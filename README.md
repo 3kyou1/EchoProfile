@@ -68,9 +68,13 @@ git clone https://github.com/jhlee0409/claude-code-history-viewer.git
 cd claude-code-history-viewer
 # Run the setup script to install all dependencies
 ./scripts/setup-build-env.sh
-# Build the application
-pnpm tauri:build
+# Build the application (auto-detects your platform)
+pnpm tauri:build:auto
 ```
+
+**Platform-specific builds:**
+- macOS: `pnpm tauri:build` (universal binary for Intel + Apple Silicon)
+- Linux: `pnpm tauri:build:linux` (DEB, RPM, AppImage)
 
 #### Manual Setup
 

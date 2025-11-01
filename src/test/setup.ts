@@ -1,8 +1,18 @@
 import '@testing-library/jest-dom';
 
 // Mock Tauri APIs for testing environment
+interface TauriMock {
+  tauri: {
+    invoke: ReturnType<typeof vi.fn>;
+  };
+  event: {
+    listen: ReturnType<typeof vi.fn>;
+    emit: ReturnType<typeof vi.fn>;
+  };
+}
+
 global.window = global.window || {};
-global.window.__TAURI__ = {
+(global.window as typeof global.window & { __TAURI__: TauriMock }).__TAURI__ = {
   tauri: {
     invoke: vi.fn(),
   },
@@ -10,7 +20,7 @@ global.window.__TAURI__ = {
     listen: vi.fn(),
     emit: vi.fn(),
   },
-} as any;
+};
 
 // Mock matchMedia for components that use media queries
 Object.defineProperty(window, 'matchMedia', {
@@ -32,11 +42,14 @@ global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
   observe() {}
-  takeRecords() {
+  takeRecords(): IntersectionObserverEntry[] {
     return [];
   }
   unobserve() {}
-} as any;
+} as unknown as {
+  new (): IntersectionObserver;
+  prototype: IntersectionObserver;
+};
 
 // Mock ResizeObserver for components that observe size changes
 global.ResizeObserver = class ResizeObserver {
@@ -44,5 +57,8 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
   observe() {}
   unobserve() {}
-} as any;
+} as unknown as {
+  new (): ResizeObserver;
+  prototype: ResizeObserver;
+};
 

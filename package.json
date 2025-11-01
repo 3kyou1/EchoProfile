@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "build": "$npm_execpath run sync-version && tsc -b && vite build",
     "tauri:build": "$npm_execpath run sync-version && tauri build --target universal-apple-darwin",
+    "tauri:build:linux": "$npm_execpath run sync-version && tauri build",
     "sync-version": "node scripts/sync-version.cjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

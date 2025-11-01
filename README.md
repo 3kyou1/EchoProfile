@@ -1,7 +1,7 @@
 A desktop app to browse and search your Claude Code conversation history stored in `~/.claude`.
 
 ![Version](https://img.shields.io/badge/Version-1.0.0--beta.3-orange.svg)
-![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey.svg)
+![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux-lightgrey.svg)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
 
@@ -60,14 +60,45 @@ Get the latest version from [Releases](https://github.com/jhlee0409/claude-code-
 
 ### Build from source
 
+**🌍 Language Support**: The app includes **complete English language support** by default, with additional support for Korean, Japanese, and Chinese.
+
+#### Quick Setup (Recommended)
+```bash
+git clone https://github.com/jhlee0409/claude-code-history-viewer.git
+cd claude-code-history-viewer
+# Run the setup script to install all dependencies
+./scripts/setup-build-env.sh
+# Build the application
+pnpm tauri:build
+```
+
+#### Manual Setup
+
+##### macOS
+```bash
+git clone https://github.com/jhlee0409/claude-code-history-viewer.git
+cd claude-code-history-viewer
+# Install dependencies
+pnpm install
+# Add required Rust targets for universal builds
+rustup target add x86_64-apple-darwin
+# Build
+pnpm tauri:build
+```
+
+**Requirements**: Node.js 18+, pnpm, Rust toolchain, Xcode Command Line Tools
+
+##### Linux
+See [LINUX_BUILD.md](LINUX_BUILD.md) for detailed Linux build instructions.
+
 ```bash
 git clone https://github.com/jhlee0409/claude-code-history-viewer.git
 cd claude-code-history-viewer
 pnpm install
-pnpm tauri:build
+pnpm tauri:build:linux
 ```
 
-**Requirements**: Node.js 18+, pnpm, Rust toolchain, Xcode Command Line Tools (macOS)
+**Requirements**: Node.js 18+, pnpm, Rust toolchain, system libraries (WebKit, GTK)
 
 ## Usage
 
@@ -79,7 +110,7 @@ pnpm tauri:build
 
 ## Current limitations
 
-- **macOS only** for now (Windows/Linux support planned)
+- **Linux and macOS support** (Windows support planned)
 - **Beta software** - expect some rough edges
 - Large conversation histories (thousands of messages) might be slow to load initially
 - Auto-update system is still being tested

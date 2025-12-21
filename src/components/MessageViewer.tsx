@@ -4,11 +4,12 @@ import React, {
   useCallback,
   useState,
   useMemo,
+  useDeferredValue,
 } from "react";
-import { Loader2, MessageCircle, ChevronDown, Search, X } from "lucide-react";
+import { Loader2, MessageCircle, ChevronDown, ChevronUp, Search, X, Filter } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ClaudeMessage, ClaudeSession } from "../types";
-import type { SearchState } from "../store/useAppStore";
+import type { SearchState, SearchFilterType } from "../store/useAppStore";
 import { ClaudeContentArrayRenderer } from "./contentRenderer";
 import {
   ClaudeToolUseDisplay,
@@ -16,10 +17,21 @@ import {
   MessageContentDisplay,
   AssistantMessageDetails,
 } from "./messageRenderer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { extractClaudeMessageContent } from "../utils/messageUtils";
 import { cn } from "../utils/cn";
 import { COLORS } from "../constants/colors";
 import { formatTime } from "../utils/time";
+
+// Search configuration constants
+const SEARCH_MIN_CHARS = 2; // Minimum characters required to trigger search
+const SCROLL_HIGHLIGHT_DELAY_MS = 100; // Delay to wait for DOM update before scrolling
 
 interface MessageViewerProps {
   messages: ClaudeMessage[];
@@ -27,15 +39,23 @@ interface MessageViewerProps {
   selectedSession: ClaudeSession | null;
   sessionSearch: SearchState;
   onSearchChange: (query: string) => void;
+  onFilterTypeChange: (filterType: SearchFilterType) => void;
   onClearSearch: () => void;
+  onNextMatch?: () => void;
+  onPrevMatch?: () => void;
 }
 
 interface MessageNodeProps {
   message: ClaudeMessage;
   depth: number;
+  isCurrentMatch?: boolean;
+  isMatch?: boolean;
+  searchQuery?: string;
+  filterType?: SearchFilterType;
+  currentMatchIndex?: number; // 메시지 내에서 현재 활성화된 매치 인덱스
 }
 
-const ClaudeMessageNode = ({ message, depth }: MessageNodeProps) => {
+const ClaudeMessageNode = React.memo(({ message, depth, isCurrentMatch, isMatch, searchQuery, filterType = "content", currentMatchIndex }: MessageNodeProps) => {
   const { t } = useTranslation("components");
 
   if (message.isSidechain) {
@@ -46,10 +66,15 @@ const ClaudeMessageNode = ({ message, depth }: MessageNodeProps) => {
 
   return (
     <div
+      data-message-uuid={message.uuid}
       className={cn(
-        "w-full px-4 py-2",
+        "w-full px-4 py-2 transition-colors duration-300",
         leftMargin,
-        message.isSidechain && "bg-gray-100 dark:bg-gray-800"
+        message.isSidechain && "bg-gray-100 dark:bg-gray-800",
+        // 현재 매치된 메시지 강조
+        isCurrentMatch && "bg-yellow-100 dark:bg-yellow-900/30 ring-2 ring-yellow-400 dark:ring-yellow-500",
+        // 다른 매치 메시지 연한 강조
+        isMatch && !isCurrentMatch && "bg-yellow-50 dark:bg-yellow-900/10"
       )}
     >
       <div className="max-w-4xl mx-auto">
@@ -95,6 +120,9 @@ const ClaudeMessageNode = ({ message, depth }: MessageNodeProps) => {
           <MessageContentDisplay
             content={extractClaudeMessageContent(message)}
             messageType={message.type}
+            searchQuery={searchQuery}
+            isCurrentMatch={isCurrentMatch}
+            currentMatchIndex={currentMatchIndex}
           />
 
           {/* Claude API Content Array */}
@@ -105,7 +133,13 @@ const ClaudeMessageNode = ({ message, depth }: MessageNodeProps) => {
               (message.type === "assistant" &&
                 !extractClaudeMessageContent(message))) && (
               <div className="mb-2">
-                <ClaudeContentArrayRenderer content={message.content} />
+                <ClaudeContentArrayRenderer
+                  content={message.content}
+                  searchQuery={searchQuery}
+                  filterType={filterType}
+                  isCurrentMatch={isCurrentMatch}
+                  currentMatchIndex={currentMatchIndex}
+                />
               </div>
             )}
 
@@ -138,7 +172,9 @@ const ClaudeMessageNode = ({ message, depth }: MessageNodeProps) => {
       </div>
     </div>
   );
-};
+});
+
+ClaudeMessageNode.displayName = 'ClaudeMessageNode';
 
 // 타입 안전한 parent UUID 추출 함수
 const getParentUuid = (message: ClaudeMessage): string | null | undefined => {
@@ -155,28 +191,71 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   selectedSession,
   sessionSearch,
   onSearchChange,
+  onFilterTypeChange,
   onClearSearch,
+  onNextMatch,
+  onPrevMatch,
 }) => {
   const { t } = useTranslation("components");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [localSearchQuery, setLocalSearchQuery] = useState("");
+  // Optimistic UI: 입력 상태를 별도로 관리 (startTransition으로 비긴급 업데이트)
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // 검색어 입력 시 debounce 처리
+  // useDeferredValue: 검색은 백그라운드에서 처리
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  // 검색 진행 중 여부 (시각적 피드백용)
+  const isSearchPending = searchQuery !== deferredSearchQuery;
+
+  // 입력 핸들러: controlled input으로 상태 업데이트
+  const handleSearchInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  }, []);
+
+  // deferred 값이 변경될 때만 검색 실행
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onSearchChange(localSearchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [localSearchQuery, onSearchChange]);
+    // 빈 문자열이면 검색 초기화
+    if (deferredSearchQuery.length === 0) {
+      onSearchChange("");
+      return;
+    }
+
+    // 최소 글자 수 미만이면 검색하지 않음
+    if (deferredSearchQuery.length < SEARCH_MIN_CHARS) {
+      return;
+    }
+
+    // 최소 글자 수 이상일 때만 검색 실행
+    onSearchChange(deferredSearchQuery);
+  }, [deferredSearchQuery, onSearchChange]);
 
   // 세션 변경 시 검색어 초기화
   useEffect(() => {
-    setLocalSearchQuery("");
+    setSearchQuery("");
   }, [selectedSession?.session_id]);
 
-  // 표시할 메시지 결정 (검색 결과 또는 전체 메시지)
-  const displayMessages = sessionSearch.query ? sessionSearch.results : messages;
+  // 카카오톡 스타일: 항상 전체 메시지 표시 (필터링 없음)
+  const displayMessages = messages;
+
+  // 매치된 메시지 UUID Set (효율적인 조회용)
+  const matchedUuids = useMemo(() => {
+    return new Set(sessionSearch.matches?.map(m => m.messageUuid) || []);
+  }, [sessionSearch.matches]);
+
+  // 현재 매치 정보 (UUID와 메시지 내 인덱스)
+  const currentMatch = useMemo(() => {
+    if (sessionSearch.currentMatchIndex >= 0 && sessionSearch.matches?.length > 0) {
+      const match = sessionSearch.matches[sessionSearch.currentMatchIndex];
+      return match ? {
+        messageUuid: match.messageUuid,
+        matchIndex: match.matchIndex,
+      } : null;
+    }
+    return null;
+  }, [sessionSearch.currentMatchIndex, sessionSearch.matches]);
+
+  const currentMatchUuid = currentMatch?.messageUuid ?? null;
 
   // 메시지 트리 구조 메모이제이션 (성능 최적화)
   const { rootMessages, uniqueMessages } = useMemo(() => {
@@ -241,10 +320,71 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
 
   // 검색어 초기화 핸들러
   const handleClearSearch = useCallback(() => {
-    setLocalSearchQuery("");
+    setSearchQuery("");
     onClearSearch();
     searchInputRef.current?.focus();
   }, [onClearSearch]);
+
+  // 현재 매치된 하이라이트 텍스트로 스크롤 이동
+  const scrollToHighlight = useCallback((matchUuid: string | null) => {
+    if (!scrollContainerRef.current) return;
+
+    // 먼저 하이라이트된 텍스트 요소를 찾음
+    const highlightElement = scrollContainerRef.current.querySelector(
+      '[data-search-highlight="current"]'
+    );
+
+    if (highlightElement) {
+      // 하이라이트된 텍스트로 스크롤
+      highlightElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      return;
+    }
+
+    // 하이라이트 요소가 없으면 메시지 영역으로 스크롤 (fallback)
+    if (matchUuid) {
+      const messageElement = scrollContainerRef.current.querySelector(
+        `[data-message-uuid="${matchUuid}"]`
+      );
+
+      if (messageElement) {
+        messageElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }
+  }, []);
+
+  // 현재 매치 변경 시 해당 하이라이트로 스크롤
+  useEffect(() => {
+    if (currentMatchUuid) {
+      // DOM 업데이트 후 스크롤 (렌더링 완료 대기)
+      const timer = setTimeout(() => {
+        scrollToHighlight(currentMatchUuid);
+      }, SCROLL_HIGHLIGHT_DELAY_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [currentMatchUuid, sessionSearch.currentMatchIndex, scrollToHighlight]);
+
+  // 키보드 단축키 핸들러
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        // Shift+Enter: 이전 매치
+        onPrevMatch?.();
+      } else {
+        // Enter: 다음 매치
+        onNextMatch?.();
+      }
+    } else if (e.key === "Escape") {
+      // Escape: 검색 초기화
+      handleClearSearch();
+    }
+  }, [onNextMatch, onPrevMatch, handleClearSearch]);
 
   // 스크롤 위치 상태 추가
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -333,9 +473,23 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     // 고유한 키 생성
     const uniqueKey = keyPrefix ? `${keyPrefix}-${message.uuid}` : message.uuid;
 
+    // 검색 매치 상태 확인
+    const isMatch = matchedUuids.has(message.uuid);
+    const isCurrentMatch = currentMatchUuid === message.uuid;
+    const messageMatchIndex = isCurrentMatch ? currentMatch?.matchIndex : undefined;
+
     // 현재 메시지를 먼저 추가하고, 자식 메시지들을 이어서 추가
     const result: React.ReactNode[] = [
-      <ClaudeMessageNode key={uniqueKey} message={message} depth={depth} />,
+      <ClaudeMessageNode
+        key={uniqueKey}
+        message={message}
+        depth={depth}
+        isMatch={isMatch}
+        isCurrentMatch={isCurrentMatch}
+        searchQuery={sessionSearch.query}
+        filterType={sessionSearch.filterType}
+        currentMatchIndex={messageMatchIndex}
+      />,
     ];
 
     // 자식 메시지들을 재귀적으로 추가 (depth 증가)
@@ -364,44 +518,143 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         )}
       >
         <div className="max-w-4xl mx-auto">
-          <div className="relative">
-            <Search className={cn(
-              "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
-              COLORS.ui.text.muted
-            )} />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={localSearchQuery}
-              onChange={(e) => setLocalSearchQuery(e.target.value)}
-              placeholder={t("messageViewer.searchPlaceholder")}
-              aria-label={t("messageViewer.searchPlaceholder")}
-              className={cn(
-                "w-full pl-10 pr-10 py-2 rounded-lg border text-sm",
-                "focus:outline-none focus:ring-2 focus:ring-blue-500",
-                COLORS.ui.background.primary,
-                COLORS.ui.border.light,
-                COLORS.ui.text.primary
-              )}
-            />
-            {localSearchQuery && (
-              <button
-                onClick={handleClearSearch}
-                aria-label="Clear search"
+          <div className="flex items-center gap-2">
+            {/* 검색 필터 타입 선택 */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm",
+                    "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                    "transition-colors hover:bg-gray-100 dark:hover:bg-gray-800",
+                    COLORS.ui.background.primary,
+                    COLORS.ui.border.light,
+                    COLORS.ui.text.primary
+                  )}
+                  aria-label={t("messageViewer.filterType")}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span>
+                    {sessionSearch.filterType === "content"
+                      ? t("messageViewer.filterContent")
+                      : t("messageViewer.filterToolId")}
+                  </span>
+                  <ChevronDown className="w-3 h-3 opacity-50" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-40">
+                <DropdownMenuRadioGroup
+                  value={sessionSearch.filterType}
+                  onValueChange={(value) => {
+                    onFilterTypeChange(value as SearchFilterType);
+                    setSearchQuery("");
+                  }}
+                >
+                  <DropdownMenuRadioItem value="content">
+                    {t("messageViewer.filterContent")}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="toolId">
+                    {t("messageViewer.filterToolId")}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* 검색 입력 필드 */}
+            <div className="relative flex-1">
+              <Search className={cn(
+                "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
+                COLORS.ui.text.muted
+              )} />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchInput}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={t("messageViewer.searchPlaceholder")}
+                aria-label={t("messageViewer.searchPlaceholder")}
                 className={cn(
-                  "absolute right-3 top-1/2 transform -translate-y-1/2",
-                  "p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700",
-                  COLORS.ui.text.muted
+                  "w-full pl-10 pr-10 py-2 rounded-lg border text-sm",
+                  "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  COLORS.ui.background.primary,
+                  COLORS.ui.border.light,
+                  COLORS.ui.text.primary
                 )}
-              >
-                <X className="w-4 h-4" />
-              </button>
+              />
+              {/* 검색 진행 중 로딩 표시 또는 클리어 버튼 */}
+              {searchQuery && (
+                isSearchPending ? (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Loader2 className={cn("w-4 h-4 animate-spin", COLORS.ui.text.muted)} />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    aria-label="Clear search"
+                    className={cn(
+                      "absolute right-3 top-1/2 transform -translate-y-1/2",
+                      "p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700",
+                      COLORS.ui.text.muted
+                    )}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )
+              )}
+            </div>
+
+            {/* 검색 결과 네비게이션 (카카오톡 스타일) */}
+            {sessionSearch.query && sessionSearch.matches && sessionSearch.matches.length > 0 && (
+              <div className="flex items-center gap-1">
+                {/* 매치 카운터 */}
+                <span className={cn("text-sm font-medium min-w-[60px] text-center", COLORS.ui.text.muted)}>
+                  {sessionSearch.currentMatchIndex + 1}/{sessionSearch.matches.length}
+                </span>
+
+                {/* 이전 매치 버튼 */}
+                <button
+                  type="button"
+                  onClick={onPrevMatch}
+                  disabled={sessionSearch.matches.length === 0}
+                  aria-label="Previous match (Shift+Enter)"
+                  title="Previous match (Shift+Enter)"
+                  className={cn(
+                    "p-1.5 rounded-lg border transition-colors",
+                    "hover:bg-gray-100 dark:hover:bg-gray-700",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    COLORS.ui.border.light
+                  )}
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </button>
+
+                {/* 다음 매치 버튼 */}
+                <button
+                  type="button"
+                  onClick={onNextMatch}
+                  disabled={sessionSearch.matches.length === 0}
+                  aria-label="Next match (Enter)"
+                  title="Next match (Enter)"
+                  className={cn(
+                    "p-1.5 rounded-lg border transition-colors",
+                    "hover:bg-gray-100 dark:hover:bg-gray-700",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    COLORS.ui.border.light
+                  )}
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
             )}
           </div>
-          {/* 검색 결과 정보 */}
-          {sessionSearch.query && (
+
+          {/* 검색 상태 정보 */}
+          {(sessionSearch.query || (searchQuery.length >= 2 && isSearchPending)) && (
             <div className={cn("mt-2 text-sm", COLORS.ui.text.muted)}>
-              {sessionSearch.isSearching ? (
+              {sessionSearch.isSearching || isSearchPending ? (
                 <span className="flex items-center space-x-2">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   <span>{t("messageViewer.searching")}</span>
@@ -409,9 +662,14 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               ) : (
                 <span>
                   {t("messageViewer.searchResults", {
-                    count: sessionSearch.results.length,
+                    count: sessionSearch.matches?.length || 0,
                     total: messages.length,
                   })}
+                  {sessionSearch.matches && sessionSearch.matches.length > 0 && (
+                    <span className="ml-2 text-xs">
+                      (Enter: next, Shift+Enter: prev, Esc: clear)
+                    </span>
+                  )}
                 </span>
               )}
             </div>
@@ -450,7 +708,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         )}
         <div className="max-w-4xl mx-auto">
           {/* 검색 결과 없음 */}
-          {sessionSearch.query && sessionSearch.results.length === 0 && !sessionSearch.isSearching && (
+          {sessionSearch.query && (!sessionSearch.matches || sessionSearch.matches.length === 0) && !sessionSearch.isSearching && (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
               <Search className="w-12 h-12 mb-4 text-gray-400" />
               <p className="text-lg font-medium mb-2">
@@ -489,11 +747,20 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
                       ? `${message.uuid}-${index}`
                       : `fallback-${index}-${message.timestamp}-${message.type}`;
 
+                  const isMatch = matchedUuids.has(message.uuid);
+                  const isCurrentMatch = currentMatchUuid === message.uuid;
+                  const messageMatchIndex = isCurrentMatch ? currentMatch?.matchIndex : undefined;
+
                   return (
                     <ClaudeMessageNode
                       key={uniqueKey}
                       message={message}
                       depth={0}
+                      isMatch={isMatch}
+                      isCurrentMatch={isCurrentMatch}
+                      searchQuery={sessionSearch.query}
+                      filterType={sessionSearch.filterType}
+                      currentMatchIndex={messageMatchIndex}
                     />
                   );
                 });
@@ -521,6 +788,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
                       {t("messageViewer.checkConsole")}
                     </div>
                     <button
+                      type="button"
                       onClick={() => window.location.reload()}
                       className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                     >
@@ -536,6 +804,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         {/* 플로팅 맨 아래로 버튼 */}
         {showScrollToBottom && (
           <button
+            type="button"
             onClick={scrollToBottom}
             className={cn(
               "fixed bottom-10 right-2 p-3 rounded-full shadow-lg transition-all duration-300 z-50",

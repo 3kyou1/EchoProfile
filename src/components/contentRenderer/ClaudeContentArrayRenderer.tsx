@@ -3,9 +3,14 @@ import { ToolUseRenderer } from "./ToolUseRenderer";
 import { ImageRenderer } from "./ImageRenderer";
 import { ClaudeToolResultItem } from "../toolResultRenderer";
 import { useTranslation } from "react-i18next";
+import type { SearchFilterType } from "../../store/useAppStore";
 
 type Props = {
   content: unknown[];
+  searchQuery?: string;
+  filterType?: SearchFilterType;
+  isCurrentMatch?: boolean;
+  currentMatchIndex?: number; // 메시지 내에서 현재 활성화된 매치 인덱스
 };
 
 // Type guard for content items
@@ -13,7 +18,13 @@ const isContentItem = (item: unknown): item is Record<string, unknown> => {
   return item !== null && typeof item === "object";
 };
 
-export const ClaudeContentArrayRenderer = ({ content }: Props) => {
+export const ClaudeContentArrayRenderer = ({
+  content,
+  searchQuery = "",
+  filterType = "content",
+  isCurrentMatch = false,
+  currentMatchIndex = 0,
+}: Props) => {
   const { t } = useTranslation("components");
   if (!Array.isArray(content) || content.length === 0) {
     return null;
@@ -70,10 +81,26 @@ export const ClaudeContentArrayRenderer = ({ content }: Props) => {
             return null;
 
           case "tool_use":
-            return <ToolUseRenderer key={index} toolUse={item} />;
+            return (
+              <ToolUseRenderer
+                key={index}
+                toolUse={item}
+                searchQuery={filterType === "toolId" ? searchQuery : ""}
+                isCurrentMatch={isCurrentMatch}
+                currentMatchIndex={currentMatchIndex}
+              />
+            );
 
           case "tool_result":
-            return <ClaudeToolResultItem toolResult={item} index={index} />;
+            return (
+              <ClaudeToolResultItem
+                toolResult={item}
+                index={index}
+                searchQuery={filterType === "toolId" ? searchQuery : ""}
+                isCurrentMatch={isCurrentMatch}
+                currentMatchIndex={currentMatchIndex}
+              />
+            );
 
           default:
             // 기본 JSON 렌더링

@@ -9,18 +9,44 @@ import { useCopyButton } from "../../hooks/useCopyButton";
 import { Renderer } from "../../shared/RendererHeader";
 import { cn } from "../../utils/cn";
 import { COLORS } from "../../constants/colors";
+import { HighlightedText } from "../common";
 
 type Props = {
   toolResult: Record<string, unknown>;
   index: number;
+  searchQuery?: string;
+  isCurrentMatch?: boolean;
+  currentMatchIndex?: number; // 메시지 내에서 현재 활성화된 매치 인덱스
 };
 
-export const ClaudeToolResultItem = ({ toolResult, index }: Props) => {
+export const ClaudeToolResultItem = ({
+  toolResult,
+  index,
+  searchQuery = "",
+  isCurrentMatch = false,
+  currentMatchIndex = 0,
+}: Props) => {
   const { t } = useTranslation("components");
   const { renderCopyButton } = useCopyButton();
   const toolUseId = toolResult.tool_use_id || "";
   const content = toolResult.content || "";
   const isError = toolResult.is_error === true;
+
+  // Tool ID 렌더링 헬퍼 (검색 하이라이팅 지원)
+  const renderToolUseId = (id: string) => {
+    if (!id) return null;
+    const idString = String(id);
+    return searchQuery ? (
+      <HighlightedText
+        text={`Tool ID: ${idString}`}
+        searchQuery={searchQuery}
+        isCurrentMatch={isCurrentMatch}
+        currentMatchIndex={currentMatchIndex}
+      />
+    ) : (
+      <>Tool ID: {idString}</>
+    );
+  };
 
   // 줄 번호가 붙은 파일 내용인지 감지하는 함수
   const isNumberedFileContent = (text: string): boolean => {
@@ -279,7 +305,7 @@ export const ClaudeToolResultItem = ({ toolResult, index }: Props) => {
                     COLORS.ui.text.secondary
                   )}
                 >
-                  Tool ID: {String(toolUseId)}
+                  {renderToolUseId(toolUseId as string)}
                 </code>
               )}
             </div>
@@ -390,7 +416,7 @@ export const ClaudeToolResultItem = ({ toolResult, index }: Props) => {
                     COLORS.ui.text.secondary
                   )}
                 >
-                  Tool ID: {String(toolUseId)}
+                  {renderToolUseId(toolUseId as string)}
                 </code>
               )}
             </div>
@@ -424,7 +450,7 @@ export const ClaudeToolResultItem = ({ toolResult, index }: Props) => {
                   : COLORS.semantic.success.text
               )}
             >
-              Tool ID: {String(toolUseId)}
+              {renderToolUseId(toolUseId as string)}
             </code>
           )
         }

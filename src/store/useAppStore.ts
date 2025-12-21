@@ -19,6 +19,11 @@ import {
   type AnalyticsViewType,
   initialAnalyticsState,
 } from "../types/analytics";
+import {
+  buildSearchIndex,
+  searchMessages as searchMessagesFromIndex,
+  clearSearchIndex,
+} from "../utils/searchIndex";
 
 // Tauri API가 사용 가능한지 확인하는 함수
 const isTauriAvailable = () => {
@@ -66,8 +71,12 @@ interface AppStore extends AppState {
   clearTokenStats: () => void;
   setExcludeSidechain: (exclude: boolean) => void;
 
-  // Session search actions (세션 내 검색)
+  // Session search actions (카카오톡 스타일 네비게이션 검색)
   setSessionSearchQuery: (query: string) => void;
+  setSearchFilterType: (filterType: SearchFilterType) => void;
+  goToNextMatch: () => void;
+  goToPrevMatch: () => void;
+  goToMatchIndex: (index: number) => void;
   clearSessionSearch: () => void;
 
   // Global stats actions
@@ -86,12 +95,39 @@ interface AppStore extends AppState {
   clearAnalyticsErrors: () => void;
 }
 
-// 검색 관련 상태
+// 검색 매치 정보
+export interface SearchMatch {
+  messageUuid: string;
+  messageIndex: number; // messages 배열 내 인덱스
+  matchIndex: number; // 메시지 내에서 몇 번째 매치인지 (0부터 시작)
+  matchCount: number; // 해당 메시지 내 총 매치 개수
+}
+
+// 검색 필터 타입
+export type SearchFilterType = "content" | "toolId";
+
+// 검색 관련 상태 (카카오톡 스타일 네비게이션)
 export interface SearchState {
   query: string;
-  results: ClaudeMessage[];
+  matches: SearchMatch[];
+  currentMatchIndex: number;
   isSearching: boolean;
+  filterType: SearchFilterType;
+  /**
+   * @deprecated matches 필드를 사용하세요. 이 필드는 하위 호환성을 위해 유지됩니다.
+   */
+  results: ClaudeMessage[];
 }
+
+// Helper: Create empty search state while preserving filterType
+const createEmptySearchState = (filterType: SearchFilterType): SearchState => ({
+  query: "",
+  matches: [],
+  currentMatchIndex: -1,
+  isSearching: false,
+  filterType,
+  results: [],
+});
 
 export const useAppStore = create<AppStore>((set, get) => ({
   // Initial state
@@ -122,11 +158,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
   projectTokenStats: [],
   excludeSidechain: true,
 
-  // Session search state (클라이언트 측 검색)
+  // Session search state (카카오톡 스타일 네비게이션 검색)
   sessionSearch: {
     query: "",
-    results: [],
+    matches: [],
+    currentMatchIndex: -1,
     isSearching: false,
+    filterType: "content" as SearchFilterType,
+    results: [], // Legacy
   },
 
   // Analytics state
@@ -247,6 +286,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   selectSession: async (session: ClaudeSession) => {
+    // 이전 세션의 검색 인덱스 초기화
+    clearSearchIndex();
+
     set({
       selectedSession: session,
       messages: [],
@@ -259,8 +301,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       },
       sessionSearch: {
         query: "",
+        matches: [],
+        currentMatchIndex: -1,
         results: [],
         isSearching: false,
+        filterType: get().sessionSearch.filterType, // 필터 타입 유지
       },
       isLoadingMessages: true,
     });
@@ -286,6 +331,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
           `🚀 [Frontend] selectSession: ${filteredMessages.length}개 메시지 로드, ${duration.toFixed(1)}ms`
         );
       }
+
+      // FlexSearch 인덱스 구축 (동기 실행, 대부분의 경우 수 밀리초 이내 완료)
+      buildSearchIndex(filteredMessages);
 
       set({
         messages: filteredMessages,
@@ -613,21 +661,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }));
   },
 
-  // Session search actions (세션 내 클라이언트 측 검색)
+  // Session search actions (카카오톡 스타일 네비게이션 검색)
   setSessionSearchQuery: (query: string) => {
-    const { messages } = get();
+    const { messages, sessionSearch } = get();
+    const { filterType } = sessionSearch;
 
+    // Empty query clears search results
     if (!query.trim()) {
-      set({
-        sessionSearch: {
-          query: "",
-          results: [],
-          isSearching: false,
-        },
-      });
+      set((state) => ({
+        sessionSearch: createEmptySearchState(state.sessionSearch.filterType),
+      }));
       return;
     }
 
+    // Set searching state
     set((state) => ({
       sessionSearch: {
         ...state.sessionSearch,
@@ -636,95 +683,112 @@ export const useAppStore = create<AppStore>((set, get) => ({
       },
     }));
 
-    // 클라이언트 측에서 메시지 검색 (대소문자 구분 없음)
-    const lowerQuery = query.toLowerCase();
+    try {
+      // FlexSearch를 사용한 고속 검색 (역색인 기반 O(1) ~ O(log n))
+      const searchResults = searchMessagesFromIndex(query, filterType);
 
-    // 텍스트 추출 헬퍼 함수
-    const extractTextFromContent = (content: unknown): string => {
-      if (typeof content === "string") return content;
-      if (Array.isArray(content)) {
-        return content
-          .map(item => {
-            if (typeof item === "string") return item;
-            if (item && typeof item === "object") {
-              // text, thinking 필드에서만 추출
-              const textFields: string[] = [];
-              if ("text" in item && typeof item.text === "string") {
-                textFields.push(item.text);
-              }
-              if ("thinking" in item && typeof item.thinking === "string") {
-                textFields.push(item.thinking);
-              }
-              return textFields.join(" ");
-            }
-            return "";
-          })
-          .join(" ");
-      }
-      return "";
-    };
+      // SearchMatch 형식으로 변환 (유효한 인덱스만 필터링)
+      const matches: SearchMatch[] = searchResults
+        .filter((result) => result.messageIndex >= 0 && result.messageIndex < messages.length)
+        .map((result) => ({
+          messageUuid: result.messageUuid,
+          messageIndex: result.messageIndex,
+          matchIndex: result.matchIndex,
+          matchCount: result.matchCount,
+        }));
 
-    const results = messages.filter((message) => {
-      // content에서 검색
-      if (message.content) {
-        const contentStr = extractTextFromContent(message.content);
-        if (contentStr.toLowerCase().includes(lowerQuery)) {
-          return true;
-        }
-      }
+      // 매치 결과 저장 (첫 번째 매치로 자동 이동)
+      set((state) => ({
+        sessionSearch: {
+          query,
+          matches,
+          currentMatchIndex: matches.length > 0 ? 0 : -1,
+          isSearching: false,
+          filterType: state.sessionSearch.filterType,
+          results: matches
+            .map((m) => messages[m.messageIndex])
+            .filter((m): m is ClaudeMessage => m !== undefined), // Legacy 호환
+        },
+      }));
+    } catch (error) {
+      console.error("[Search] Failed to search messages:", error);
+      // On error, clear results but keep query for user feedback
+      set((state) => ({
+        sessionSearch: {
+          query,
+          matches: [],
+          currentMatchIndex: -1,
+          isSearching: false,
+          filterType: state.sessionSearch.filterType,
+          results: [],
+        },
+      }));
+    }
+  },
 
-      // toolUse의 name 필드에서만 검색 (input은 제외)
-      if (message.toolUse && typeof message.toolUse === "object") {
-        const toolName = (message.toolUse as { name?: string }).name || "";
-        if (toolName.toLowerCase().includes(lowerQuery)) {
-          return true;
-        }
-      }
+  // 다음 검색 결과로 이동
+  goToNextMatch: () => {
+    const { sessionSearch } = get();
+    if (sessionSearch.matches.length === 0) return;
 
-      // toolUseResult의 텍스트 필드에서만 검색
-      if (message.toolUseResult) {
-        const result = message.toolUseResult;
-        const searchableFields: string[] = [];
-
-        if (typeof result === "object" && result !== null) {
-          // stdout, stderr, content 등 주요 텍스트 필드만 추출
-          if ("stdout" in result && typeof result.stdout === "string") {
-            searchableFields.push(result.stdout);
-          }
-          if ("stderr" in result && typeof result.stderr === "string") {
-            searchableFields.push(result.stderr);
-          }
-          if ("content" in result && typeof result.content === "string") {
-            searchableFields.push(result.content);
-          }
-        } else if (typeof result === "string") {
-          searchableFields.push(result);
-        }
-
-        if (searchableFields.join(" ").toLowerCase().includes(lowerQuery)) {
-          return true;
-        }
-      }
-
-      return false;
+    const nextIndex = (sessionSearch.currentMatchIndex + 1) % sessionSearch.matches.length;
+    set({
+      sessionSearch: {
+        ...sessionSearch,
+        currentMatchIndex: nextIndex,
+      },
     });
+  },
+
+  // 이전 검색 결과로 이동
+  goToPrevMatch: () => {
+    const { sessionSearch } = get();
+    if (sessionSearch.matches.length === 0) return;
+
+    // Wrap around: if at first match (0), go to last match
+    const totalMatches = sessionSearch.matches.length;
+    const prevIndex =
+      sessionSearch.currentMatchIndex <= 0
+        ? totalMatches - 1
+        : sessionSearch.currentMatchIndex - 1;
 
     set({
       sessionSearch: {
-        query,
-        results,
-        isSearching: false,
+        ...sessionSearch,
+        currentMatchIndex: prevIndex,
+      },
+    });
+  },
+
+  // 특정 인덱스로 이동
+  goToMatchIndex: (index: number) => {
+    const { sessionSearch } = get();
+    const { matches } = sessionSearch;
+
+    // Validate index bounds
+    if (index < 0 || index >= matches.length) {
+      console.warn(`[Search] Invalid match index: ${index} (total: ${matches.length})`);
+      return;
+    }
+
+    set({
+      sessionSearch: {
+        ...sessionSearch,
+        currentMatchIndex: index,
       },
     });
   },
 
   clearSessionSearch: () => {
-    set({
-      sessionSearch: {
-        query: "",
-        results: [],
-        isSearching: false,
-      },
-    });
+    set((state) => ({
+      sessionSearch: createEmptySearchState(state.sessionSearch.filterType),
+    }));
+  },
+
+  // 검색 필터 타입 변경
+  setSearchFilterType: (filterType: SearchFilterType) => {
+    set(() => ({
+      sessionSearch: createEmptySearchState(filterType),
+    }));
   },
 }));

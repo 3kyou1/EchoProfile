@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
@@ -12,12 +12,7 @@ import {
   Zap,
   Database,
   Eye,
-  Hash,
-  Target,
-  Users,
-  Award,
-  Timer,
-  CircuitBoard,
+  Loader2,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import type { ToolUsageStats, ActivityHeatmap } from "../types";
@@ -32,8 +27,12 @@ import { useAnalytics } from "../hooks/useAnalytics";
  *
  * props 전달을 최소화하고 직접 store와 hook을 사용하여 의존성을 낮춤
  */
-export const AnalyticsDashboard: React.FC = () => {
-  const { selectedProject, selectedSession, sessionTokenStats } = useAppStore();
+interface AnalyticsDashboardProps {
+  isViewingGlobalStats?: boolean;
+}
+
+export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ isViewingGlobalStats = false }) => {
+  const { selectedProject, selectedSession, sessionTokenStats, globalSummary, isLoadingGlobalStats } = useAppStore();
 
   const { state: analyticsState } = useAnalytics();
   const { t } = useTranslation("components");
@@ -57,8 +56,46 @@ export const AnalyticsDashboard: React.FC = () => {
     return num.toString();
   };
 
+  // Calculate Claude API pricing based on model and token counts
+  const calculateModelPrice = (
+    modelName: string,
+    inputTokens: number,
+    outputTokens: number,
+    cacheCreationTokens: number,
+    cacheReadTokens: number
+  ): number => {
+    // Pricing per million tokens (MTok)
+    const pricing: Record<string, { input: number; output: number; cacheWrite: number; cacheRead: number }> = {
+      'claude-opus-4-5': { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.50 },
+      'claude-opus-4': { input: 15, output: 75, cacheWrite: 18.75, cacheRead: 1.50 },
+      'claude-sonnet-4-5': { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.30 },
+      'claude-sonnet-4': { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.30 },
+      'claude-3-5-sonnet': { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.30 },
+      'claude-3-5-haiku': { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.10 },
+      'claude-3-haiku': { input: 0.25, output: 1.25, cacheWrite: 0.30, cacheRead: 0.03 },
+    };
+
+    // Find matching pricing tier (partial match for versioned models)
+    const defaultPricing = { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.30 }; // default to sonnet
+    let modelPricing = pricing['claude-sonnet-4-5'] || defaultPricing;
+    for (const [key, value] of Object.entries(pricing)) {
+      if (modelName.toLowerCase().includes(key)) {
+        modelPricing = value;
+        break;
+      }
+    }
+
+    // Calculate cost: (tokens / 1,000,000) * price_per_MTok
+    const inputCost = (inputTokens / 1000000) * modelPricing.input;
+    const outputCost = (outputTokens / 1000000) * modelPricing.output;
+    const cacheWriteCost = (cacheCreationTokens / 1000000) * modelPricing.cacheWrite;
+    const cacheReadCost = (cacheReadTokens / 1000000) * modelPricing.cacheRead;
+
+    return inputCost + outputCost + cacheWriteCost + cacheReadCost;
+  };
+
   // 7일간의 일별 데이터 생성 (누락된 날짜 채우기)
-  const generateDailyData = () => {
+  const dailyData = useMemo(() => {
     if (!projectSummary?.daily_stats) return [];
 
     // 최근 7일 날짜 배열 생성
@@ -69,8 +106,8 @@ export const AnalyticsDashboard: React.FC = () => {
     });
 
     // 날짜별 데이터 집계
-    const dailyData = last7Days.map((date) => {
-      const dayStats = projectSummary.daily_stats.find(
+    return last7Days.map((date) => {
+      const dayStats = projectSummary?.daily_stats.find(
         (stat) => stat.date === date
       );
 
@@ -82,9 +119,7 @@ export const AnalyticsDashboard: React.FC = () => {
         active_hours: dayStats?.active_hours || 0,
       };
     });
-
-    return dailyData;
-  };
+  }, [projectSummary?.daily_stats]);
 
   // Activity heatmap component
   const ActivityHeatmapComponent = ({ data }: { data: ActivityHeatmap[] }) => {
@@ -283,11 +318,13 @@ export const AnalyticsDashboard: React.FC = () => {
                   >
                     {t("analytics.count", { count: tool.usage_count })}
                   </span>
-                  <div className={cn("text-xs", COLORS.ui.text.muted)}>
-                    {t("analytics.successRate", {
-                      percent: Math.round(tool.success_rate),
-                    })}
-                  </div>
+                  {Math.round(tool.success_rate) !== 100 && (
+                    <div className={cn("text-xs", COLORS.ui.text.muted)}>
+                      {t("analytics.successRate", {
+                        percent: Math.round(tool.success_rate),
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="relative">
@@ -320,7 +357,23 @@ export const AnalyticsDashboard: React.FC = () => {
 
   // Project Statistics View
   const ProjectStatsView = () => {
-    if (!projectSummary) return null;
+    // Show loading state while data is being fetched
+    if (!projectSummary) {
+      if (analyticsState.isLoadingProjectSummary) {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Loader2 className={cn("w-12 h-12 mx-auto mb-4 animate-spin", COLORS.ui.text.disabled)} />
+              <p className={cn("text-sm", COLORS.ui.text.tertiary)}>
+                {t("analytics.loading")}
+              </p>
+            </div>
+          </div>
+        );
+      }
+      // If not loading and no data, return null
+      return null;
+    }
 
     const lastDayStats =
       projectSummary.daily_stats[projectSummary.daily_stats.length - 1];
@@ -402,12 +455,15 @@ export const AnalyticsDashboard: React.FC = () => {
           >
             <div className="flex items-center justify-between mb-2">
               <Clock className={cn("w-8 h-8", COLORS.semantic.success.icon)} />
+              <span className={cn("text-xs", COLORS.ui.text.muted)}>
+                avg: {formatDuration(projectSummary.avg_session_duration)}
+              </span>
             </div>
             <div className={cn("text-2xl font-bold", COLORS.ui.text.primary)}>
-              {formatDuration(projectSummary.avg_session_duration)}
+              {formatDuration(projectSummary.total_session_duration)}
             </div>
             <div className={cn("text-sm", COLORS.ui.text.tertiary)}>
-              {t("analytics.avgSessionTime")}
+              {t("analytics.totalSessionTime")}
             </div>
           </div>
 
@@ -507,8 +563,7 @@ export const AnalyticsDashboard: React.FC = () => {
               {/* Enhanced bar chart */}
               <div className="relative h-48">
                 <div className="absolute  inset-0 flex items-end justify-between gap-1">
-                  {generateDailyData().map((stat) => {
-                    const dailyData = generateDailyData();
+                  {dailyData.map((stat) => {
                     const maxTokens = Math.max(
                       ...dailyData.map((s) => s.total_tokens),
                       1
@@ -592,13 +647,13 @@ export const AnalyticsDashboard: React.FC = () => {
                   <div
                     className={cn("text-lg font-bold", COLORS.ui.text.primary)}
                   >
-                    {generateDailyData().reduce(
+                    {dailyData.reduce(
                       (sum, s) => sum + s.total_tokens,
                       0
                     ) > 0
                       ? formatNumber(
                           Math.round(
-                            generateDailyData().reduce(
+                            dailyData.reduce(
                               (sum, s) => sum + s.total_tokens,
                               0
                             ) / 7
@@ -615,7 +670,7 @@ export const AnalyticsDashboard: React.FC = () => {
                     className={cn("text-lg font-bold", COLORS.ui.text.primary)}
                   >
                     {Math.round(
-                      generateDailyData().reduce(
+                      dailyData.reduce(
                         (sum, s) => sum + s.message_count,
                         0
                       ) / 7
@@ -630,7 +685,7 @@ export const AnalyticsDashboard: React.FC = () => {
                     className={cn("text-lg font-bold", COLORS.ui.text.primary)}
                   >
                     {
-                      generateDailyData().filter((s) => s.total_tokens > 0)
+                      dailyData.filter((s) => s.total_tokens > 0)
                         .length
                     }
                   </div>
@@ -1064,215 +1119,302 @@ export const AnalyticsDashboard: React.FC = () => {
     );
   };
 
-  // Quick Stats Bar Component
-  const QuickStatsBar = () => {
-    if (!projectSummary) return null;
 
-    const sessionRank = sessionComparison?.rank_by_tokens || null;
-    const sessionPercentage =
-      sessionComparison?.percentage_of_project_tokens || 0;
+  // Global Stats View Component - matches ProjectStatsView layout
+  const GlobalStatsView = () => {
+    if (!globalSummary) return null;
 
-    return (
-      <div
-        className={cn(
-          "p-4 rounded-lg border mb-6",
-          "bg-linear-to-r from-indigo-50 via-purple-50 to-pink-50",
-          "dark:from-indigo-950 dark:via-purple-950 dark:to-pink-950",
-          COLORS.semantic.info.border
-        )}
-      >
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-1">
-              <Target
-                className={cn("w-4 h-4 mr-1", COLORS.semantic.info.icon)}
-              />
-              <span
-                className={cn("text-xs font-medium", COLORS.ui.text.tertiary)}
-              >
-                {t("analytics.totalTokens")}
-              </span>
-            </div>
-            <div className={cn("text-xl font-bold", COLORS.ui.text.primary)}>
-              {formatNumber(projectSummary.total_tokens)}
-            </div>
-          </div>
-
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-1">
-              <Users
-                className={cn("w-4 h-4 mr-1", COLORS.semantic.success.icon)}
-              />
-              <span
-                className={cn("text-xs font-medium", COLORS.ui.text.tertiary)}
-              >
-                {t("analytics.totalSessions")}
-              </span>
-            </div>
-            <div className={cn("text-xl font-bold", COLORS.ui.text.primary)}>
-              {projectSummary.total_sessions}
-              {t("analytics.sessionsUnit")}
-            </div>
-          </div>
-
-          {selectedSession && sessionStats && (
-            <>
-              <div className="text-center">
-                <div className="flex items-center justify-center mb-1">
-                  <Award
-                    className={cn("w-4 h-4 mr-1", COLORS.semantic.warning.icon)}
-                  />
-                  <span
-                    className={cn(
-                      "text-xs font-medium",
-                      COLORS.ui.text.tertiary
-                    )}
-                  >
-                    {t("analytics.sessionRank")}
-                  </span>
-                </div>
-                <div
-                  className={cn("text-xl font-bold", COLORS.ui.text.primary)}
-                >
-                  #{sessionRank || "-"}
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="flex items-center justify-center mb-1">
-                  <Timer
-                    className={cn("w-4 h-4 mr-1", COLORS.tools.search.icon)}
-                  />
-                  <span
-                    className={cn(
-                      "text-xs font-medium",
-                      COLORS.ui.text.tertiary
-                    )}
-                  >
-                    {t("analytics.projectShare")}
-                  </span>
-                </div>
-                <div
-                  className={cn("text-xl font-bold", COLORS.ui.text.primary)}
-                >
-                  {sessionPercentage.toFixed(1)}%
-                </div>
-              </div>
-            </>
-          )}
-
-          {!selectedSession && (
-            <>
-              <div className="text-center">
-                <div className="flex items-center justify-center mb-1">
-                  <Clock
-                    className={cn("w-4 h-4 mr-1", COLORS.semantic.warning.icon)}
-                  />
-                  <span
-                    className={cn(
-                      "text-xs font-medium",
-                      COLORS.ui.text.tertiary
-                    )}
-                  >
-                    {t("analytics.avgSession")}
-                  </span>
-                </div>
-                <div
-                  className={cn("text-xl font-bold", COLORS.ui.text.primary)}
-                >
-                  {formatDuration(projectSummary.avg_session_duration)}
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="flex items-center justify-center mb-1">
-                  <Activity
-                    className={cn("w-4 h-4 mr-1", COLORS.tools.search.icon)}
-                  />
-                  <span
-                    className={cn(
-                      "text-xs font-medium",
-                      COLORS.ui.text.tertiary
-                    )}
-                  >
-                    {t("analytics.activeTime")}
-                  </span>
-                </div>
-                <div
-                  className={cn("text-xl font-bold", COLORS.ui.text.primary)}
-                >
-                  {projectSummary.most_active_hour}
-                  {t("analytics.hourSuffix")}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // Tab Navigation Component
-  const TabNavigation = () => {
-    const hasSessionData = selectedSession && sessionStats && sessionComparison;
+    // Use the actual calculated session duration from backend (in minutes)
+    const totalSessionTime = globalSummary.total_session_duration_minutes;
 
     return (
-      <div className="flex mb-6">
-        <div
-          className={cn("flex rounded-lg p-1", "bg-gray-100 dark:bg-gray-800")}
-        >
-          <button
-            onClick={() => setActiveTab("project")}
+      <div className="space-y-6">
+        {/* Overview Cards - Total Tokens first, then Total Messages */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div
             className={cn(
-              "px-4 py-2 rounded-md font-medium transition-all",
-              "flex items-center space-x-2",
-              activeTab === "project"
-                ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              "p-6 rounded-lg border",
+              "bg-linear-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950",
+              COLORS.tools.search.border
             )}
           >
-            <BarChart3 className="w-4 h-4" />
-            <span>{t("analytics.projectOverview")}</span>
-          </button>
+            <div className="flex items-center justify-between mb-2">
+              <Activity className={cn("w-8 h-8", COLORS.tools.search.icon)} />
+              <span className={cn("text-xs", COLORS.ui.text.muted)}>
+                {globalSummary.total_projects} {t("analytics.totalProjects")}
+              </span>
+            </div>
+            <div className={cn("text-2xl font-bold", COLORS.ui.text.primary)}>
+              {formatNumber(globalSummary.total_tokens)}
+            </div>
+            <div className={cn("text-sm", COLORS.ui.text.tertiary)}>
+              {t("analytics.totalTokens")}
+            </div>
+          </div>
 
-          {hasSessionData && (
-            <button
-              onClick={() => setActiveTab("session")}
-              className={cn(
-                "px-4 py-2 rounded-md font-medium transition-all",
-                "flex items-center space-x-2",
-                activeTab === "session"
-                  ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-              )}
-            >
-              <Target className="w-4 h-4" />
-              <span>{t("analytics.sessionDetails")}</span>
-            </button>
-          )}
+          <div
+            className={cn(
+              "p-6 rounded-lg border",
+              "bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950",
+              COLORS.semantic.info.border
+            )}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <MessageCircle
+                className={cn("w-8 h-8", COLORS.semantic.info.icon)}
+              />
+              <span className={cn("text-xs", COLORS.ui.text.muted)}>
+                {t("analytics.totalSessions")}: {globalSummary.total_sessions}
+              </span>
+            </div>
+            <div className={cn("text-2xl font-bold", COLORS.ui.text.primary)}>
+              {formatNumber(globalSummary.total_messages)}
+            </div>
+            <div className={cn("text-sm", COLORS.ui.text.tertiary)}>
+              {t("analytics.totalMessages")}
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              "p-6 rounded-lg border",
+              "bg-linear-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950",
+              COLORS.semantic.success.border
+            )}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <Clock className={cn("w-8 h-8", COLORS.semantic.success.icon)} />
+            </div>
+            <div className={cn("text-2xl font-bold", COLORS.ui.text.primary)}>
+              {formatDuration(totalSessionTime)}
+            </div>
+            <div className={cn("text-sm", COLORS.ui.text.tertiary)}>
+              {t("analytics.sessionTime")}
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              "p-6 rounded-lg border",
+              "bg-linear-to-br from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950",
+              COLORS.semantic.warning.border
+            )}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <Wrench className={cn("w-8 h-8", COLORS.semantic.warning.icon)} />
+            </div>
+            <div className={cn("text-2xl font-bold", COLORS.ui.text.primary)}>
+              {globalSummary.most_used_tools.length}
+            </div>
+            <div className={cn("text-sm", COLORS.ui.text.tertiary)}>
+              {t("analytics.toolsUsed")}
+            </div>
+          </div>
         </div>
 
-        {hasSessionData && (
-          <div className="ml-auto flex items-center space-x-2 text-sm text-gray-500">
-            <Hash className="w-4 h-4" />
-            <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-              {selectedSession.session_id.substring(0, 8)}...
-            </code>
+        {/* First Row: Model Distribution and Most Used Tools */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Model Distribution */}
+          {globalSummary.model_distribution.length > 0 && (
+            <div
+              className={cn(
+                "p-6 rounded-lg border",
+                COLORS.ui.background.white,
+                COLORS.ui.border.medium
+              )}
+            >
+              <h3 className={cn("text-lg font-semibold mb-4", COLORS.ui.text.primary)}>
+                {t("analytics.modelDistribution")}
+              </h3>
+              <div className="space-y-3">
+                {globalSummary.model_distribution.map((model) => {
+                  const price = calculateModelPrice(
+                    model.model_name,
+                    model.input_tokens,
+                    model.output_tokens,
+                    model.cache_creation_tokens,
+                    model.cache_read_tokens
+                  );
+                  return (
+                    <div key={model.model_name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={cn("text-sm font-medium", COLORS.ui.text.primary)}>
+                          {model.model_name}
+                        </span>
+                        <span className={cn("text-sm", COLORS.ui.text.secondary)}>
+                          {formatNumber(model.token_count)} tokens (${price.toFixed(price >= 100 ? 0 : price >= 10 ? 1 : 2)})
+                        </span>
+                      </div>
+                      <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all"
+                          style={{
+                            width: `${(model.token_count / globalSummary.total_tokens) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Most Used Tools */}
+          <div
+            className={cn(
+              "p-6 rounded-lg border",
+              COLORS.ui.background.white,
+              COLORS.ui.border.medium
+            )}
+          >
+            <h3
+              className={cn(
+                "text-lg font-semibold mb-4",
+                COLORS.ui.text.primary
+              )}
+            >
+              {t("analytics.mostUsedToolsTitle")}
+            </h3>
+            {globalSummary.most_used_tools.length > 0 ? (
+              <ToolUsageChart tools={globalSummary.most_used_tools} />
+            ) : (
+              <div className={cn("text-center py-8", COLORS.ui.text.muted)}>
+                {t("analytics.No tool usage data available")}
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Second Row: Activity Heatmap and Top Projects */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Activity Heatmap */}
+          <div
+            className={cn(
+              "p-6 rounded-lg border",
+              COLORS.ui.background.white,
+              COLORS.ui.border.medium
+            )}
+          >
+            <h3
+              className={cn(
+                "text-lg font-semibold mb-4",
+                COLORS.ui.text.primary
+              )}
+            >
+              {t("analytics.activityHeatmapTitle")}
+            </h3>
+            {globalSummary.activity_heatmap.length > 0 ? (
+              <ActivityHeatmapComponent
+                data={globalSummary.activity_heatmap}
+              />
+            ) : (
+              <div className={cn("text-center py-8", COLORS.ui.text.muted)}>
+                {t("analytics.No activity data available")}
+              </div>
+            )}
+          </div>
+
+          {/* Top Projects */}
+          {globalSummary.top_projects.length > 0 && (
+            <div
+              className={cn(
+                "p-6 rounded-lg border",
+                COLORS.ui.background.white,
+                COLORS.ui.border.medium
+              )}
+            >
+              <h3 className={cn("text-lg font-semibold mb-4", COLORS.ui.text.primary)}>
+                {t("analytics.topProjects")}
+              </h3>
+              <div className="space-y-3">
+                {globalSummary.top_projects.slice(0, 10).map((project, index) => (
+                  <div
+                    key={project.project_name}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg",
+                      "bg-gray-50 dark:bg-gray-800/50"
+                    )}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm",
+                          index === 0 ? "bg-yellow-500 text-white" :
+                          index === 1 ? "bg-gray-400 text-white" :
+                          index === 2 ? "bg-orange-600 text-white" :
+                          "bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                        )}
+                      >
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className={cn("font-medium text-sm", COLORS.ui.text.primary)}>
+                          {project.project_name}
+                        </p>
+                        <p className={cn("text-xs", COLORS.ui.text.tertiary)}>
+                          {project.sessions} sessions • {project.messages} messages
+                        </p>
+                      </div>
+                    </div>
+                    <div className={cn("text-right")}>
+                      <p className={cn("font-bold text-sm", COLORS.ui.text.primary)}>
+                        {formatNumber(project.tokens)}
+                      </p>
+                      <p className={cn("text-xs", COLORS.ui.text.tertiary)}>{t("analytics.tokens")}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
-  // Auto-switch to session tab when session is selected
+  // Auto-switch to session tab when session is selected, reset to project tab when session is cleared
   React.useEffect(() => {
     if (selectedSession && sessionStats && sessionComparison) {
       setActiveTab("session");
+    } else {
+      // Reset to project tab when no session is selected or when switching projects
+      setActiveTab("project");
     }
   }, [selectedSession, sessionStats, sessionComparison]);
 
-  // Main render logic
-  if (!selectedProject) {
+  // Reset to project tab when project changes
+  React.useEffect(() => {
+    setActiveTab("project");
+  }, [selectedProject?.name]);
+
+  // Main render logic - Show Global Stats when viewing global stats or no project is selected
+  if (isViewingGlobalStats || !selectedProject) {
+    if (isLoadingGlobalStats) {
+      return (
+        <div
+          className={cn(
+            "flex-1 p-6 flex items-center justify-center",
+            COLORS.ui.background.primary
+          )}
+        >
+          <div className="text-center">
+            <Loader2 className={cn("w-16 h-16 mx-auto mb-4 animate-spin", COLORS.ui.text.disabled)} />
+            <h2 className={cn("text-xl font-semibold mb-2", COLORS.ui.text.primary)}>
+              {t("analytics.loadingGlobalStats")}
+            </h2>
+            <p className={cn("text-sm", COLORS.ui.text.tertiary)}>
+              {t("analytics.loadingGlobalStatsDescription")}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (globalSummary) {
+      return <GlobalStatsView />;
+    }
+
     return (
       <div
         className={cn(
@@ -1297,25 +1439,52 @@ export const AnalyticsDashboard: React.FC = () => {
     );
   }
 
+  // Project-specific stats
+  const hasSessionData = selectedSession && sessionStats && sessionComparison;
+
   return (
-    <div className="flex-1 p-6 overflow-auto">
-      <div className="mb-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <CircuitBoard className={cn("w-6 h-6", COLORS.semantic.info.icon)} />
-          <h2 className={cn("text-xl font-semibold", COLORS.ui.text.primary)}>
-            {t("analytics.dashboard")}
-          </h2>
+    <div className={cn("flex-1 p-6 overflow-auto", COLORS.ui.background.primary)}>
+      {/* Tab Selector - Only show when session is selected */}
+      {hasSessionData && (
+        <div className="flex space-x-2 mb-6">
+          <button
+            onClick={() => setActiveTab("project")}
+            className={cn(
+              "px-4 py-2 rounded-lg transition-colors font-medium",
+              activeTab === "project"
+                ? "bg-blue-500 text-white"
+                : cn(
+                    "bg-gray-200 dark:bg-gray-700",
+                    COLORS.ui.text.secondary,
+                    "hover:bg-gray-300 dark:hover:bg-gray-600"
+                  )
+            )}
+          >
+            {t("analytics.projectOverview")}
+          </button>
+          <button
+            onClick={() => setActiveTab("session")}
+            className={cn(
+              "px-4 py-2 rounded-lg transition-colors font-medium",
+              activeTab === "session"
+                ? "bg-blue-500 text-white"
+                : cn(
+                    "bg-gray-200 dark:bg-gray-700",
+                    COLORS.ui.text.secondary,
+                    "hover:bg-gray-300 dark:hover:bg-gray-600"
+                  )
+            )}
+          >
+            {t("analytics.sessionDetails")}
+          </button>
         </div>
-        <p className={cn(COLORS.ui.text.tertiary)}>
-          {selectedProject?.name}
-          {selectedSession && ` • ${t("analytics.Session Analysis")}`}
-        </p>
-      </div>
+      )}
 
-      <QuickStatsBar />
-      <TabNavigation />
-
-      {activeTab === "project" ? <ProjectStatsView /> : <SessionStatsView />}
+      {/* Render based on active tab - but always show ProjectStatsView if no session data */}
+      {hasSessionData && activeTab === "session" ? <SessionStatsView /> : <ProjectStatsView />}
     </div>
   );
 };
+
+// Add display name for debugging
+AnalyticsDashboard.displayName = "AnalyticsDashboard";

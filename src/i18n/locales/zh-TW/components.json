@@ -3,7 +3,9 @@
     "title": "專案：",
     "notFound": "未找到專案",
     "selectToView": "選擇專案以查看分析",
-    "count": "專案：{{count}}個"
+    "count": "專案：{{count}}個",
+    "globalStats": "📊 全域統計",
+    "globalStatsDescription": "所有專案概覽"
   },
   "session": {
     "title": "會話：",
@@ -192,7 +194,19 @@
     "totalTokenUsageLabel": "總權杖使用量",
     "tooltipTokens": "權杖:",
     "tooltipMessages": "訊息:",
-    "tooltipSessions": "對話:"
+    "tooltipSessions": "對話:",
+    "globalOverview": "全域概覽",
+    "globalOverviewDescription": "電腦上所有 Claude Code 專案的彙整統計",
+    "totalProjects": "總專案數",
+    "activityPeriod": "活動時期",
+    "firstMessage": "首條訊息",
+    "lastMessage": "最後訊息",
+    "daysSpan": "天數範圍",
+    "days": "天",
+    "modelDistribution": "模型分佈",
+    "topProjects": "按權杖數排名的專案",
+    "loadingGlobalStats": "正在載入全域統計",
+    "loadingGlobalStatsDescription": "正在彙整所有專案的資料..."
   },
   "time": {
     "start": "開始：",

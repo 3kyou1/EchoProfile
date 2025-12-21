@@ -126,9 +126,9 @@ pub struct SessionTokenStats {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DailyStats {
     pub date: String,
-    pub total_tokens: u32,
-    pub input_tokens: u32,
-    pub output_tokens: u32,
+    pub total_tokens: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
     pub message_count: usize,
     pub session_count: usize,
     pub active_hours: usize,
@@ -147,7 +147,7 @@ pub struct ActivityHeatmap {
     pub hour: u8,
     pub day: u8,
     pub activity_count: u32,
-    pub tokens_used: u32,
+    pub tokens_used: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -155,9 +155,10 @@ pub struct ProjectStatsSummary {
     pub project_name: String,
     pub total_sessions: usize,
     pub total_messages: usize,
-    pub total_tokens: u32,
-    pub avg_tokens_per_session: u32,
+    pub total_tokens: u64,
+    pub avg_tokens_per_session: u64,
     pub avg_session_duration: u32,
+    pub total_session_duration: u32,
     pub most_active_hour: u8,
     pub most_used_tools: Vec<ToolUsageStats>,
     pub daily_stats: Vec<DailyStats>,
@@ -167,10 +168,10 @@ pub struct ProjectStatsSummary {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TokenDistribution {
-    pub input: u32,
-    pub output: u32,
-    pub cache_creation: u32,
-    pub cache_read: u32,
+    pub input: u64,
+    pub output: u64,
+    pub cache_creation: u64,
+    pub cache_read: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -181,6 +182,48 @@ pub struct SessionComparison {
     pub rank_by_tokens: usize,
     pub rank_by_duration: usize,
     pub is_above_average: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DateRange {
+    pub first_message: Option<String>,
+    pub last_message: Option<String>,
+    pub days_span: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelStats {
+    pub model_name: String,
+    pub message_count: u32,
+    pub token_count: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cache_creation_tokens: u64,
+    pub cache_read_tokens: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectRanking {
+    pub project_name: String,
+    pub sessions: u32,
+    pub messages: u32,
+    pub tokens: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct GlobalStatsSummary {
+    pub total_projects: u32,
+    pub total_sessions: u32,
+    pub total_messages: u32,
+    pub total_tokens: u64,
+    pub total_session_duration_minutes: u64,
+    pub date_range: DateRange,
+    pub token_distribution: TokenDistribution,
+    pub daily_stats: Vec<DailyStats>,
+    pub activity_heatmap: Vec<ActivityHeatmap>,
+    pub most_used_tools: Vec<ToolUsageStats>,
+    pub model_distribution: Vec<ModelStats>,
+    pub top_projects: Vec<ProjectRanking>,
 }
 
 #[cfg(test)]

@@ -3,7 +3,9 @@
     "title": "프로젝트:",
     "notFound": "프로젝트를 찾을 수 없습니다",
     "selectToView": "분석을 보려면 프로젝트를 선택하세요",
-    "count": "프로젝트: {{count}}개"
+    "count": "프로젝트: {{count}}개",
+    "globalStats": "📊 전체 통계",
+    "globalStatsDescription": "모든 프로젝트 개요"
   },
   "session": {
     "title": "세션:",
@@ -193,7 +195,19 @@
     "toolUsageName": "도구 사용 이름",
     "tokens": "토큰",
     "units": "단위",
-    "tokenUsageGeneral": "토큰 사용량"
+    "tokenUsageGeneral": "토큰 사용량",
+    "globalOverview": "전체 개요",
+    "globalOverviewDescription": "컴퓨터의 모든 Claude Code 프로젝트에 대한 통합 통계",
+    "totalProjects": "전체 프로젝트",
+    "activityPeriod": "활동 기간",
+    "firstMessage": "첫 메시지",
+    "lastMessage": "마지막 메시지",
+    "daysSpan": "기간",
+    "days": "일",
+    "modelDistribution": "모델 분포",
+    "topProjects": "토큰 기준 상위 프로젝트",
+    "loadingGlobalStats": "전체 통계 로딩 중",
+    "loadingGlobalStatsDescription": "모든 프로젝트의 데이터를 집계하는 중..."
   },
   "time": {
     "start": "시작:",

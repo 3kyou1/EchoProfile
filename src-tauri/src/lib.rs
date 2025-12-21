@@ -28,6 +28,7 @@ pub fn run() {
             get_project_token_stats,
             get_project_stats_summary,
             get_session_comparison,
+            get_global_stats_summary,
             check_for_updates,
             check_for_updates_secure,
             verify_download_integrity,

@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   MessageCircle,
+  Database,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ClaudeProject, ClaudeSession } from "../types";
@@ -20,7 +21,9 @@ interface ProjectTreeProps {
   selectedSession: ClaudeSession | null;
   onProjectSelect: (project: ClaudeProject) => void;
   onSessionSelect: (session: ClaudeSession) => void;
+  onGlobalStatsClick: () => void;
   isLoading: boolean;
+  isViewingGlobalStats: boolean;
 }
 
 export const ProjectTree: React.FC<ProjectTreeProps> = ({
@@ -29,7 +32,9 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
   selectedSession,
   onProjectSelect,
   onSessionSelect,
+  onGlobalStatsClick,
   isLoading,
+  isViewingGlobalStats,
 }) => {
   const [expandedProject, setExpandedProject] = useState("");
   const { t, i18n } = useTranslation();
@@ -90,6 +95,46 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
           </div>
         ) : (
           <div className="space-y-2">
+            {/* Global Stats Button */}
+            <button
+              onClick={onGlobalStatsClick}
+              className={cn(
+                "w-full px-4 py-3 flex items-center space-x-3 text-left transition-colors",
+                "hover:bg-gray-200 dark:hover:bg-gray-700",
+                isViewingGlobalStats
+                  ? "bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-500"
+                  : "bg-transparent"
+              )}
+            >
+              <Database
+                className={cn(
+                  "w-5 h-5 flex-shrink-0",
+                  isViewingGlobalStats
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-gray-600 dark:text-gray-400"
+                )}
+              />
+              <div className="flex-1 min-w-0">
+                <div
+                  className={cn(
+                    "font-semibold truncate",
+                    isViewingGlobalStats
+                      ? "text-blue-900 dark:text-blue-100"
+                      : "text-gray-900 dark:text-gray-100"
+                  )}
+                >
+                  {t("components:project.globalStats", "📊 Global Statistics")}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {t(
+                    "components:project.globalStatsDescription",
+                    "All projects overview"
+                  )}
+                </div>
+              </div>
+            </button>
+
+            {/* Projects List */}
             {projects.map((project) => {
               const isExpanded = expandedProject === project.path;
 

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ProjectTree } from "./components/ProjectTree";
 import { MessageViewer } from "./components/MessageViewer";
 import { TokenStatsViewer } from "./components/TokenStatsViewer";
@@ -39,6 +39,13 @@ function App() {
     selectSession,
     setSessionSearchQuery,
     clearSessionSearch,
+    loadGlobalStats,
+    setAnalyticsCurrentView,
+    setAnalyticsLoadingProjectSummary,
+    loadProjectStatsSummary,
+    setAnalyticsProjectSummary,
+    setAnalyticsProjectSummaryError,
+    loadProjectTokenStats,
   } = useAppStore();
 
   const {
@@ -52,23 +59,39 @@ function App() {
   const { t: tMessages } = useTranslation("messages");
   const { language, loadLanguage } = useLanguageStore();
 
-  // 세션 선택 시 현재 뷰 유지 (useAnalytics hook에서 자동 데이터 업데이트 처리)
+  // Track if viewing global stats
+  const [isViewingGlobalStats, setIsViewingGlobalStats] = useState(false);
+
+  // Global Stats 버튼 클릭 핸들러
+  const handleGlobalStatsClick = useCallback(() => {
+    setIsViewingGlobalStats(true);
+    // Clear selected project and session to show global view
+    useAppStore.setState({ selectedProject: null, selectedSession: null });
+    // Switch to analytics view to show global dashboard
+    setAnalyticsCurrentView("analytics");
+    loadGlobalStats();
+  }, [loadGlobalStats, setAnalyticsCurrentView]);
+
+  // 세션 선택 시 메시지 뷰로 전환 (기본값)
   const handleSessionSelect = async (session: ClaudeSession) => {
+    // Switch to messages view when selecting a session
+    setAnalyticsCurrentView("messages");
     await selectSession(session);
-    // useAnalytics hook의 useEffect에서 자동으로 데이터 업데이트 처리
   };
 
   useEffect(() => {
     // 언어 설정 로드 후 앱 초기화
-    loadLanguage()
-      .then(() => {
-        initializeApp();
-      })
-      .catch((error) => {
+    const initialize = async () => {
+      try {
+        await loadLanguage();
+      } catch (error) {
         console.error("Failed to load language:", error);
+      } finally {
         // 기본 언어로 앱 초기화 진행
-        initializeApp();
-      });
+        await initializeApp();
+      }
+    };
+    initialize();
   }, [initializeApp, loadLanguage]);
 
   // i18n 언어 변경 감지
@@ -99,39 +122,57 @@ function App() {
   }, [language, i18nInstance]);
 
   // 프로젝트 선택 핸들러 (분석 상태 초기화 포함)
-  const handleProjectSelect = async (project: ClaudeProject) => {
-    const wasAnalyticsOpen = computed.isAnalyticsView;
-    const wasTokenStatsOpen = computed.isTokenStatsView;
+  const handleProjectSelect = useCallback(
+    async (project: ClaudeProject) => {
+      const wasTokenStatsOpen = computed.isTokenStatsView;
 
-    // 기존 분석 데이터 초기화
-    if (!computed.isMessagesView) {
-      analyticsActions.switchToMessages();
-    }
+      // Clear global stats view flag when selecting a project
+      setIsViewingGlobalStats(false);
 
-    // 프로젝트 선택
-    await selectProject(project);
+      // 프로젝트 선택
+      await selectProject(project);
 
-    // 분석 탭이 열려있었다면 새 프로젝트의 분석 데이터 자동 로드
-    if (wasAnalyticsOpen) {
-      try {
-        await analyticsActions.switchToAnalytics();
-      } catch (error) {
-        console.error("Failed to auto-load analytics for new project:", error);
+      // 토큰 통계 탭이 열려있었다면 유지, 아니면 기본적으로 분석 대시보드 표시
+      if (wasTokenStatsOpen) {
+        try {
+          setAnalyticsCurrentView("tokenStats");
+          await loadProjectTokenStats(project.path);
+        } catch (error) {
+          console.error(
+            "Failed to auto-load token stats for new project:",
+            error
+          );
+        }
+      } else {
+        // Always show analytics dashboard when selecting a project
+        try {
+          // Load analytics data using the project parameter directly (not from state)
+          setAnalyticsCurrentView("analytics");
+          setAnalyticsLoadingProjectSummary(true);
+          const summary = await loadProjectStatsSummary(project.path);
+          setAnalyticsProjectSummary(summary);
+        } catch (error) {
+          console.error("Failed to auto-load analytics for new project:", error);
+          setAnalyticsProjectSummary(null); // Clear stale data
+          setAnalyticsProjectSummaryError(
+            error instanceof Error ? error.message : "Failed to load project stats"
+          );
+        } finally {
+          setAnalyticsLoadingProjectSummary(false);
+        }
       }
-    }
-
-    // 토큰 통계 탭이 열려있었다면 새 프로젝트의 토큰 통계 자동 로드
-    if (wasTokenStatsOpen) {
-      try {
-        await analyticsActions.switchToTokenStats();
-      } catch (error) {
-        console.error(
-          "Failed to auto-load token stats for new project:",
-          error
-        );
-      }
-    }
-  };
+    },
+    [
+      computed.isTokenStatsView,
+      selectProject,
+      setAnalyticsCurrentView,
+      loadProjectTokenStats,
+      setAnalyticsLoadingProjectSummary,
+      loadProjectStatsSummary,
+      setAnalyticsProjectSummary,
+      setAnalyticsProjectSummaryError,
+    ]
+  );
 
   // Show folder selector if needed
 
@@ -193,7 +234,9 @@ function App() {
             selectedSession={selectedSession}
             onProjectSelect={handleProjectSelect}
             onSessionSelect={handleSessionSelect}
+            onGlobalStatsClick={handleGlobalStatsClick}
             isLoading={isLoadingProjects || isLoadingSessions}
+            isViewingGlobalStats={isViewingGlobalStats}
           />
 
           {/* Main Content Area */}
@@ -201,7 +244,8 @@ function App() {
             {/* Content Header */}
             {(selectedSession ||
               computed.isTokenStatsView ||
-              computed.isAnalyticsView) && (
+              computed.isAnalyticsView ||
+              isViewingGlobalStats) && (
               <div
                 className={cn(
                   "p-4 border-b",
@@ -217,15 +261,19 @@ function App() {
                         COLORS.ui.text.primary
                       )}
                     >
-                      {computed.isAnalyticsView
+                      {isViewingGlobalStats
+                        ? tComponents("analytics.globalOverview")
+                        : computed.isAnalyticsView
                         ? tComponents("analytics.dashboard")
                         : computed.isTokenStatsView
                         ? tMessages("tokenStats.title")
                         : tComponents("message.conversation")}
                     </h2>
                     <span className={cn("text-sm", COLORS.ui.text.secondary)}>
-                      {selectedSession?.summary ||
-                        tComponents("session.summaryNotFound")}
+                      {isViewingGlobalStats
+                        ? tComponents("analytics.globalOverviewDescription")
+                        : selectedSession?.summary ||
+                          tComponents("session.summaryNotFound")}
                     </span>
                     {computed.isMessagesView && selectedSession && (
                       <div>
@@ -245,7 +293,7 @@ function App() {
                         {tComponents("analytics.tokenUsageDetailed")}
                       </p>
                     )}
-                    {computed.isAnalyticsView && (
+                    {computed.isAnalyticsView && !isViewingGlobalStats && (
                       <p className={cn("text-sm mt-1", COLORS.ui.text.muted)}>
                         {selectedSession
                           ? tComponents("analytics.projectSessionAnalysis")
@@ -259,9 +307,9 @@ function App() {
 
             {/* Content */}
             <div className="flex-1 overflow-hidden">
-              {computed.isAnalyticsView ? (
+              {computed.isAnalyticsView || isViewingGlobalStats ? (
                 <div className="h-full overflow-y-auto">
-                  <AnalyticsDashboard />
+                  <AnalyticsDashboard isViewingGlobalStats={isViewingGlobalStats} />
                 </div>
               ) : computed.isTokenStatsView ? (
                 <div className="h-full overflow-y-auto p-6 space-y-8">

@@ -240,6 +240,7 @@ export interface ProjectStatsSummary {
   total_tokens: number;
   avg_tokens_per_session: number;
   avg_session_duration: number; // in minutes
+  total_session_duration: number; // in minutes - total time across all sessions
   most_active_hour: number;
   most_used_tools: ToolUsageStats[];
   daily_stats: DailyStats[];
@@ -259,6 +260,49 @@ export interface SessionComparison {
   rank_by_tokens: number;
   rank_by_duration: number;
   is_above_average: boolean;
+}
+
+export interface DateRange {
+  first_message?: string;
+  last_message?: string;
+  days_span: number;
+}
+
+export interface ModelStats {
+  model_name: string;
+  message_count: number;
+  token_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
+}
+
+export interface ProjectRanking {
+  project_name: string;
+  sessions: number;
+  messages: number;
+  tokens: number;
+}
+
+export interface GlobalStatsSummary {
+  total_projects: number;
+  total_sessions: number;
+  total_messages: number;
+  total_tokens: number;
+  total_session_duration_minutes: number;
+  date_range: DateRange;
+  token_distribution: {
+    input: number;
+    output: number;
+    cache_creation: number;
+    cache_read: number;
+  };
+  daily_stats: DailyStats[];
+  activity_heatmap: ActivityHeatmap[];
+  most_used_tools: ToolUsageStats[];
+  model_distribution: ModelStats[];
+  top_projects: ProjectRanking[];
 }
 
 // 업데이트 관련 타입 정의

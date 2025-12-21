@@ -3,7 +3,9 @@
     "title": "项目：",
     "notFound": "未找到项目",
     "selectToView": "选择项目以查看分析",
-    "count": "项目：{{count}}个"
+    "count": "项目：{{count}}个",
+    "globalStats": "📊 全局统计",
+    "globalStatsDescription": "所有项目概览"
   },
   "session": {
     "title": "会话：",
@@ -192,7 +194,19 @@
     "totalTokenUsageLabel": "总令牌使用量",
     "tooltipTokens": "令牌:",
     "tooltipMessages": "消息:",
-    "tooltipSessions": "会话:"
+    "tooltipSessions": "会话:",
+    "globalOverview": "全局概览",
+    "globalOverviewDescription": "计算机上所有 Claude Code 项目的汇总统计",
+    "totalProjects": "总项目数",
+    "activityPeriod": "活动时期",
+    "firstMessage": "首条消息",
+    "lastMessage": "最后消息",
+    "daysSpan": "天数跨度",
+    "days": "天",
+    "modelDistribution": "模型分布",
+    "topProjects": "按令牌数排名的项目",
+    "loadingGlobalStats": "正在加载全局统计",
+    "loadingGlobalStatsDescription": "正在汇总所有项目的数据..."
   },
   "time": {
     "start": "开始：",

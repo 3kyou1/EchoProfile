@@ -150,7 +150,7 @@ export const ContentArrayRenderer = ({ toolResult }: Props) => {
                       <div className="prose prose-sm max-w-none prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-code:text-red-600 dark:prose-code:text-red-400 prose-code:bg-gray-100 dark:prose-code:bg-gray-700 prose-pre:bg-gray-900 dark:prose-pre:bg-gray-800 prose-pre:text-gray-100 dark:prose-pre:text-gray-200 prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-ul:text-gray-700 dark:prose-ul:text-gray-300 prose-ol:text-gray-700 dark:prose-ol:text-gray-300">
                         {itemObj.text.includes("<thinking>") &&
                         itemObj.text.includes("</thinking>") ? (
-                          <ThinkingRenderer text={itemObj.text} />
+                          <ThinkingRenderer thinking={itemObj.text} />
                         ) : (
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {itemObj.text}

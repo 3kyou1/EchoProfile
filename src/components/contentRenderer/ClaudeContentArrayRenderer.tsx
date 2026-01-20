@@ -230,10 +230,10 @@ export const ClaudeContentArrayRenderer = memo(function ClaudeContentArrayRender
 
           case "thinking":
             if (typeof item.thinking === "string") {
-              return <ThinkingRenderer key={index} content={item.thinking} />;
+              return <ThinkingRenderer key={index} thinking={item.thinking} />;
             }
             if (typeof item.content === "string") {
-              return <ThinkingRenderer key={index} content={item.content} />;
+              return <ThinkingRenderer key={index} thinking={item.content} />;
             }
             return null;
 
@@ -382,6 +382,7 @@ export const ClaudeContentArrayRenderer = memo(function ClaudeContentArrayRender
           case "tool_result":
             return (
               <ClaudeToolResultItem
+                key={index}
                 toolResult={item}
                 index={index}
                 searchQuery={filterType === "toolId" ? searchQuery : ""}

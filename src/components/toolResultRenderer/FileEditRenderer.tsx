@@ -31,6 +31,14 @@ export const FileEditRenderer = ({ toolResult }: Props) => {
       ? toolResult.userModified
       : false;
 
+  // Compute file content after applying the edit
+  const fileAfterChange =
+    originalFile && oldString
+      ? replaceAll
+        ? originalFile.split(oldString).join(newString)
+        : originalFile.replace(oldString, newString)
+      : "";
+
   const formatShortPath = (path: string): string => {
     if (!path) return "";
     const parts = path.split('/').filter(Boolean);
@@ -59,6 +67,12 @@ export const FileEditRenderer = ({ toolResult }: Props) => {
                 `edit-result-${filePath}`,
                 t('fileEditRenderer.copyChangedResult'),
                 true
+              )}
+            {fileAfterChange &&
+              renderCopyButton(
+                fileAfterChange,
+                `file-after-change-${filePath}`,
+                t('fileEditRenderer.copyFileAfterChange')
               )}
             {originalFile &&
               renderCopyButton(

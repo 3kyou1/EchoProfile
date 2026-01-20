@@ -3,6 +3,7 @@ import { ProjectTree } from "./components/ProjectTree";
 import { MessageViewer } from "./components/MessageViewer";
 import { TokenStatsViewer } from "./components/TokenStatsViewer";
 import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
+import { RecentEditsViewer } from "./components/RecentEditsViewer";
 import { SimpleUpdateManager } from "./components/SimpleUpdateManager";
 import { useAppStore } from "./store/useAppStore";
 import { useAnalytics } from "./hooks/useAnalytics";
@@ -248,6 +249,7 @@ function App() {
             {/* Content Header - Only for Analytics/Token Stats views (Messages view has its own toolbar) */}
             {(computed.isTokenStatsView ||
               computed.isAnalyticsView ||
+              computed.isRecentEditsView ||
               isViewingGlobalStats) && (
               <div
                 className={cn(
@@ -268,11 +270,15 @@ function App() {
                         ? tComponents("analytics.globalOverview")
                         : computed.isAnalyticsView
                         ? tComponents("analytics.dashboard")
+                        : computed.isRecentEditsView
+                        ? tComponents("recentEdits.title")
                         : tMessages("tokenStats.title")}
                     </h2>
                     <span className={cn("text-sm", COLORS.ui.text.secondary)}>
                       {isViewingGlobalStats
                         ? tComponents("analytics.globalOverviewDescription")
+                        : computed.isRecentEditsView
+                        ? tComponents("recentEdits.description")
                         : selectedSession?.summary ||
                           tComponents("session.summaryNotFound")}
                     </span>
@@ -295,7 +301,15 @@ function App() {
 
             {/* Content */}
             <div className="flex-1 overflow-hidden">
-              {computed.isAnalyticsView || isViewingGlobalStats ? (
+              {computed.isRecentEditsView ? (
+                <div className="h-full overflow-y-auto">
+                  <RecentEditsViewer
+                    recentEdits={analyticsState.recentEdits}
+                    isLoading={analyticsState.isLoadingRecentEdits}
+                    error={analyticsState.recentEditsError}
+                  />
+                </div>
+              ) : computed.isAnalyticsView || isViewingGlobalStats ? (
                 <div className="h-full overflow-y-auto">
                   <AnalyticsDashboard isViewingGlobalStats={isViewingGlobalStats} />
                 </div>

@@ -219,7 +219,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ isViewin
   const ActivityHeatmapComponent = ({ data }: { data: ActivityHeatmap[] }) => {
     const maxActivity = Math.max(...data.map((d) => d.activity_count), 1);
     const hours = Array.from({ length: 24 }, (_, i) => i);
-    const days = t("analytics.weekdayNames", { returnObjects: true });
+    const days = t("analytics.weekdayNames", { returnObjects: true }) as string[];
 
     // Color scale using CSS variables with inline styles
     const getHeatColor = (intensity: number): string => {

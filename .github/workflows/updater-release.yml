@@ -1,4 +1,6 @@
 # GitHub Releases에서 Tauri 업데이터를 위한 메타데이터 자동 생성
+# 참고: https://v2.tauri.app/distribute/pipelines/github/
+# 참고: https://github.com/tauri-apps/tauri-action
 name: Release with Updater Metadata
 
 on:
@@ -6,100 +8,154 @@ on:
     tags:
       - "v*"
 
+# 동시 실행 방지 - race condition 및 중복 릴리즈 방지
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false  # 진행 중인 릴리즈는 취소하지 않음
+
 permissions:
   contents: write
 
+env:
+  # 공통 환경 변수
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+
 jobs:
+  # 1단계: 릴리즈 생성 (단일 job으로 race condition 방지)
   create-release:
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create-release.outputs.result }}
+      version: ${{ steps.get-version.outputs.version }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: get version from tag
-        run: echo "PACKAGE_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+      - name: Get version from tag
+        id: get-version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Version: $VERSION"
 
-      - name: create release
+      - name: Create draft release
         id: create-release
         uses: actions/github-script@v7
         with:
+          retries: 3
           script: |
+            const version = '${{ steps.get-version.outputs.version }}';
+
+            // 기존 릴리즈가 있는지 확인
+            try {
+              const { data: existingRelease } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: `v${version}`
+              });
+
+              if (existingRelease) {
+                console.log(`⚠️ Release for v${version} already exists (ID: ${existingRelease.id})`);
+                // 기존 draft 릴리즈면 재사용
+                if (existingRelease.draft) {
+                  console.log('♻️ Reusing existing draft release');
+                  return existingRelease.id;
+                }
+                // 이미 발행된 릴리즈면 에러
+                throw new Error(`Release v${version} is already published`);
+              }
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+              // 404면 릴리즈가 없음 - 새로 생성
+            }
+
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${process.env.PACKAGE_VERSION}`,
-              name: `Claude Code History Viewer v${process.env.PACKAGE_VERSION}`,
+              tag_name: `v${version}`,
+              name: `Claude Code History Viewer v${version}`,
               body: '⏳ 빌드 진행 중...',
-              generate_release_notes: false,
               draft: true,
               prerelease: false,
+              generate_release_notes: false,
             });
+
+            console.log(`✅ Created draft release (ID: ${data.id})`);
             return data.id;
 
+  # 2단계: 멀티 플랫폼 빌드
   build-tauri:
     needs: create-release
     strategy:
-      fail-fast: false
+      fail-fast: false  # 한 플랫폼 실패해도 다른 플랫폼 계속 빌드
       matrix:
         include:
           # macOS - Apple Silicon (M1+)
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
             target: aarch64-apple-darwin
+            rust_targets: 'aarch64-apple-darwin'
           # macOS - Intel
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
             target: x86_64-apple-darwin
+            rust_targets: 'x86_64-apple-darwin'
           # Linux - x64
           - platform: ubuntu-22.04
             args: ''
             target: ''
+            rust_targets: ''
           # Windows - x64
           - platform: windows-latest
             args: ''
             target: ''
+            rust_targets: ''
 
     runs-on: ${{ matrix.platform }}
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: install just
+      - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: install pnpm
+      - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
 
-      - name: setup node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
 
       # Linux dependencies (Tauri v2 requires webkit2gtk-4.1)
-      - name: install dependencies (ubuntu only)
+      - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: install Rust stable
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.rust_targets }}
 
-      - name: cache Rust dependencies
+      - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
+          shared-key: ${{ matrix.platform }}-${{ matrix.target }}
 
-      - name: install frontend dependencies
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Build and upload to release
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -114,203 +170,107 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
+          # tauri-action이 자동으로 latest.json 생성 및 병합
+          uploadUpdaterJson: true
+          # 업로드 실패 시 3회 재시도
+          retryAttempts: 3
 
-  generate-updater-metadata:
+  # 3단계: 릴리즈 발행
+  publish-release:
     needs: [create-release, build-tauri]
     runs-on: ubuntu-latest
+    # 모든 빌드가 성공해야 발행 (실패 시 draft 상태 유지)
+    if: ${{ !cancelled() && needs.build-tauri.result == 'success' }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate release notes and latest.json
+      - name: Generate release notes and publish
         uses: actions/github-script@v7
         with:
+          retries: 3
           script: |
-            const fs = require('fs');
+            const releaseId = ${{ needs.create-release.outputs.release_id }};
+            const version = '${{ needs.create-release.outputs.version }}';
 
-            // 1. 먼저 릴리즈 노트 생성
-            console.log('📝 Generating release notes...');
+            console.log(`📝 Generating release notes for v${version}...`);
+
+            // 릴리즈 노트 자동 생성
             const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: '${{ github.ref_name }}',
+              tag_name: `v${version}`,
             });
 
-            // 2. 릴리즈 노트로 릴리즈 업데이트 (아직 draft 상태 유지)
+            // 릴리즈 에셋 확인
+            const { data: release } = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            });
+
+            console.log(`📦 Release assets (${release.assets.length}):`);
+            for (const asset of release.assets) {
+              console.log(`  - ${asset.name} (${(asset.size / 1024 / 1024).toFixed(2)} MB)`);
+            }
+
+            // latest.json 존재 확인
+            const latestJson = release.assets.find(a => a.name === 'latest.json');
+            if (!latestJson) {
+              console.warn('⚠️ latest.json not found - updater may not work');
+            } else {
+              console.log('✅ latest.json found');
+            }
+
+            // 릴리즈 노트 업데이트 및 발행
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              release_id: ${{ needs.create-release.outputs.release_id }},
+              release_id: releaseId,
               body: generatedNotes.body,
-              draft: true, // 아직 draft 유지
-            });
-            console.log('✅ Release notes updated');
-
-            // 3. 업데이트된 릴리스 정보 가져오기
-            const release = await github.rest.repos.getRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: ${{ needs.create-release.outputs.release_id }}
+              draft: false,  // 발행!
             });
 
-            const releaseData = release.data;
-            const version = releaseData.tag_name.replace(/^v/, '');
-            const pubDate = new Date().toISOString(); // 현재 시간 사용
+            console.log(`🎉 Release v${version} published!`);
+            console.log(`🔗 https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/v${version}`);
 
-            console.log(`Processing release version: ${version}`);
-            console.log(`Total assets: ${releaseData.assets.length}`);
-
-            // 플랫폼별 아티팩트 매핑
-            const platforms = {};
-
-            // Helper function to find asset and signature
-            const findAssetPair = (pattern, sigPattern) => {
-              const asset = releaseData.assets.find(a =>
-                a && a.name && pattern.test(a.name) && !a.name.endsWith('.sig')
-              );
-              const sig = releaseData.assets.find(a =>
-                a && a.name && sigPattern.test(a.name)
-              );
-              return { asset, sig };
-            };
-
-            // macOS - Apple Silicon (aarch64) - Tauri updater requires .app.tar.gz
-            const macAarch64 = findAssetPair(
-              /_aarch64\.app\.tar\.gz$/,
-              /_aarch64\.app\.tar\.gz\.sig$/
-            );
-            if (macAarch64.asset) {
-              let signature = '';
-              if (macAarch64.sig) {
-                try {
-                  const sigResponse = await fetch(macAarch64.sig.browser_download_url);
-                  signature = await sigResponse.text();
-                } catch (e) { console.warn('Failed to fetch aarch64 sig:', e.message); }
-              }
-              platforms['darwin-aarch64'] = {
-                signature: signature,
-                url: macAarch64.asset.browser_download_url
-              };
-              console.log(`✅ darwin-aarch64: ${macAarch64.asset.name}`);
-            }
-
-            // macOS - Intel (x86_64) - Tauri updater requires .app.tar.gz
-            const macX64 = findAssetPair(
-              /_x64\.app\.tar\.gz$/,
-              /_x64\.app\.tar\.gz\.sig$/
-            );
-            if (macX64.asset) {
-              let signature = '';
-              if (macX64.sig) {
-                try {
-                  const sigResponse = await fetch(macX64.sig.browser_download_url);
-                  signature = await sigResponse.text();
-                } catch (e) { console.warn('Failed to fetch x64 sig:', e.message); }
-              }
-              platforms['darwin-x86_64'] = {
-                signature: signature,
-                url: macX64.asset.browser_download_url
-              };
-              console.log(`✅ darwin-x86_64: ${macX64.asset.name}`);
-            }
-
-            // Linux - x64 (AppImage)
-            const linuxAppImage = findAssetPair(
-              /\.AppImage$/,
-              /\.AppImage\.sig$/
-            );
-            if (linuxAppImage.asset) {
-              let signature = '';
-              if (linuxAppImage.sig) {
-                try {
-                  const sigResponse = await fetch(linuxAppImage.sig.browser_download_url);
-                  signature = await sigResponse.text();
-                } catch (e) { console.warn('Failed to fetch linux sig:', e.message); }
-              }
-              platforms['linux-x86_64'] = {
-                signature: signature,
-                url: linuxAppImage.asset.browser_download_url
-              };
-              console.log(`✅ linux-x86_64: ${linuxAppImage.asset.name}`);
-            }
-
-            // Windows - x64 (NSIS installer) - 더 구체적인 패턴 사용
-            const windowsNsis = findAssetPair(
-              /x64-setup\.exe$/,
-              /x64-setup\.exe\.sig$/
-            );
-            if (windowsNsis.asset) {
-              let signature = '';
-              if (windowsNsis.sig) {
-                try {
-                  const sigResponse = await fetch(windowsNsis.sig.browser_download_url);
-                  signature = await sigResponse.text();
-                } catch (e) { console.warn('Failed to fetch windows sig:', e.message); }
-              }
-              platforms['windows-x86_64'] = {
-                signature: signature,
-                url: windowsNsis.asset.browser_download_url
-              };
-              console.log(`✅ windows-x86_64: ${windowsNsis.asset.name}`);
-            }
-
-            // latest.json 생성 (실제 릴리즈 노트 포함)
-            const releaseUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${{ github.ref_name }}`;
-            const latestJson = {
-              version: version,
-              notes: `See release notes at ${releaseUrl}`,
-              pub_date: pubDate,
-              platforms: platforms
-            };
-
-            fs.writeFileSync('latest.json', JSON.stringify(latestJson, null, 2));
-            console.log('\n📄 Generated latest.json:');
-            console.log(JSON.stringify(latestJson, null, 2));
-
-      - name: Upload latest.json to release
+      - name: Notify on failure
+        if: failure()
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const content = fs.readFileSync('latest.json');
+            const releaseId = ${{ needs.create-release.outputs.release_id }};
 
-            // Delete existing latest.json if exists
-            const release = await github.rest.repos.getRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: ${{ needs.create-release.outputs.release_id }}
-            });
-
-            const existingAsset = release.data.assets.find(a => a.name === 'latest.json');
-            if (existingAsset) {
-              await github.rest.repos.deleteReleaseAsset({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                asset_id: existingAsset.id
-              });
-              console.log('🗑️ Deleted existing latest.json');
-            }
-
-            // Upload new latest.json
-            await github.rest.repos.uploadReleaseAsset({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: ${{ needs.create-release.outputs.release_id }},
-              name: 'latest.json',
-              data: content
-            });
-            console.log('✅ Uploaded latest.json');
-
-      - name: Publish release
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Publish release (set draft to false)
+            // 실패 시 릴리즈 노트에 기록
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              release_id: ${{ needs.create-release.outputs.release_id }},
-              draft: false,
+              release_id: releaseId,
+              body: '❌ 릴리즈 발행 실패. 워크플로우 로그를 확인하세요.',
+              draft: true,  // draft 상태 유지
             });
 
-            console.log('✅ Release published');
+  # 4단계: 빌드 실패 시 정리
+  cleanup-on-failure:
+    needs: [create-release, build-tauri]
+    runs-on: ubuntu-latest
+    if: ${{ failure() && needs.create-release.result == 'success' }}
+
+    steps:
+      - name: Update release on build failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releaseId = ${{ needs.create-release.outputs.release_id }};
+
+            console.log('⚠️ Build failed, updating release status...');
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId,
+              body: '❌ 빌드 실패. 워크플로우 로그를 확인하세요.\n\n이 draft 릴리즈는 수동으로 삭제하거나, 태그를 다시 푸시하면 재사용됩니다.',
+              draft: true,
+            });
+
+            console.log('📝 Release updated with failure status (kept as draft)');

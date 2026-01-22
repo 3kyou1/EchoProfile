@@ -2,12 +2,12 @@
 
 浏览存储在`~/.claude`中的Claude Code对话历史的桌面应用。
 
-![Version](https://img.shields.io/badge/Version-1.0.0--beta.5-orange.svg)
+![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
 
-> ⚠️ **Beta** - 可能不稳定或有变化
+> 
 
 ## 截图
 

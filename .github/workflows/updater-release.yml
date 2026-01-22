@@ -268,10 +268,38 @@ jobs:
             console.log(JSON.stringify(latestJson, null, 2));
 
       - name: Upload latest.json to release
-        run: |
-          gh release upload ${{ github.ref_name }} latest.json --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const content = fs.readFileSync('latest.json');
+
+            // Delete existing latest.json if exists
+            const release = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }}
+            });
+
+            const existingAsset = release.data.assets.find(a => a.name === 'latest.json');
+            if (existingAsset) {
+              await github.rest.repos.deleteReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                asset_id: existingAsset.id
+              });
+              console.log('🗑️ Deleted existing latest.json');
+            }
+
+            // Upload new latest.json
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              name: 'latest.json',
+              data: content
+            });
+            console.log('✅ Uploaded latest.json');
 
       - name: Publish release
         uses: actions/github-script@v7

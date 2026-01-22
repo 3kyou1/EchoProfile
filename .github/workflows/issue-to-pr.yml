@@ -1,0 +1,135 @@
+name: Issue Analysis & PR Setup
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  analyze-and-setup:
+    # 'ready' 라벨이 붙었을 때만 실행
+    if: contains(github.event.issue.labels.*.name, 'ready')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Analyze Issue & Create Branch
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+
+            // 이슈 정보 추출
+            const issueNumber = issue.number;
+            const issueTitle = issue.title;
+            const issueBody = issue.body || '';
+
+            // 브랜치명 생성 (이슈 번호 + 제목 slug)
+            const slug = issueTitle
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-|-$/g, '')
+              .substring(0, 40);
+            const branchName = `issue-${issueNumber}-${slug}`;
+
+            // 카테고리 자동 감지
+            let category = 'enhancement';
+            const titleLower = issueTitle.toLowerCase();
+            const bodyLower = issueBody.toLowerCase();
+
+            if (titleLower.includes('bug') || titleLower.includes('fix') || bodyLower.includes('error')) {
+              category = 'bugfix';
+            } else if (titleLower.includes('feat') || titleLower.includes('add')) {
+              category = 'feature';
+            } else if (titleLower.includes('doc') || titleLower.includes('readme')) {
+              category = 'docs';
+            } else if (titleLower.includes('refactor')) {
+              category = 'refactor';
+            }
+
+            // PR 템플릿 생성
+            const prBody = `## 관련 이슈
+Closes #${issueNumber}
+
+## 이슈 요약
+**제목:** ${issueTitle}
+
+**원문:**
+${issueBody}
+
+---
+
+## 작업 체크리스트
+- [ ] 요구사항 분석 완료
+- [ ] 구현 완료
+- [ ] 테스트 완료
+- [ ] 문서 업데이트 (필요시)
+
+## 구현 노트
+<!-- Claude Code가 분석한 내용이 여기에 추가됩니다 -->
+
+---
+🤖 Auto-generated from issue #${issueNumber}
+`;
+
+            core.setOutput('branch_name', branchName);
+            core.setOutput('issue_number', issueNumber);
+            core.setOutput('issue_title', issueTitle);
+            core.setOutput('issue_body', issueBody);
+            core.setOutput('category', category);
+            core.setOutput('pr_body', prBody);
+
+      - name: Create Branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ${{ steps.analyze.outputs.branch_name }}
+          git push origin ${{ steps.analyze.outputs.branch_name }}
+
+      - name: Create Draft PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[#${{ steps.analyze.outputs.issue_number }}] ${{ steps.analyze.outputs.issue_title }}`,
+              body: `${{ steps.analyze.outputs.pr_body }}`,
+              head: '${{ steps.analyze.outputs.branch_name }}',
+              base: 'main',
+              draft: true
+            });
+
+            // 이슈에 코멘트 추가
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.analyze.outputs.issue_number }},
+              body: `🚀 **작업 환경이 준비되었습니다!**
+
+**브랜치:** \`${{ steps.analyze.outputs.branch_name }}\`
+**Draft PR:** #${pr.number}
+
+\`\`\`bash
+# 로컬에서 작업 시작
+git fetch origin
+git checkout ${{ steps.analyze.outputs.branch_name }}
+
+# Claude Code로 작업
+claude "이슈 #${{ steps.analyze.outputs.issue_number }} 작업 시작"
+\`\`\`
+`
+            });
+
+            console.log(`Created draft PR #${pr.number}`);

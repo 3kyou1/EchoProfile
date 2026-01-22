@@ -97,3 +97,11 @@ test-ui:
 # Run simple tests only
 test-simple:
     vitest run simple
+
+# Setup work environment for a GitHub issue
+issue ISSUE_NUMBER:
+    ./scripts/setup-issue-work.sh {{ISSUE_NUMBER}}
+
+# List open issues
+issues:
+    gh issue list --state open --limit 20

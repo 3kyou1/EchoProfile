@@ -2,7 +2,7 @@
 
 `~/.claude`에 저장된 Claude Code 대화 기록을 탐색하는 데스크톱 앱.
 
-![Version](https://img.shields.io/badge/Version-1.0.0--beta.4-orange.svg)
+![Version](https://img.shields.io/badge/Version-1.0.0--beta.5-orange.svg)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)

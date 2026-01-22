@@ -18,6 +18,8 @@ Desktop app to browse Claude Code conversation history stored in `~/.claude`.
 
 <img width="720" alt="Analytics Dashboard" src="https://github.com/user-attachments/assets/77dc026c-8901-47d1-a8ca-e5235b97e945" />
 
+<img width="720" alt="Token Statistics" src="https://github.com/user-attachments/assets/ec5b17d0-076c-435e-8cec-1c6fd74265db" />
+
 ## Features
 
 - **Browse**: Navigate conversations by project/session
@@ -51,10 +53,36 @@ pnpm tauri:build     # Production build
 
 **Requirements**: Node.js 18+, pnpm, Rust toolchain
 
+## Usage
+
+1. Launch the app
+2. It automatically scans `~/.claude` for conversation data
+3. Browse projects in the left sidebar
+4. Click a session to view messages
+5. Use tabs to switch between Messages, Analytics, Token Stats, and Recent Edits
+
 ## Data privacy
 
 Runs locally only. No data sent to servers.
 
+## Troubleshooting
+
+**"No Claude data found"**: Make sure `~/.claude` exists with conversation history.
+
+**Performance issues**: Large conversation histories may be slow initially. The app uses virtual scrolling to handle this.
+
+**Update problems**: If auto-updater fails, download manually from [Releases](https://github.com/jhlee0409/claude-code-history-viewer/releases).
+
+## Tech stack
+
+- **Backend**: Rust + Tauri v2
+- **Frontend**: React 19, TypeScript, Tailwind CSS, Zustand
+- **Build**: Vite, just
+
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE).
+
+---
+
+[Open an issue](https://github.com/jhlee0409/claude-code-history-viewer/issues) for questions or bug reports.

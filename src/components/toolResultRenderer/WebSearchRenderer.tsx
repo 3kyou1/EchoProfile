@@ -8,13 +8,21 @@ import { Renderer } from "../../shared/RendererHeader";
 import { layout } from "@/components/renderers";
 import { cn } from "@/lib/utils";
 import { HighlightedText } from "../common/HighlightedText";
+import { safeStringify } from "@/utils/jsonUtils";
 
 type Props = {
   searchData: Record<string, unknown>;
   searchQuery?: string;
+  isCurrentMatch?: boolean;
+  currentMatchIndex?: number;
 };
 
-export const WebSearchRenderer = ({ searchData, searchQuery }: Props) => {
+export const WebSearchRenderer = ({
+  searchData,
+  searchQuery,
+  isCurrentMatch = false,
+  currentMatchIndex = 0,
+}: Props) => {
   const { t } = useTranslation('components');
   const query = typeof searchData.query === "string" ? searchData.query : "";
   const results = Array.isArray(searchData.results) ? searchData.results : [];
@@ -45,7 +53,12 @@ export const WebSearchRenderer = ({ searchData, searchQuery }: Props) => {
           </div>
           <code className={`${layout.bodyText} px-2 py-1 rounded block bg-muted text-foreground`}>
             {searchQuery ? (
-              <HighlightedText text={query} searchQuery={searchQuery} />
+              <HighlightedText
+                text={query}
+                searchQuery={searchQuery}
+                isCurrentMatch={isCurrentMatch}
+                currentMatchIndex={currentMatchIndex}
+              />
             ) : (
               query
             )}
@@ -121,7 +134,7 @@ export const WebSearchRenderer = ({ searchData, searchQuery }: Props) => {
                                   </div>
                                 ) : (
                                   <pre className={`${layout.monoText} overflow-x-auto p-2 rounded bg-muted text-foreground/80`}>
-                                    {JSON.stringify(item, null, 2)}
+                                    {safeStringify(item, 2)}
                                   </pre>
                                 )}
                               </div>
@@ -132,7 +145,7 @@ export const WebSearchRenderer = ({ searchData, searchQuery }: Props) => {
 
                       return (
                         <pre className={`${layout.monoText} overflow-x-auto p-2 rounded bg-muted text-foreground/80`}>
-                          {JSON.stringify(result, null, 2)}
+                          {safeStringify(result, 2)}
                         </pre>
                       );
                     })()

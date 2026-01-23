@@ -7,13 +7,21 @@ import { Renderer } from "../../shared/RendererHeader";
 import { cn } from "@/lib/utils";
 import { layout } from "@/components/renderers";
 import { HighlightedText } from "../common/HighlightedText";
+import { safeStringify } from "@/utils/jsonUtils";
 
 type Props = {
   mcpData: Record<string, unknown>;
   searchQuery?: string;
+  isCurrentMatch?: boolean;
+  currentMatchIndex?: number;
 };
 
-export const MCPRenderer = ({ mcpData, searchQuery }: Props) => {
+export const MCPRenderer = ({
+  mcpData,
+  searchQuery,
+  isCurrentMatch = false,
+  currentMatchIndex = 0,
+}: Props) => {
   const { t } = useTranslation('components');
   const server = mcpData.server || "unknown";
   const method = mcpData.method || "unknown";
@@ -50,7 +58,7 @@ export const MCPRenderer = ({ mcpData, searchQuery }: Props) => {
             </button>
             {showParams && (
               <pre className={`mt-1 p-2 rounded ${layout.monoText} overflow-auto bg-tool-mcp/20 text-foreground`}>
-                {JSON.stringify(params, null, 2)}
+                {safeStringify(params, 2)}
               </pre>
             )}
           </div>
@@ -63,7 +71,12 @@ export const MCPRenderer = ({ mcpData, searchQuery }: Props) => {
               </div>
               <div className={`${layout.bodyText} text-destructive`}>
                 {searchQuery ? (
-                  <HighlightedText text={String(error)} searchQuery={searchQuery} />
+                  <HighlightedText
+                    text={String(error)}
+                    searchQuery={searchQuery}
+                    isCurrentMatch={isCurrentMatch}
+                    currentMatchIndex={currentMatchIndex}
+                  />
                 ) : (
                   String(error)
                 )}
@@ -81,7 +94,7 @@ export const MCPRenderer = ({ mcpData, searchQuery }: Props) => {
               </button>
               {showResult && (
                 <pre className={`mt-1 p-2 rounded ${layout.monoText} overflow-auto bg-muted text-foreground`}>
-                  {JSON.stringify(result, null, 2)}
+                  {safeStringify(result, 2)}
                 </pre>
               )}
             </div>

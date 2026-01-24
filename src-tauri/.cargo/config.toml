@@ -5,9 +5,9 @@
 # Use all available CPU cores for compilation
 jobs = -1
 
-[target.x86_64-apple-darwin]
-# Faster linking on macOS Intel
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+# [target.x86_64-apple-darwin]
+# lld not available on all macOS CI runners - disabled for compatibility
+# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 
 [target.aarch64-apple-darwin]
 # Apple Silicon optimizations

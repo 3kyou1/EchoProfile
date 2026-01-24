@@ -10,6 +10,7 @@
  * - Unknown types: Fallback JSON display
  */
 
+import { memo } from "react";
 import { ThinkingRenderer } from "./ThinkingRenderer";
 import { ToolUseRenderer } from "./ToolUseRenderer";
 import { ImageRenderer } from "./ImageRenderer";
@@ -35,7 +36,7 @@ const isContentItem = (item: unknown): item is Record<string, unknown> => {
   return item !== null && typeof item === "object";
 };
 
-export const ClaudeContentArrayRenderer = ({
+export const ClaudeContentArrayRenderer = memo(({
   content,
   searchQuery = "",
   filterType = "content",
@@ -43,7 +44,7 @@ export const ClaudeContentArrayRenderer = ({
   currentMatchIndex = 0,
   skipToolResults = false,
 }: Props) => {
-  const { t } = useTranslation("components");
+  const { t } = useTranslation();
   if (!Array.isArray(content) || content.length === 0) {
     return null;
   }
@@ -208,4 +209,6 @@ export const ClaudeContentArrayRenderer = ({
       })}
     </div>
   );
-};
+});
+
+ClaudeContentArrayRenderer.displayName = "ClaudeContentArrayRenderer";

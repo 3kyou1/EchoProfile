@@ -12,7 +12,8 @@ import { useResizablePanel } from "./hooks/useResizablePanel";
 
 import { useTranslation } from "react-i18next";
 import { AppErrorType, type ClaudeSession, type ClaudeProject } from "./types";
-import { AlertTriangle, Loader2, MessageSquare, Database, BarChart3, FileEdit, Coins } from "lucide-react";
+import { AlertTriangle, MessageSquare, Database, BarChart3, FileEdit, Coins } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { useLanguageStore } from "./store/useLanguageStore";
 import { type SupportedLanguage } from "./i18n";
 
@@ -31,9 +32,11 @@ function App() {
     isLoadingProjects,
     isLoadingSessions,
     isLoadingMessages,
+    isLoadingTokenStats,
     error,
     sessionTokenStats,
     projectTokenStats,
+    projectTokenStatsPagination,
     sessionSearch,
     initializeApp,
     selectProject,
@@ -45,24 +48,18 @@ function App() {
     clearSessionSearch,
     loadGlobalStats,
     setAnalyticsCurrentView,
-    setAnalyticsLoadingProjectSummary,
-    loadProjectStatsSummary,
-    setAnalyticsProjectSummary,
-    setAnalyticsProjectSummaryError,
-    loadProjectTokenStats,
+    loadMoreProjectTokenStats,
+    loadMoreRecentEdits,
   } = useAppStore();
 
   const {
     state: analyticsState,
-    actions: _analyticsActions,
+    actions: analyticsActions,
     computed,
   } = useAnalytics();
-  void _analyticsActions;
 
-  const { t, i18n: i18nInstance } = useTranslation("common");
-  const { t: tComponents } = useTranslation("components");
-  const { t: tMessages } = useTranslation("messages");
-  const { language, loadLanguage } = useLanguageStore();
+  const { t, i18n: i18nInstance } = useTranslation();
+      const { language, loadLanguage } = useLanguageStore();
 
   const [isViewingGlobalStats, setIsViewingGlobalStats] = useState(false);
 
@@ -88,6 +85,16 @@ function App() {
   const handleSessionSelect = async (session: ClaudeSession) => {
     setIsViewingGlobalStats(false);
     setAnalyticsCurrentView("messages");
+
+    // 글로벌 통계에서 돌아올 때 세션의 프로젝트를 복원
+    const currentProject = useAppStore.getState().selectedProject;
+    if (!currentProject || currentProject.name !== session.project_name) {
+      const project = projects.find((p) => p.name === session.project_name);
+      if (project) {
+        await selectProject(project);
+      }
+    }
+
     await selectSession(session);
   };
 
@@ -110,7 +117,7 @@ function App() {
         ? lng.includes("TW") || lng.includes("HK")
           ? "zh-TW"
           : "zh-CN"
-        : lng.split("-")[0];
+        : lng.split('common.-')[0];
 
       if (
         currentLang &&
@@ -131,43 +138,42 @@ function App() {
 
   const handleProjectSelect = useCallback(
     async (project: ClaudeProject) => {
+      const currentProject = useAppStore.getState().selectedProject;
+
+      // 같은 프로젝트를 다시 클릭하면 닫기 (토글)
+      if (currentProject?.path === project.path) {
+        useAppStore.setState({ selectedProject: null, selectedSession: null, sessions: [] });
+        analyticsActions.clearAll();
+        return;
+      }
+
       const wasTokenStatsOpen = computed.isTokenStatsView;
       setIsViewingGlobalStats(false);
+
+      // 이전 프로젝트의 캐시 초기화
+      analyticsActions.clearAll();
+
       await selectProject(project);
 
+      // 이전 뷰 유지하면서 새 프로젝트 데이터 로드
       if (wasTokenStatsOpen) {
         try {
-          setAnalyticsCurrentView("tokenStats");
-          await loadProjectTokenStats(project.path);
+          await analyticsActions.switchToTokenStats();
         } catch (error) {
           console.error("Failed to auto-load token stats:", error);
         }
       } else {
         try {
-          setAnalyticsCurrentView("analytics");
-          setAnalyticsLoadingProjectSummary(true);
-          const summary = await loadProjectStatsSummary(project.path);
-          setAnalyticsProjectSummary(summary);
+          await analyticsActions.switchToAnalytics();
         } catch (error) {
           console.error("Failed to auto-load analytics:", error);
-          setAnalyticsProjectSummary(null);
-          setAnalyticsProjectSummaryError(
-            error instanceof Error ? error.message : "Failed to load project stats"
-          );
-        } finally {
-          setAnalyticsLoadingProjectSummary(false);
         }
       }
     },
     [
       computed.isTokenStatsView,
       selectProject,
-      setAnalyticsCurrentView,
-      loadProjectTokenStats,
-      setAnalyticsLoadingProjectSummary,
-      loadProjectStatsSummary,
-      setAnalyticsProjectSummary,
-      setAnalyticsProjectSummaryError,
+      analyticsActions,
     ]
   );
 
@@ -180,14 +186,14 @@ function App() {
             <AlertTriangle className="w-8 h-8 text-destructive" />
           </div>
           <h1 className="text-xl font-semibold text-foreground mb-2">
-            {t("errorOccurred")}
+            {t('common.errorOccurred')}
           </h1>
           <p className="text-sm text-muted-foreground mb-6">{error.message}</p>
           <button
             onClick={() => window.location.reload()}
             className="action-btn primary"
           >
-            {t("retry")}
+            {t('common.retry')}
           </button>
         </div>
       </div>
@@ -241,20 +247,20 @@ function App() {
                   <div>
                     <h2 className="text-sm font-semibold text-foreground">
                       {isViewingGlobalStats
-                        ? tComponents("analytics.globalOverview")
+                        ? t("analytics.globalOverview")
                         : computed.isAnalyticsView
-                        ? tComponents("analytics.dashboard")
+                        ? t("analytics.dashboard")
                         : computed.isRecentEditsView
-                        ? tComponents("recentEdits.title")
-                        : tMessages("tokenStats.title")}
+                        ? t("recentEdits.title")
+                        : t('messages.tokenStats.title')}
                     </h2>
                     <p className="text-xs text-muted-foreground">
                       {isViewingGlobalStats
-                        ? tComponents("analytics.globalOverviewDescription")
+                        ? t("analytics.globalOverviewDescription")
                         : computed.isRecentEditsView
-                        ? tComponents("recentEdits.description")
+                        ? t("recentEdits.description")
                         : selectedSession?.summary ||
-                          tComponents("session.summaryNotFound")}
+                          t("session.summaryNotFound")}
                     </p>
                   </div>
                 </div>
@@ -270,6 +276,8 @@ function App() {
                 >
                   <RecentEditsViewer
                     recentEdits={analyticsState.recentEdits}
+                    pagination={analyticsState.recentEditsPagination}
+                    onLoadMore={() => selectedProject && loadMoreRecentEdits(selectedProject.path)}
                     isLoading={analyticsState.isLoadingRecentEdits}
                     error={analyticsState.recentEditsError}
                   />
@@ -288,9 +296,12 @@ function App() {
                 >
                   <div className="p-6">
                     <TokenStatsViewer
-                      title={tMessages("tokenStats.title")}
+                      title={t('messages.tokenStats.title')}
                       sessionStats={sessionTokenStats}
                       projectStats={projectTokenStats}
+                      pagination={projectTokenStatsPagination}
+                      onLoadMore={() => selectedProject && loadMoreProjectTokenStats(selectedProject.path)}
+                      isLoading={isLoadingTokenStats}
                     />
                   </div>
                 </OverlayScrollbarsComponent>
@@ -314,10 +325,10 @@ function App() {
                       <MessageSquare className="w-10 h-10 text-muted-foreground/50" />
                     </div>
                     <h3 className="text-lg font-medium text-foreground mb-2">
-                      {tComponents("session.select")}
+                      {t("session.select")}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {tComponents("session.selectDescription")}
+                      {t("session.selectDescription")}
                     </p>
                   </div>
                 </div>
@@ -329,13 +340,13 @@ function App() {
         {/* Status Bar */}
         <footer className="h-7 px-4 flex items-center justify-between bg-sidebar border-t border-border/50 text-2xs text-muted-foreground">
           <div className="flex items-center gap-3 font-mono tabular-nums">
-            <span>{tComponents("project.count", { count: projects.length })}</span>
+            <span>{t("project.count", { count: projects.length })}</span>
             <span className="text-border">•</span>
-            <span>{tComponents("session.count", { count: sessions.length })}</span>
+            <span>{t("session.count", { count: sessions.length })}</span>
             {selectedSession && computed.isMessagesView && (
               <>
                 <span className="text-border">•</span>
-                <span>{tComponents("message.count", { count: messages.length })}</span>
+                <span>{t("message.count", { count: messages.length })}</span>
               </>
             )}
           </div>
@@ -346,13 +357,13 @@ function App() {
             isLoadingMessages ||
             computed.isAnyLoading) && (
             <div className="flex items-center gap-1.5">
-              <Loader2 className="w-3 h-3 animate-spin" />
+              <LoadingSpinner size="xs" variant="muted" />
               <span>
-                {computed.isAnyLoading && tComponents("status.loadingStats")}
-                {isLoadingProjects && tComponents("status.scanning")}
-                {isLoadingSessions && tComponents("status.loadingSessions")}
-                {isLoadingMessages && tComponents("status.loadingMessages")}
-                {isLoading && tComponents("status.initializing")}
+                {computed.isAnyLoading && t("status.loadingStats")}
+                {isLoadingProjects && t("status.scanning")}
+                {isLoadingSessions && t("status.loadingSessions")}
+                {isLoadingMessages && t("status.loadingMessages")}
+                {isLoading && t("status.initializing")}
               </span>
             </div>
           )}

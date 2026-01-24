@@ -4,6 +4,13 @@
  */
 
 import type { ProjectStatsSummary, SessionComparison, RecentEditsResult } from './index';
+import type { RecentEditsPaginationState } from '../utils/pagination';
+
+/**
+ * Pagination state for recent edits
+ * Re-exported from pagination utilities for backwards compatibility
+ */
+export type RecentEditsPagination = RecentEditsPaginationState;
 
 /**
  * Analytics 뷰 타입
@@ -24,6 +31,7 @@ export interface AnalyticsState {
   projectSummary: ProjectStatsSummary | null;
   sessionComparison: SessionComparison | null;
   recentEdits: RecentEditsResult | null;
+  recentEditsPagination: RecentEditsPagination;
 
   // 로딩 상태
   isLoadingProjectSummary: boolean;
@@ -73,11 +81,17 @@ export interface AnalyticsActions {
 /**
  * Analytics 초기 상태
  */
+import { createInitialRecentEditsPagination } from '../utils/pagination';
+
+export const initialRecentEditsPagination: RecentEditsPagination =
+  createInitialRecentEditsPagination();
+
 export const initialAnalyticsState: AnalyticsState = {
   currentView: 'messages',
   projectSummary: null,
   sessionComparison: null,
   recentEdits: null,
+  recentEditsPagination: initialRecentEditsPagination,
   isLoadingProjectSummary: false,
   isLoadingSessionComparison: false,
   isLoadingRecentEdits: false,
@@ -111,6 +125,9 @@ export interface UseAnalyticsReturn {
     isMessagesView: boolean;
     isRecentEditsView: boolean;
     hasAnyError: boolean;
+    isLoadingAnalytics: boolean;
+    isLoadingTokenStats: boolean;
+    isLoadingRecentEdits: boolean;
     isAnyLoading: boolean;
   };
 }

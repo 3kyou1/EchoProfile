@@ -1,13 +1,14 @@
-use crate::models::*;
-use crate::utils::{extract_project_name, estimate_message_count_from_size};
+use crate::models::ClaudeProject;
+use crate::utils::{estimate_message_count_from_size, extract_project_name};
+use chrono::{DateTime, Utc};
 use std::fs;
 use std::path::PathBuf;
 use walkdir::WalkDir;
-use chrono::{DateTime, Utc};
 
 #[tauri::command]
 pub async fn get_claude_folder_path() -> Result<String, String> {
-    let home_dir = dirs::home_dir().ok_or("HOME_DIRECTORY_NOT_FOUND:Could not determine home directory")?;
+    let home_dir =
+        dirs::home_dir().ok_or("HOME_DIRECTORY_NOT_FOUND:Could not determine home directory")?;
     let claude_path = home_dir.join(".claude");
 
     if !claude_path.exists() {
@@ -18,7 +19,9 @@ pub async fn get_claude_folder_path() -> Result<String, String> {
     }
 
     if fs::read_dir(&claude_path).is_err() {
-        return Err("PERMISSION_DENIED:Cannot access Claude folder. Please check permissions.".to_string());
+        return Err(
+            "PERMISSION_DENIED:Cannot access Claude folder. Please check permissions.".to_string(),
+        );
     }
 
     Ok(claude_path.to_string_lossy().to_string())
@@ -62,7 +65,7 @@ pub async fn scan_projects(claude_path: String) -> Result<Vec<ClaudeProject>, St
         .min_depth(1)
         .max_depth(1)
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| e.file_type().is_dir())
     {
         let raw_project_name = entry.file_name().to_string_lossy().to_string();
@@ -75,7 +78,7 @@ pub async fn scan_projects(claude_path: String) -> Result<Vec<ClaudeProject>, St
 
         for jsonl_entry in WalkDir::new(entry.path())
             .into_iter()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
         {
             session_count += 1;
@@ -86,8 +89,8 @@ pub async fn scan_projects(claude_path: String) -> Result<Vec<ClaudeProject>, St
                         last_modified = Some(modified);
                     }
                 }
-                
-                // 파일 크기로 메시지 수 추정 - 훨씬 빠름
+
+                // Estimate message count from file size - much faster
                 let estimated_messages = estimate_message_count_from_size(metadata.len());
                 message_count += estimated_messages;
             }
@@ -114,9 +117,243 @@ pub async fn scan_projects(claude_path: String) -> Result<Vec<ClaudeProject>, St
     #[cfg(debug_assertions)]
     {
         let elapsed = start_time.elapsed();
-        println!("📊 scan_projects 성능: {}개 프로젝트, {}ms 소요",
-                 projects.len(), elapsed.as_millis());
+        println!(
+            "📊 scan_projects performance: {} projects, {}ms elapsed",
+            projects.len(),
+            elapsed.as_millis()
+        );
     }
 
     Ok(projects)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    fn create_test_jsonl_file(dir: &PathBuf, filename: &str, content: &str) {
+        let file_path = dir.join(filename);
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+    }
+
+    // Test validate_claude_folder
+    #[tokio::test]
+    async fn test_validate_claude_folder_nonexistent() {
+        let result = validate_claude_folder("/nonexistent/path".to_string()).await;
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_validate_claude_folder_without_projects() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        fs::create_dir(&claude_dir).unwrap();
+        // No projects subdirectory
+
+        let result = validate_claude_folder(claude_dir.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_validate_claude_folder_with_projects() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        let projects_dir = claude_dir.join("projects");
+        fs::create_dir_all(&projects_dir).unwrap();
+
+        // Test with .claude directory path directly
+        let result = validate_claude_folder(claude_dir.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_validate_claude_folder_from_parent() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        let projects_dir = claude_dir.join("projects");
+        fs::create_dir_all(&projects_dir).unwrap();
+
+        // Test with parent directory (home-like path)
+        let result = validate_claude_folder(temp_dir.path().to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    // Test scan_projects
+    #[tokio::test]
+    async fn test_scan_projects_empty() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        let projects_dir = claude_dir.join("projects");
+        fs::create_dir_all(&projects_dir).unwrap();
+
+        let result = scan_projects(claude_dir.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_scan_projects_no_projects_dir() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let result = scan_projects(temp_dir.path().to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_scan_projects_single_project() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        let projects_dir = claude_dir.join("projects");
+        let project_dir = projects_dir.join("my-project");
+        fs::create_dir_all(&project_dir).unwrap();
+
+        // Create a session file
+        create_test_jsonl_file(
+            &project_dir,
+            "session.jsonl",
+            r#"{"uuid":"uuid-1","sessionId":"session-1","timestamp":"2025-06-26T10:00:00Z","type":"user","message":{"role":"user","content":"Hello"}}"#,
+        );
+
+        let result = scan_projects(claude_dir.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+
+        let projects = result.unwrap();
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].name, "my-project");
+        assert_eq!(projects[0].session_count, 1);
+        assert!(projects[0].message_count > 0);
+    }
+
+    #[tokio::test]
+    async fn test_scan_projects_multiple_projects() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        let projects_dir = claude_dir.join("projects");
+
+        // Create project 1
+        let project1_dir = projects_dir.join("project-alpha");
+        fs::create_dir_all(&project1_dir).unwrap();
+        create_test_jsonl_file(&project1_dir, "session1.jsonl", "{}");
+        create_test_jsonl_file(&project1_dir, "session2.jsonl", "{}");
+
+        // Create project 2
+        let project2_dir = projects_dir.join("project-beta");
+        fs::create_dir_all(&project2_dir).unwrap();
+        create_test_jsonl_file(&project2_dir, "session.jsonl", "{}");
+
+        let result = scan_projects(claude_dir.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+
+        let projects = result.unwrap();
+        assert_eq!(projects.len(), 2);
+
+        // Find project-alpha and verify session count
+        let alpha = projects.iter().find(|p| p.name == "project-alpha").unwrap();
+        assert_eq!(alpha.session_count, 2);
+    }
+
+    #[tokio::test]
+    async fn test_scan_projects_extracts_project_name() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        let projects_dir = claude_dir.join("projects");
+
+        // Create project with prefix format (like "-Users-jack-client-myapp")
+        // splitn(4, '-') on "-Users-jack-client-myapp" yields:
+        // ["", "Users", "jack", "client-myapp"] -> returns "client-myapp"
+        let project_dir = projects_dir.join("-Users-jack-client-myapp");
+        fs::create_dir_all(&project_dir).unwrap();
+        create_test_jsonl_file(&project_dir, "session.jsonl", "{}");
+
+        let result = scan_projects(claude_dir.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+
+        let projects = result.unwrap();
+        assert_eq!(projects.len(), 1);
+        // extract_project_name extracts the 4th part from splitn(4, '-')
+        // "-Users-jack-client-myapp" -> ["", "Users", "jack", "client-myapp"]
+        assert_eq!(projects[0].name, "client-myapp");
+    }
+
+    #[tokio::test]
+    async fn test_scan_projects_sorted_by_last_modified() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        let projects_dir = claude_dir.join("projects");
+
+        // Create older project
+        let older_dir = projects_dir.join("older-project");
+        fs::create_dir_all(&older_dir).unwrap();
+        create_test_jsonl_file(&older_dir, "session.jsonl", "{}");
+
+        // Wait briefly to ensure different timestamps
+        std::thread::sleep(std::time::Duration::from_millis(10));
+
+        // Create newer project
+        let newer_dir = projects_dir.join("newer-project");
+        fs::create_dir_all(&newer_dir).unwrap();
+        create_test_jsonl_file(&newer_dir, "session.jsonl", "{}");
+
+        let result = scan_projects(claude_dir.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+
+        let projects = result.unwrap();
+        assert_eq!(projects.len(), 2);
+        // Newer project should be first (sorted by last_modified descending)
+        assert_eq!(projects[0].name, "newer-project");
+        assert_eq!(projects[1].name, "older-project");
+    }
+
+    #[tokio::test]
+    async fn test_scan_projects_ignores_non_jsonl_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        let projects_dir = claude_dir.join("projects");
+        let project_dir = projects_dir.join("test-project");
+        fs::create_dir_all(&project_dir).unwrap();
+
+        // Create various file types
+        create_test_jsonl_file(&project_dir, "session.jsonl", "{}");
+        create_test_jsonl_file(&project_dir, "config.json", "{}");
+        create_test_jsonl_file(&project_dir, "readme.txt", "readme");
+
+        let result = scan_projects(claude_dir.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+
+        let projects = result.unwrap();
+        assert_eq!(projects.len(), 1);
+        // Only .jsonl file should be counted
+        assert_eq!(projects[0].session_count, 1);
+    }
+
+    #[tokio::test]
+    async fn test_scan_projects_nested_sessions() {
+        let temp_dir = TempDir::new().unwrap();
+        let claude_dir = temp_dir.path().join(".claude");
+        let projects_dir = claude_dir.join("projects");
+        let project_dir = projects_dir.join("test-project");
+        let nested_dir = project_dir.join("subdir");
+        fs::create_dir_all(&nested_dir).unwrap();
+
+        // Create sessions at different levels
+        create_test_jsonl_file(&project_dir, "session1.jsonl", "{}");
+        create_test_jsonl_file(&nested_dir, "session2.jsonl", "{}");
+
+        let result = scan_projects(claude_dir.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+
+        let projects = result.unwrap();
+        assert_eq!(projects.len(), 1);
+        // WalkDir should find sessions in subdirectories too
+        assert_eq!(projects[0].session_count, 2);
+    }
 }

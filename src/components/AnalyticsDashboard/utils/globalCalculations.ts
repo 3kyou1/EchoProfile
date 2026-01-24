@@ -61,7 +61,7 @@ export type RankMedal = "🥇" | "🥈" | "🥉" | null;
  */
 export const getRankMedal = (index: number): RankMedal => {
   const medals: RankMedal[] = ["🥇", "🥈", "🥉"];
-  return index < 3 ? medals[index] : null;
+  return index < 3 ? (medals[index] as RankMedal) : null;
 };
 
 /**

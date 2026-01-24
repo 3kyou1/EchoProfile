@@ -4,7 +4,7 @@
  * Utility functions for project-level analytics calculations.
  */
 
-import type { ProjectStatsSummary, DailyStat } from "../../../types";
+import type { ProjectStatsSummary, DailyStats } from "../../../types";
 import type { DailyStatData } from "../types";
 import { calculateGrowthRate } from "./calculations";
 
@@ -16,7 +16,7 @@ import { calculateGrowthRate } from "./calculations";
  * Generate 7-day daily data from project stats
  * Maps the last 7 days to daily stats, filling gaps with zeros
  */
-export const generateLast7DaysData = (dailyStats: DailyStat[] | undefined): DailyStatData[] => {
+export const generateLast7DaysData = (dailyStats: DailyStats[] | undefined): DailyStatData[] => {
   if (!dailyStats) return [];
 
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -52,7 +52,7 @@ export interface GrowthMetrics {
 /**
  * Calculate day-over-day growth rates for tokens and messages
  */
-export const calculateDailyGrowth = (dailyStats: DailyStat[]): GrowthMetrics => {
+export const calculateDailyGrowth = (dailyStats: DailyStats[]): GrowthMetrics => {
   if (dailyStats.length < 2) {
     return { tokenGrowth: 0, messageGrowth: 0 };
   }

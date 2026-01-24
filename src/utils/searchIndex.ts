@@ -292,6 +292,7 @@ class MessageSearchIndex {
 
       for (let i = currentIndex; i < endIndex; i++) {
         const message = messages[i];
+        if (!message) continue;
 
         // Content 인덱스
         const text = extractSearchableText(message);

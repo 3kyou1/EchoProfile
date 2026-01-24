@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import type { SessionTokenStats } from "../types";
 import type { ProjectTokenStatsPagination } from "../store/slices/messageSlice";
-import { formatTime } from "../utils/time";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { LoadingState } from "./ui/loading";

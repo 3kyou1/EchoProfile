@@ -158,7 +158,7 @@ export interface ClaudeMessage {
   type: string;
   content?: string | ContentItem[] | Record<string, unknown>;
   toolUse?: Record<string, unknown>;
-  toolUseResult?: Record<string, unknown>;
+  toolUseResult?: Record<string, unknown> | string;
   isSidechain?: boolean;
   // Assistant metadata
   model?: string;

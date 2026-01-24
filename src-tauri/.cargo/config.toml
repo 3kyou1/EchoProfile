@@ -9,9 +9,9 @@ jobs = -1
 # lld not available on all macOS CI runners - disabled for compatibility
 # rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 
-[target.aarch64-apple-darwin]
-# Apple Silicon optimizations
-rustflags = ["-C", "target-cpu=native"]
+# [target.aarch64-apple-darwin]
+# Note: target-cpu=native removed for universal binary compatibility
+# Universal builds must work on both x86_64 and aarch64
 
 # Environment variables for testing
 [env]

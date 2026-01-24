@@ -44,14 +44,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS - Apple Silicon (macos-13 크로스컴파일)
-          - platform: macos-13
-            args: '--target aarch64-apple-darwin'
-            target: aarch64-apple-darwin
-          # macOS - Intel (macos-13 크로스컴파일)
-          - platform: macos-13
-            args: '--target x86_64-apple-darwin'
-            target: x86_64-apple-darwin
+          # macOS - Universal Binary (supports both Intel and Apple Silicon)
+          - platform: macos-14
+            args: '--target universal-apple-darwin'
+            target: 'aarch64-apple-darwin,x86_64-apple-darwin'
           # Linux - x64
           - platform: ubuntu-22.04
             args: ''
@@ -159,24 +155,16 @@ jobs:
               return { asset, sig };
             };
 
-            // macOS - Apple Silicon
-            const macAarch64 = findAssetPair(/_aarch64\.app\.tar\.gz$/, /_aarch64\.app\.tar\.gz\.sig$/);
-            if (macAarch64.asset) {
+            // macOS - Universal Binary (supports both Apple Silicon and Intel)
+            const macUniversal = findAssetPair(/_universal\.app\.tar\.gz$/, /_universal\.app\.tar\.gz\.sig$/);
+            if (macUniversal.asset) {
               let signature = '';
-              if (macAarch64.sig) {
-                try { signature = await (await fetch(macAarch64.sig.browser_download_url)).text(); } catch (e) {}
+              if (macUniversal.sig) {
+                try { signature = await (await fetch(macUniversal.sig.browser_download_url)).text(); } catch (e) {}
               }
-              platforms['darwin-aarch64'] = { signature, url: macAarch64.asset.browser_download_url };
-            }
-
-            // macOS - Intel
-            const macX64 = findAssetPair(/_x64\.app\.tar\.gz$/, /_x64\.app\.tar\.gz\.sig$/);
-            if (macX64.asset) {
-              let signature = '';
-              if (macX64.sig) {
-                try { signature = await (await fetch(macX64.sig.browser_download_url)).text(); } catch (e) {}
-              }
-              platforms['darwin-x86_64'] = { signature, url: macX64.asset.browser_download_url };
+              // Both darwin-aarch64 and darwin-x86_64 point to the same universal binary
+              platforms['darwin-aarch64'] = { signature, url: macUniversal.asset.browser_download_url };
+              platforms['darwin-x86_64'] = { signature, url: macUniversal.asset.browser_download_url };
             }
 
             // Linux

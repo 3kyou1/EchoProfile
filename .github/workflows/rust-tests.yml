@@ -226,11 +226,12 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
       - name: Run security audit
-        uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: src-tauri
+        working-directory: src-tauri
+        run: cargo audit
 
   # Documentation check - main branch only
   docs:

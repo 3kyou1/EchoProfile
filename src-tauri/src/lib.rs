@@ -70,10 +70,10 @@ pub fn run() {
             #[cfg(not(debug_assertions))]
             match _event {
                 tauri::RunEvent::Ready { .. } => {
-                    _handler.track_event("app_started", None);
+                    let _ = _handler.track_event("app_started", None);
                 }
                 tauri::RunEvent::Exit { .. } => {
-                    _handler.track_event("app_exited", None);
+                    let _ = _handler.track_event("app_exited", None);
                     _handler.flush_events_blocking();
                 }
                 _ => {}

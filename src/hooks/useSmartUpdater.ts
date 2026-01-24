@@ -48,8 +48,14 @@ export function useSmartUpdater() {
 
   // 자동 체크 (개선된 버전)
   useEffect(() => {
+    // 개발 모드에서는 자동 업데이트 체크 비활성화 (GitHub API rate limit 방지)
+    if (import.meta.env.DEV) {
+      console.log('[DEV] 자동 업데이트 체크 비활성화');
+      return;
+    }
+
     const settings = getUpdateSettings();
-    
+
     // 자동 체크가 비활성화되어 있으면 체크하지 않음
     if (!settings.autoCheck) {
       return;

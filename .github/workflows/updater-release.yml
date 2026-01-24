@@ -85,8 +85,8 @@ jobs:
           # macOS ARM64 - macos-14는 M1 네이티브 (가장 빠름)
           - platform: macos-14
             target: aarch64-apple-darwin
-          # macOS x86_64 - macos-13은 Intel 네이티브
-          - platform: macos-13
+          # macOS x86_64 - macos-15-intel은 Intel 네이티브
+          - platform: macos-15-intel
             target: x86_64-apple-darwin
           # Linux
           - platform: ubuntu-22.04

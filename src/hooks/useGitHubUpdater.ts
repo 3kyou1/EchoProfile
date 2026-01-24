@@ -114,24 +114,36 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
         }
       }
 
-      // GitHub API로 릴리즈 정보 가져오기
-      const releaseInfo = await fetchGitHubRelease();
-
-      if (!releaseInfo) {
-        throw new Error(t('common.hooks.releaseInfoFetchFailed'));
-      }
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Release info:', releaseInfo);
-      }
-
-      // Tauri 업데이터로 업데이트 확인
+      // Tauri 업데이터로 업데이트 확인 (핵심 - 먼저 실행)
       const update = await check();
-
       const hasUpdate = !!update;
 
+      // GitHub API로 릴리즈 정보 가져오기 (실패해도 업데이트 체크는 계속)
+      let releaseInfo: GitHubRelease | null = null;
+      try {
+        releaseInfo = await fetchGitHubRelease();
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Release info:', releaseInfo);
+        }
+      } catch (e) {
+        // GitHub API 실패해도 Tauri updater 결과는 사용
+        console.warn('GitHub API 실패, Tauri updater 결과만 사용:', e);
+      }
+
+      // 릴리즈 정보가 없으면 업데이트 버전으로 대체 생성
+      if (!releaseInfo && update) {
+        releaseInfo = {
+          tag_name: `v${update.version}`,
+          name: `v${update.version}`,
+          body: '',
+          published_at: new Date().toISOString(),
+          html_url: `https://github.com/jhlee0409/claude-code-history-viewer/releases/tag/v${update.version}`,
+          assets: [],
+        };
+      }
+
       // 결과 캐싱 (현재 버전이 있을 때만)
-      if (state.currentVersion) {
+      if (state.currentVersion && releaseInfo) {
         setCachedUpdateResult(hasUpdate, releaseInfo, state.currentVersion);
       }
 
@@ -153,7 +165,7 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
             : t('common.hooks.updateCheckFailed'),
       }));
     }
-  }, [fetchGitHubRelease, state.currentVersion]);
+  }, [fetchGitHubRelease, state.currentVersion, t]);
 
   const downloadAndInstall = useCallback(async () => {
     if (!state.updateInfo) return;

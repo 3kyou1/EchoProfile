@@ -11,18 +11,17 @@ on:
 # 동시 실행 방지 - race condition 및 중복 릴리즈 방지
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: false  # 진행 중인 릴리즈는 취소하지 않음
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 env:
-  # 공통 환경 변수
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
 
 jobs:
-  # 1단계: 릴리즈 생성 (단일 job으로 race condition 방지)
+  # 1단계: 릴리즈 생성
   create-release:
     runs-on: ubuntu-latest
     outputs:
@@ -46,32 +45,23 @@ jobs:
           retries: 3
           script: |
             const version = '${{ steps.get-version.outputs.version }}';
-
-            // 기존 릴리즈가 있는지 확인
             try {
               const { data: existingRelease } = await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 tag: `v${version}`
               });
-
               if (existingRelease) {
                 console.log(`⚠️ Release for v${version} already exists (ID: ${existingRelease.id})`);
-                // 기존 draft 릴리즈면 재사용
                 if (existingRelease.draft) {
                   console.log('♻️ Reusing existing draft release');
                   return existingRelease.id;
                 }
-                // 이미 발행된 릴리즈면 에러
                 throw new Error(`Release v${version} is already published`);
               }
             } catch (error) {
-              if (error.status !== 404) {
-                throw error;
-              }
-              // 404면 릴리즈가 없음 - 새로 생성
+              if (error.status !== 404) throw error;
             }
-
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -82,45 +72,33 @@ jobs:
               prerelease: false,
               generate_release_notes: false,
             });
-
             console.log(`✅ Created draft release (ID: ${data.id})`);
             return data.id;
 
-  # 2단계: 멀티 플랫폼 빌드
+  # 2단계: 멀티 플랫폼 빌드 (네이티브 빌드로 ring 크로스컴파일 문제 회피)
   build-tauri:
     needs: create-release
     strategy:
-      fail-fast: false  # 한 플랫폼 실패해도 다른 플랫폼 계속 빌드
+      fail-fast: false
       matrix:
         include:
-          # macOS - Apple Silicon (M1+)
-          - platform: macos-latest
-            args: '--target aarch64-apple-darwin'
+          # macOS ARM64 - macos-14는 M1 네이티브 (가장 빠름)
+          - platform: macos-14
             target: aarch64-apple-darwin
-            rust_targets: 'aarch64-apple-darwin'
-          # macOS - Intel
-          - platform: macos-latest
-            args: '--target x86_64-apple-darwin'
+          # macOS x86_64 - macos-13은 Intel 네이티브
+          - platform: macos-13
             target: x86_64-apple-darwin
-            rust_targets: 'x86_64-apple-darwin'
-          # Linux - x64
+          # Linux
           - platform: ubuntu-22.04
-            args: ''
-            target: ''
-            rust_targets: ''
-          # Windows - x64
+            target: x86_64-unknown-linux-gnu
+          # Windows
           - platform: windows-latest
-            args: ''
-            target: ''
-            rust_targets: ''
+            target: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.platform }}
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install just
-        uses: extractions/setup-just@v2
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -133,7 +111,6 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
-      # Linux dependencies (Tauri v2 requires webkit2gtk-4.1)
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -142,27 +119,27 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust_targets }}
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-          shared-key: ${{ matrix.platform }}-${{ matrix.target }}
+          shared-key: tauri-${{ matrix.target }}
+          cache-on-failure: true
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Create Aptabase config
+        shell: bash
         env:
           APTABASE_KEY: ${{ secrets.APTABASE_KEY }}
         run: |
-          if [ -z "$APTABASE_KEY" ]; then
-            echo "::warning::APTABASE_KEY secret is not set. Analytics will be disabled."
-          else
+          if [ -n "$APTABASE_KEY" ]; then
             echo "APTABASE_KEY=$APTABASE_KEY" > src-tauri/.env
             echo "✅ Aptabase config created"
+          else
+            echo "::warning::APTABASE_KEY not set"
           fi
 
       - name: Build and upload to release
@@ -171,7 +148,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # macOS signing (optional)
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -180,17 +156,13 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
-          args: ${{ matrix.args }}
-          # tauri-action이 자동으로 latest.json 생성 및 병합
-          uploadUpdaterJson: true
-          # 업로드 실패 시 3회 재시도
+          includeUpdaterJson: true
           retryAttempts: 3
 
   # 3단계: 릴리즈 발행
   publish-release:
     needs: [create-release, build-tauri]
     runs-on: ubuntu-latest
-    # 모든 빌드가 성공해야 발행 (실패 시 draft 상태 유지)
     if: ${{ !cancelled() && needs.build-tauri.result == 'success' }}
 
     steps:
@@ -203,47 +175,35 @@ jobs:
           script: |
             const releaseId = ${{ needs.create-release.outputs.release_id }};
             const version = '${{ needs.create-release.outputs.version }}';
-
             console.log(`📝 Generating release notes for v${version}...`);
-
-            // 릴리즈 노트 자동 생성
             const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: `v${version}`,
             });
-
-            // 릴리즈 에셋 확인
             const { data: release } = await github.rest.repos.getRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: releaseId
             });
-
             console.log(`📦 Release assets (${release.assets.length}):`);
             for (const asset of release.assets) {
               console.log(`  - ${asset.name} (${(asset.size / 1024 / 1024).toFixed(2)} MB)`);
             }
-
-            // latest.json 존재 확인
             const latestJson = release.assets.find(a => a.name === 'latest.json');
             if (!latestJson) {
-              console.warn('⚠️ latest.json not found - updater may not work');
+              console.warn('⚠️ latest.json not found');
             } else {
               console.log('✅ latest.json found');
             }
-
-            // 릴리즈 노트 업데이트 및 발행
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: releaseId,
               body: generatedNotes.body,
-              draft: false,  // 발행!
+              draft: false,
             });
-
             console.log(`🎉 Release v${version} published!`);
-            console.log(`🔗 https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/v${version}`);
 
       - name: Notify on failure
         if: failure()
@@ -251,14 +211,12 @@ jobs:
         with:
           script: |
             const releaseId = ${{ needs.create-release.outputs.release_id }};
-
-            // 실패 시 릴리즈 노트에 기록
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: releaseId,
-              body: '❌ 릴리즈 발행 실패. 워크플로우 로그를 확인하세요.',
-              draft: true,  // draft 상태 유지
+              body: '❌ 릴리즈 발행 실패',
+              draft: true,
             });
 
   # 4단계: 빌드 실패 시 정리
@@ -273,15 +231,11 @@ jobs:
         with:
           script: |
             const releaseId = ${{ needs.create-release.outputs.release_id }};
-
             console.log('⚠️ Build failed, updating release status...');
-
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: releaseId,
-              body: '❌ 빌드 실패. 워크플로우 로그를 확인하세요.\n\n이 draft 릴리즈는 수동으로 삭제하거나, 태그를 다시 푸시하면 재사용됩니다.',
+              body: '❌ 빌드 실패. 워크플로우 로그를 확인하세요.',
               draft: true,
             });
-
-            console.log('📝 Release updated with failure status (kept as draft)');

@@ -46,6 +46,10 @@ jobs:
           workspaces: src-tauri
           cache-on-failure: true
 
+      - name: Create .env file for build
+        working-directory: src-tauri
+        run: echo "APTABASE_KEY=${{ secrets.APTABASE_KEY }}" > .env
+
       - name: Check formatting
         working-directory: src-tauri
         run: cargo fmt --all -- --check
@@ -92,6 +96,10 @@ jobs:
         with:
           workspaces: src-tauri
           cache-on-failure: true
+
+      - name: Create .env file for build
+        working-directory: src-tauri
+        run: echo "APTABASE_KEY=${{ secrets.APTABASE_KEY }}" > .env
 
       - name: Run tests with nextest
         working-directory: src-tauri
@@ -140,6 +148,10 @@ jobs:
           workspaces: src-tauri
           cache-on-failure: true
 
+      - name: Create .env file for build
+        working-directory: src-tauri
+        run: echo "APTABASE_KEY=${{ secrets.APTABASE_KEY }}" > .env
+
       - name: Generate coverage report
         working-directory: src-tauri
         run: |
@@ -187,6 +199,10 @@ jobs:
         with:
           workspaces: src-tauri
           cache-on-failure: true
+
+      - name: Create .env file for build
+        working-directory: src-tauri
+        run: echo "APTABASE_KEY=${{ secrets.APTABASE_KEY }}" > .env
 
       - name: Run benchmarks
         working-directory: src-tauri
@@ -242,6 +258,10 @@ jobs:
         with:
           workspaces: src-tauri
           cache-on-failure: true
+
+      - name: Create .env file for build
+        working-directory: src-tauri
+        run: echo "APTABASE_KEY=${{ secrets.APTABASE_KEY }}" > .env
 
       - name: Check documentation
         working-directory: src-tauri

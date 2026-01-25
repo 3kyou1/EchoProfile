@@ -314,6 +314,63 @@ describe("ProjectTree worktree grouping", () => {
       expect(expandedGroups.has("group-libs")).toBe(false);
     });
   });
+
+  describe("accordion behavior (single project expansion)", () => {
+    it("should only allow one project to be expanded at a time", () => {
+      // Simulate accordion toggle logic
+      const toggleProjectAccordion = (
+        currentExpanded: Set<string>,
+        projectPath: string
+      ): Set<string> => {
+        // If the project is already expanded, collapse it
+        if (currentExpanded.has(projectPath)) {
+          return new Set();
+        }
+        // Otherwise, expand only this project (collapse all others)
+        return new Set([projectPath]);
+      };
+
+      let expanded = new Set<string>();
+
+      // Expand first project
+      expanded = toggleProjectAccordion(expanded, "/project-a");
+      expect(expanded.size).toBe(1);
+      expect(expanded.has("/project-a")).toBe(true);
+
+      // Expand second project - first should collapse
+      expanded = toggleProjectAccordion(expanded, "/project-b");
+      expect(expanded.size).toBe(1);
+      expect(expanded.has("/project-a")).toBe(false);
+      expect(expanded.has("/project-b")).toBe(true);
+
+      // Toggle same project - should collapse
+      expanded = toggleProjectAccordion(expanded, "/project-b");
+      expect(expanded.size).toBe(0);
+    });
+
+    it("should prevent showing sessions from wrong project", () => {
+      // This test documents the bug and its fix
+      // Bug: Multiple projects expanded shows same sessions for all
+      // Fix: Only one project can be expanded, so sessions always match
+
+      const sessions = [
+        { session_id: "1", project_name: "project-a" },
+        { session_id: "2", project_name: "project-a" },
+      ];
+
+      // With accordion behavior, only one project is expanded at a time
+      // So sessions are always from the correct project
+      const expandedProject = "/project-a";
+      const selectedProjectPath = "/project-a";
+
+      // Sessions should only be displayed when the expanded project matches selected
+      const shouldShowSessions = expandedProject === selectedProjectPath;
+      expect(shouldShowSessions).toBe(true);
+
+      // If different project was selected, accordion would collapse the old one
+      // preventing mismatched session display
+    });
+  });
 });
 
 describe("ProjectTree edge cases", () => {

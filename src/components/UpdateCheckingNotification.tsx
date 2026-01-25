@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { Loader2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { layout } from "@/components/renderers";
+import { CHECKING_NOTIFICATION_TIMEOUT_MS } from "@/config/update.config";
 
 interface UpdateCheckingNotificationProps {
   onClose: () => void;
@@ -12,6 +14,17 @@ export function UpdateCheckingNotification({
   isVisible,
 }: UpdateCheckingNotificationProps) {
   const { t } = useTranslation();
+
+  // Failsafe timeout - auto-dismiss if check takes too long
+  useEffect(() => {
+    if (isVisible) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, CHECKING_NOTIFICATION_TIMEOUT_MS);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, onClose]);
 
   if (!isVisible) return null;
 

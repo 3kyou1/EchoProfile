@@ -100,6 +100,10 @@ export function SimpleUpdateManager() {
       <UpdateErrorNotification
         error={errorMessage}
         onClose={() => setShowError(false)}
+        onRetry={() => {
+          setIsManualCheck(true);
+          updater.smartCheckForUpdates(true);
+        }}
         isVisible={showError}
       />
     </>

@@ -1,6 +1,7 @@
 // 업데이트 설정 관리 유틸리티
 import type { UpdateSettings } from '../types/updateSettings';
 import { DEFAULT_UPDATE_SETTINGS } from '../types/updateSettings';
+import { updateLogger } from './logger';
 
 const SETTINGS_KEY = 'update_settings';
 
@@ -65,7 +66,7 @@ export function setUpdateSettings(settings: Partial<UpdateSettings>): void {
     const updated = { ...current, ...settings };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
   } catch (error) {
-    console.warn('업데이트 설정 저장 실패:', error);
+    updateLogger.warn('업데이트 설정 저장 실패:', error);
   }
 }
 

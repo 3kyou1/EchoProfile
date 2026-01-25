@@ -54,7 +54,6 @@ interface ProjectTreeProps {
 export const ProjectTree: React.FC<ProjectTreeProps> = ({
   projects,
   sessions,
-  selectedProject: _selectedProject,
   selectedSession,
   onProjectSelect,
   onSessionSelect,

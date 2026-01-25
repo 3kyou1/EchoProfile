@@ -1,27 +1,30 @@
 import { useEffect } from "react";
-import { AlertCircle, X } from "lucide-react";
+import { AlertCircle, X, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { layout } from "@/components/renderers";
+import { ERROR_NOTIFICATION_DURATION_MS } from "@/config/update.config";
 
 interface UpdateErrorNotificationProps {
   error: string;
   onClose: () => void;
+  onRetry?: () => void;
   isVisible: boolean;
 }
 
 export function UpdateErrorNotification({
   error,
   onClose,
+  onRetry,
   isVisible,
 }: UpdateErrorNotificationProps) {
   const { t } = useTranslation();
 
-  // 5초 후 자동으로 사라지기
+  // Auto-dismiss after configured duration
   useEffect(() => {
     if (isVisible) {
       const timer = setTimeout(() => {
         onClose();
-      }, 5000);
+      }, ERROR_NOTIFICATION_DURATION_MS);
 
       return () => clearTimeout(timer);
     }
@@ -41,9 +44,21 @@ export function UpdateErrorNotification({
             <h3 className={`${layout.bodyText} font-semibold text-foreground`}>
               {t("common.error.updateCheckFailed")}
             </h3>
-            <p className={`${layout.smallText} mt-1 text-foreground/80 truncate`}>
+            <p className={`${layout.smallText} mt-1 text-foreground/80 line-clamp-2`}>
               {error}
             </p>
+            {onRetry && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onRetry();
+                }}
+                className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                {t("common.retry")}
+              </button>
+            )}
           </div>
 
           <button

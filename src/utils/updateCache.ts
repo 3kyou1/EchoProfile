@@ -1,5 +1,10 @@
 // 업데이트 체크 결과 캐싱 유틸리티
 import type { GitHubRelease } from '../hooks/useGitHubUpdater';
+import {
+  UPDATE_CACHE_DURATION_MS,
+  UPDATE_CACHE_SCHEMA_VERSION,
+} from '../config/update.config';
+import { updateLogger } from './logger';
 
 interface CachedUpdateResult {
   hasUpdate: boolean;
@@ -10,7 +15,6 @@ interface CachedUpdateResult {
 }
 
 const CACHE_KEY = 'update_check_cache';
-const CACHE_DURATION_MS = 30 * 60 * 1000; // 30분
 
 /**
  * Type guard for CachedUpdateResult validation
@@ -26,9 +30,6 @@ function isCachedUpdateResult(data: unknown): data is CachedUpdateResult {
     (obj.schemaVersion === undefined || typeof obj.schemaVersion === 'number')
   );
 }
-// 캐시 스키마 버전: 버전 파싱 버그 수정으로 인해 기존 캐시 무효화
-// 버전을 올리면 기존 사용자의 캐시가 자동으로 무효화됨
-const CACHE_SCHEMA_VERSION = 2;
 
 export function getCachedUpdateResult(currentVersion: string): CachedUpdateResult | null {
   try {
@@ -45,7 +46,7 @@ export function getCachedUpdateResult(currentVersion: string): CachedUpdateResul
 
     // 스키마 버전이 다르면 캐시 무효화 (버전 파싱 버그 수정)
     // 기존 캐시에는 schemaVersion이 없으므로 자동으로 무효화됨
-    if (parsed.schemaVersion !== CACHE_SCHEMA_VERSION) {
+    if (parsed.schemaVersion !== UPDATE_CACHE_SCHEMA_VERSION) {
       clearAllUpdateRelatedCache();
       return null;
     }
@@ -53,7 +54,7 @@ export function getCachedUpdateResult(currentVersion: string): CachedUpdateResul
     // 버전이 다르거나 캐시가 만료된 경우 무효화
     if (
       parsed.currentVersion !== currentVersion ||
-      Date.now() - parsed.timestamp > CACHE_DURATION_MS
+      Date.now() - parsed.timestamp > UPDATE_CACHE_DURATION_MS
     ) {
       localStorage.removeItem(CACHE_KEY);
       return null;
@@ -96,12 +97,12 @@ export function setCachedUpdateResult(
       releaseInfo,
       timestamp: Date.now(),
       currentVersion,
-      schemaVersion: CACHE_SCHEMA_VERSION,
+      schemaVersion: UPDATE_CACHE_SCHEMA_VERSION,
     };
 
     localStorage.setItem(CACHE_KEY, JSON.stringify(result));
   } catch (error) {
-    console.warn('업데이트 캐시 저장 실패:', error);
+    updateLogger.warn('업데이트 캐시 저장 실패:', error);
   }
 }
 

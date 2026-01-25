@@ -6,11 +6,12 @@ import {
   shouldShowUpdateForVersion,
   isOnline
 } from '@/utils/updateSettings';
-
-// Timing constants (in milliseconds)
-const INTRO_MODAL_DELAY_MS = 2000;
-const AUTO_CHECK_DELAY_MS = 5000;
-const POST_INTRO_CHECK_DELAY_MS = 1000;
+import {
+  INTRO_MODAL_DELAY_MS,
+  AUTO_CHECK_DELAY_MS,
+  POST_INTRO_CHECK_DELAY_MS,
+} from '@/config/update.config';
+import { updateLogger } from '@/utils/logger';
 
 export function useSmartUpdater() {
   const githubUpdater = useGitHubUpdater();
@@ -38,13 +39,13 @@ export function useSmartUpdater() {
     if (!forceCheck) {
       // 오프라인 상태 확인
       if (!isOnline()) {
-        console.log('오프라인 상태로 업데이트 체크 건너뜀');
+        updateLogger.log('오프라인 상태로 업데이트 체크 건너뜀');
         return;
       }
 
       // 사용자 설정 확인
       if (!shouldCheckForUpdates()) {
-        console.log('사용자 설정에 의해 업데이트 체크 건너뜀');
+        updateLogger.log('사용자 설정에 의해 업데이트 체크 건너뜀');
         return;
       }
     }
@@ -61,7 +62,7 @@ export function useSmartUpdater() {
 
     // 개발 모드에서는 자동 업데이트 체크 비활성화 (GitHub API rate limit 방지)
     if (import.meta.env.DEV) {
-      console.log('[DEV] 자동 업데이트 체크 비활성화');
+      updateLogger.log('자동 업데이트 체크 비활성화 (DEV mode)');
       hasCheckedOnStartup.current = true;
       return;
     }

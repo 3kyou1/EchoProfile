@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { CheckCircle, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { layout } from "@/components/renderers";
+import { SUCCESS_NOTIFICATION_DURATION_MS } from "@/config/update.config";
 
 interface UpToDateNotificationProps {
   currentVersion: string;
@@ -16,12 +17,12 @@ export function UpToDateNotification({
 }: UpToDateNotificationProps) {
   const { t } = useTranslation();
 
-  // 3초 후 자동으로 사라지기
+  // Auto-dismiss after configured duration
   useEffect(() => {
     if (isVisible) {
       const timer = setTimeout(() => {
         onClose();
-      }, 3000);
+      }, SUCCESS_NOTIFICATION_DURATION_MS);
 
       return () => clearTimeout(timer);
     }

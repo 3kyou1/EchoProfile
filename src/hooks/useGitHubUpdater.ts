@@ -5,14 +5,16 @@ import { check, Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { getVersion } from "@tauri-apps/api/app";
 import { getCachedUpdateResult, setCachedUpdateResult } from "../utils/updateCache";
-
-// Configuration constants
-const REPO_OWNER = 'jhlee0409';
-const REPO_NAME = 'claude-code-history-viewer';
-const GITHUB_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`;
-const GITHUB_RELEASE_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/tag`;
-const API_TIMEOUT_MS = 10000;
-const TAURI_CHECK_TIMEOUT_MS = 15000;
+import { updateLogger } from "../utils/logger";
+import {
+  GITHUB_LATEST_RELEASE_API,
+  GITHUB_RELEASE_URL,
+  USER_AGENT,
+} from "../config/app.config";
+import {
+  GITHUB_API_TIMEOUT_MS,
+  TAURI_CHECK_TIMEOUT_MS,
+} from "../config/update.config";
 
 export interface GitHubRelease {
   tag_name: string;
@@ -70,13 +72,13 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
     useCallback(async (): Promise<GitHubRelease | null> => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+        const timeoutId = setTimeout(() => controller.abort(), GITHUB_API_TIMEOUT_MS);
 
-        const response = await fetch(GITHUB_API_URL, {
+        const response = await fetch(GITHUB_LATEST_RELEASE_API, {
           method: "GET",
           headers: {
             Accept: "application/vnd.github.v3+json",
-            "User-Agent": "Claude-Code-History-Viewer",
+            "User-Agent": USER_AGENT,
           },
           signal: controller.signal,
         });
@@ -84,6 +86,10 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
+          // Handle rate limiting (403 or 429)
+          if (response.status === 403 || response.status === 429) {
+            throw new Error(t('common.hooks.rateLimitError'));
+          }
           throw new Error(t('common.hooks.githubApiError', { status: response.status }));
         }
 
@@ -91,11 +97,12 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
         return release;
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-          console.warn(`GitHub API request timeout (${API_TIMEOUT_MS}ms)`);
-        } else {
-          console.error("Failed to fetch GitHub release info:", error);
+          updateLogger.warn(`GitHub API request timeout (${GITHUB_API_TIMEOUT_MS}ms)`);
+          throw new Error(t('common.hooks.timeoutError'));
         }
-        return null;
+        updateLogger.error("Failed to fetch GitHub release info:", error);
+        // Re-throw to propagate specific error messages
+        throw error;
       }
     }, [t]);
 
@@ -127,12 +134,10 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
       let releaseInfo: GitHubRelease | null = null;
       try {
         releaseInfo = await fetchGitHubRelease();
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Release info:', releaseInfo);
-        }
+        updateLogger.log('Release info:', releaseInfo);
       } catch (e) {
         // GitHub API 실패해도 Tauri updater 결과는 사용
-        console.warn('GitHub API 실패, Tauri updater 결과만 사용:', e);
+        updateLogger.warn('GitHub API 실패, Tauri updater 결과만 사용:', e);
       }
 
       // 릴리즈 정보가 없으면 업데이트 버전으로 대체 생성
@@ -160,7 +165,7 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
         releaseInfo,
       }));
     } catch (error) {
-      console.error("업데이트 확인 실패:", error);
+      updateLogger.error("업데이트 확인 실패:", error);
       setState((prev) => ({
         ...prev,
         isChecking: false,
@@ -222,7 +227,7 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
             : t('common.hooks.updateInstallFailed'),
       }));
     }
-  }, [state.updateInfo]);
+  }, [state.updateInfo, t]);
 
   const dismissUpdate = useCallback(() => {
     setState((prev) => ({

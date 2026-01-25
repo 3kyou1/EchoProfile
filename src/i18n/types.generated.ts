@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-01-23T18:39:49.947Z
- * 총 키 개수: 743
+ * 생성 시간: 2026-01-25T13:43:18.334Z
+ * 총 키 개수: 768
  */
 
 /**
@@ -34,7 +34,10 @@ export type TranslationKey =
   | 'common.errorOccurred'
   | 'common.help'
   | 'common.hooks.githubApiError'
+  | 'common.hooks.networkError'
   | 'common.hooks.noProjectSelected'
+  | 'common.hooks.rateLimitError'
+  | 'common.hooks.timeoutError'
   | 'common.hooks.projectSummaryLoadFailed'
   | 'common.hooks.recentEditsLoadFailed'
   | 'common.hooks.releaseInfoFetchFailed'
@@ -224,6 +227,9 @@ export type TranslationKey =
   | 'session.select'
   | 'session.selectDescription'
   | 'session.summaryNotFound'
+  | 'session.rename'
+  | 'session.renamePlaceholder'
+  | 'session.resetName'
   | 'session.title'
   | 'project.count'
   | 'project.globalStats'
@@ -231,6 +237,18 @@ export type TranslationKey =
   | 'project.notFound'
   | 'project.selectToView'
   | 'project.title'
+  | 'project.worktreeGrouping'
+  | 'project.worktrees'
+  | 'project.worktreeGroup'
+  | 'project.groupingNone'
+  | 'project.groupingDirectory'
+  | 'project.groupingWorktree'
+  | 'project.main'
+  | 'project.hide'
+  | 'project.unhide'
+  | 'project.hiddenPatterns'
+  | 'project.addPattern'
+  | 'project.removePattern'
   | 'message.allLoaded'
   | 'message.branch'
   | 'message.checkConsole'
@@ -755,7 +773,14 @@ export type TranslationKey =
   | 'commandOutputDisplay.packageManagement'
   | 'commandOutputDisplay.tableOutput'
   | 'commandOutputDisplay.terminalOutput'
-  | 'common.noDataAvailable';
+  | 'common.noDataAvailable'
+  | 'captureMode.enter'
+  | 'captureMode.active'
+  | 'captureMode.done'
+  | 'captureMode.hiddenCount'
+  | 'captureMode.restoreAll'
+  | 'captureMode.hideBlock'
+  | 'captureMode.tooltip';
 
 /**
  * 사용 가능한 접두사 목록
@@ -767,6 +792,7 @@ export type TranslationPrefix =
   | 'analytics'
   | 'assistantMessageDetails'
   | 'bashCodeExecutionToolResultRenderer'
+  | 'captureMode'
   | 'citationRenderer'
   | 'claudeContentArrayRenderer'
   | 'claudeSessionHistoryRenderer'
@@ -845,7 +871,10 @@ export type CommonKeys =
   | 'errorOccurred'
   | 'help'
   | 'hooks.githubApiError'
+  | 'hooks.networkError'
   | 'hooks.noProjectSelected'
+  | 'hooks.rateLimitError'
+  | 'hooks.timeoutError'
   | 'hooks.projectSummaryLoadFailed'
   | 'hooks.recentEditsLoadFailed'
   | 'hooks.releaseInfoFetchFailed'
@@ -1046,6 +1075,9 @@ export type SessionKeys =
   | 'select'
   | 'selectDescription'
   | 'summaryNotFound'
+  | 'rename'
+  | 'renamePlaceholder'
+  | 'resetName'
   | 'title';
 
 /**
@@ -1057,7 +1089,19 @@ export type ProjectKeys =
   | 'globalStatsDescription'
   | 'notFound'
   | 'selectToView'
-  | 'title';
+  | 'title'
+  | 'worktreeGrouping'
+  | 'worktrees'
+  | 'worktreeGroup'
+  | 'groupingNone'
+  | 'groupingDirectory'
+  | 'groupingWorktree'
+  | 'main'
+  | 'hide'
+  | 'unhide'
+  | 'hiddenPatterns'
+  | 'addPattern'
+  | 'removePattern';
 
 /**
  * message 네임스페이스 키
@@ -1852,4 +1896,16 @@ export type CommandOutputDisplayKeys =
   | 'packageManagement'
   | 'tableOutput'
   | 'terminalOutput';
+
+/**
+ * captureMode 네임스페이스 키
+ */
+export type CaptureModeKeys =
+  | 'enter'
+  | 'active'
+  | 'done'
+  | 'hiddenCount'
+  | 'restoreAll'
+  | 'hideBlock'
+  | 'tooltip';
 

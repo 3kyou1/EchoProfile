@@ -29,12 +29,23 @@ fn search_in_value(value: &serde_json::Value, query: &str) -> bool {
     }
 }
 
+/// Extract project name from file path
+/// Path format: ~/.claude/projects/[project-name]/[session-file].jsonl
+fn extract_project_name(file_path: &PathBuf) -> Option<String> {
+    file_path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+        .map(|s| s.to_string())
+}
+
 /// Search for messages matching the query in a single file
 ///
 /// Uses a reusable buffer to avoid repeated heap allocations during JSON parsing.
 #[allow(unsafe_code)] // Required for mmap performance optimization
 fn search_in_file(file_path: &PathBuf, query: &str) -> Vec<ClaudeMessage> {
     let query_lower = query.to_lowercase();
+    let project_name = extract_project_name(file_path);
 
     let file = match fs::File::open(file_path) {
         Ok(f) => f,
@@ -102,6 +113,7 @@ fn search_in_file(file_path: &PathBuf, query: &str) -> Vec<ClaudeMessage> {
                 .unwrap_or_else(|| Utc::now().to_rfc3339()),
             message_type: log_entry.message_type,
             content: Some(message_content.content.clone()),
+            project_name: project_name.clone(),
             tool_use: log_entry.tool_use,
             tool_use_result: log_entry.tool_use_result,
             is_sidechain: log_entry.is_sidechain,

@@ -38,17 +38,17 @@ export const GlobalSearchModal = ({
     const { claudePath, projects, selectProject, selectSession, sessions } =
         useAppStore();
 
-    // Group results by session
+    // Group results by project name
     const groupedResults = useMemo(() => {
         const groups = new Map<string, GlobalSearchResult[]>();
 
         for (const result of results) {
-            const sessionId =
-                result.sessionId || t("globalSearch.unknownProject");
-            if (!groups.has(sessionId)) {
-                groups.set(sessionId, []);
+            const projectName =
+                result.projectName || t("globalSearch.unknownProject");
+            if (!groups.has(projectName)) {
+                groups.set(projectName, []);
             }
-            groups.get(sessionId)!.push(result);
+            groups.get(projectName)!.push(result);
         }
 
         return groups;
@@ -369,13 +369,11 @@ export const GlobalSearchModal = ({
                     {results.length > 0 && (
                         <div className="py-2">
                             {Array.from(groupedResults.entries()).map(
-                                ([sessionId, items]) => (
-                                    <div key={sessionId}>
-                                        {/* Session Header */}
+                                ([projectName, items]) => (
+                                    <div key={projectName}>
+                                        {/* Project Header */}
                                         <div className="px-4 py-1.5 text-xs font-medium text-muted-foreground bg-muted sticky top-0 truncate">
-                                            {sessionId.length > 30
-                                                ? `${sessionId.slice(0, 30)}...`
-                                                : sessionId}
+                                            {projectName}
                                         </div>
 
                                         {/* Results in this project */}

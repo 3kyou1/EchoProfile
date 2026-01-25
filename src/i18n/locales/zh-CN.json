@@ -218,6 +218,9 @@
   "session.select": "请选择会话",
   "session.selectDescription": "从左侧选择项目和会话以查看对话内容",
   "session.summaryNotFound": "未找到会话摘要。",
+  "session.rename": "重命名会话",
+  "session.renamePlaceholder": "输入会话名称...",
+  "session.resetName": "重置名称",
   "session.title": "会话：",
   "project.count": "项目：{{count}}个",
   "project.globalStats": "全局统计",
@@ -225,6 +228,8 @@
   "project.notFound": "未找到项目",
   "project.selectToView": "选择项目以查看分析",
   "project.title": "项目：",
+  "project.worktreeGrouping": "分组工作树",
+  "project.worktrees": "工作树",
   "message.allLoaded": "已加载所有消息",
   "message.branch": "分支",
   "message.checkConsole": "请查看控制台以获取详细错误信息。",
@@ -749,5 +754,12 @@
   "commandOutputDisplay.packageManagement": "包管理",
   "commandOutputDisplay.tableOutput": "表格输出",
   "commandOutputDisplay.terminalOutput": "终端输出",
-  "common.noDataAvailable": "无可用数据"
+  "common.noDataAvailable": "无可用数据",
+  "captureMode.enter": "截图模式",
+  "captureMode.active": "截图模式",
+  "captureMode.done": "完成",
+  "captureMode.hiddenCount": "已隐藏 {{count}} 个",
+  "captureMode.restoreAll": "全部恢复",
+  "captureMode.hideBlock": "隐藏此块",
+  "captureMode.tooltip": "隐藏消息块以便截图"
 }

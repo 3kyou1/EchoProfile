@@ -8,6 +8,8 @@
 import type { ClaudeMessage } from "../../../types";
 import type {
   FlattenedMessage,
+  FlattenedMessageItem,
+  HiddenBlocksPlaceholder,
   AgentProgressGroup,
   AgentTaskGroupResult,
   AgentProgressGroupResult,
@@ -21,11 +23,14 @@ interface FlattenOptions {
   agentTaskMemberUuids: Set<string>;
   agentProgressGroups: Map<string, AgentProgressGroupResult>;
   agentProgressMemberUuids: Set<string>;
+  /** Message UUIDs to hide (only used when in capture mode) */
+  hiddenMessageIds?: string[];
 }
 
 /**
  * Flatten message tree using DFS traversal while preserving depth.
  * Also attaches group information for agent tasks and progress.
+ * When messages are hidden, inserts placeholder items showing the count.
  */
 export function flattenMessageTree({
   messages,
@@ -33,7 +38,10 @@ export function flattenMessageTree({
   agentTaskMemberUuids,
   agentProgressGroups,
   agentProgressMemberUuids,
+  hiddenMessageIds = [],
 }: FlattenOptions): FlattenedMessage[] {
+  // Create a Set for O(1) lookup of hidden messages
+  const hiddenSet = new Set(hiddenMessageIds);
   if (messages.length === 0) {
     return [];
   }
@@ -58,7 +66,92 @@ export function flattenMessageTree({
 
   // If no root messages exist, treat all messages as flat list
   if (rootMessages.length === 0) {
-    return uniqueMessages.map((message, index) =>
+    return flattenWithPlaceholders(
+      uniqueMessages,
+      hiddenSet,
+      agentTaskGroups,
+      agentTaskMemberUuids,
+      agentProgressGroups,
+      agentProgressMemberUuids
+    );
+  }
+
+  // DFS traversal to flatten tree - first collect all messages in order
+  const orderedMessages: ClaudeMessage[] = [];
+  const visited = new Set<string>();
+
+  function traverse(message: ClaudeMessage, skipDueToHiddenParent = false): void {
+    if (visited.has(message.uuid)) {
+      if (import.meta.env.DEV) {
+        console.warn(`Circular reference detected for message: ${message.uuid}`);
+      }
+      return;
+    }
+
+    visited.add(message.uuid);
+
+    // Track if this message should be skipped due to hidden parent
+    const isHiddenByParent = skipDueToHiddenParent;
+
+    // Add message to ordered list (we'll filter later)
+    if (!isHiddenByParent) {
+      orderedMessages.push(message);
+    }
+
+    // Traverse children (skip children if this message is hidden)
+    const isHidden = hiddenSet.has(message.uuid) || isHiddenByParent;
+    const children = childrenMap.get(message.uuid) ?? [];
+    for (const child of children) {
+      traverse(child, isHidden);
+    }
+  }
+
+  // Start from root messages
+  for (const root of rootMessages) {
+    traverse(root);
+  }
+
+  // Fallback: If tree traversal resulted in significantly fewer messages,
+  // add remaining unvisited messages
+  if (orderedMessages.length < uniqueMessages.length * 0.9) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[flattenMessageTree] Tree traversal found ${orderedMessages.length}/${uniqueMessages.length} messages. Adding orphaned messages.`
+      );
+    }
+    for (const msg of uniqueMessages) {
+      if (!visited.has(msg.uuid)) {
+        orderedMessages.push(msg);
+        visited.add(msg.uuid);
+      }
+    }
+  }
+
+  // Now flatten with placeholders
+  return flattenWithPlaceholders(
+    orderedMessages,
+    hiddenSet,
+    agentTaskGroups,
+    agentTaskMemberUuids,
+    agentProgressGroups,
+    agentProgressMemberUuids
+  );
+}
+
+/**
+ * Flatten messages and insert placeholders where hidden messages were.
+ */
+function flattenWithPlaceholders(
+  messages: ClaudeMessage[],
+  hiddenSet: Set<string>,
+  agentTaskGroups: Map<string, AgentTaskGroupResult>,
+  agentTaskMemberUuids: Set<string>,
+  agentProgressGroups: Map<string, AgentProgressGroupResult>,
+  agentProgressMemberUuids: Set<string>
+): FlattenedMessage[] {
+  if (hiddenSet.size === 0) {
+    // No hidden messages - return regular flattened list
+    return messages.map((message, index) =>
       createFlattenedMessage(
         message,
         0,
@@ -71,72 +164,57 @@ export function flattenMessageTree({
     );
   }
 
-  // DFS traversal to flatten tree
   const result: FlattenedMessage[] = [];
-  const visited = new Set<string>();
+  let pendingHiddenUuids: string[] = [];
+  let visibleMessageIndex = 0;
 
-  function traverse(message: ClaudeMessage, depth: number): void {
-    if (visited.has(message.uuid)) {
-      console.warn(`Circular reference detected for message: ${message.uuid}`);
-      return;
-    }
-
-    visited.add(message.uuid);
-
-    result.push(
-      createFlattenedMessage(
-        message,
-        depth,
-        result.length,
-        agentTaskGroups,
-        agentTaskMemberUuids,
-        agentProgressGroups,
-        agentProgressMemberUuids
-      )
-    );
-
-    // Traverse children
-    const children = childrenMap.get(message.uuid) ?? [];
-    for (const child of children) {
-      traverse(child, depth + 1);
-    }
-  }
-
-  // Start from root messages
-  for (const root of rootMessages) {
-    traverse(root, 0);
-  }
-
-  // Fallback: If tree traversal resulted in significantly fewer messages,
-  // some messages might be orphaned (parent UUID points to non-existent message).
-  // In this case, add remaining unvisited messages at depth 0.
-  if (result.length < uniqueMessages.length * 0.9) {
-    console.warn(
-      `[flattenMessageTree] Tree traversal found ${result.length}/${uniqueMessages.length} messages. Adding orphaned messages.`
-    );
-    for (const msg of uniqueMessages) {
-      if (!visited.has(msg.uuid)) {
-        result.push(
-          createFlattenedMessage(
-            msg,
-            0,
-            result.length,
-            agentTaskGroups,
-            agentTaskMemberUuids,
-            agentProgressGroups,
-            agentProgressMemberUuids
-          )
-        );
-        visited.add(msg.uuid);
+  for (const message of messages) {
+    if (hiddenSet.has(message.uuid)) {
+      // Accumulate hidden message UUIDs
+      pendingHiddenUuids.push(message.uuid);
+    } else {
+      // Flush pending hidden messages as placeholder
+      if (pendingHiddenUuids.length > 0) {
+        const placeholder: HiddenBlocksPlaceholder = {
+          type: "hidden-placeholder",
+          hiddenCount: pendingHiddenUuids.length,
+          hiddenUuids: [...pendingHiddenUuids],
+        };
+        result.push(placeholder);
+        pendingHiddenUuids = [];
       }
+
+      // Add visible message with correct originalIndex
+      result.push(
+        createFlattenedMessage(
+          message,
+          0,
+          visibleMessageIndex,
+          agentTaskGroups,
+          agentTaskMemberUuids,
+          agentProgressGroups,
+          agentProgressMemberUuids
+        )
+      );
+      visibleMessageIndex++;
     }
+  }
+
+  // Flush any remaining hidden messages at the end
+  if (pendingHiddenUuids.length > 0) {
+    const placeholder: HiddenBlocksPlaceholder = {
+      type: "hidden-placeholder",
+      hiddenCount: pendingHiddenUuids.length,
+      hiddenUuids: [...pendingHiddenUuids],
+    };
+    result.push(placeholder);
   }
 
   return result;
 }
 
 /**
- * Create a FlattenedMessage object with group information.
+ * Create a FlattenedMessageItem object with group information.
  */
 function createFlattenedMessage(
   message: ClaudeMessage,
@@ -146,7 +224,7 @@ function createFlattenedMessage(
   agentTaskMemberUuids: Set<string>,
   agentProgressGroups: Map<string, AgentProgressGroupResult>,
   agentProgressMemberUuids: Set<string>
-): FlattenedMessage {
+): FlattenedMessageItem {
   // Check agent task group status
   const taskGroupInfo = agentTaskGroups.get(message.uuid);
   const isGroupLeader = !!taskGroupInfo;
@@ -171,6 +249,7 @@ function createFlattenedMessage(
   }
 
   return {
+    type: "message",
     message,
     depth,
     originalIndex,
@@ -185,13 +264,17 @@ function createFlattenedMessage(
 
 /**
  * Build a UUID to index map for quick lookups.
+ * Only includes message items, not placeholders.
  */
 export function buildUuidToIndexMap(
   flattenedMessages: FlattenedMessage[]
 ): Map<string, number> {
   const map = new Map<string, number>();
   flattenedMessages.forEach((item, index) => {
-    map.set(item.message.uuid, index);
+    // Only map message items, skip placeholders
+    if (item.type === "message") {
+      map.set(item.message.uuid, index);
+    }
   });
   return map;
 }
@@ -210,7 +293,7 @@ export function findGroupLeaderIndex(
   for (const [leaderId, group] of agentTaskGroups.entries()) {
     if (group.messageUuids.has(uuid)) {
       const leaderIndex = flattenedMessages.findIndex(
-        (item) => item.message.uuid === leaderId
+        (item) => item.type === "message" && item.message.uuid === leaderId
       );
       return leaderIndex >= 0 ? leaderIndex : null;
     }
@@ -220,7 +303,7 @@ export function findGroupLeaderIndex(
   for (const [leaderId, group] of agentProgressGroups.entries()) {
     if (group.messageUuids.has(uuid)) {
       const leaderIndex = flattenedMessages.findIndex(
-        (item) => item.message.uuid === leaderId
+        (item) => item.type === "message" && item.message.uuid === leaderId
       );
       return leaderIndex >= 0 ? leaderIndex : null;
     }

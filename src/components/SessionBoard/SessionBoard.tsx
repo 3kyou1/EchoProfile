@@ -191,15 +191,7 @@ export const SessionBoard = () => {
                                     data={data}
                                     zoomLevel={zoomLevel}
                                     activeBrush={activeBrush}
-                                    onHoverInteraction={(type, value) => {
-                                        // Only brush on hover if there is already an active brush
-                                        if (activeBrush) {
-                                            setActiveBrush({ type: type as any, value });
-                                        }
-                                    }}
-                                    onLeaveInteraction={() => {
-                                        // No-op or clear if you want transient behavior, but sticky is better
-                                    }}
+                                    // Removed onHoverInteraction to disable brushing on hover
                                     onInteractionClick={(id) => {
                                         if (selectedMessageId === id) {
                                             setSelectedMessageId(null);

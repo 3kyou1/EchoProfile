@@ -364,11 +364,11 @@ export function toDisplayPath(fullPath: string, homePath?: string): string {
 function detectHomePath(path: string): string | null {
   // macOS: /Users/username/...
   const macMatch = path.match(/^(\/Users\/[^/]+)/);
-  if (macMatch) return macMatch[1];
+  if (macMatch?.[1]) return macMatch[1];
 
   // Linux: /home/username/...
   const linuxMatch = path.match(/^(\/home\/[^/]+)/);
-  if (linuxMatch) return linuxMatch[1];
+  if (linuxMatch?.[1]) return linuxMatch[1];
 
   return null;
 }

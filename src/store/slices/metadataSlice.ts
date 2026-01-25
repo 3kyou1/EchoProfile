@@ -5,6 +5,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import type { StateCreator } from "zustand";
 import type {
   UserMetadata,
   SessionMetadata,
@@ -13,7 +14,7 @@ import type {
 } from "../../types";
 import { DEFAULT_USER_METADATA } from "../../types";
 import { matchGlobPattern } from "../../utils/globUtils";
-import type { StoreSet, StoreGet, FullAppStore } from "./types";
+import type { FullAppStore } from "./types";
 
 // ============================================================================
 // State Interface
@@ -87,10 +88,12 @@ export const initialMetadataState: MetadataSliceState = {
 // Slice Creator
 // ============================================================================
 
-export const createMetadataSlice = (
-  set: StoreSet<FullAppStore>,
-  get: StoreGet<FullAppStore>
-): MetadataSlice => ({
+export const createMetadataSlice: StateCreator<
+  FullAppStore,
+  [],
+  [],
+  MetadataSlice
+> = (set, get) => ({
   ...initialMetadataState,
 
   loadMetadata: async () => {

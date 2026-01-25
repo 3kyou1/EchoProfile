@@ -54,7 +54,7 @@ interface ProjectTreeProps {
 export const ProjectTree: React.FC<ProjectTreeProps> = ({
   projects,
   sessions,
-  selectedProject,
+  selectedProject: _selectedProject,
   selectedSession,
   onProjectSelect,
   onSessionSelect,
@@ -360,7 +360,6 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                     <div className="ml-4 pl-3 border-l-2 border-blue-500/20 space-y-0.5">
                       {group.projects.map((project) => {
                         const isProjectExp = isProjectExpanded(project.path);
-                        const isSelected = selectedProject?.path === project.path;
 
                         return (
                           <div key={project.path}>
@@ -550,7 +549,6 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                       {allGroupProjects.map((project, idx) => {
                         const isProjectExp = isProjectExpanded(project.path);
                         const isMain = idx === 0;
-                        const isSelected = selectedProject?.path === project.path;
 
                         return (
                           <div key={project.path}>
@@ -678,7 +676,6 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
             {/* Note: directory mode shows ALL projects in groups, so no ungrouped section */}
             {(groupingMode === "none" ? projects : groupingMode === "worktree" ? displayProjects : []).map((project) => {
               const isExpanded = isProjectExpanded(project.path);
-              const isSelected = selectedProject?.path === project.path;
 
               return (
                 <div key={project.path}>

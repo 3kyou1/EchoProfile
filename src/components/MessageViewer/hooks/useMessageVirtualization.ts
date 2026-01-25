@@ -135,7 +135,7 @@ export const useMessageVirtualization = ({
       if (directIndex !== undefined) {
         const item = flattenedMessages[directIndex];
         // If this is a group member, find the leader instead
-        if (item?.isGroupMember || item?.isProgressGroupMember) {
+        if (item?.type === "message" && (item.isGroupMember || item.isProgressGroupMember)) {
           const leaderIndex = findGroupLeaderIndex(
             uuid,
             flattenedMessages,

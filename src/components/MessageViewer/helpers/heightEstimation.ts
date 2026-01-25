@@ -26,6 +26,11 @@ const HEIGHT_DEFAULTS = {
  * This is used as the initial estimate before actual measurement.
  */
 export function estimateMessageHeight(item: FlattenedMessage): number {
+  // Hidden placeholder has fixed height
+  if (item.type === "hidden-placeholder") {
+    return 40; // Compact placeholder height
+  }
+
   const { message, isGroupMember, isProgressGroupMember, agentTaskGroup, agentProgressGroup } = item;
 
   // Group members are hidden (height: 0)

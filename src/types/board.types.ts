@@ -9,10 +9,18 @@ export interface BoardSessionStats {
     toolCount: number;
 }
 
+export interface SessionFileEdit {
+    path: string;
+    timestamp: string;
+    messageId: string;
+    type: "write" | "edit" | "create";
+}
+
 export interface BoardSessionData {
     session: ClaudeSession;
     messages: ClaudeMessage[];
     stats: BoardSessionStats;
+    fileEdits: SessionFileEdit[];
 }
 
 export type ZoomLevel = 0 | 1 | 2; // 0: PIXEL, 1: SKIM, 2: READ

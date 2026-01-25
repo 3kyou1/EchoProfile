@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
 import { Coins, AlertCircle, Clock } from "lucide-react";
@@ -27,13 +28,12 @@ export const SessionLane = ({
 }: SessionLaneProps) => {
     const parentRef = useRef<HTMLDivElement>(null);
     const { session, messages, stats } = data;
+    const selectedMessageId = useAppStore(state => state.selectedMessageId);
 
     // Filter out "no-content" messages before virtualization
-    // This ensures the virtualizer sees the correct count and indices
     const visibleMessages = messages.filter(msg => {
         const content = extractClaudeMessageContent(msg) || "";
         const isTool = !!msg.toolUse;
-        // Keep if content is non-empty OR it's a tool use
         return content.trim().length > 0 || isTool;
     });
 
@@ -48,7 +48,6 @@ export const SessionLane = ({
         overscan: 10,
     });
 
-    // Handle local scroll and notify parent
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         if (onScroll) {
             onScroll(e.currentTarget.scrollTop);
@@ -161,6 +160,7 @@ export const SessionLane = ({
                                     message={message}
                                     zoomLevel={zoomLevel}
                                     isActive={isInteractionActive(message)}
+                                    isExpanded={selectedMessageId === message.uuid}
                                     onHover={onHoverInteraction}
                                     onLeave={onLeaveInteraction}
                                     onClick={() => onInteractionClick?.(message.uuid)}

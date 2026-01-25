@@ -5,6 +5,7 @@ import type {
     BoardSessionData,
     BoardSessionStats,
     ZoomLevel,
+    SessionFileEdit,
 } from "../../types/board.types";
 import type { ClaudeMessage, ClaudeSession } from "../../types";
 
@@ -17,12 +18,14 @@ export interface BoardSliceState {
         type: "role" | "status" | "tool" | "file";
         value: string;
     } | null;
+    selectedMessageId: string | null;
 }
 
 export interface BoardSliceActions {
     loadBoardSessions: (sessions: ClaudeSession[]) => Promise<void>;
     setZoomLevel: (level: ZoomLevel) => void;
     setActiveBrush: (brush: BoardSliceState["activeBrush"]) => void;
+    setSelectedMessageId: (id: string | null) => void;
     clearBoard: () => void;
 }
 
@@ -34,6 +37,7 @@ const initialBoardState: BoardSliceState = {
     isLoadingBoard: false,
     zoomLevel: 1, // Default to SKIM
     activeBrush: null,
+    selectedMessageId: null,
 };
 
 /**
@@ -81,7 +85,7 @@ export const createBoardSlice: StateCreator<
                         { sessionPath: session.file_path }
                     );
 
-                    // Calculate stats
+                    // Calculate stats and extract file edits
                     const stats: BoardSessionStats = {
                         totalTokens: 0,
                         inputTokens: 0,
@@ -90,6 +94,8 @@ export const createBoardSlice: StateCreator<
                         durationMs: 0,
                         toolCount: 0,
                     };
+
+                    const fileEdits: SessionFileEdit[] = [];
 
                     messages.forEach((msg) => {
                         if (msg.usage) {
@@ -101,7 +107,26 @@ export const createBoardSlice: StateCreator<
 
                         if (msg.durationMs) stats.durationMs += msg.durationMs;
                         if (msg.stopReasonSystem?.toLowerCase().includes("error")) stats.errorCount++;
-                        if (msg.toolUse) stats.toolCount++;
+
+                        if (msg.toolUse) {
+                            stats.toolCount++;
+                            const toolUse = msg.toolUse as any;
+                            const name = toolUse.name;
+                            const input = toolUse.input;
+
+                            // Hoist file edits
+                            if (['write_to_file', 'replace_file_content', 'create_file', 'edit_file'].includes(name)) {
+                                const path = input?.path || input?.file_path || input?.TargetFile || "";
+                                if (path) {
+                                    fileEdits.push({
+                                        path,
+                                        timestamp: msg.timestamp,
+                                        messageId: msg.uuid,
+                                        type: name === 'create_file' ? 'create' : 'edit'
+                                    });
+                                }
+                            }
+                        }
 
                         if (msg.toolUseResult) {
                             const result = msg.toolUseResult as any;
@@ -119,6 +144,7 @@ export const createBoardSlice: StateCreator<
                             session: { ...session, relevance }, // Inject heuristic relevance
                             messages,
                             stats,
+                            fileEdits,
                         },
                     };
                 } catch (err) {
@@ -161,5 +187,6 @@ export const createBoardSlice: StateCreator<
 
     setZoomLevel: (zoomLevel: ZoomLevel) => set({ zoomLevel }),
     setActiveBrush: (activeBrush) => set({ activeBrush }),
+    setSelectedMessageId: (id) => set({ selectedMessageId: id }),
     clearBoard: () => set(initialBoardState),
 });

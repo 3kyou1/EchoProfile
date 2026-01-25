@@ -16,7 +16,9 @@ export const SessionBoard = () => {
         zoomLevel,
         activeBrush,
         setZoomLevel,
-        setActiveBrush
+        setActiveBrush,
+        setSelectedMessageId,
+        selectedMessageId
     } = useAppStore();
 
     const { t } = useTranslation();
@@ -68,7 +70,6 @@ export const SessionBoard = () => {
 
         // Vertical Pan (Sync across all lanes)
         const y = e.pageY;
-        const deltaY = y - startY;
 
         const lanes = document.querySelectorAll('.session-lane-scroll');
         lanes.forEach(lane => {
@@ -190,8 +191,22 @@ export const SessionBoard = () => {
                                     data={data}
                                     zoomLevel={zoomLevel}
                                     activeBrush={activeBrush}
-                                    onHoverInteraction={(type, value) => setActiveBrush({ type: type as any, value })}
-                                    onLeaveInteraction={() => setActiveBrush(null)}
+                                    onHoverInteraction={(type, value) => {
+                                        // Only brush on hover if there is already an active brush
+                                        if (activeBrush) {
+                                            setActiveBrush({ type: type as any, value });
+                                        }
+                                    }}
+                                    onLeaveInteraction={() => {
+                                        // No-op or clear if you want transient behavior, but sticky is better
+                                    }}
+                                    onInteractionClick={(id) => {
+                                        if (selectedMessageId === id) {
+                                            setSelectedMessageId(null);
+                                        } else {
+                                            setSelectedMessageId(id);
+                                        }
+                                    }}
                                     onScroll={handleLaneScroll}
                                 />
                             </div>

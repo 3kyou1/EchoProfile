@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGitHubUpdater } from './useGitHubUpdater';
 import {
   getUpdateSettings,
@@ -16,6 +16,7 @@ export function useSmartUpdater() {
   const githubUpdater = useGitHubUpdater();
   const [showIntroModal, setShowIntroModal] = useState(false);
   const [introModalShown, setIntroModalShown] = useState(false);
+  const hasCheckedOnStartup = useRef(false);
 
   // 초기 안내 모달 표시 확인
   useEffect(() => {
@@ -51,11 +52,17 @@ export function useSmartUpdater() {
     await githubUpdater.checkForUpdates(forceCheck);
   }, [githubUpdater]);
 
-  // 자동 체크 (개선된 버전)
+  // 자동 체크 (앱 시작 시 1회만 실행)
   useEffect(() => {
+    // 이미 시작 시 체크했으면 다시 체크하지 않음
+    if (hasCheckedOnStartup.current) {
+      return;
+    }
+
     // 개발 모드에서는 자동 업데이트 체크 비활성화 (GitHub API rate limit 방지)
     if (import.meta.env.DEV) {
       console.log('[DEV] 자동 업데이트 체크 비활성화');
+      hasCheckedOnStartup.current = true;
       return;
     }
 
@@ -63,11 +70,13 @@ export function useSmartUpdater() {
 
     // 자동 체크가 비활성화되어 있으면 체크하지 않음
     if (!settings.autoCheck) {
+      hasCheckedOnStartup.current = true;
       return;
     }
 
     // 체크 주기에 따른 처리 (never인 경우 조기 반환)
     if (settings.checkInterval === 'never') {
+      hasCheckedOnStartup.current = true;
       return;
     }
 
@@ -76,11 +85,13 @@ export function useSmartUpdater() {
     const delay = AUTO_CHECK_DELAY_MS;
 
     const timer = setTimeout(() => {
+      hasCheckedOnStartup.current = true;
       smartCheckForUpdates();
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [smartCheckForUpdates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 업데이트 모달 표시 조건 개선
   const shouldShowUpdateModal = useCallback(() => {

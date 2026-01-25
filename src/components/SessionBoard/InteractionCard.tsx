@@ -5,7 +5,7 @@ import type { ZoomLevel } from "../../types/board.types";
 import { ToolIcon } from "../ToolIcon";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 import { clsx } from "clsx";
-import { FileText, X } from "lucide-react";
+import { FileText, X, FileCode, AlignLeft, Bot, User, Ban } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAppStore } from "../../store/useAppStore";
 
@@ -40,6 +40,8 @@ const ExpandedCard = ({
     isMarkdownPretty: boolean;
     onClose: () => void;
 }) => {
+    const { setMarkdownPretty } = useAppStore();
+
     if (!triggerRect) return null;
 
     // Calculate position: default to right, sticky to screen
@@ -88,7 +90,11 @@ const ExpandedCard = ({
                             {message.toolUse ? (
                                 <ToolIcon toolName={(message.toolUse as any).name} className="w-4 h-4 text-accent" />
                             ) : (
-                                <div className={clsx("w-3 h-3 rounded-full", role === 'user' ? 'bg-primary' : 'bg-muted-foreground')} />
+                                role === 'user' ? (
+                                    <User className="w-3 h-3 text-primary" />
+                                ) : (
+                                    <Bot className="w-3 h-3 text-muted-foreground" />
+                                )
                             )}
                         </div>
 
@@ -102,18 +108,37 @@ const ExpandedCard = ({
                                 {new Date(message.timestamp).toLocaleTimeString()}
                             </span>
                         </div>
-
-                        {editedMdFile && (
-                            <div className="ml-2 flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] text-emerald-600 font-medium">
-                                <FileText className="w-2.5 h-2.5" />
-                                <span className="max-w-[100px] truncate">{editedMdFile}</span>
-                            </div>
-                        )}
                     </div>
 
-                    <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100">
-                        <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* Markdown Toggle inside Tooltip */}
+                        <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md border border-border/50">
+                            <button
+                                onClick={() => setMarkdownPretty(false)}
+                                className={clsx(
+                                    "p-1 rounded transition-all",
+                                    !isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                )}
+                                title="Raw Text"
+                            >
+                                <AlignLeft className="w-3 h-3" />
+                            </button>
+                            <button
+                                onClick={() => setMarkdownPretty(true)}
+                                className={clsx(
+                                    "p-1 rounded transition-all",
+                                    isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                )}
+                                title="Pretty Markdown"
+                            >
+                                <FileCode className="w-3 h-3" />
+                            </button>
+                        </div>
+
+                        <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap select-text">
@@ -179,6 +204,11 @@ export const InteractionCard = memo(({
         (message.toolUseResult as any)?.is_error ||
         (message.toolUseResult as any)?.stderr?.length > 0;
 
+    const isCancelled = message.stopReason === "customer_cancelled" ||
+        message.stopReasonSystem === "customer_cancelled" ||
+        message.stopReason === "consumer_cancelled" || // Some legacy
+        content.includes("request canceled by user");
+
     const role = message.role || message.type;
 
     const editedMdFile = useMemo(() => {
@@ -210,8 +240,16 @@ export const InteractionCard = memo(({
         "relative rounded transition-all duration-200 cursor-pointer overflow-hidden border border-transparent shadow-sm select-none",
         !isActive && "opacity-20 scale-[0.98] grayscale blur-[0.5px]",
         isActive && "hover:border-accent hover:shadow-lg hover:z-50 hover:scale-[1.02]",
-        isError && "bg-destructive/10 border-destructive/20"
+        isError && "bg-destructive/10 border-destructive/20",
+        isCancelled && "bg-orange-500/10 border-orange-500/20"
     );
+
+    // Minimal Role Indicator (Icon only)
+    const RoleIcon = useMemo(() => {
+        if (message.toolUse) return <ToolIcon toolName={(message.toolUse as any).name} className="w-4 h-4 text-accent" />;
+        if (role === 'user') return <User className="w-3.5 h-3.5 text-primary" />;
+        return <Bot className="w-3.5 h-3.5 text-muted-foreground" />;
+    }, [role, message.toolUse]);
 
     // Level 0: Pixel/Heatmap
     if (zoomLevel === 0) {
@@ -225,8 +263,8 @@ export const InteractionCard = memo(({
 
         if (editedMdFile) bgColor = "bg-emerald-500/80";
         if (isError) bgColor = "bg-destructive/80";
+        if (isCancelled) bgColor = "bg-orange-500/70";
 
-        // NO onclick expansion for Pixel view yet, as requested
         return (
             <div
                 ref={cardRef}
@@ -250,14 +288,12 @@ export const InteractionCard = memo(({
                     onMouseLeave={onLeave}
                     onClick={onClick}
                 >
-                    <div className="mt-0.5 relative">
-                        {message.toolUse ? (
-                            <ToolIcon toolName={(message.toolUse as any).name} className="text-accent" />
-                        ) : (
-                            <div className={clsx("w-3.5 h-3.5 rounded-full",
-                                role === "user" ? "bg-primary" : "bg-muted-foreground/40")}
-                            />
-                        )}
+                    <div className="mt-0.5 relative shrink-0">
+                        {/* Use circle indicator with icon inside for better affordance */}
+                        <div className="w-6 h-6 rounded-full bg-muted/30 flex items-center justify-center">
+                            {RoleIcon}
+                        </div>
+
                         {editedMdFile && (
                             <div
                                 className="absolute -top-1 -right-1 p-0.5 bg-emerald-500 rounded-full shadow-sm text-white border border-background"
@@ -269,12 +305,23 @@ export const InteractionCard = memo(({
                                 <FileText className="w-2 h-2" />
                             </div>
                         )}
+
+                        {isCancelled && (
+                            <div className="absolute -bottom-1 -right-1 p-0.5 bg-orange-500 rounded-full shadow-sm text-white border border-background" title="Cancelled by User">
+                                <Ban className="w-2 h-2" />
+                            </div>
+                        )}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="text-[10px] font-medium uppercase tracking-tight text-muted-foreground opacity-70 mb-0.5">
-                            {message.toolUse ? (message.toolUse as any).name : role}
-                        </div>
-                        <p className="text-xs line-clamp-2 leading-tight text-foreground/80">
+                        {/* Removed text label for Role, just showing tool name if applicable */}
+                        {message.toolUse && (
+                            <div className="text-[10px] font-medium uppercase tracking-tight text-accent opacity-90 mb-0.5">
+                                {(message.toolUse as any).name}
+                            </div>
+                        )}
+                        <p className={clsx("text-xs line-clamp-2 leading-tight",
+                            role === 'user' ? 'text-foreground font-medium' : 'text-foreground/80'
+                        )}>
                             {message.toolUse ? toolInput : content}
                         </p>
                     </div>
@@ -321,20 +368,17 @@ export const InteractionCard = memo(({
                     </div>
                 )}
 
-                <div className="flex justify-between items-center border-b border-border/10 pb-1.5 mb-1">
+                <div className="flex justify-between items-start border-b border-border/10 pb-1.5 mb-1">
                     <div className="flex items-center gap-2">
-                        {message.toolUse ? (
-                            <div className="flex items-center gap-1.5">
-                                <ToolIcon toolName={(message.toolUse as any).name} className="text-accent" />
-                                <span className="text-xs font-bold text-accent uppercase">{(message.toolUse as any).name}</span>
-                            </div>
-                        ) : (
-                            <span className={clsx("text-xs font-bold uppercase", role === 'user' ? 'text-primary' : 'text-muted-foreground')}>
-                                {role}
-                            </span>
+                        <div className="w-6 h-6 rounded-full bg-muted/30 flex items-center justify-center shrink-0">
+                            {RoleIcon}
+                        </div>
+
+                        {isCancelled && (
+                            <span className="text-[10px] uppercase font-bold text-orange-500 tracking-wide border border-orange-500/30 px-1.5 rounded">Cancelled</span>
                         )}
                     </div>
-                    <span className="text-[10px] text-muted-foreground font-mono">
+                    <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
                         {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                 </div>

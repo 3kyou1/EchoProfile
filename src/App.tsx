@@ -6,6 +6,7 @@ import { TokenStatsViewer } from "./components/TokenStatsViewer";
 import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
 import { RecentEditsViewer } from "./components/RecentEditsViewer";
 import { SimpleUpdateManager } from "./components/SimpleUpdateManager";
+import { SessionBoard } from "./components/SessionBoard/SessionBoard";
 import { useAppStore } from "./store/useAppStore";
 import { useAnalytics } from "./hooks/useAnalytics";
 import { useResizablePanel } from "./hooks/useResizablePanel";
@@ -68,7 +69,7 @@ function App() {
   } = useAnalytics();
 
   const { t, i18n: i18nInstance } = useTranslation();
-      const { language, loadLanguage } = useLanguageStore();
+  const { language, loadLanguage } = useLanguageStore();
 
   const [isViewingGlobalStats, setIsViewingGlobalStats] = useState(false);
 
@@ -265,46 +266,55 @@ function App() {
             {(computed.isTokenStatsView ||
               computed.isAnalyticsView ||
               computed.isRecentEditsView ||
+              computed.isBoardView ||
               isViewingGlobalStats) && (
-              <div className="px-6 py-4 border-b border-border/50 bg-card/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
-                    {isViewingGlobalStats ? (
-                      <Database className="w-5 h-5 text-accent" />
-                    ) : computed.isAnalyticsView ? (
-                      <BarChart3 className="w-5 h-5 text-accent" />
-                    ) : computed.isRecentEditsView ? (
-                      <FileEdit className="w-5 h-5 text-accent" />
-                    ) : (
-                      <Coins className="w-5 h-5 text-accent" />
-                    )}
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-semibold text-foreground">
-                      {isViewingGlobalStats
-                        ? t("analytics.globalOverview")
-                        : computed.isAnalyticsView
-                        ? t("analytics.dashboard")
-                        : computed.isRecentEditsView
-                        ? t("recentEdits.title")
-                        : t('messages.tokenStats.title')}
-                    </h2>
-                    <p className="text-xs text-muted-foreground">
-                      {isViewingGlobalStats
-                        ? t("analytics.globalOverviewDescription")
-                        : computed.isRecentEditsView
-                        ? t("recentEdits.description")
-                        : selectedSession?.summary ||
-                          t("session.summaryNotFound")}
-                    </p>
+                <div className="px-6 py-4 border-b border-border/50 bg-card/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
+                      {isViewingGlobalStats ? (
+                        <Database className="w-5 h-5 text-accent" />
+                      ) : computed.isAnalyticsView ? (
+                        <BarChart3 className="w-5 h-5 text-accent" />
+                      ) : computed.isRecentEditsView ? (
+                        <FileEdit className="w-5 h-5 text-accent" />
+                      ) : computed.isBoardView ? (
+                        <MessageSquare className="w-5 h-5 text-accent" />
+                      ) : (
+                        <Coins className="w-5 h-5 text-accent" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-foreground">
+                        {isViewingGlobalStats
+                          ? t("analytics.globalOverview")
+                          : computed.isAnalyticsView
+                            ? t("analytics.dashboard")
+                            : computed.isRecentEditsView
+                              ? t("recentEdits.title")
+                              : computed.isBoardView
+                                ? "Session Board"
+                                : t('messages.tokenStats.title')}
+                      </h2>
+                      <p className="text-xs text-muted-foreground">
+                        {isViewingGlobalStats
+                          ? t("analytics.globalOverviewDescription")
+                          : computed.isRecentEditsView
+                            ? t("recentEdits.description")
+                            : computed.isBoardView
+                              ? "Comparative overview of different sessions"
+                              : selectedSession?.summary ||
+                              t("session.summaryNotFound")}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Content */}
             <div className="flex-1 overflow-hidden">
-              {computed.isRecentEditsView ? (
+              {computed.isBoardView ? (
+                <SessionBoard />
+              ) : computed.isRecentEditsView ? (
                 <OverlayScrollbarsComponent
                   className="h-full"
                   options={{ scrollbars: { theme: "os-theme-custom", autoHide: "leave" } }}
@@ -391,17 +401,17 @@ function App() {
             isLoadingSessions ||
             isLoadingMessages ||
             computed.isAnyLoading) && (
-            <div className="flex items-center gap-1.5">
-              <LoadingSpinner size="xs" variant="muted" />
-              <span>
-                {computed.isAnyLoading && t("status.loadingStats")}
-                {isLoadingProjects && t("status.scanning")}
-                {isLoadingSessions && t("status.loadingSessions")}
-                {isLoadingMessages && t("status.loadingMessages")}
-                {isLoading && t("status.initializing")}
-              </span>
-            </div>
-          )}
+              <div className="flex items-center gap-1.5">
+                <LoadingSpinner size="xs" variant="muted" />
+                <span>
+                  {computed.isAnyLoading && t("status.loadingStats")}
+                  {isLoadingProjects && t("status.scanning")}
+                  {isLoadingSessions && t("status.loadingSessions")}
+                  {isLoadingMessages && t("status.loadingMessages")}
+                  {isLoading && t("status.initializing")}
+                </span>
+              </div>
+            )}
         </footer>
 
         {/* Update Manager */}

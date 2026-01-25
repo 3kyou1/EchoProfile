@@ -16,6 +16,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
   const {
     // Store state
     analytics,
+    sessions,
     selectedProject,
     selectedSession,
     isLoadingTokenStats,
@@ -42,6 +43,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     loadSessionComparison,
     loadSessionTokenStats,
     loadRecentEdits,
+    loadBoardSessions,
     clearTokenStats,
   } = useAppStore();
 
@@ -286,6 +288,25 @@ export const useAnalytics = (): UseAnalyticsReturn => {
   ]);
 
   /**
+   * 보드 뷰로 전환
+   * 프로젝트의 최근 세션들을 로드하여 보드 시각화
+   */
+  const switchToBoard = useCallback(async () => {
+    if (!selectedProject) {
+      throw new Error(t('common.hooks.noProjectSelected'));
+    }
+
+    setAnalyticsCurrentView("board");
+    clearAnalyticsErrors();
+
+    // 프로젝트의 최근 세션들을 보드에 로드 (최대 10개)
+    if (sessions.length > 0) {
+      const sessionsToLoad = sessions.slice(0, 10);
+      await loadBoardSessions(sessionsToLoad);
+    }
+  }, [t, selectedProject, sessions, setAnalyticsCurrentView, clearAnalyticsErrors, loadBoardSessions]);
+
+  /**
    * 현재 뷰의 분석 데이터 강제 새로고침
    * 캐시를 무시하고 데이터를 다시 로드
    */
@@ -305,6 +326,9 @@ export const useAnalytics = (): UseAnalyticsReturn => {
         setAnalyticsRecentEdits(null);
         await switchToRecentEdits();
         break;
+      case "board":
+        await switchToBoard();
+        break;
       case "messages":
         // 메시지 뷰는 별도 새로고침 로직 없음
         break;
@@ -316,6 +340,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     switchToTokenStats,
     switchToAnalytics,
     switchToRecentEdits,
+    switchToBoard,
     clearTokenStats,
     setAnalyticsProjectSummary,
     setAnalyticsSessionComparison,
@@ -340,6 +365,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
       isAnalyticsView: analytics.currentView === "analytics",
       isMessagesView: analytics.currentView === "messages",
       isRecentEditsView: analytics.currentView === "recentEdits",
+      isBoardView: analytics.currentView === "board",
       hasAnyError: !!(
         analytics.projectSummaryError ||
         analytics.sessionComparisonError ||
@@ -491,6 +517,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
       switchToTokenStats,
       switchToAnalytics,
       switchToRecentEdits,
+      switchToBoard,
       refreshAnalytics,
       clearAll,
     },

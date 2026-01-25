@@ -136,6 +136,16 @@ export interface AppStoreState {
   // Capture mode state
   isCaptureMode: boolean;
   hiddenMessageIds: string[];
+
+  // Board state
+  boardSessions: Record<string, import("../../types/board.types").BoardSessionData>;
+  visibleSessionIds: string[];
+  isLoadingBoard: boolean;
+  zoomLevel: import("../../types/board.types").ZoomLevel;
+  activeBrush: {
+    type: "role" | "status" | "tool";
+    value: string;
+  } | null;
 }
 
 export interface AppStoreActions {
@@ -234,6 +244,12 @@ export interface AppStoreActions {
   restoreAllMessages: () => void;
   isMessageHidden: (uuid: string) => boolean;
   getHiddenCount: () => number;
+
+  // Board actions
+  loadBoardSessions: (sessions: ClaudeSession[]) => Promise<void>;
+  setZoomLevel: (level: import("../../types/board.types").ZoomLevel) => void;
+  setActiveBrush: (brush: { type: "role" | "status" | "tool"; value: string } | null) => void;
+  clearBoard: () => void;
 }
 
 export type FullAppStore = AppStoreState & AppStoreActions;

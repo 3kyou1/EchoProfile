@@ -6,6 +6,7 @@ import {
   Activity,
   FileEdit,
   Terminal,
+  Columns,
 } from "lucide-react";
 
 import { TooltipButton } from "@/shared/TooltipButton";
@@ -18,7 +19,7 @@ import { SettingDropdown } from "./SettingDropdown";
 
 export const Header = () => {
   const { t } = useTranslation();
-    
+
   const {
     selectedProject,
     selectedSession,
@@ -52,6 +53,15 @@ export const Header = () => {
       await analyticsActions.switchToRecentEdits();
     } catch (error) {
       console.error("Failed to load recent edits:", error);
+    }
+  };
+
+  const handleLoadBoard = async () => {
+    if (!selectedProject) return;
+    try {
+      await analyticsActions.switchToBoard();
+    } catch (error) {
+      console.error("Failed to load board:", error);
     }
   };
 
@@ -151,6 +161,20 @@ export const Header = () => {
                 }
               }}
               disabled={computed.isLoadingRecentEdits}
+            />
+
+            {/* Session Board */}
+            <NavButton
+              icon={Columns}
+              label="Session Board"
+              isActive={computed.isBoardView}
+              onClick={() => {
+                if (computed.isBoardView) {
+                  analyticsActions.switchToMessages();
+                } else {
+                  handleLoadBoard();
+                }
+              }}
             />
           </>
         )}

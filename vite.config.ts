@@ -52,7 +52,6 @@ export default defineConfig(() => ({
 
           // Syntax highlighting bundle (heavy)
           if (
-            id.includes("react-syntax-highlighter") ||
             id.includes("prismjs") ||
             id.includes("refractor") ||
             id.includes("prism-react-renderer")
@@ -115,7 +114,6 @@ export default defineConfig(() => ({
       "react",
       "react-dom",
       "react-markdown",
-      "react-syntax-highlighter",
       "lucide-react",
     ],
     exclude: [

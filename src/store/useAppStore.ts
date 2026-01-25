@@ -38,6 +38,10 @@ import {
   type CaptureModeSlice,
   createCaptureModeSlice,
 } from "./slices/captureModeSlice";
+import {
+  type BoardSlice,
+  createBoardSlice,
+} from "./slices/boardSlice";
 
 // Re-export types for backward compatibility
 export type {
@@ -57,7 +61,8 @@ export type AppStore = ProjectSlice &
   SettingsSlice &
   GlobalStatsSlice &
   MetadataSlice &
-  CaptureModeSlice;
+  CaptureModeSlice &
+  BoardSlice;
 
 // ============================================================================
 // Store Creation
@@ -72,4 +77,5 @@ export const useAppStore = create<AppStore>()((...args) => ({
   ...createGlobalStatsSlice(...args),
   ...createMetadataSlice(...args),
   ...createCaptureModeSlice(...args),
+  ...createBoardSlice(...args),
 }));

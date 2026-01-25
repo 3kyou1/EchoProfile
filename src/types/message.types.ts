@@ -116,13 +116,13 @@ export interface RawClaudeMessage {
   sessionId: string;
   timestamp: string;
   type:
-    | "user"
-    | "assistant"
-    | "system"
-    | "summary"
-    | "file-history-snapshot"
-    | "progress"
-    | "queue-operation";
+  | "user"
+  | "assistant"
+  | "system"
+  | "summary"
+  | "file-history-snapshot"
+  | "progress"
+  | "queue-operation";
   message: MessagePayload;
   toolUse?: Record<string, unknown>;
   toolUseResult?: Record<string, unknown> | string;
@@ -160,6 +160,7 @@ export interface ClaudeMessage {
   toolUse?: Record<string, unknown>;
   toolUseResult?: Record<string, unknown> | string;
   isSidechain?: boolean;
+  role?: string;
   // Assistant metadata
   model?: string;
   stop_reason?: "tool_use" | "end_turn" | "max_tokens";

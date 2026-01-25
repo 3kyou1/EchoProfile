@@ -81,7 +81,10 @@ export function SimpleUpdateManager() {
 
       {/* 체크 중 알림 (수동 체크 시) */}
       <UpdateCheckingNotification
-        onClose={() => setShowChecking(false)}
+        onClose={() => {
+          setShowChecking(false);
+          manualCheckRef.current = false; // X 클릭 시 수동 체크 플래그 해제
+        }}
         isVisible={showChecking}
       />
 

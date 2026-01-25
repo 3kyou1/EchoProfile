@@ -1,9 +1,10 @@
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
 import { Coins, AlertCircle, Clock } from "lucide-react";
 import { clsx } from "clsx";
+import { extractClaudeMessageContent } from "../../utils/messageUtils";
 
 interface SessionLaneProps {
     data: BoardSessionData;
@@ -27,11 +28,20 @@ export const SessionLane = ({
     const parentRef = useRef<HTMLDivElement>(null);
     const { session, messages, stats } = data;
 
+    // Filter out "no-content" messages before virtualization
+    // This ensures the virtualizer sees the correct count and indices
+    const visibleMessages = messages.filter(msg => {
+        const content = extractClaudeMessageContent(msg) || "";
+        const isTool = !!msg.toolUse;
+        // Keep if content is non-empty OR it's a tool use
+        return content.trim().length > 0 || isTool;
+    });
+
     const rowVirtualizer = useVirtualizer({
-        count: messages.length,
+        count: visibleMessages.length,
         getScrollElement: () => parentRef.current,
         estimateSize: () => {
-            if (zoomLevel === 0) return 6; // Compact for Pixel View
+            if (zoomLevel === 0) return 6;
             if (zoomLevel === 1) return 80;
             return 150;
         },
@@ -120,7 +130,7 @@ export const SessionLane = ({
                     }}
                 >
                     {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                        const message = messages[virtualRow.index];
+                        const message = visibleMessages[virtualRow.index];
                         if (!message) return null;
 
                         let zIndex = 1;

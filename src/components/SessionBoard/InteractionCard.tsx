@@ -39,14 +39,31 @@ export const InteractionCard = memo(({
     const role = message.role || message.type;
 
     const editedMdFile = useMemo(() => {
-        if (!message.toolUse) return null;
-        const toolUse = message.toolUse as any;
-        const path = toolUse.input?.path || toolUse?.input?.file_path || "";
-        if (typeof path === 'string' && path.toLowerCase().endsWith('.md')) {
-            return path;
+        // 1. Explicit tool use (writing/creating .md files)
+        if (message.toolUse) {
+            const toolUse = message.toolUse as any;
+            const name = toolUse.name;
+            const input = toolUse.input;
+
+            if (['write_to_file', 'replace_file_content', 'create_file', 'edit_file'].includes(name)) {
+                const path = input?.path || input?.file_path || input?.TargetFile || "";
+                if (typeof path === 'string' && path.toLowerCase().endsWith('.md')) {
+                    return path;
+                }
+            }
         }
+
+        // 2. Assistant talking about creating or editing CLAUDE.MD
+        if (role === 'assistant' && content) {
+            // Regex to find "create" or "update" or "edit" near CLAUDE.MD or *.md
+            const mdMention = content.match(/(create|update|edit|writing|wrote).+?([a-zA-Z0-9_\-\.]+\.md)/i);
+            if (mdMention && mdMention[2]) {
+                return mdMention[2]; // Return the filename mentioned
+            }
+        }
+
         return null;
-    }, [message.toolUse]);
+    }, [message.toolUse, content, role]);
 
     // Base classes for the card
     const baseClasses = clsx(

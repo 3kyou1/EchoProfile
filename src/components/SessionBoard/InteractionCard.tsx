@@ -1,4 +1,4 @@
-import { memo, useMemo, useEffect, useRef } from "react";
+import { memo, useMemo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ClaudeMessage } from "../../types";
 import type { ZoomLevel } from "../../types/board.types";
@@ -6,6 +6,8 @@ import { ToolIcon } from "../ToolIcon";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 import { clsx } from "clsx";
 import { FileText, X } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { useAppStore } from "../../store/useAppStore";
 
 interface InteractionCardProps {
     message: ClaudeMessage;
@@ -24,6 +26,8 @@ const ExpandedCard = ({
     editedMdFile,
     role,
     isError,
+    triggerRect,
+    isMarkdownPretty,
     onClose
 }: {
     message: ClaudeMessage;
@@ -32,50 +36,108 @@ const ExpandedCard = ({
     editedMdFile: string | null;
     role: string;
     isError: boolean;
+    triggerRect: DOMRect | null;
+    isMarkdownPretty: boolean;
     onClose: () => void;
 }) => {
+    if (!triggerRect) return null;
+
+    // Calculate position: default to right, sticky to screen
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const cardWidth = 480; // Reasonable reading width
+    const gap = 12;
+
+    let left = triggerRect.right + gap;
+    let top = triggerRect.top;
+
+    // Flip to left if not enough space on right
+    if (left + cardWidth > windowWidth - 20) {
+        left = triggerRect.left - cardWidth - gap;
+    }
+
+    // Adjust top if bottom overflow
+    const maxHeight = Math.min(600, windowHeight - 40);
+    if (top + maxHeight > windowHeight - 20) {
+        top = Math.max(20, windowHeight - maxHeight - 20);
+    }
+
+    // If top is initially offscreen (e.g. card is scrolled partially out), clamp it
+    if (top < 20) top = 20;
+
+    const displayContent = content || (message.toolUse ? JSON.stringify((message.toolUse as any).input, null, 2) : "No content");
+
     return createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-            {/* Backdrop (invisible but captures clicks outside) handled by parent board logic, 
-          but here we just render the card overlay */}
+        <div className="fixed inset-0 z-50 pointer-events-none">
+            {/* Click backdrop to close */}
+            <div className="absolute inset-0 pointer-events-auto" onClick={(e) => { e.stopPropagation(); onClose(); }} />
+
             <div
-                className="pointer-events-auto w-[50vw] max-w-3xl max-h-[80vh] bg-card border border-border rounded-xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200"
+                className="absolute w-[480px] bg-popover/95 text-popover-foreground border border-border rounded-lg shadow-2xl flex flex-col backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-auto ring-1 ring-border/50"
+                style={{
+                    left: `${left}px`,
+                    top: `${top}px`,
+                    maxHeight: `${maxHeight}px`,
+                    transformOrigin: left > triggerRect.right ? 'left top' : 'right top'
+                }}
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
             >
-                <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20 rounded-t-xl shrink-0">
-                    <div className="flex items-center gap-3">
-                        {message.toolUse ? (
-                            <div className="flex items-center gap-2">
-                                <ToolIcon toolName={(message.toolUse as any).name} className="w-5 h-5 text-accent" />
-                                <span className="font-bold text-accent uppercase text-sm">{(message.toolUse as any).name}</span>
-                            </div>
-                        ) : (
-                            <span className={clsx("font-bold uppercase text-sm", role === 'user' ? 'text-primary' : 'text-muted-foreground')}>
-                                {role}
+                <div className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/30 rounded-t-lg shrink-0 select-none">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-background rounded-md shadow-sm border border-border/50">
+                            {message.toolUse ? (
+                                <ToolIcon toolName={(message.toolUse as any).name} className="w-4 h-4 text-accent" />
+                            ) : (
+                                <div className={clsx("w-3 h-3 rounded-full", role === 'user' ? 'bg-primary' : 'bg-muted-foreground')} />
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                            <span className={clsx("font-bold uppercase text-[11px] tracking-wide",
+                                message.toolUse ? "text-accent" : (role === 'user' ? 'text-primary' : 'text-foreground')
+                            )}>
+                                {message.toolUse ? (message.toolUse as any).name : role}
                             </span>
-                        )}
+                            <span className="text-[10px] text-muted-foreground font-mono leading-none">
+                                {new Date(message.timestamp).toLocaleTimeString()}
+                            </span>
+                        </div>
+
                         {editedMdFile && (
-                            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-xs text-emerald-600 font-medium">
-                                <FileText className="w-3 h-3" />
-                                <span>{editedMdFile}</span>
+                            <div className="ml-2 flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] text-emerald-600 font-medium">
+                                <FileText className="w-2.5 h-2.5" />
+                                <span className="max-w-[100px] truncate">{editedMdFile}</span>
                             </div>
                         )}
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="p-1 hover:bg-muted rounded-full transition-colors">
-                        <X className="w-4 h-4 text-muted-foreground" />
+
+                    <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100">
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap">
-                    {content || (message.toolUse ? JSON.stringify((message.toolUse as any).input, null, 2) : "No content")}
+                <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap select-text">
+                    {isMarkdownPretty && !message.toolUse ? (
+                        <div className="prose prose-xs dark:prose-invert max-w-none break-words">
+                            <ReactMarkdown>{displayContent}</ReactMarkdown>
+                        </div>
+                    ) : (
+                        displayContent
+                    )}
                 </div>
 
-                <div className="p-3 border-t border-border/50 bg-muted/10 rounded-b-xl flex justify-between items-center text-xs text-muted-foreground shrink-0">
-                    <span>{new Date(message.timestamp).toLocaleString()}</span>
+                {isError && (
+                    <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 text-destructive text-xs font-medium">
+                        Error detected in this interaction
+                    </div>
+                )}
+
+                <div className="p-2 border-t border-border/50 bg-muted/10 rounded-b-lg flex justify-end gap-3 text-[10px] text-muted-foreground shrink-0 font-mono">
                     {(message.usage) && (
-                        <div className="flex gap-4 font-mono">
-                            <span>Input: {message.usage.input_tokens}</span>
-                            <span>Output: {message.usage.output_tokens}</span>
-                        </div>
+                        <>
+                            <span>In: {message.usage.input_tokens.toLocaleString()}</span>
+                            <span>Out: {message.usage.output_tokens.toLocaleString()}</span>
+                        </>
                     )}
                 </div>
             </div>
@@ -93,6 +155,17 @@ export const InteractionCard = memo(({
     onLeave,
     onClick
 }: InteractionCardProps) => {
+    const cardRef = useRef<HTMLDivElement>(null);
+    const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null);
+    const isMarkdownPretty = useAppStore(state => state.isMarkdownPretty);
+
+    // Update rect when expanded changes
+    useEffect(() => {
+        if (isExpanded && cardRef.current) {
+            setTriggerRect(cardRef.current.getBoundingClientRect());
+        }
+    }, [isExpanded]);
+
     const content = extractClaudeMessageContent(message) || "";
     const isTool = !!message.toolUse;
     const toolInput = isTool ? JSON.stringify((message.toolUse as any).input) : "";
@@ -134,24 +207,11 @@ export const InteractionCard = memo(({
 
     // Base classes for the card
     const baseClasses = clsx(
-        "relative rounded transition-all duration-200 cursor-pointer overflow-hidden border border-transparent shadow-sm",
+        "relative rounded transition-all duration-200 cursor-pointer overflow-hidden border border-transparent shadow-sm select-none",
         !isActive && "opacity-20 scale-[0.98] grayscale blur-[0.5px]",
         isActive && "hover:border-accent hover:shadow-lg hover:z-50 hover:scale-[1.02]",
         isError && "bg-destructive/10 border-destructive/20"
     );
-
-    // EXPANDED VIEW (Portal)
-    const expandedView = isExpanded ? (
-        <ExpandedCard
-            message={message}
-            content={content}
-            toolInput={toolInput}
-            editedMdFile={editedMdFile}
-            role={role}
-            isError={isError as any}
-            onClose={() => onClick?.()}
-        />
-    ) : null;
 
     // Level 0: Pixel/Heatmap
     if (zoomLevel === 0) {
@@ -166,17 +226,16 @@ export const InteractionCard = memo(({
         if (editedMdFile) bgColor = "bg-emerald-500/80";
         if (isError) bgColor = "bg-destructive/80";
 
+        // NO onclick expansion for Pixel view yet, as requested
         return (
-            <>
-                <div
-                    className={clsx(baseClasses, bgColor, "w-full")}
-                    style={{ height: `${height}px` }}
-                    onMouseEnter={() => onHover?.('role', role)}
-                    onMouseLeave={onLeave}
-                    onClick={onClick}
-                />
-                {expandedView}
-            </>
+            <div
+                ref={cardRef}
+                className={clsx(baseClasses, bgColor, "w-full")}
+                style={{ height: `${height}px` }}
+                onMouseEnter={() => onHover?.('role', role)}
+                onMouseLeave={onLeave}
+                onClick={onClick}
+            />
         );
     }
 
@@ -185,6 +244,7 @@ export const InteractionCard = memo(({
         return (
             <>
                 <div
+                    ref={cardRef}
                     className={clsx(baseClasses, "mb-1.5 p-2 bg-card min-h-[60px] flex gap-2 items-start")}
                     onMouseEnter={() => onHover?.('role', role)}
                     onMouseLeave={onLeave}
@@ -222,7 +282,17 @@ export const InteractionCard = memo(({
                         <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
                     )}
                 </div>
-                {expandedView}
+                {isExpanded && <ExpandedCard
+                    message={message}
+                    content={content}
+                    toolInput={toolInput}
+                    editedMdFile={editedMdFile}
+                    role={role}
+                    isError={isError as any}
+                    triggerRect={triggerRect}
+                    isMarkdownPretty={isMarkdownPretty}
+                    onClose={() => onClick?.()}
+                />}
             </>
         );
     }
@@ -231,6 +301,7 @@ export const InteractionCard = memo(({
     return (
         <>
             <div
+                ref={cardRef}
                 className={clsx(baseClasses, "mb-2.5 p-3 bg-card flex flex-col gap-2 ring-1 ring-border/5 shadow-md")}
                 style={{ transformOrigin: 'top center' }}
                 onMouseEnter={() => onHover?.('role', role)}
@@ -286,7 +357,17 @@ export const InteractionCard = memo(({
                     </div>
                 )}
             </div>
-            {expandedView}
+            {isExpanded && <ExpandedCard
+                message={message}
+                content={content}
+                toolInput={toolInput}
+                editedMdFile={editedMdFile}
+                role={role}
+                isError={isError as any}
+                triggerRect={triggerRect}
+                isMarkdownPretty={isMarkdownPretty}
+                onClose={() => onClick?.()}
+            />}
         </>
     );
 });

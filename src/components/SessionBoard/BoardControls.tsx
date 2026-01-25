@@ -8,10 +8,13 @@ import {
     Wrench,
     AlertCircle,
     FileText,
-    MousePointer2
+    MousePointer2,
+    FileCode,
+    AlignLeft
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useCallback } from "react";
+import { useAppStore } from "../../store/useAppStore";
 
 interface BoardControlsProps {
     zoomLevel: ZoomLevel;
@@ -26,6 +29,7 @@ export const BoardControls = ({
     activeBrush,
     onBrushChange
 }: BoardControlsProps) => {
+    const { isMarkdownPretty, setMarkdownPretty } = useAppStore();
 
     const handleWheel = useCallback((e: React.WheelEvent) => {
         // Determine scroll direction
@@ -137,6 +141,30 @@ export const BoardControls = ({
             </div>
 
             <div className="flex items-center gap-3">
+                {/* Markdown Toggle */}
+                <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg border border-border/50">
+                    <button
+                        onClick={() => setMarkdownPretty(false)}
+                        className={clsx(
+                            "p-1.5 rounded-md transition-all",
+                            !isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="Raw Text"
+                    >
+                        <AlignLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => setMarkdownPretty(true)}
+                        className={clsx(
+                            "p-1.5 rounded-md transition-all",
+                            isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="Pretty Print Markdown"
+                    >
+                        <FileCode className="w-4 h-4" />
+                    </button>
+                </div>
+
                 <div className="text-[10px] text-muted-foreground bg-muted/50 px-2 py-1 rounded font-mono">
                     {zoomLevel === 0 ? 'PIXEL' : zoomLevel === 1 ? 'SKIM' : 'READ'}
                 </div>

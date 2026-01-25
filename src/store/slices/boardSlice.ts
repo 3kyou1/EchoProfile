@@ -19,6 +19,7 @@ export interface BoardSliceState {
         value: string;
     } | null;
     selectedMessageId: string | null;
+    isMarkdownPretty: boolean;
 }
 
 export interface BoardSliceActions {
@@ -26,6 +27,7 @@ export interface BoardSliceActions {
     setZoomLevel: (level: ZoomLevel) => void;
     setActiveBrush: (brush: BoardSliceState["activeBrush"]) => void;
     setSelectedMessageId: (id: string | null) => void;
+    setMarkdownPretty: (pretty: boolean) => void;
     clearBoard: () => void;
 }
 
@@ -38,6 +40,7 @@ const initialBoardState: BoardSliceState = {
     zoomLevel: 1, // Default to SKIM
     activeBrush: null,
     selectedMessageId: null,
+    isMarkdownPretty: true, // Default to pretty printing
 };
 
 /**
@@ -188,5 +191,6 @@ export const createBoardSlice: StateCreator<
     setZoomLevel: (zoomLevel: ZoomLevel) => set({ zoomLevel }),
     setActiveBrush: (activeBrush) => set({ activeBrush }),
     setSelectedMessageId: (id) => set({ selectedMessageId: id }),
+    setMarkdownPretty: (isMarkdownPretty) => set({ isMarkdownPretty }),
     clearBoard: () => set(initialBoardState),
 });

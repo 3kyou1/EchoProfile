@@ -14,16 +14,6 @@ const GITHUB_RELEASE_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releas
 const API_TIMEOUT_MS = 10000;
 const TAURI_CHECK_TIMEOUT_MS = 15000;
 
-// Promise with timeout wrapper
-function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(errorMessage)), ms)
-    ),
-  ]);
-}
-
 export interface GitHubRelease {
   tag_name: string;
   name: string;
@@ -129,12 +119,8 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
       }
 
       // Tauri 업데이터로 업데이트 확인 (핵심 - 먼저 실행)
-      // Timeout 추가로 무한 대기 방지
-      const update = await withTimeout(
-        check(),
-        TAURI_CHECK_TIMEOUT_MS,
-        'Update check timed out'
-      );
+      // Tauri 네이티브 타임아웃 사용 (Rust 레벨에서 HTTP 요청 취소 가능)
+      const update = await check({ timeout: TAURI_CHECK_TIMEOUT_MS });
       const hasUpdate = !!update;
 
       // GitHub API로 릴리즈 정보 가져오기 (실패해도 업데이트 체크는 계속)

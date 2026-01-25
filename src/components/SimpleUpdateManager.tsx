@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSmartUpdater } from "../hooks/useSmartUpdater";
 import { SimpleUpdateModal } from "./SimpleUpdateModal";
 import { UpdateIntroModal } from "./UpdateConsentModal";
@@ -13,20 +13,20 @@ export function SimpleUpdateManager() {
   const [showChecking, setShowChecking] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const manualCheckRef = useRef(false);
+  const [isManualCheck, setIsManualCheck] = useState(false);
 
   // 수동 체크 시 체크 중 알림 표시
   useEffect(() => {
-    if (updater.state.isChecking && manualCheckRef.current) {
+    if (updater.state.isChecking && isManualCheck) {
       setShowChecking(true);
     } else {
       setShowChecking(false);
     }
-  }, [updater.state.isChecking]);
+  }, [updater.state.isChecking, isManualCheck]);
 
   // 수동 체크 결과 처리
   useEffect(() => {
-    if (!updater.state.isChecking && manualCheckRef.current) {
+    if (!updater.state.isChecking && isManualCheck) {
       if (updater.state.error) {
         // 에러 발생
         setErrorMessage(updater.state.error);
@@ -37,18 +37,19 @@ export function SimpleUpdateManager() {
         setTimeout(() => setShowUpToDate(false), 3000);
       }
       // 업데이트가 있는 경우 업데이트 모달이 표시됨
-      manualCheckRef.current = false;
+      setIsManualCheck(false);
     }
   }, [
     updater.state.isChecking,
     updater.state.hasUpdate,
     updater.state.error,
+    isManualCheck,
   ]);
 
   // 수동 업데이트 체크 이벤트 리스너
   useEffect(() => {
     const handleManualCheck = () => {
-      manualCheckRef.current = true;
+      setIsManualCheck(true);
       setShowError(false);
       setShowUpToDate(false);
       updater.smartCheckForUpdates(true); // 강제 체크
@@ -83,7 +84,7 @@ export function SimpleUpdateManager() {
       <UpdateCheckingNotification
         onClose={() => {
           setShowChecking(false);
-          manualCheckRef.current = false; // X 클릭 시 수동 체크 플래그 해제
+          setIsManualCheck(false);
         }}
         isVisible={showChecking}
       />

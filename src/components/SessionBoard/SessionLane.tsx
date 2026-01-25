@@ -40,10 +40,32 @@ export const SessionLane = ({
     const rowVirtualizer = useVirtualizer({
         count: visibleMessages.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => {
+        estimateSize: (index) => {
+            const msg = visibleMessages[index];
+            const content = extractClaudeMessageContent(msg) || "";
+            const isTool = !!msg.toolUse;
+            // Rough content length heuristic
+            const len = content.length;
+
+            // 0: Pixel View (Fixed small)
             if (zoomLevel === 0) return 6;
-            if (zoomLevel === 1) return 80;
-            return 150;
+
+            // 1: Skim View (Compact)
+            if (zoomLevel === 1) {
+                if (isTool) return 80;
+                if (len < 100) return 60; // Tiny content -> smaller height
+                return 90;
+            }
+
+            // 2: Read View (Detail)
+            // Base overhead: ~40px (header+footer)
+            // Line height: ~20px
+            // Characters per line: ~50 (very rough avg)
+            if (isTool) return 140; // Tools have generous space
+            if (len < 50) return 70; // Extremely short (e.g. "Ok.", "Request cancelled")
+            if (len < 200) return 120; // Short paragraph
+            if (len < 500) return 180; // Medium
+            return 250; // Long (clamped max)
         },
         overscan: 10,
     });

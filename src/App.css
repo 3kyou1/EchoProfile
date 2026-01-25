@@ -11,6 +11,7 @@
   overflow-x: auto;
   font-size: 0.9375rem;
   line-height: 1.5;
+  color: #1f2937;
 }
 
 .dark .prose pre {
@@ -24,6 +25,7 @@
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   font-size: 0.9375rem;
+  color: #1f2937;
 }
 
 .dark .prose code {

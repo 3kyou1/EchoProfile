@@ -138,5 +138,3 @@ ptr_arg = "allow"
 format_push_string = "allow"
 duplicated_attributes = "allow"
 return_self_not_must_use = "allow"
-# Closure parameters with _ prefix are valid when intentionally ignoring
-used_underscore_binding = "allow"

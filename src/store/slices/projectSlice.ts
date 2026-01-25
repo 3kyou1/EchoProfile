@@ -242,13 +242,16 @@ export const createProjectSlice: StateCreator<
   },
 
   getGroupedProjects: () => {
-    const { projects, userMetadata, isProjectHidden, getEffectiveGroupingMode } = get();
-    const effectiveMode = getEffectiveGroupingMode();
+    const { projects, userMetadata, isProjectHidden } = get();
+    const settings = userMetadata?.settings;
+
+    // Determine effective grouping mode (same logic as getEffectiveGroupingMode)
+    const effectiveMode = settings?.groupingMode ?? (settings?.worktreeGrouping ? "worktree" : "none");
 
     // Filter out hidden projects first (use actual_path for pattern matching)
     const visibleProjects = projects.filter((p) => !isProjectHidden(p.actual_path));
 
-    // Only group when worktree mode is active (check both new and legacy settings)
+    // Only group when worktree mode is active
     if (effectiveMode !== "worktree") {
       // When worktree grouping is disabled, return all visible projects as ungrouped
       return { groups: [], ungrouped: visibleProjects };

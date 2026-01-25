@@ -12,6 +12,17 @@ const REPO_NAME = 'claude-code-history-viewer';
 const GITHUB_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`;
 const GITHUB_RELEASE_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/tag`;
 const API_TIMEOUT_MS = 10000;
+const TAURI_CHECK_TIMEOUT_MS = 15000;
+
+// Promise with timeout wrapper
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(errorMessage)), ms)
+    ),
+  ]);
+}
 
 export interface GitHubRelease {
   tag_name: string;
@@ -118,7 +129,12 @@ export function useGitHubUpdater(): UseGitHubUpdaterReturn {
       }
 
       // Tauri 업데이터로 업데이트 확인 (핵심 - 먼저 실행)
-      const update = await check();
+      // Timeout 추가로 무한 대기 방지
+      const update = await withTimeout(
+        check(),
+        TAURI_CHECK_TIMEOUT_MS,
+        'Update check timed out'
+      );
       const hasUpdate = !!update;
 
       // GitHub API로 릴리즈 정보 가져오기 (실패해도 업데이트 체크는 계속)

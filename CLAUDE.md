@@ -79,17 +79,38 @@ just sync-version
 
 ### Release Process
 
+**⚠️ 중요: 릴리즈 전 필수 체크리스트**
+
+커밋/푸시 전에 반드시 다음을 확인:
+
+```bash
+# 1. TypeScript 빌드 체크 (CI와 동일한 옵션)
+pnpm tsc --build .
+
+# 2. 테스트 실행
+pnpm test run
+
+# 3. 린트 체크 (선택사항, 에러만 확인)
+pnpm lint
+```
+
+**모든 체크가 통과한 후에만 커밋/푸시 진행!**
+
 ```bash
 # 1. 버전 업데이트
-npm version prerelease --preid=beta --no-git-tag-version
+npm version <version> --no-git-tag-version
+# 예: npm version 1.2.2 --no-git-tag-version
 
 # 2. 버전 동기화
 just sync-version
 
-# 3. 커밋 및 태그
+# 3. 최종 체크 (필수!)
+pnpm tsc --build . && pnpm test run
+
+# 4. 커밋 및 태그
 git add -A
-git commit -m "chore: bump version to 1.0.0-beta.5"
-git tag v1.0.0-beta.5
+git commit -m "chore: release v1.2.2"
+git tag v1.2.2
 git push && git push --tags
 ```
 

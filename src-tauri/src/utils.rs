@@ -140,7 +140,7 @@ fn decode_with_filesystem_check(encoded: &str) -> Option<String> {
             // Check if remaining part (after this hyphen) completes a valid path
             let remaining = &encoded[pos + 1..];
             if !remaining.is_empty() {
-                let full_path = format!("{}/{}", current_path, remaining);
+                let full_path = format!("{current_path}/{remaining}");
                 if Path::new(&full_path).exists() {
                     return Some(full_path);
                 }

@@ -32,9 +32,6 @@ export const BoardControls = ({
         if (Math.abs(e.deltaY) < 10) return;
 
         if (e.deltaY > 0) {
-            // Zoom in (Read -> Skim -> Pixel is actually zoom out conceptually, 
-            // but user says "mouse wheel in header should change zoom levels")
-            // Let's make scroll down = smaller (pixel), scroll up = larger (read)
             if (zoomLevel > 0) onZoomChange((zoomLevel - 1) as ZoomLevel);
         } else {
             if (zoomLevel < 2) onZoomChange((zoomLevel + 1) as ZoomLevel);
@@ -97,6 +94,7 @@ export const BoardControls = ({
                         isActive={activeBrush?.type === 'role' && activeBrush.value === 'user'}
                         onHover={() => onBrushChange({ type: 'role', value: 'user' })}
                         onLeave={() => onBrushChange(null)}
+                        onClick={() => onBrushChange(activeBrush?.type === 'role' && activeBrush.value === 'user' ? null : { type: 'role', value: 'user' })}
                         colorClass="text-primary"
                     />
                     <LegendItem
@@ -105,22 +103,25 @@ export const BoardControls = ({
                         isActive={activeBrush?.type === 'role' && activeBrush.value === 'assistant'}
                         onHover={() => onBrushChange({ type: 'role', value: 'assistant' })}
                         onLeave={() => onBrushChange(null)}
+                        onClick={() => onBrushChange(activeBrush?.type === 'role' && activeBrush.value === 'assistant' ? null : { type: 'role', value: 'assistant' })}
                         colorClass="text-foreground"
                     />
                     <LegendItem
                         icon={<Wrench className="w-3.5 h-3.5" />}
                         label="Tools"
                         isActive={activeBrush?.type === 'tool'}
-                        onHover={() => onBrushChange({ type: 'tool', value: 'tool' })} // Generic tool hover
+                        onHover={() => onBrushChange({ type: 'tool', value: 'tool' })}
                         onLeave={() => onBrushChange(null)}
+                        onClick={() => onBrushChange(activeBrush?.type === 'tool' ? null : { type: 'tool', value: 'tool' })}
                         colorClass="text-accent"
                     />
                     <LegendItem
                         icon={<FileText className="w-3.5 h-3.5" />}
                         label="Docs"
                         isActive={activeBrush?.type === 'file'}
-                        onHover={() => onBrushChange({ type: 'file', value: '.md' })} // Generic search for .md
+                        onHover={() => onBrushChange({ type: 'file', value: '.md' })}
                         onLeave={() => onBrushChange(null)}
+                        onClick={() => onBrushChange(activeBrush?.type === 'file' ? null : { type: 'file', value: '.md' })}
                         colorClass="text-emerald-500"
                     />
                     <LegendItem
@@ -129,6 +130,7 @@ export const BoardControls = ({
                         isActive={activeBrush?.type === 'status' && activeBrush.value === 'error'}
                         onHover={() => onBrushChange({ type: 'status', value: 'error' })}
                         onLeave={() => onBrushChange(null)}
+                        onClick={() => onBrushChange(activeBrush?.type === 'status' && activeBrush.value === 'error' ? null : { type: 'status', value: 'error' })}
                         colorClass="text-destructive"
                     />
                 </div>
@@ -149,17 +151,19 @@ interface LegendItemProps {
     isActive: boolean;
     onHover: () => void;
     onLeave: () => void;
+    onClick: () => void;
     colorClass: string;
 }
 
-const LegendItem = ({ icon, label, isActive, onHover, onLeave, colorClass }: LegendItemProps) => (
+const LegendItem = ({ icon, label, isActive, onHover, onLeave, onClick, colorClass }: LegendItemProps) => (
     <div
         className={clsx(
-            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all cursor-default select-none",
+            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all cursor-pointer select-none",
             isActive ? "bg-background border-accent shadow-sm scale-105" : "bg-muted/20 border-transparent opacity-70 hover:opacity-100 hover:bg-muted/40"
         )}
-        onMouseEnter={onHover}
-        onMouseLeave={onLeave}
+        onMouseEnter={!isActive ? onHover : undefined}
+        onMouseLeave={!isActive ? onLeave : undefined}
+        onClick={onClick}
     >
         <span className={clsx(colorClass)}>{icon}</span>
         <span className="text-[11px] font-medium">{label}</span>

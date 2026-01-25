@@ -77,22 +77,21 @@ pub fn estimate_message_count_from_size(file_size: u64) -> usize {
 /// - `/Users/jack/.claude/projects/-Users-jack-my-project` → `/Users/jack/my-project`
 /// - `/Users/jack/.claude/projects/-tmp-feature-my-project` → `/tmp/feature-my-project`
 ///
-/// Note: Only the leading dash and path separators are encoded. Dashes within
-/// path segment names (like "my-project") are preserved.
+/// This function uses filesystem existence checks to correctly decode paths
+/// where the project name itself contains hyphens.
 pub fn decode_project_path(session_storage_path: &str) -> String {
     const MARKER: &str = ".claude/projects/";
     if let Some(marker_pos) = session_storage_path.find(MARKER) {
         let encoded = &session_storage_path[marker_pos + MARKER.len()..];
         if encoded.starts_with('-') {
-            // Claude encodes paths by replacing "/" with "-"
-            // The encoding uses splitn(4, '-') to extract the last part as project name
-            // So "-Users-jack-my-project" has 4 parts: ["", "Users", "jack", "my-project"]
-            // We reconstruct as: "/" + "Users" + "/" + "jack" + "/" + "my-project"
+            // Try filesystem-based decoding first (most accurate)
+            if let Some(path) = decode_with_filesystem_check(encoded) {
+                return path;
+            }
+
+            // Fallback: use heuristic decoding
             let parts: Vec<&str> = encoded.splitn(4, '-').collect();
             if parts.len() >= 4 {
-                // parts[0] is empty (before leading dash)
-                // parts[1..3] are path segments
-                // parts[3] is the remaining path (may contain dashes that are part of the name)
                 return format!("/{}/{}/{}", parts[1], parts[2], parts[3]);
             } else if parts.len() == 3 {
                 return format!("/{}/{}", parts[1], parts[2]);
@@ -102,6 +101,66 @@ pub fn decode_project_path(session_storage_path: &str) -> String {
         }
     }
     session_storage_path.to_string()
+}
+
+/// Decode path by checking filesystem existence at each possible split point
+///
+/// For `-Users-jack-client-claude-code-history-viewer`:
+/// 1. Check `/Users` (exists? continue)
+/// 2. Check `/Users/jack` (exists? continue)
+/// 3. Check `/Users/jack/client` (exists? continue)
+/// 4. Check `/Users/jack/client/claude-code-history-viewer` (exists? ✓ return this)
+fn decode_with_filesystem_check(encoded: &str) -> Option<String> {
+    // Find all hyphen positions
+    let hyphen_positions: Vec<usize> = encoded
+        .char_indices()
+        .filter(|(_, c)| *c == '-')
+        .map(|(i, _)| i)
+        .collect();
+
+    if hyphen_positions.is_empty() {
+        return None;
+    }
+
+    // Build path by extending one segment at a time
+    let mut current_path = String::new();
+    let mut last_pos = 0;
+
+    for (i, &pos) in hyphen_positions.iter().enumerate() {
+        // Get the segment between last_pos and current hyphen
+        let segment = &encoded[last_pos..pos];
+        if !segment.is_empty() {
+            current_path.push('/');
+            current_path.push_str(segment);
+        }
+        last_pos = pos + 1;
+
+        // Check if current path exists as a directory
+        if !current_path.is_empty() && Path::new(&current_path).is_dir() {
+            // Check if remaining part (after this hyphen) completes a valid path
+            let remaining = &encoded[pos + 1..];
+            if !remaining.is_empty() {
+                let full_path = format!("{}/{}", current_path, remaining);
+                if Path::new(&full_path).exists() {
+                    return Some(full_path);
+                }
+            }
+        }
+
+        // If this is the last hyphen, we need to add the remaining part
+        if i == hyphen_positions.len() - 1 && last_pos < encoded.len() {
+            let remaining = &encoded[last_pos..];
+            current_path.push('/');
+            current_path.push_str(remaining);
+        }
+    }
+
+    // Check if the fully decoded path exists
+    if !current_path.is_empty() && Path::new(&current_path).exists() {
+        return Some(current_path);
+    }
+
+    None
 }
 
 /// Extract main git directory from gitdir path

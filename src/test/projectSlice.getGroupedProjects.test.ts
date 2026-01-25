@@ -1,19 +1,13 @@
 /**
  * @fileoverview Tests for projectSlice getGroupedProjects selector
- * Tests for worktree grouping functionality in the store
+ * Tests for worktree grouping functionality in the store (Git-based only)
  */
 import { describe, it, expect } from "vitest";
 import type { ClaudeProject } from "../types";
-import {
-  detectWorktreeGroups,
-  detectWorktreeGroupsHybrid,
-} from "../utils/worktreeUtils";
+import { detectWorktreeGroupsHybrid } from "../utils/worktreeUtils";
 
-// Since we can't easily test the full Zustand store with all its dependencies,
-// we test the detectWorktreeGroups and detectWorktreeGroupsHybrid functions directly.
-// The store's getGroupedProjects uses the hybrid version which combines:
-// 1. Git-based grouping (100% accurate when git info is available)
-// 2. Heuristic-based grouping (fallback for projects without git info)
+// The store's getGroupedProjects uses Git-based grouping only.
+// Projects without git_info are treated as ungrouped.
 
 // Helper to create mock ClaudeProject
 function createMockProject(overrides: Partial<ClaudeProject> = {}): ClaudeProject {
@@ -45,22 +39,39 @@ describe("getGroupedProjects logic", () => {
     });
   });
 
-  describe("when worktreeGrouping is enabled", () => {
-    it("should group worktrees with their parent projects", () => {
-      const projects = [
-        createMockProject({ name: "my-app", path: "/Users/jack/my-app" }),
-        createMockProject({ name: "my-app", path: "/tmp/feature-branch/my-app" }),
-        createMockProject({
-          name: "my-app",
-          path: "/private/tmp/hotfix/my-app",
-        }),
-        createMockProject({
-          name: "standalone",
-          path: "/Users/jack/standalone",
-        }),
-      ];
+  describe("when worktreeGrouping is enabled (Git-based)", () => {
+    it("should group linked worktrees with main repos using git_info", () => {
+      const mainRepo = createMockProject({
+        name: "my-app",
+        path: "/Users/jack/my-app",
+        actual_path: "/Users/jack/my-app",
+        git_info: { worktree_type: "main" },
+      });
+      const worktree1 = createMockProject({
+        name: "my-app",
+        path: "/tmp/feature-branch/my-app",
+        actual_path: "/tmp/feature-branch/my-app",
+        git_info: {
+          worktree_type: "linked",
+          main_project_path: "/Users/jack/my-app",
+        },
+      });
+      const worktree2 = createMockProject({
+        name: "my-app",
+        path: "/private/tmp/hotfix/my-app",
+        actual_path: "/private/tmp/hotfix/my-app",
+        git_info: {
+          worktree_type: "linked",
+          main_project_path: "/Users/jack/my-app",
+        },
+      });
+      const standalone = createMockProject({
+        name: "standalone",
+        path: "/Users/jack/standalone",
+        git_info: { worktree_type: "main" },
+      });
 
-      const result = detectWorktreeGroups(projects);
+      const result = detectWorktreeGroupsHybrid([mainRepo, worktree1, worktree2, standalone]);
 
       // Should have 1 group (my-app with 2 worktrees)
       expect(result.groups).toHaveLength(1);
@@ -73,33 +84,36 @@ describe("getGroupedProjects logic", () => {
     });
 
     it("should handle empty projects array", () => {
-      const result = detectWorktreeGroups([]);
+      const result = detectWorktreeGroupsHybrid([]);
 
       expect(result.groups).toHaveLength(0);
       expect(result.ungrouped).toHaveLength(0);
     });
 
-    it("should handle only regular projects (no worktrees)", () => {
+    it("should treat projects without git_info as ungrouped", () => {
       const projects = [
         createMockProject({ name: "project-a", path: "/Users/jack/project-a" }),
-        createMockProject({ name: "project-b", path: "/home/user/project-b" }),
+        createMockProject({ name: "project-a", path: "/tmp/branch/project-a" }),
       ];
 
-      const result = detectWorktreeGroups(projects);
+      const result = detectWorktreeGroupsHybrid(projects);
 
+      // No git_info means no grouping
       expect(result.groups).toHaveLength(0);
       expect(result.ungrouped).toHaveLength(2);
     });
 
-    it("should handle only tmp projects without parents (orphan worktrees)", () => {
-      const projects = [
-        createMockProject({
-          name: "orphan-project",
-          path: "/tmp/branch/orphan-project",
-        }),
-      ];
+    it("should handle orphan linked worktrees without main repo", () => {
+      const orphanWorktree = createMockProject({
+        name: "orphan-project",
+        path: "/tmp/branch/orphan-project",
+        git_info: {
+          worktree_type: "linked",
+          main_project_path: "/Users/jack/non-existent",
+        },
+      });
 
-      const result = detectWorktreeGroups(projects);
+      const result = detectWorktreeGroupsHybrid([orphanWorktree]);
 
       expect(result.groups).toHaveLength(0);
       expect(result.ungrouped).toHaveLength(1);
@@ -108,40 +122,62 @@ describe("getGroupedProjects logic", () => {
     it("should correctly identify multiple parent-child relationships", () => {
       const projects = [
         // Parent 1 with 1 worktree
-        createMockProject({ name: "app-one", path: "/Users/jack/app-one" }),
+        createMockProject({
+          name: "app-one",
+          path: "/Users/jack/app-one",
+          actual_path: "/Users/jack/app-one",
+          git_info: { worktree_type: "main" },
+        }),
         createMockProject({
           name: "app-one",
           path: "/tmp/feature/app-one",
+          git_info: {
+            worktree_type: "linked",
+            main_project_path: "/Users/jack/app-one",
+          },
         }),
         // Parent 2 with 2 worktrees
-        createMockProject({ name: "app-two", path: "/Users/jack/app-two" }),
+        createMockProject({
+          name: "app-two",
+          path: "/Users/jack/app-two",
+          actual_path: "/Users/jack/app-two",
+          git_info: { worktree_type: "main" },
+        }),
         createMockProject({
           name: "app-two",
           path: "/tmp/branch-a/app-two",
+          git_info: {
+            worktree_type: "linked",
+            main_project_path: "/Users/jack/app-two",
+          },
         }),
         createMockProject({
           name: "app-two",
           path: "/tmp/branch-b/app-two",
+          git_info: {
+            worktree_type: "linked",
+            main_project_path: "/Users/jack/app-two",
+          },
         }),
         // Standalone project
-        createMockProject({ name: "standalone", path: "/Users/jack/standalone" }),
+        createMockProject({
+          name: "standalone",
+          path: "/Users/jack/standalone",
+          git_info: { worktree_type: "main" },
+        }),
       ];
 
-      const result = detectWorktreeGroups(projects);
+      const result = detectWorktreeGroupsHybrid(projects);
 
       expect(result.groups).toHaveLength(2);
 
       // Find app-one group
-      const appOneGroup = result.groups.find(
-        (g) => g.parent.name === "app-one"
-      );
+      const appOneGroup = result.groups.find((g) => g.parent.name === "app-one");
       expect(appOneGroup).toBeDefined();
       expect(appOneGroup?.children).toHaveLength(1);
 
       // Find app-two group
-      const appTwoGroup = result.groups.find(
-        (g) => g.parent.name === "app-two"
-      );
+      const appTwoGroup = result.groups.find((g) => g.parent.name === "app-two");
       expect(appTwoGroup).toBeDefined();
       expect(appTwoGroup?.children).toHaveLength(2);
 
@@ -154,17 +190,23 @@ describe("getGroupedProjects logic", () => {
       const parent = createMockProject({
         name: "my-project",
         path: "/Users/jack/my-project",
+        actual_path: "/Users/jack/my-project",
         session_count: 5,
         message_count: 100,
+        git_info: { worktree_type: "main" },
       });
       const worktree = createMockProject({
         name: "my-project",
         path: "/tmp/feature/my-project",
         session_count: 2,
         message_count: 25,
+        git_info: {
+          worktree_type: "linked",
+          main_project_path: "/Users/jack/my-project",
+        },
       });
 
-      const result = detectWorktreeGroups([parent, worktree]);
+      const result = detectWorktreeGroupsHybrid([parent, worktree]);
 
       expect(result.groups[0].parent.session_count).toBe(5);
       expect(result.groups[0].parent.message_count).toBe(100);
@@ -173,92 +215,54 @@ describe("getGroupedProjects logic", () => {
     });
   });
 
-  describe("detectWorktreeGroupsHybrid", () => {
-    it("should use heuristic grouping when git info is not available", () => {
+  describe("edge cases", () => {
+    it("should handle projects with not_git worktree_type", () => {
       const projects = [
-        createMockProject({ name: "my-app", path: "/Users/jack/my-app" }),
-        createMockProject({ name: "my-app", path: "/tmp/feature-branch/my-app" }),
+        createMockProject({
+          name: "my-project",
+          path: "/Users/jack/my-project",
+          git_info: { worktree_type: "not_git" },
+        }),
+        createMockProject({
+          name: "my-project",
+          path: "/tmp/branch/my-project",
+          git_info: { worktree_type: "not_git" },
+        }),
       ];
 
       const result = detectWorktreeGroupsHybrid(projects);
 
-      // Should fall back to heuristic grouping
-      expect(result.groups).toHaveLength(1);
-      expect(result.groups[0].parent.path).toBe("/Users/jack/my-app");
-      expect(result.groups[0].children).toHaveLength(1);
-    });
-  });
-
-  describe("edge cases", () => {
-    it("should handle projects with similar but not matching names", () => {
-      const projects = [
-        createMockProject({ name: "my-project", path: "/Users/jack/my-project" }),
-        createMockProject({
-          name: "my-project-v2",
-          path: "/tmp/branch/my-project-v2",
-        }),
-      ];
-
-      const result = detectWorktreeGroups(projects);
-
-      // Should not group because names don't match exactly
+      // not_git is treated as no git info - all ungrouped
       expect(result.groups).toHaveLength(0);
       expect(result.ungrouped).toHaveLength(2);
     });
 
-    it("should handle projects with special characters in names", () => {
-      const projects = [
-        createMockProject({
-          name: "my-project_2.0",
-          path: "/Users/jack/my-project_2.0",
-        }),
-        createMockProject({
-          name: "my-project_2.0",
-          path: "/tmp/feature/my-project_2.0",
-        }),
-      ];
+    it("should handle mixed git_info availability", () => {
+      const mainRepo = createMockProject({
+        name: "my-project",
+        path: "/Users/jack/my-project",
+        actual_path: "/Users/jack/my-project",
+        git_info: { worktree_type: "main" },
+      });
+      const linkedWorktree = createMockProject({
+        name: "my-project",
+        path: "/tmp/feature/my-project",
+        git_info: {
+          worktree_type: "linked",
+          main_project_path: "/Users/jack/my-project",
+        },
+      });
+      const noGitProject = createMockProject({
+        name: "no-git",
+        path: "/Users/jack/no-git",
+        git_info: null,
+      });
 
-      const result = detectWorktreeGroups(projects);
-
-      expect(result.groups).toHaveLength(1);
-      expect(result.groups[0].parent.name).toBe("my-project_2.0");
-    });
-
-    it("should not group two tmp projects with same name", () => {
-      const projects = [
-        createMockProject({
-          name: "my-project",
-          path: "/tmp/branch-a/my-project",
-        }),
-        createMockProject({
-          name: "my-project",
-          path: "/tmp/branch-b/my-project",
-        }),
-      ];
-
-      const result = detectWorktreeGroups(projects);
-
-      // Both should be ungrouped (no parent project exists)
-      expect(result.groups).toHaveLength(0);
-      expect(result.ungrouped).toHaveLength(2);
-    });
-
-    it("should handle deeply nested paths", () => {
-      const projects = [
-        createMockProject({
-          name: "deep-project",
-          path: "/Users/jack/code/work/clients/acme/deep-project",
-        }),
-        createMockProject({
-          name: "deep-project",
-          path: "/tmp/some/nested/path/deep-project",
-        }),
-      ];
-
-      const result = detectWorktreeGroups(projects);
+      const result = detectWorktreeGroupsHybrid([mainRepo, linkedWorktree, noGitProject]);
 
       expect(result.groups).toHaveLength(1);
-      expect(result.groups[0].children).toHaveLength(1);
+      expect(result.ungrouped).toHaveLength(1);
+      expect(result.ungrouped[0].name).toBe("no-git");
     });
   });
 });

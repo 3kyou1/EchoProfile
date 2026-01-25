@@ -23,15 +23,13 @@ export interface WorktreeGroupingResult {
 const TMP_PREFIXES = ["/tmp/", "/private/tmp/"];
 
 /**
+ * @deprecated Use project.actual_path instead. Backend provides accurate path decoding.
+ *
  * Decodes the actual project path from a Claude session storage path.
- * Claude stores sessions in ~/.claude/projects/ with the project path encoded.
+ * This naive implementation replaces all hyphens with slashes, which fails
+ * for project names containing hyphens (e.g., "my-project" becomes "my/project").
  *
- * @example
- * decodeProjectPath("/Users/jack/.claude/projects/-Users-jack-client-my-project")
- * // Returns: "/Users/jack/client/my-project"
- *
- * decodeProjectPath("/Users/jack/.claude/projects/-tmp-feature-branch-my-project")
- * // Returns: "/tmp/feature-branch/my-project"
+ * The backend (utils.rs) uses filesystem existence checks for accurate decoding.
  */
 export function decodeProjectPath(sessionStoragePath: string): string {
   // Find the .claude/projects/ part
@@ -47,7 +45,7 @@ export function decodeProjectPath(sessionStoragePath: string): string {
   const encoded = sessionStoragePath.slice(markerIndex + marker.length);
 
   // Replace leading dash and all dashes with slashes
-  // "-Users-jack-client-my-project" -> "/Users/jack/client/my-project"
+  // WARNING: This is inaccurate for paths with hyphens in names
   if (encoded.startsWith("-")) {
     return encoded.replace(/-/g, "/");
   }
@@ -57,150 +55,30 @@ export function decodeProjectPath(sessionStoragePath: string): string {
 
 /**
  * Extracts the final project name from a path.
- * Automatically decodes session storage paths.
+ * Expects an actual filesystem path (not encoded session storage path).
  * e.g., /Users/jack/my-project -> my-project
  * e.g., /tmp/vibe-kanban/my-project -> my-project
  */
 export function extractProjectName(path: string): string {
-  const actualPath = decodeProjectPath(path);
   // Remove trailing slash if present
-  const cleanPath = actualPath.endsWith("/") ? actualPath.slice(0, -1) : actualPath;
+  const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
   // Get the last segment
   const segments = cleanPath.split("/");
   return segments[segments.length - 1] || "";
 }
 
 /**
- * Checks if a project path is in a temporary directory (indicating a worktree).
- * Automatically decodes session storage paths.
- */
-export function isInTmpDirectory(path: string): boolean {
-  const actualPath = decodeProjectPath(path);
-  return TMP_PREFIXES.some((prefix) => actualPath.startsWith(prefix));
-}
-
-/**
- * Checks if childPath is a worktree of parentPath.
- * A worktree is identified when:
- * 1. The child is in a /tmp/ directory
- * 2. The parent is NOT in a /tmp/ directory
- * 3. They share the same final project name
- *
- * @example
- * isWorktreeOf("/Users/jack/my-project", "/tmp/vibe-kanban/my-project") // true
- * isWorktreeOf("/Users/jack/my-project", "/Users/jack/my-project") // false (same path)
- * isWorktreeOf("/tmp/a/my-project", "/tmp/b/my-project") // false (both tmp)
- */
-export function isWorktreeOf(parentPath: string, childPath: string): boolean {
-  // Parent should NOT be in tmp
-  if (isInTmpDirectory(parentPath)) {
-    return false;
-  }
-
-  // Child should be in tmp
-  if (!isInTmpDirectory(childPath)) {
-    return false;
-  }
-
-  // They should share the same project name
-  const parentName = extractProjectName(parentPath);
-  const childName = extractProjectName(childPath);
-
-  return parentName === childName && parentName !== "";
-}
-
-/**
- * Detects worktree groups from a list of projects.
- *
- * Detection rules:
- * 1. Projects in `/tmp/` or `/private/tmp/` are potential worktrees
- * 2. Match by extracting final project name from path
- * 3. Parent is the non-tmp project with same name
- *
- * @returns Groups of parent projects with their worktrees, and ungrouped projects
- */
-export function detectWorktreeGroups(
-  projects: ClaudeProject[]
-): WorktreeGroupingResult {
-  // Separate tmp projects (potential worktrees) from regular projects
-  const tmpProjects: ClaudeProject[] = [];
-  const regularProjects: ClaudeProject[] = [];
-
-  for (const project of projects) {
-    if (isInTmpDirectory(project.path)) {
-      tmpProjects.push(project);
-    } else {
-      regularProjects.push(project);
-    }
-  }
-
-  // Build a map of project names to regular projects for quick lookup
-  // Multiple projects can have the same name (e.g., /Users/jack/work/my-project and /Users/jack/personal/my-project)
-  const nameToRegularProjects = new Map<string, ClaudeProject[]>();
-  for (const project of regularProjects) {
-    const name = extractProjectName(project.path);
-    if (name) {
-      if (!nameToRegularProjects.has(name)) {
-        nameToRegularProjects.set(name, []);
-      }
-      nameToRegularProjects.get(name)!.push(project);
-    }
-  }
-
-  // Track which projects have been grouped
-  const groupedParentPaths = new Set<string>();
-  const groupedChildPaths = new Set<string>();
-
-  // Build groups
-  const groupMap = new Map<string, WorktreeGroup>();
-
-  for (const tmpProject of tmpProjects) {
-    const tmpName = extractProjectName(tmpProject.path);
-    const candidates = nameToRegularProjects.get(tmpName);
-
-    if (candidates && candidates.length > 0 && candidates[0]) {
-      // If multiple candidates, pick the first one (could be improved with path ancestry matching)
-      const parentProject: ClaudeProject = candidates[0];
-      const parentPath = parentProject.path;
-
-      if (!groupMap.has(parentPath)) {
-        groupMap.set(parentPath, {
-          parent: parentProject,
-          children: [],
-        });
-      }
-
-      groupMap.get(parentPath)!.children.push(tmpProject);
-      groupedParentPaths.add(parentPath);
-      groupedChildPaths.add(tmpProject.path);
-    }
-  }
-
-  // Build the final result
-  const groups: WorktreeGroup[] = Array.from(groupMap.values());
-
-  // Ungrouped = regular projects without children + tmp projects without parents
-  const ungrouped: ClaudeProject[] = [
-    ...regularProjects.filter((p) => !groupedParentPaths.has(p.path)),
-    ...tmpProjects.filter((p) => !groupedChildPaths.has(p.path)),
-  ];
-
-  return { groups, ungrouped };
-}
-
-/**
  * Gets the display label for a worktree child (removes tmp path prefix).
- * Automatically decodes session storage paths.
+ * Expects an actual filesystem path (use project.actual_path).
  * e.g., /tmp/vibe-kanban/my-project -> vibe-kanban/my-project
  */
 export function getWorktreeLabel(childPath: string): string {
-  const actualPath = decodeProjectPath(childPath);
   for (const prefix of TMP_PREFIXES) {
-    if (actualPath.startsWith(prefix)) {
-      return actualPath.slice(prefix.length);
+    if (childPath.startsWith(prefix)) {
+      return childPath.slice(prefix.length);
     }
   }
-  return actualPath;
+  return childPath;
 }
 
 // ============================================================================
@@ -262,13 +140,12 @@ export function detectWorktreeGroupsByGit(
 }
 
 /**
- * Hybrid worktree detection combining git metadata and heuristics.
+ * Worktree detection using git metadata only.
  *
- * Priority:
- * 1. Git info available → Use git-based grouping (100% accurate)
- * 2. Git info unavailable → Fall back to heuristic-based grouping
+ * Uses git_info from backend for 100% accurate detection.
+ * Projects without git_info are treated as ungrouped.
  *
- * @returns Combined grouping result
+ * @returns Grouping result with worktree groups and ungrouped projects
  */
 export function detectWorktreeGroupsHybrid(
   projects: ClaudeProject[]
@@ -285,16 +162,13 @@ export function detectWorktreeGroupsHybrid(
     }
   }
 
-  // Git-based grouping for projects with git info
+  // Git-based grouping only (100% accurate)
   const gitResult = detectWorktreeGroupsByGit(withGitInfo);
 
-  // Heuristic-based grouping for remaining projects
-  const remainingProjects = [...gitResult.ungrouped, ...withoutGitInfo];
-  const heuristicResult = detectWorktreeGroups(remainingProjects);
-
+  // Projects without git info go to ungrouped
   return {
-    groups: [...gitResult.groups, ...heuristicResult.groups],
-    ungrouped: heuristicResult.ungrouped,
+    groups: gitResult.groups,
+    ungrouped: [...gitResult.ungrouped, ...withoutGitInfo],
   };
 }
 

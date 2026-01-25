@@ -1,14 +1,11 @@
 /**
  * @fileoverview Tests for worktree detection utilities
- * Tests for extractProjectName, isInTmpDirectory, isWorktreeOf, detectWorktreeGroups, getWorktreeLabel
+ * Tests for extractProjectName, getWorktreeLabel, detectWorktreeGroupsByGit, etc.
  */
 import { describe, it, expect } from "vitest";
 import {
   decodeProjectPath,
   extractProjectName,
-  isInTmpDirectory,
-  isWorktreeOf,
-  detectWorktreeGroups,
   getWorktreeLabel,
   detectWorktreeGroupsByGit,
   detectWorktreeGroupsHybrid,
@@ -122,262 +119,20 @@ describe("extractProjectName", () => {
     expect(extractProjectName("/Users/jack/my-project_v2.0")).toBe("my-project_v2.0");
   });
 
-  it("should extract project name from Claude session storage path", () => {
-    // When decoded, dashes become slashes, so the last segment is "project"
-    expect(
-      extractProjectName("/Users/jack/.claude/projects/-Users-jack-client-myproject")
-    ).toBe("myproject");
+  it("should extract project name from actual_path (not session storage path)", () => {
+    // Use actual_path which is already decoded by backend
+    expect(extractProjectName("/Users/jack/client/myproject")).toBe("myproject");
   });
 
-  it("should extract project name from tmp session storage path", () => {
-    expect(
-      extractProjectName("/Users/jack/.claude/projects/-tmp-vibekanban-myproject")
-    ).toBe("myproject");
+  it("should extract project name from tmp actual_path", () => {
+    expect(extractProjectName("/tmp/vibekanban/myproject")).toBe("myproject");
   });
 
-  it("should extract same final segment for parent and worktree paths (enabling grouping)", () => {
-    // Both paths have the same final segment after decoding, enabling worktree grouping
-    const parentPath = "/Users/jack/.claude/projects/-Users-jack-client-myproject";
-    const worktreePath = "/Users/jack/.claude/projects/-tmp-vibekanban-myproject";
+  it("should extract same final segment for parent and worktree actual_paths", () => {
+    // Both paths have the same project name, enabling worktree grouping
+    const parentPath = "/Users/jack/client/myproject";
+    const worktreePath = "/tmp/vibekanban/myproject";
     expect(extractProjectName(parentPath)).toBe(extractProjectName(worktreePath));
-  });
-});
-
-describe("isInTmpDirectory", () => {
-  it("should return true for /tmp/ path", () => {
-    expect(isInTmpDirectory("/tmp/vibe-kanban/my-project")).toBe(true);
-  });
-
-  it("should return true for /private/tmp/ path", () => {
-    expect(isInTmpDirectory("/private/tmp/branch-name/my-project")).toBe(true);
-  });
-
-  it("should return true for root /tmp/ path", () => {
-    expect(isInTmpDirectory("/tmp/project")).toBe(true);
-  });
-
-  it("should return false for regular user path", () => {
-    expect(isInTmpDirectory("/Users/jack/my-project")).toBe(false);
-  });
-
-  it("should return false for path containing tmp in middle", () => {
-    expect(isInTmpDirectory("/Users/jack/tmp/my-project")).toBe(false);
-  });
-
-  it("should return false for path ending with tmp", () => {
-    expect(isInTmpDirectory("/Users/jack/mytmp")).toBe(false);
-  });
-
-  it("should return false for home directory path", () => {
-    expect(isInTmpDirectory("/home/user/project")).toBe(false);
-  });
-
-  it("should return false for empty path", () => {
-    expect(isInTmpDirectory("")).toBe(false);
-  });
-
-  it("should return true for Claude session storage path encoding a tmp path", () => {
-    expect(
-      isInTmpDirectory("/Users/jack/.claude/projects/-tmp-vibe-kanban-my-project")
-    ).toBe(true);
-  });
-
-  it("should return true for session storage path encoding /private/tmp/", () => {
-    expect(
-      isInTmpDirectory("/Users/jack/.claude/projects/-private-tmp-branch-my-project")
-    ).toBe(true);
-  });
-
-  it("should return false for session storage path encoding non-tmp path", () => {
-    expect(
-      isInTmpDirectory("/Users/jack/.claude/projects/-Users-jack-client-my-project")
-    ).toBe(false);
-  });
-});
-
-describe("isWorktreeOf", () => {
-  it("should return true when child is in tmp and parent is not, with same name", () => {
-    expect(
-      isWorktreeOf("/Users/jack/my-project", "/tmp/vibe-kanban/my-project")
-    ).toBe(true);
-  });
-
-  it("should return true for /private/tmp/ worktree", () => {
-    expect(
-      isWorktreeOf("/Users/jack/my-project", "/private/tmp/feature/my-project")
-    ).toBe(true);
-  });
-
-  it("should return false when parent is also in tmp", () => {
-    expect(
-      isWorktreeOf("/tmp/a/my-project", "/tmp/b/my-project")
-    ).toBe(false);
-  });
-
-  it("should return false when child is not in tmp", () => {
-    expect(
-      isWorktreeOf("/Users/jack/my-project", "/Users/jack/other/my-project")
-    ).toBe(false);
-  });
-
-  it("should return false when names don't match", () => {
-    expect(
-      isWorktreeOf("/Users/jack/my-project", "/tmp/branch/other-project")
-    ).toBe(false);
-  });
-
-  it("should return false when parent path is empty string", () => {
-    expect(isWorktreeOf("", "/tmp/branch/my-project")).toBe(false);
-  });
-
-  it("should return false when child path is empty string", () => {
-    expect(isWorktreeOf("/Users/jack/my-project", "")).toBe(false);
-  });
-
-  it("should return false for same path (not a worktree relationship)", () => {
-    expect(
-      isWorktreeOf("/Users/jack/my-project", "/Users/jack/my-project")
-    ).toBe(false);
-  });
-});
-
-describe("detectWorktreeGroups", () => {
-  it("should return empty groups for empty project list", () => {
-    const result = detectWorktreeGroups([]);
-    expect(result.groups).toEqual([]);
-    expect(result.ungrouped).toEqual([]);
-  });
-
-  it("should return all projects as ungrouped when no worktrees exist", () => {
-    const projects = [
-      createMockProject({ name: "project-a", path: "/Users/jack/project-a" }),
-      createMockProject({ name: "project-b", path: "/Users/jack/project-b" }),
-    ];
-
-    const result = detectWorktreeGroups(projects);
-
-    expect(result.groups).toEqual([]);
-    expect(result.ungrouped).toHaveLength(2);
-    expect(result.ungrouped.map((p) => p.name)).toContain("project-a");
-    expect(result.ungrouped.map((p) => p.name)).toContain("project-b");
-  });
-
-  it("should group worktree with its parent project", () => {
-    const parent = createMockProject({
-      name: "my-project",
-      path: "/Users/jack/my-project",
-    });
-    const worktree = createMockProject({
-      name: "my-project",
-      path: "/tmp/vibe-kanban/my-project",
-    });
-
-    const result = detectWorktreeGroups([parent, worktree]);
-
-    expect(result.groups).toHaveLength(1);
-    expect(result.groups[0].parent.path).toBe("/Users/jack/my-project");
-    expect(result.groups[0].children).toHaveLength(1);
-    expect(result.groups[0].children[0].path).toBe("/tmp/vibe-kanban/my-project");
-    expect(result.ungrouped).toHaveLength(0);
-  });
-
-  it("should group multiple worktrees under same parent", () => {
-    const parent = createMockProject({
-      name: "my-project",
-      path: "/Users/jack/my-project",
-    });
-    const worktree1 = createMockProject({
-      name: "my-project",
-      path: "/tmp/feature-a/my-project",
-    });
-    const worktree2 = createMockProject({
-      name: "my-project",
-      path: "/tmp/feature-b/my-project",
-    });
-
-    const result = detectWorktreeGroups([parent, worktree1, worktree2]);
-
-    expect(result.groups).toHaveLength(1);
-    expect(result.groups[0].children).toHaveLength(2);
-    expect(result.ungrouped).toHaveLength(0);
-  });
-
-  it("should handle multiple parent projects with their own worktrees", () => {
-    const parent1 = createMockProject({
-      name: "project-a",
-      path: "/Users/jack/project-a",
-    });
-    const parent2 = createMockProject({
-      name: "project-b",
-      path: "/Users/jack/project-b",
-    });
-    const worktree1 = createMockProject({
-      name: "project-a",
-      path: "/tmp/branch/project-a",
-    });
-    const worktree2 = createMockProject({
-      name: "project-b",
-      path: "/tmp/branch/project-b",
-    });
-
-    const result = detectWorktreeGroups([parent1, parent2, worktree1, worktree2]);
-
-    expect(result.groups).toHaveLength(2);
-    expect(result.ungrouped).toHaveLength(0);
-  });
-
-  it("should keep tmp projects without parent in ungrouped", () => {
-    const parent = createMockProject({
-      name: "project-a",
-      path: "/Users/jack/project-a",
-    });
-    const orphanWorktree = createMockProject({
-      name: "project-b",
-      path: "/tmp/branch/project-b",
-    });
-
-    const result = detectWorktreeGroups([parent, orphanWorktree]);
-
-    expect(result.groups).toHaveLength(0);
-    expect(result.ungrouped).toHaveLength(2);
-  });
-
-  it("should handle mixed grouped and ungrouped projects", () => {
-    const parent = createMockProject({
-      name: "project-a",
-      path: "/Users/jack/project-a",
-    });
-    const worktree = createMockProject({
-      name: "project-a",
-      path: "/tmp/branch/project-a",
-    });
-    const standalone = createMockProject({
-      name: "project-b",
-      path: "/Users/jack/project-b",
-    });
-
-    const result = detectWorktreeGroups([parent, worktree, standalone]);
-
-    expect(result.groups).toHaveLength(1);
-    expect(result.groups[0].parent.name).toBe("project-a");
-    expect(result.ungrouped).toHaveLength(1);
-    expect(result.ungrouped[0].name).toBe("project-b");
-  });
-
-  it("should handle /private/tmp/ worktrees", () => {
-    const parent = createMockProject({
-      name: "my-project",
-      path: "/Users/jack/my-project",
-    });
-    const worktree = createMockProject({
-      name: "my-project",
-      path: "/private/tmp/feature/my-project",
-    });
-
-    const result = detectWorktreeGroups([parent, worktree]);
-
-    expect(result.groups).toHaveLength(1);
-    expect(result.groups[0].children[0].path).toBe("/private/tmp/feature/my-project");
   });
 });
 
@@ -412,54 +167,13 @@ describe("getWorktreeLabel", () => {
     expect(getWorktreeLabel("/tmp/")).toBe("");
   });
 
-  it("should decode and remove tmp prefix from session storage path", () => {
-    expect(
-      getWorktreeLabel("/Users/jack/.claude/projects/-tmp-vibekanban-myproject")
-    ).toBe("vibekanban/myproject");
+  it("should handle actual_path from tmp worktree", () => {
+    // Use actual_path which is already decoded by backend
+    expect(getWorktreeLabel("/tmp/vibekanban/myproject")).toBe("vibekanban/myproject");
   });
 
-  it("should decode and remove private tmp prefix from session storage path", () => {
-    expect(
-      getWorktreeLabel("/Users/jack/.claude/projects/-private-tmp-feature-myproject")
-    ).toBe("feature/myproject");
-  });
-});
-
-describe("detectWorktreeGroups with session storage paths", () => {
-  it("should detect worktree relationship from session storage paths", () => {
-    const parent = createMockProject({
-      name: "myproject",
-      path: "/Users/jack/.claude/projects/-Users-jack-client-myproject",
-    });
-    const worktree = createMockProject({
-      name: "myproject",
-      path: "/Users/jack/.claude/projects/-tmp-vibekanban-myproject",
-    });
-
-    const result = detectWorktreeGroups([parent, worktree]);
-
-    expect(result.groups).toHaveLength(1);
-    expect(result.groups[0].parent.path).toBe(
-      "/Users/jack/.claude/projects/-Users-jack-client-myproject"
-    );
-    expect(result.groups[0].children).toHaveLength(1);
-    expect(result.ungrouped).toHaveLength(0);
-  });
-
-  it("should not group session storage paths with different project names", () => {
-    const parent = createMockProject({
-      name: "projecta",
-      path: "/Users/jack/.claude/projects/-Users-jack-client-projecta",
-    });
-    const worktree = createMockProject({
-      name: "projectb",
-      path: "/Users/jack/.claude/projects/-tmp-branch-projectb",
-    });
-
-    const result = detectWorktreeGroups([parent, worktree]);
-
-    expect(result.groups).toHaveLength(0);
-    expect(result.ungrouped).toHaveLength(2);
+  it("should handle actual_path from private tmp worktree", () => {
+    expect(getWorktreeLabel("/private/tmp/feature/myproject")).toBe("feature/myproject");
   });
 });
 
@@ -829,8 +543,7 @@ describe("groupProjectsByDirectory", () => {
 });
 
 describe("detectWorktreeGroupsHybrid", () => {
-  it("should use git info when available, heuristic otherwise", () => {
-    // Git-based grouping (has git_info)
+  it("should group projects with git_info", () => {
     const mainRepo = createMockProject({
       name: "gitproject",
       path: "/Users/jack/.claude/projects/-Users-jack-gitproject",
@@ -848,14 +561,39 @@ describe("detectWorktreeGroupsHybrid", () => {
       main_project_path: "/Users/jack/gitproject",
     };
 
-    // Heuristic-based grouping (no git_info)
-    const heuristicParent = createMockProject({
+    const result = detectWorktreeGroupsHybrid([mainRepo, linkedWorktree]);
+
+    expect(result.groups).toHaveLength(1);
+    expect(result.groups[0].parent.git_info?.worktree_type).toBe("main");
+    expect(result.groups[0].children).toHaveLength(1);
+  });
+
+  it("should treat projects without git_info as ungrouped", () => {
+    const mainRepo = createMockProject({
+      name: "gitproject",
+      path: "/Users/jack/.claude/projects/-Users-jack-gitproject",
+      actual_path: "/Users/jack/gitproject",
+    });
+    mainRepo.git_info = { worktree_type: "main" };
+
+    const linkedWorktree = createMockProject({
+      name: "gitproject",
+      path: "/Users/jack/.claude/projects/-tmp-feature-gitproject",
+      actual_path: "/tmp/feature/gitproject",
+    });
+    linkedWorktree.git_info = {
+      worktree_type: "linked",
+      main_project_path: "/Users/jack/gitproject",
+    };
+
+    // Projects without git_info should be ungrouped
+    const noGitParent = createMockProject({
       name: "legacyproject",
       path: "/Users/jack/.claude/projects/-Users-jack-legacyproject",
       actual_path: "/Users/jack/legacyproject",
     });
 
-    const heuristicWorktree = createMockProject({
+    const noGitWorktree = createMockProject({
       name: "legacyproject",
       path: "/Users/jack/.claude/projects/-tmp-branch-legacyproject",
       actual_path: "/tmp/branch/legacyproject",
@@ -864,16 +602,17 @@ describe("detectWorktreeGroupsHybrid", () => {
     const result = detectWorktreeGroupsHybrid([
       mainRepo,
       linkedWorktree,
-      heuristicParent,
-      heuristicWorktree,
+      noGitParent,
+      noGitWorktree,
     ]);
 
-    expect(result.groups).toHaveLength(2);
-    expect(result.ungrouped).toHaveLength(0);
+    // Only git-based group should be created
+    expect(result.groups).toHaveLength(1);
+    // Projects without git_info should be ungrouped
+    expect(result.ungrouped).toHaveLength(2);
   });
 
-  it("should prioritize git info over heuristic", () => {
-    // Main repo with git_info
+  it("should use git_info for grouping", () => {
     const mainRepo = createMockProject({
       name: "myproject",
       path: "/Users/jack/.claude/projects/-Users-jack-myproject",
@@ -881,7 +620,6 @@ describe("detectWorktreeGroupsHybrid", () => {
     });
     mainRepo.git_info = { worktree_type: "main" };
 
-    // Linked worktree with correct git_info
     const linkedWorktree = createMockProject({
       name: "myproject",
       path: "/Users/jack/.claude/projects/-tmp-feature-myproject",
@@ -895,28 +633,26 @@ describe("detectWorktreeGroupsHybrid", () => {
     const result = detectWorktreeGroupsHybrid([mainRepo, linkedWorktree]);
 
     expect(result.groups).toHaveLength(1);
-    // Verify it used git-based grouping (parent path matches)
     expect(result.groups[0].parent.git_info?.worktree_type).toBe("main");
   });
 
-  it("should fall back to heuristic for projects without git info", () => {
+  it("should not group projects without git_info", () => {
     const parent = createMockProject({
       name: "noinfo",
       path: "/Users/jack/.claude/projects/-Users-jack-noinfo",
       actual_path: "/Users/jack/noinfo",
     });
-    // No git_info
 
     const worktree = createMockProject({
       name: "noinfo",
       path: "/Users/jack/.claude/projects/-tmp-feature-noinfo",
       actual_path: "/tmp/feature/noinfo",
     });
-    // No git_info
 
     const result = detectWorktreeGroupsHybrid([parent, worktree]);
 
-    // Should use heuristic and group them
-    expect(result.groups).toHaveLength(1);
+    // Without git_info, no grouping should happen
+    expect(result.groups).toHaveLength(0);
+    expect(result.ungrouped).toHaveLength(2);
   });
 });

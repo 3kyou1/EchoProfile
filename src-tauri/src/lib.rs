@@ -26,7 +26,6 @@ use crate::commands::{
     },
 };
 
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[allow(unused_mut)]

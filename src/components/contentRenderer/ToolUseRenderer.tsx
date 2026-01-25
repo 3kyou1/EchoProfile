@@ -33,6 +33,7 @@ import {
   codeTheme,
   layout,
 } from "../renderers";
+import { getPreStyles, getLineStyles, getTokenStyles } from "@/utils/prismStyles";
 
 interface ToolUseRendererProps extends BaseRendererProps {
   toolUse: Record<string, unknown>;
@@ -152,20 +153,28 @@ export const ToolUseRenderer = ({
                 }) => (
                   <pre
                     className={className}
-                    style={{
-                      ...style,
-                      margin: 0,
+                    style={getPreStyles(isDarkMode, style, {
                       fontSize: codeTheme.fontSize,
                       padding: codeTheme.padding,
-                    }}
+                    })}
                   >
-                    {tokens.map((line, i) => (
-                      <div key={i} {...getLineProps({ line })}>
-                        {line.map((token, j) => (
-                          <span key={j} {...getTokenProps({ token })} />
-                        ))}
-                      </div>
-                    ))}
+                    {tokens.map((line, i) => {
+                      const lineProps = getLineProps({ line });
+                      return (
+                        <div key={i} {...lineProps} style={getLineStyles(lineProps.style)}>
+                          {line.map((token, j) => {
+                            const tokenProps = getTokenProps({ token });
+                            return (
+                              <span
+                                key={j}
+                                {...tokenProps}
+                                style={getTokenStyles(isDarkMode, tokenProps.style)}
+                              />
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
                   </pre>
                 )}
               </Highlight>
@@ -281,20 +290,28 @@ export const ToolUseRenderer = ({
             {({ className, style, tokens, getLineProps, getTokenProps }) => (
               <pre
                 className={className}
-                style={{
-                  ...style,
-                  margin: 0,
+                style={getPreStyles(isDarkMode, style, {
                   fontSize: codeTheme.fontSize,
                   padding: codeTheme.padding,
-                }}
+                })}
               >
-                {tokens.map((line, i) => (
-                  <div key={i} {...getLineProps({ line })}>
-                    {line.map((token, j) => (
-                      <span key={j} {...getTokenProps({ token })} />
-                    ))}
-                  </div>
-                ))}
+                {tokens.map((line, i) => {
+                  const lineProps = getLineProps({ line });
+                  return (
+                    <div key={i} {...lineProps} style={getLineStyles(lineProps.style)}>
+                      {line.map((token, j) => {
+                        const tokenProps = getTokenProps({ token });
+                        return (
+                          <span
+                            key={j}
+                            {...tokenProps}
+                            style={getTokenStyles(isDarkMode, tokenProps.style)}
+                          />
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </pre>
             )}
           </Highlight>

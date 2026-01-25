@@ -5,6 +5,7 @@ import { ToolIcon } from "../ToolIcon";
 import { layout } from "@/components/renderers";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/theme";
+import { getPreStyles, getLineStyles, getTokenStyles } from "@/utils/prismStyles";
 
 interface ClaudeToolUseDisplayProps {
   toolUse: Record<string, unknown>;
@@ -39,20 +40,28 @@ export const ClaudeToolUseDisplay: React.FC<ClaudeToolUseDisplayProps> = ({
           {({ className, style, tokens, getLineProps, getTokenProps }) => (
             <pre
               className={className}
-              style={{
-                ...style,
-                margin: 0,
+              style={getPreStyles(isDarkMode, style, {
                 fontSize: "0.8125rem",
                 padding: "0.5rem",
-              }}
+              })}
             >
-              {tokens.map((line, i) => (
-                <div key={i} {...getLineProps({ line, key: i })}>
-                  {line.map((token, key) => (
-                    <span key={key} {...getTokenProps({ token, key })} />
-                  ))}
-                </div>
-              ))}
+              {tokens.map((line, i) => {
+                const lineProps = getLineProps({ line, key: i });
+                return (
+                  <div key={i} {...lineProps} style={getLineStyles(lineProps.style)}>
+                    {line.map((token, key) => {
+                      const tokenProps = getTokenProps({ token, key });
+                      return (
+                        <span
+                          key={key}
+                          {...tokenProps}
+                          style={getTokenStyles(isDarkMode, tokenProps.style)}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </pre>
           )}
         </Highlight>

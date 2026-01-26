@@ -3,9 +3,25 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
-import { Coins, AlertCircle, Clock, Zap, Crown, Anchor, Hash, GitCommit, Pencil } from "lucide-react";
+import { Coins, AlertCircle, Clock, Zap, Crown, Anchor, Hash, GitCommit, Pencil, TrendingUp, Database, Eye } from "lucide-react";
 import { clsx } from "clsx";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
+
+// Helper for formatting duration
+const formatDuration = (minutes: number): string => {
+    if (minutes < 1) return "<1m";
+    if (minutes < 60) return `${Math.round(minutes)}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+};
+
+// Helper for formatting large numbers
+const formatNumber = (num: number): string => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`; // Changed to match "17.1K" style
+    return num.toLocaleString();
+};
 
 interface SessionLaneProps {
     data: BoardSessionData;
@@ -99,6 +115,16 @@ export const SessionLane = ({
         }
     };
 
+    // Calculate duration for display
+    const durationMinutes = stats.durationMs ? stats.durationMs / (1000 * 60) : 0;
+
+    // Placeholder cache read estimation (since we might not have exact cache numbers in BoardSessionStats yet, 
+    // but if we do, use them. If not, 0 or omit). 
+    // BoardSessionStats currently aggregates input/output. To do this really properly we might need to broaden BoardSessionStats again,
+    // but for now let's reuse inputTokens/outputTokens which we definitely have.
+    // Assuming "Cache Read" isn't explicitly tracked in BoardSessionStats yet, we'll skip it or show 0/placeholder if needed.
+    // Actually, let's just show Input / Output which is 100% accurate.
+
     return (
         <div className={clsx(
             "flex flex-col h-full border-r transition-all relative group",
@@ -116,7 +142,8 @@ export const SessionLane = ({
                 (zoomLevel !== 0 && depth === 'epic') ? "bg-indigo-50/80 dark:bg-indigo-950/40" : (zoomLevel !== 0 ? "bg-card/40" : "")
             )}
                 style={{
-                    height: zoomLevel === 0 ? '110px' : '150px' // Enforce consistent height
+                    height: zoomLevel === 0 ? '110px' : 'auto', // Auto height for flexible analytics layout in normal view
+                    minHeight: zoomLevel === 0 ? '0' : '150px'
                 }}
             >
                 {/* Pixel View Header */}
@@ -156,54 +183,75 @@ export const SessionLane = ({
                         </div>
                     </div>
                 ) : (
-                    /* Normal Header */
-                    <div className="flex flex-col h-full">
-                        <h3 className="text-sm font-bold truncate mb-2 text-foreground" title={session.summary || session.session_id}>
-                            {session.summary || "Untitled Session"}
-                        </h3>
+                    /* Normal Header - Styled like SessionStatsCard */
+                    <div className="flex flex-col h-full gap-3">
+                        {/* Top Row: Date | Depth Badges */}
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono text-muted-foreground/70 tabular-nums">
+                                {new Date(session.last_modified).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
 
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground opacity-70">
-                                <Clock className="w-3 h-3" />
-                                <span>{new Date(session.last_modified).toLocaleDateString()}</span>
-                            </div>
-
-                            {/* Moved badges to be inline with metadata row to save space */}
-                            {depth === 'epic' && <span className="bg-indigo-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 ml-auto shrink-0"><Crown className="w-3 h-3" /> EPIC</span>}
-                            {depth === 'deep' && <span className="bg-slate-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 ml-auto shrink-0"><Anchor className="w-3 h-3" /> DEEP</span>}
-                        </div>
-
-                        <div className="mt-auto grid grid-cols-2 gap-2">
-                            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-accent/5 rounded border border-accent/10">
-                                <Coins className="w-3.5 h-3.5 text-accent" />
-                                <span className="text-[11px] font-mono font-bold leading-none">{stats.totalTokens.toLocaleString()}</span>
-                            </div>
-                            <div className={clsx(
-                                "flex items-center gap-1.5 px-2 py-1.5 rounded border",
-                                stats.errorCount > 0 ? "bg-destructive/5 border-destructive/20 text-destructive" : "bg-muted/5 border-border/50 text-muted-foreground"
-                            )}>
-                                <AlertCircle className="w-3.5 h-3.5" />
-                                <span className="text-[11px] font-mono font-bold leading-none">{stats.errorCount}</span>
+                            <div className="flex gap-1.5">
+                                {depth === 'epic' && <span className="text-indigo-500"><Crown className="w-3 h-3" /></span>}
+                                {depth === 'deep' && <span className="text-slate-500"><Anchor className="w-3 h-3" /></span>}
                             </div>
                         </div>
 
-                        {/* Derived Metrics Row for Zoom 1/2 */}
+                        {/* Main Stats Row: Large Tokens Count */}
+                        <div className="flex items-baseline gap-2">
+                            <div className="flex items-baseline text-xl font-bold font-mono tracking-tight text-foreground">
+                                {formatNumber(stats.totalTokens)}
+                                <span className="text-[10px] text-muted-foreground font-normal ml-1">tokens</span>
+                            </div>
+                            <div className="ml-auto flex items-baseline gap-3 text-[10px] text-muted-foreground">
+                                <span>{messages.length} msgs</span>
+                                <span>{formatDuration(durationMinutes)}</span>
+                            </div>
+                        </div>
+
+                        {/* Detailed Token Breakdown Row */}
+                        <div className="grid grid-cols-2 gap-2 pb-2 border-b border-border/30">
+                            <div className="flex items-center gap-1.5">
+                                <TrendingUp className="w-3 h-3 text-emerald-500" />
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                    In: <span className="text-emerald-500 font-bold">{formatNumber(stats.inputTokens)}</span>
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Zap className="w-3 h-3 text-purple-500" />
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                    Out: <span className="text-purple-500 font-bold">{formatNumber(stats.outputTokens)}</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Derived Metrics (Commit / Edits) */}
                         {(stats.commitCount > 0 || stats.fileEditCount > 0) && (
-                            <div className="flex items-center gap-3 mt-2 text-[10px] opacity-80 pl-1">
+                            <div className="flex items-center gap-3 pt-1 text-[10px]">
                                 {stats.commitCount > 0 && (
-                                    <div className="flex items-center gap-1 text-indigo-500 font-medium">
+                                    <div className="flex items-center gap-1.5 text-indigo-500 font-medium">
                                         <GitCommit className="w-3 h-3" />
-                                        <span>{stats.commitCount}</span>
+                                        <span>{stats.commitCount} commits</span>
                                     </div>
                                 )}
                                 {stats.fileEditCount > 0 && (
-                                    <div className="flex items-center gap-1 text-emerald-600 font-medium">
+                                    <div className="flex items-center gap-1.5 text-emerald-600 font-medium">
                                         <Pencil className="w-3 h-3" />
-                                        <span>{stats.fileEditCount} ({stats.filesTouchedCount} files)</span>
+                                        <span>{stats.fileEditCount} edits</span>
                                     </div>
                                 )}
                             </div>
                         )}
+
+                        {/* Title/Summary at bottom */}
+                        <div className="mt-auto pt-2">
+                            <h3 className="text-xs font-semibold text-foreground/90 line-clamp-2 leading-relaxed" title={session.summary || session.session_id}>
+                                {session.summary || "Untitled Session"}
+                            </h3>
+                            <code className="text-[9px] text-muted-foreground/40 font-mono mt-1 block truncate">
+                                {session.session_id}
+                            </code>
+                        </div>
                     </div>
                 )}
             </div>

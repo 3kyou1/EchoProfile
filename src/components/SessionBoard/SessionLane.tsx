@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useLayoutEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
@@ -57,32 +57,28 @@ export const SessionLane = ({
         count: visibleMessages.length,
         getScrollElement: () => parentRef.current,
         estimateSize: (index) => {
+            // 0: Pixel View (Fixed small)
+            if (zoomLevel === 0) return 4;
+
             const msg = visibleMessages[index];
             const content = extractClaudeMessageContent(msg) || "";
             const isTool = !!msg.toolUse;
-            // Rough content length heuristic
             const len = content.length;
 
-            // 0: Pixel View (Fixed small)
-            // Removed generic vertical padding, so each pixel row is tight
-            if (zoomLevel === 0) return 4;
-
+            // Initial estimates (will be corrected by dynamic measurement if enabled/rendered)
             // 1: Skim View (Compact)
             if (zoomLevel === 1) {
                 if (isTool) return 80;
-                if (len < 100) return 60; // Tiny content -> smaller height
+                if (len < 100) return 60;
                 return 90;
             }
 
             // 2: Read View (Detail)
-            // Base overhead: ~40px (header+footer)
-            // Line height: ~20px
-            // Characters per line: ~50 (very rough avg)
-            if (isTool) return 140; // Tools have generous space
-            if (len < 50) return 70; // Extremely short (e.g. "Ok.", "Request cancelled")
-            if (len < 200) return 120; // Short paragraph
-            if (len < 500) return 180; // Medium
-            return 250; // Long (clamped max)
+            if (isTool) return 140;
+            if (len < 50) return 70;
+            if (len < 200) return 120;
+            if (len < 500) return 180;
+            return 250;
         },
         overscan: 10,
     });
@@ -106,6 +102,7 @@ export const SessionLane = ({
         }
 
         switch (depth) {
+            // epic, deep, etc...
             case 'epic':
                 return "w-[480px] min-w-[480px] bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200/50 dark:border-indigo-800/50";
             case 'deep':
@@ -117,13 +114,6 @@ export const SessionLane = ({
 
     // Calculate duration for display
     const durationMinutes = stats.durationMs ? stats.durationMs / (1000 * 60) : 0;
-
-    // Placeholder cache read estimation (since we might not have exact cache numbers in BoardSessionStats yet, 
-    // but if we do, use them. If not, 0 or omit). 
-    // BoardSessionStats currently aggregates input/output. To do this really properly we might need to broaden BoardSessionStats again,
-    // but for now let's reuse inputTokens/outputTokens which we definitely have.
-    // Assuming "Cache Read" isn't explicitly tracked in BoardSessionStats yet, we'll skip it or show 0/placeholder if needed.
-    // Actually, let's just show Input / Output which is 100% accurate.
 
     return (
         <div className={clsx(
@@ -279,15 +269,26 @@ export const SessionLane = ({
 
                         if (!message) return null;
 
+                        // Use dynamic measurements for Zoom 1 & 2 to avoid layout breakage
+                        const isDynamic = zoomLevel !== 0;
+
                         return (
                             <div
                                 key={message.uuid}
+                                data-index={virtualRow.index}
+                                ref={isDynamic ? rowVirtualizer.measureElement : undefined}
                                 style={{
                                     position: 'absolute',
                                     top: 0,
                                     left: 0,
                                     width: '100%',
-                                    height: `${virtualRow.size}px`,
+                                    // Only force height for Pixel View (Zoom 0) or if dynamic measure fails?
+                                    // For dynamic, we let content drive height, but absolute pos requires careful handling.
+                                    // Virtualizer sets `virtualRow.size` to measured height anyway.
+                                    // BUT initially it's estimated. If we don't set height, the content sets it.
+                                    // Then the measure callback fires.
+                                    // So we should NOT set height for dynamic rows.
+                                    height: isDynamic ? undefined : `${virtualRow.size}px`,
                                     transform: `translateY(${virtualRow.start}px)`,
                                     // Padding adjusted to account for the connector line on the left
                                     paddingLeft: zoomLevel === 0 ? '0' : '32px',

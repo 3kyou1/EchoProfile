@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
-import { GitCommitVertical, Terminal, FilePlus, FileText, Book, TrendingUp, Zap, Crown, Pencil, GitCommit, FileSearch } from "lucide-react";
+import { Terminal, FilePlus, FileText, Book, TrendingUp, Zap, Crown, Pencil, GitCommit } from "lucide-react";
 import { clsx } from "clsx";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 

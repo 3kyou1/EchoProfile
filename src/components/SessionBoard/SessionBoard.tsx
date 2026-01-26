@@ -32,7 +32,6 @@ export const SessionBoard = () => {
     const [isMetaPressed, setIsMetaPressed] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [startX, setStartX] = useState(0);
-    const [startY, setStartY] = useState(0);
     const [scrollLeft, setScrollLeft] = useState(0);
 
     // Track Meta/Command key
@@ -58,7 +57,6 @@ export const SessionBoard = () => {
         if (!isMetaPressed || !parentRef.current) return;
         setIsDragging(true);
         setStartX(e.pageX - parentRef.current.offsetLeft);
-        setStartY(e.pageY);
         setScrollLeft(parentRef.current.scrollLeft);
     };
 
@@ -72,8 +70,6 @@ export const SessionBoard = () => {
         parentRef.current.scrollLeft = scrollLeft - walkX;
 
         // Vertical Pan (Sync across all lanes)
-        const y = e.pageY;
-
         const lanes = document.querySelectorAll('.session-lane-scroll');
         lanes.forEach(lane => {
             lane.scrollTop = lane.scrollTop - (e.movementY * 1.5);
@@ -119,6 +115,7 @@ export const SessionBoard = () => {
             if (zoomLevel === 0) return 80;
 
             const sessionId = visibleSessionIds[index];
+            if (!sessionId) return 320;
             const data = boardSessions[sessionId];
 
             // "Epic" sessions get wider columns in normal views

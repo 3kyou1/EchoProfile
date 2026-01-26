@@ -138,6 +138,15 @@ export const createAnalyticsSlice: StateCreator<
     }));
   },
 
+  setAnalyticsRecentEditsSearchQuery: (query: string) => {
+    set((state) => ({
+      analytics: {
+        ...state.analytics,
+        recentEditsSearchQuery: query,
+      },
+    }));
+  },
+
   setAnalyticsLoadingRecentEdits: (loading: boolean) => {
     set((state) => ({
       analytics: {

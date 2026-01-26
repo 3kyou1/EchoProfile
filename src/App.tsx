@@ -325,6 +325,7 @@ function App() {
                     onLoadMore={() => selectedProject && loadMoreRecentEdits(selectedProject.path)}
                     isLoading={analyticsState.isLoadingRecentEdits}
                     error={analyticsState.recentEditsError}
+                    initialSearchQuery={analyticsState.recentEditsSearchQuery}
                   />
                 </OverlayScrollbarsComponent>
               ) : computed.isAnalyticsView || isViewingGlobalStats ? (

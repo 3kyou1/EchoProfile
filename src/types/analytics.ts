@@ -33,6 +33,8 @@ export interface AnalyticsState {
   recentEdits: RecentEditsResult | null;
   recentEditsPagination: RecentEditsPagination;
 
+  recentEditsSearchQuery: string;
+
   // 로딩 상태
   isLoadingProjectSummary: boolean;
   isLoadingSessionComparison: boolean;
@@ -56,6 +58,7 @@ export interface AnalyticsActions {
   setProjectSummary: (summary: ProjectStatsSummary | null) => void;
   setSessionComparison: (comparison: SessionComparison | null) => void;
   setRecentEdits: (edits: RecentEditsResult | null) => void;
+  setRecentEditsSearchQuery: (query: string) => void;
 
   // 로딩 상태 관리
   setLoadingProjectSummary: (loading: boolean) => void;
@@ -92,6 +95,7 @@ export const initialAnalyticsState: AnalyticsState = {
   sessionComparison: null,
   recentEdits: null,
   recentEditsPagination: initialRecentEditsPagination,
+  recentEditsSearchQuery: "",
   isLoadingProjectSummary: false,
   isLoadingSessionComparison: false,
   isLoadingRecentEdits: false,

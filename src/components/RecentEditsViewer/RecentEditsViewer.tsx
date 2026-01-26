@@ -22,10 +22,11 @@ export const RecentEditsViewer: React.FC<RecentEditsViewerProps> = ({
   onLoadMore,
   isLoading = false,
   error = null,
+  initialSearchQuery = "",
 }) => {
   const { t } = useTranslation();
   const { isDarkMode } = useTheme();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
 
   // Handle "Show More" click - calls backend via onLoadMore
   const handleShowMore = useCallback(() => {

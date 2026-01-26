@@ -129,7 +129,8 @@ export const createBoardSlice: StateCreator<
                         fileEditCount: derivedStats.fileEditCount,
                         commitCount: derivedStats.commitCount,
                         filesTouchedCount: derivedStats.filesTouched.size,
-                        hasMarkdownEdits: derivedStats.hasMarkdownEdits // New Flag
+                        hasMarkdownEdits: derivedStats.hasMarkdownEdits, // New Flag
+                        toolBreakdown: derivedStats.toolBreakdown
                     };
 
                     const fileEdits: SessionFileEdit[] = [];

@@ -140,12 +140,16 @@ export interface AppStoreState {
   // Board state
   boardSessions: Record<string, import("../../types/board.types").BoardSessionData>;
   visibleSessionIds: string[];
+  allSortedSessionIds: string[];
   isLoadingBoard: boolean;
   zoomLevel: import("../../types/board.types").ZoomLevel;
   activeBrush: {
-    type: "role" | "status" | "tool";
+    type: "role" | "status" | "tool" | "file";
     value: string;
   } | null;
+  selectedMessageId: string | null;
+  isMarkdownPretty: boolean;
+  dateFilter: import("../../types/board.types").DateFilter;
 }
 
 export interface AppStoreActions {
@@ -190,6 +194,7 @@ export interface AppStoreActions {
   setAnalyticsProjectSummaryError: (error: string | null) => void;
   setAnalyticsSessionComparisonError: (error: string | null) => void;
   setAnalyticsRecentEdits: (edits: RecentEditsResult | null) => void;
+  setAnalyticsRecentEditsSearchQuery: (query: string) => void;
   setAnalyticsLoadingRecentEdits: (loading: boolean) => void;
   setAnalyticsRecentEditsError: (error: string | null) => void;
   loadRecentEdits: (projectPath: string) => Promise<import("../../types").PaginatedRecentEdits>;
@@ -248,8 +253,11 @@ export interface AppStoreActions {
   // Board actions
   loadBoardSessions: (sessions: ClaudeSession[]) => Promise<void>;
   setZoomLevel: (level: import("../../types/board.types").ZoomLevel) => void;
-  setActiveBrush: (brush: { type: "role" | "status" | "tool"; value: string } | null) => void;
+  setActiveBrush: (brush: { type: "role" | "status" | "tool" | "file"; value: string } | null) => void;
   clearBoard: () => void;
+  setSelectedMessageId: (id: string | null) => void;
+  setMarkdownPretty: (pretty: boolean) => void;
+  setDateFilter: (filter: import("../../types/board.types").DateFilter) => void;
 }
 
 export type FullAppStore = AppStoreState & AppStoreActions;

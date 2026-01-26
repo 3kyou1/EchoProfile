@@ -13,6 +13,7 @@ export interface BoardSessionStats {
     commitCount: number;
     filesTouchedCount: number; // Count of unique files
     hasMarkdownEdits: boolean; // New Flag for distinct visibility
+    toolBreakdown: Record<string, number>;
 }
 
 export interface SessionFileEdit {

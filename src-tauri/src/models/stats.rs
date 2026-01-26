@@ -14,6 +14,7 @@ pub struct SessionTokenStats {
     pub last_message_time: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
+    pub most_used_tools: Vec<ToolUsageStats>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

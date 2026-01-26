@@ -6,6 +6,7 @@ export interface SessionStats {
     errorCount: number;
     filesTouched: Set<string>;
     hasMarkdownEdits: boolean; // New Flag
+    toolBreakdown: Record<string, number>;
 }
 
 export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats {
@@ -14,7 +15,8 @@ export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats 
         commitCount: 0,
         errorCount: 0,
         filesTouched: new Set(),
-        hasMarkdownEdits: false
+        hasMarkdownEdits: false,
+        toolBreakdown: {}
     };
 
     messages.forEach(msg => {
@@ -41,6 +43,9 @@ export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats 
             const tool = msg.toolUse as any;
             const name = tool.name;
             const input = tool.input || {};
+
+            // Track tool name in breakdown
+            stats.toolBreakdown[name] = (stats.toolBreakdown[name] || 0) + 1;
 
             // Detect File Edits
             // Broaden detection to catch multi_replace, atomic writes, etc.

@@ -491,8 +491,7 @@ pub async fn get_session_token_stats(session_path: String) -> Result<SessionToke
     let mut total_cache_creation_tokens = 0u32;
     let mut total_cache_read_tokens = 0u32;
 
-    let mut first_time: Option<String> = None;
-    let mut last_time: Option<String> = None;
+    let mut tool_usage: HashMap<String, (u32, u32)> = HashMap::new();
 
     for message in &messages {
         let usage = extract_token_usage(message);
@@ -508,7 +507,56 @@ pub async fn get_session_token_stats(session_path: String) -> Result<SessionToke
         if last_time.is_none() || message.timestamp > last_time.as_ref().unwrap().clone() {
             last_time = Some(message.timestamp.clone());
         }
+
+        // Track tool usage
+        if message.message_type == "assistant" {
+            if let Some(content) = &message.content {
+                if let Some(content_array) = content.as_array() {
+                    for item in content_array {
+                        if let Some(item_type) = item.get("type").and_then(|v| v.as_str()) {
+                            if item_type == "tool_use" {
+                                if let Some(name) = item.get("name").and_then(|v| v.as_str()) {
+                                    let tool_entry = tool_usage.entry(name.to_string()).or_insert((0, 0));
+                                    tool_entry.0 += 1;
+                                    tool_entry.1 += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(tool_use) = &message.tool_use {
+            if let Some(name) = tool_use.get("name").and_then(|v| v.as_str()) {
+                let tool_entry = tool_usage.entry(name.to_string()).or_insert((0, 0));
+                tool_entry.0 += 1;
+                if let Some(result) = &message.tool_use_result {
+                    let is_error = result
+                        .get("is_error")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(false);
+                    if !is_error {
+                        tool_entry.1 += 1;
+                    }
+                }
+            }
+        }
     }
+
+    let most_used_tools = tool_usage
+        .into_iter()
+        .map(|(name, (usage, success))| ToolUsageStats {
+            tool_name: name,
+            usage_count: usage,
+            success_rate: if usage > 0 {
+                success as f32 / usage as f32
+            } else {
+                0.0
+            },
+            avg_execution_time: None,
+        })
+        .collect();
 
     let total_tokens = total_input_tokens
         + total_output_tokens
@@ -535,6 +583,7 @@ pub async fn get_session_token_stats(session_path: String) -> Result<SessionToke
         first_message_time: first_time.unwrap_or_else(|| "unknown".to_string()),
         last_message_time: last_time.unwrap_or_else(|| "unknown".to_string()),
         summary: None,
+        most_used_tools,
     })
 }
 
@@ -573,6 +622,7 @@ fn extract_session_token_stats_sync(session_path: &PathBuf) -> Option<SessionTok
     let mut first_time: Option<String> = None;
     let mut last_time: Option<String> = None;
     let mut summary: Option<String> = None;
+    let mut tool_usage: HashMap<String, (u32, u32)> = HashMap::new();
 
     // Use SIMD-accelerated line detection
     let line_ranges = find_line_ranges(&mmap);
@@ -609,6 +659,43 @@ fn extract_session_token_stats_sync(session_path: &PathBuf) -> Option<SessionTok
                 if last_time.is_none() || message.timestamp > last_time.as_ref().unwrap().clone() {
                     last_time = Some(message.timestamp.clone());
                 }
+
+                // Track tool usage
+                if message.message_type == "assistant" {
+                    if let Some(content) = &message.content {
+                        if let Some(content_array) = content.as_array() {
+                            for item in content_array {
+                                if let Some(item_type) = item.get("type").and_then(|v| v.as_str()) {
+                                    if item_type == "tool_use" {
+                                        if let Some(name) = item.get("name").and_then(|v| v.as_str())
+                                        {
+                                            let tool_entry =
+                                                tool_usage.entry(name.to_string()).or_insert((0, 0));
+                                            tool_entry.0 += 1;
+                                            tool_entry.1 += 1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if let Some(tool_use) = &message.tool_use {
+                    if let Some(name) = tool_use.get("name").and_then(|v| v.as_str()) {
+                        let tool_entry = tool_usage.entry(name.to_string()).or_insert((0, 0));
+                        tool_entry.0 += 1;
+                        if let Some(result) = &message.tool_use_result {
+                            let is_error = result
+                                .get("is_error")
+                                .and_then(serde_json::Value::as_bool)
+                                .unwrap_or(false);
+                            if !is_error {
+                                tool_entry.1 += 1;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -635,6 +722,19 @@ fn extract_session_token_stats_sync(session_path: &PathBuf) -> Option<SessionTok
         first_message_time: first_time.unwrap_or_else(|| "unknown".to_string()),
         last_message_time: last_time.unwrap_or_else(|| "unknown".to_string()),
         summary,
+        most_used_tools: tool_usage
+            .into_iter()
+            .map(|(name, (usage, success))| ToolUsageStats {
+                tool_name: name,
+                usage_count: usage,
+                success_rate: if usage > 0 {
+                    success as f32 / usage as f32
+                } else {
+                    0.0
+                },
+                avg_execution_time: None,
+            })
+            .collect(),
     })
 }
 

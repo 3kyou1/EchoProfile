@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
-import { Coins, AlertCircle, Clock, Zap, Crown, Anchor, Hash, GitCommit, Pencil, TrendingUp, Database, Eye, FileText } from "lucide-react";
+import { Clock, Crown, Anchor, GitCommit, Pencil, TrendingUp, Zap } from "lucide-react";
 import { clsx } from "clsx";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 
@@ -57,10 +57,16 @@ export const SessionLane = ({
         count: visibleMessages.length,
         getScrollElement: () => parentRef.current,
         estimateSize: (index) => {
-            // 0: Pixel View (Fixed small)
-            if (zoomLevel === 0) return 4;
-
             const msg = visibleMessages[index];
+            if (!msg) return 4; // Safely return default if undefined
+
+            // 0: Pixel View (Fixed small)
+            if (zoomLevel === 0) {
+                const totalTokens = (msg.usage?.input_tokens || 0) + (msg.usage?.output_tokens || 0);
+                // Must matches InteractionCard logic: Math.min(Math.max(totalTokens / 50, 4), 20)
+                return Math.min(Math.max(totalTokens / 50, 4), 20);
+            }
+
             const content = extractClaudeMessageContent(msg) || "";
             const isTool = !!msg.toolUse;
             const len = content.length;
@@ -143,6 +149,16 @@ export const SessionLane = ({
                         {depth === 'epic' && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse mb-1" title="Epic Session" />}
                         {depth === 'deep' && <div className="w-2 h-2 rounded-full bg-slate-500 mb-1" title="Deep Session" />}
 
+                        <div className="flex justify-center gap-1 mb-1">
+                            {/* High Level Indicators for Commits / Markdown in Pixel View */}
+                            {stats.commitCount > 0 && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-sm" title="Commits" />
+                            )}
+                            {stats.hasMarkdownEdits && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-sm" title="Docs" />
+                            )}
+                        </div>
+
                         <div className="text-[10px] font-bold text-muted-foreground rotate-0 truncate max-w-full leading-tight" title={session.summary || session.session_id}>
                             {/* Just show truncated ID or short date */}
                             {new Date(session.last_modified).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
@@ -190,7 +206,7 @@ export const SessionLane = ({
                                 )}
                                 {stats.hasMarkdownEdits && (
                                     <div className="flex items-center justify-center w-4 h-4 rounded bg-amber-500 text-white shadow-sm" title="Markdown Documentation Edited">
-                                        <FileText className="w-2.5 h-2.5" />
+                                        <Pencil className="w-2.5 h-2.5" />
                                     </div>
                                 )}
 
@@ -300,6 +316,7 @@ export const SessionLane = ({
                                     // BUT initially it's estimated. If we don't set height, the content sets it.
                                     // Then the measure callback fires.
                                     // So we should NOT set height for dynamic rows.
+                                    // For Zoom 0, we must force it because we return a fixed calculation in estimateSize but no measureElement is used.
                                     height: isDynamic ? undefined : `${virtualRow.size}px`,
                                     transform: `translateY(${virtualRow.start}px)`,
                                     // Padding adjusted to account for the connector line on the left

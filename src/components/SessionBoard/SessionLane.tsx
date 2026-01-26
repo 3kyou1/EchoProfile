@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
-import { Coins, AlertCircle, Clock, Zap, Crown, Anchor } from "lucide-react";
+import { Coins, AlertCircle, Clock, Zap, Crown, Anchor, Hash } from "lucide-react";
 import { clsx } from "clsx";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 
@@ -48,7 +48,8 @@ export const SessionLane = ({
             const len = content.length;
 
             // 0: Pixel View (Fixed small)
-            if (zoomLevel === 0) return 6;
+            // Removed generic vertical padding, so each pixel row is tight
+            if (zoomLevel === 0) return 4;
 
             // 1: Skim View (Compact)
             if (zoomLevel === 1) {
@@ -83,6 +84,11 @@ export const SessionLane = ({
 
     // Determine styles for different session depths
     const getDepthStyles = () => {
+        // Pixel View always uses compact width
+        if (zoomLevel === 0) {
+            return "w-[80px] min-w-[80px] bg-background border-r border-border/30";
+        }
+
         switch (depth) {
             case 'epic':
                 return "w-[480px] min-w-[480px] bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200/50 dark:border-indigo-800/50";
@@ -98,48 +104,78 @@ export const SessionLane = ({
             "flex flex-col h-full border-r transition-all relative group",
             getDepthStyles()
         )}>
-            {/* Vertical Connector Line (Visual Flow) */}
-            <div className="absolute left-6 top-0 bottom-0 w-px bg-border/40 z-0 pointer-events-none" />
+            {/* Vertical Connector Line (Only for non-Pixel views) */}
+            {zoomLevel !== 0 && (
+                <div className="absolute left-6 top-0 bottom-0 w-px bg-border/40 z-0 pointer-events-none" />
+            )}
 
             {/* Column Header */}
             <div className={clsx(
-                "p-4 border-b border-border/50 shrink-0 z-10 backdrop-blur-sm sticky top-0",
-                depth === 'epic' ? "bg-indigo-50/80 dark:bg-indigo-950/40" : "bg-card/40"
+                "border-b border-border/50 shrink-0 z-10 backdrop-blur-sm sticky top-0",
+                zoomLevel === 0 ? "p-2 bg-background/90" : "p-4",
+                (zoomLevel !== 0 && depth === 'epic') ? "bg-indigo-50/80 dark:bg-indigo-950/40" : (zoomLevel !== 0 ? "bg-card/40" : "")
             )}>
-                <div className="flex items-center gap-2 mb-1.5">
-                    {depth === 'epic' && <span className="bg-indigo-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Crown className="w-3 h-3" /> EPIC</span>}
-                    {depth === 'deep' && <span className="bg-slate-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Anchor className="w-3 h-3" /> DEEP</span>}
-                    {depth === 'shallow' && <span className="bg-muted text-muted-foreground text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">SHALLOW</span>}
-                </div>
+                {/* Pixel View Header */}
+                {zoomLevel === 0 ? (
+                    <div className="flex flex-col items-center gap-1.5 text-center">
+                        {/* Mini badge for depth */}
+                        {depth === 'epic' && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" title="Epic Session" />}
+                        {depth === 'deep' && <div className="w-2 h-2 rounded-full bg-slate-500" title="Deep Session" />}
 
-                <h3 className="text-sm font-bold truncate mb-1 text-foreground" title={session.summary || session.session_id}>
-                    {session.summary || "Untitled Session"}
-                </h3>
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-3 opacity-70">
-                    <Clock className="w-3 h-3" />
-                    <span>{new Date(session.last_modified).toLocaleDateString()}</span>
-                </div>
+                        <div className="text-[10px] font-bold text-muted-foreground rotate-0 truncate max-w-full" title={session.summary || session.session_id}>
+                            {/* Just show truncated ID or short date */}
+                            {new Date(session.last_modified).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
+                        </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/5 rounded border border-accent/10">
-                        <Coins className="w-3 h-3 text-accent" />
-                        <span className="text-[11px] font-mono font-bold leading-none">{stats.totalTokens.toLocaleString()}</span>
+                        {/* Vertical Sparkline - using simple stacking bars for stats visually in a tiny column */}
+                        <div className="flex flex-col gap-0.5 w-full items-center mt-1">
+                            <span className="text-[8px] font-mono opacity-50">{stats.toolCount}t</span>
+                            <div className="w-full h-0.5 bg-foreground/10" />
+                            <span className="text-[8px] font-mono font-bold text-accent">{Math.round(stats.totalTokens / 1000)}k</span>
+                        </div>
                     </div>
-                    <div className={clsx(
-                        "flex items-center gap-1.5 px-2 py-1 rounded border",
-                        stats.errorCount > 0 ? "bg-destructive/5 border-destructive/20 text-destructive" : "bg-muted/5 border-border/50 text-muted-foreground"
-                    )}>
-                        <AlertCircle className="w-3 h-3" />
-                        <span className="text-[11px] font-mono font-bold leading-none">{stats.errorCount}</span>
-                    </div>
-                </div>
+                ) : (
+                    /* Normal Header */
+                    <>
+                        <div className="flex items-center gap-2 mb-1.5">
+                            {depth === 'epic' && <span className="bg-indigo-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Crown className="w-3 h-3" /> EPIC</span>}
+                            {depth === 'deep' && <span className="bg-slate-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Anchor className="w-3 h-3" /> DEEP</span>}
+                            {depth === 'shallow' && <span className="bg-muted text-muted-foreground text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">SHALLOW</span>}
+                        </div>
+
+                        <h3 className="text-sm font-bold truncate mb-1 text-foreground" title={session.summary || session.session_id}>
+                            {session.summary || "Untitled Session"}
+                        </h3>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-3 opacity-70">
+                            <Clock className="w-3 h-3" />
+                            <span>{new Date(session.last_modified).toLocaleDateString()}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/5 rounded border border-accent/10">
+                                <Coins className="w-3 h-3 text-accent" />
+                                <span className="text-[11px] font-mono font-bold leading-none">{stats.totalTokens.toLocaleString()}</span>
+                            </div>
+                            <div className={clsx(
+                                "flex items-center gap-1.5 px-2 py-1 rounded border",
+                                stats.errorCount > 0 ? "bg-destructive/5 border-destructive/20 text-destructive" : "bg-muted/5 border-border/50 text-muted-foreground"
+                            )}>
+                                <AlertCircle className="w-3 h-3" />
+                                <span className="text-[11px] font-mono font-bold leading-none">{stats.errorCount}</span>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Interactions Virtual List */}
             <div
                 ref={parentRef}
                 onScroll={handleScroll}
-                className="session-lane-scroll flex-1 overflow-y-auto px-1 py-4 scrollbar-thin overflow-x-hidden relative"
+                className={clsx(
+                    "session-lane-scroll flex-1 overflow-y-auto scrollbar-thin overflow-x-hidden relative",
+                    zoomLevel === 0 ? "px-0.5 py-2" : "px-1 py-4"
+                )}
             >
                 <div
                     style={{
@@ -163,8 +199,8 @@ export const SessionLane = ({
                                     height: `${virtualRow.size}px`,
                                     transform: `translateY(${virtualRow.start}px)`,
                                     // Padding adjusted to account for the connector line on the left
-                                    paddingLeft: zoomLevel === 0 ? '1px' : '32px',
-                                    paddingRight: zoomLevel === 0 ? '1px' : '8px',
+                                    paddingLeft: zoomLevel === 0 ? '0' : '32px',
+                                    paddingRight: zoomLevel === 0 ? '0' : '8px',
                                 }}
                             >
                                 <InteractionCard

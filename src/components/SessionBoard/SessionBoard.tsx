@@ -101,20 +101,28 @@ export const SessionBoard = () => {
         });
     }, []);
 
+    // Force re-measure when zoom level changes
+    useEffect(() => {
+        columnVirtualizer.measure();
+    }, [zoomLevel]);
+
     const columnVirtualizer = useVirtualizer({
         count: visibleSessionIds.length,
         getScrollElement: () => parentRef.current,
         estimateSize: (index) => {
+            // Pixel View (0) -> Ultra condensed columns
+            if (zoomLevel === 0) return 80;
+
             const sessionId = visibleSessionIds[index];
             const data = boardSessions[sessionId];
 
-            // "Epic" sessions get wider columns
+            // "Epic" sessions get wider columns in normal views
             if (data?.depth === 'epic') return 480;
             if (data?.depth === 'deep') return 380;
             return 320;
         },
         horizontal: true,
-        overscan: 2,
+        overscan: 5, // Increased overscan for smooth scrolling in dense view
     });
 
     if (isLoadingBoard) {

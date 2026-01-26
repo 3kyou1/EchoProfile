@@ -99,7 +99,7 @@ export const createBoardSlice: StateCreator<
     [],
     [],
     BoardSlice
-> = (set, get) => ({
+> = (set) => ({
     ...initialBoardState,
 
     loadBoardSessions: async (sessions: ClaudeSession[]) => {
@@ -233,8 +233,10 @@ export const createBoardSlice: StateCreator<
                 const startMs = filter.start ? filter.start.getTime() : 0;
                 const endMs = filter.end ? filter.end.getTime() + (24 * 60 * 60 * 1000) : Infinity; // Include the end date fully (next day midnight)
 
-                visibleSessionIds = allSortedSessionIds.filter(id => {
-                    const sessionDate = new Date(boardSessions[id].session.last_modified).getTime();
+                visibleSessionIds = allSortedSessionIds.filter((id: string) => {
+                    const session = boardSessions[id];
+                    if (!session) return false;
+                    const sessionDate = new Date(session.session.last_modified).getTime();
                     return sessionDate >= startMs && sessionDate < endMs;
                 });
             }

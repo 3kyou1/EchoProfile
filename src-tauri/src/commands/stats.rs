@@ -491,6 +491,8 @@ pub async fn get_session_token_stats(session_path: String) -> Result<SessionToke
     let mut total_cache_creation_tokens = 0u32;
     let mut total_cache_read_tokens = 0u32;
 
+    let mut first_time: Option<String> = None;
+    let mut last_time: Option<String> = None;
     let mut tool_usage: HashMap<String, (u32, u32)> = HashMap::new();
 
     for message in &messages {

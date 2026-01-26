@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-01-25T13:43:18.334Z
- * 총 키 개수: 768
+ * 생성 시간: 2026-01-26T15:05:49.129Z
+ * 총 키 개수: 809
  */
 
 /**
@@ -780,7 +780,48 @@ export type TranslationKey =
   | 'captureMode.hiddenCount'
   | 'captureMode.restoreAll'
   | 'captureMode.hideBlock'
-  | 'captureMode.tooltip';
+  | 'captureMode.tooltip'
+  | 'settingsManager.title'
+  | 'settingsManager.scope.user'
+  | 'settingsManager.scope.project'
+  | 'settingsManager.scope.local'
+  | 'settingsManager.scope.managed'
+  | 'settingsManager.noSettings'
+  | 'settingsManager.createNew'
+  | 'settingsManager.loading'
+  | 'settingsManager.error'
+  | 'settingsManager.visual.model'
+  | 'settingsManager.visual.selectModel'
+  | 'settingsManager.visual.apiKey'
+  | 'settingsManager.visual.apiKeyAcknowledge'
+  | 'settingsManager.visual.allowList'
+  | 'settingsManager.visual.denyList'
+  | 'settingsManager.visual.askList'
+  | 'settingsManager.visual.addPermission'
+  | 'settingsManager.visual.saved'
+  | 'settingsManager.json.format'
+  | 'settingsManager.json.unsavedChanges'
+  | 'settingsManager.json.invalidJson'
+  | 'settingsManager.json.saved'
+  | 'settingsManager.mcp.title'
+  | 'settingsManager.mcp.add'
+  | 'settingsManager.mcp.addTitle'
+  | 'settingsManager.mcp.empty'
+  | 'settingsManager.mcp.serverName'
+  | 'settingsManager.mcp.command'
+  | 'settingsManager.mcp.args'
+  | 'settingsManager.mcp.envVars'
+  | 'settingsManager.presets.title'
+  | 'settingsManager.presets.create'
+  | 'settingsManager.presets.createTitle'
+  | 'settingsManager.presets.empty'
+  | 'settingsManager.presets.name'
+  | 'settingsManager.presets.namePlaceholder'
+  | 'settingsManager.presets.description'
+  | 'settingsManager.presets.descriptionPlaceholder'
+  | 'settingsManager.presets.apply'
+  | 'settingsManager.presets.applyTitle'
+  | 'settingsManager.presets.applyDescription';
 
 /**
  * 사용 가능한 접두사 목록
@@ -825,6 +866,7 @@ export type TranslationPrefix =
   | 'queueOperationRenderer'
   | 'recentEdits'
   | 'session'
+  | 'settingsManager'
   | 'simpleUpdateModal'
   | 'status'
   | 'structuredPatch'
@@ -1908,4 +1950,50 @@ export type CaptureModeKeys =
   | 'restoreAll'
   | 'hideBlock'
   | 'tooltip';
+
+/**
+ * settingsManager 네임스페이스 키
+ */
+export type SettingsManagerKeys =
+  | 'title'
+  | 'scope.user'
+  | 'scope.project'
+  | 'scope.local'
+  | 'scope.managed'
+  | 'noSettings'
+  | 'createNew'
+  | 'loading'
+  | 'error'
+  | 'visual.model'
+  | 'visual.selectModel'
+  | 'visual.apiKey'
+  | 'visual.apiKeyAcknowledge'
+  | 'visual.allowList'
+  | 'visual.denyList'
+  | 'visual.askList'
+  | 'visual.addPermission'
+  | 'visual.saved'
+  | 'json.format'
+  | 'json.unsavedChanges'
+  | 'json.invalidJson'
+  | 'json.saved'
+  | 'mcp.title'
+  | 'mcp.add'
+  | 'mcp.addTitle'
+  | 'mcp.empty'
+  | 'mcp.serverName'
+  | 'mcp.command'
+  | 'mcp.args'
+  | 'mcp.envVars'
+  | 'presets.title'
+  | 'presets.create'
+  | 'presets.createTitle'
+  | 'presets.empty'
+  | 'presets.name'
+  | 'presets.namePlaceholder'
+  | 'presets.description'
+  | 'presets.descriptionPlaceholder'
+  | 'presets.apply'
+  | 'presets.applyTitle'
+  | 'presets.applyDescription';
 

@@ -6,6 +6,7 @@ import {
   Activity,
   FileEdit,
   Terminal,
+  Settings,
 } from "lucide-react";
 
 import { TooltipButton } from "@/shared/TooltipButton";
@@ -188,6 +189,20 @@ export const Header = () => {
             </TooltipButton>
           </>
         )}
+
+        {/* Settings View */}
+        <NavButton
+          icon={Settings}
+          label={t("settingsManager.title")}
+          isActive={computed.isSettingsView}
+          onClick={() => {
+            if (computed.isSettingsView) {
+              analyticsActions.switchToMessages();
+            } else {
+              analyticsActions.switchToSettings();
+            }
+          }}
+        />
 
         {/* Settings Dropdown */}
         <SettingDropdown />

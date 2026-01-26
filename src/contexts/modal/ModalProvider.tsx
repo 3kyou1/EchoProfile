@@ -8,6 +8,7 @@ import {
 interface ModalState {
   feedback: boolean;
   folderSelector: boolean;
+  settingsManager: boolean;
   folderSelectorMode: FolderSelectorMode;
 }
 
@@ -17,6 +18,7 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({
   const [modalState, setModalState] = useState<ModalState>({
     feedback: false,
     folderSelector: false,
+    settingsManager: false,
     folderSelectorMode: "notFound",
   });
 
@@ -48,6 +50,7 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({
       ...prev,
       feedback: false,
       folderSelector: false,
+      settingsManager: false,
     }));
   }, []);
 

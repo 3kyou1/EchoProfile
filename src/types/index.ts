@@ -159,3 +159,36 @@ export {
   getSessionDisplayName,
   isProjectHidden,
 } from "./metadata.types";
+
+// ============================================================================
+// Claude Code Settings Types
+// ============================================================================
+export type {
+  ClaudeModel,
+  PermissionsConfig,
+  HookCommand,
+  HooksConfig,
+  StatusLineConfig,
+  MarketplaceConfig,
+  MCPServerType,
+  MCPServerConfig,
+  FeedbackSurveyState,
+  ClaudeCodeSettings,
+  SettingsScope,
+  AllSettingsResponse,
+  ScopedSettings,
+  SettingsPreset,
+} from "./claudeSettings";
+export { SCOPE_PRIORITY } from "./claudeSettings";
+
+// ============================================================================
+// Preset Types
+// ============================================================================
+export type { PresetData, PresetInput } from "./preset.types";
+export {
+  settingsToJson,
+  jsonToSettings,
+  createPresetInput,
+  extractSettings,
+  formatPresetDate,
+} from "./preset.types";

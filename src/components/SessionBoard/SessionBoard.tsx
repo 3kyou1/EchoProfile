@@ -231,6 +231,11 @@ export const SessionBoard = () => {
                                         }
                                     }}
                                     onScroll={handleLaneScroll}
+                                    onFileClick={(file) => {
+                                        // Deep link to recent edits
+                                        useAppStore.getState().setAnalyticsRecentEditsSearchQuery(file);
+                                        useAppStore.getState().setAnalyticsCurrentView("recentEdits");
+                                    }}
                                 />
                             </div>
                         );

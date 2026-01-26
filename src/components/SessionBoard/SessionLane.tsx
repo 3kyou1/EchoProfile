@@ -31,6 +31,7 @@ interface SessionLaneProps {
     onHoverInteraction?: (type: "role" | "status" | "tool" | "file", value: string) => void;
     onLeaveInteraction?: () => void;
     onScroll?: (scrollTop: number) => void;
+    onFileClick?: (file: string) => void;
 }
 
 export const SessionLane = ({
@@ -40,7 +41,8 @@ export const SessionLane = ({
     onInteractionClick,
     onHoverInteraction,
     onLeaveInteraction,
-    onScroll
+    onScroll,
+    onFileClick
 }: SessionLaneProps) => {
     const parentRef = useRef<HTMLDivElement>(null);
     const { session, messages, stats, depth } = data;
@@ -338,6 +340,7 @@ export const SessionLane = ({
                                     onClick={() => onInteractionClick?.(message.uuid)}
                                     onNext={nextMessage ? () => onInteractionClick?.(nextMessage.uuid) : undefined}
                                     onPrev={prevMessage ? () => onInteractionClick?.(prevMessage.uuid) : undefined}
+                                    onFileClick={onFileClick}
                                 />
                             </div>
                         );

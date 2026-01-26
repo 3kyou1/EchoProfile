@@ -182,86 +182,93 @@ const ExpandedCard = ({
                             </span>
                         </div>
                     </div>
-
-                    {/* Prevent drag inside buttons */}
-                    <div className="flex items-center gap-2" onMouseDown={e => e.stopPropagation()}>
-                        {/* Navigation Controls */}
-                        <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md border border-border/50 mr-2">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
-                                disabled={!onPrev}
-                                className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
-                                title="Previous Message (Up)"
-                            >
-                                <ChevronUp className="w-3 h-3" />
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onNext?.(); }}
-                                disabled={!onNext}
-                                className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
-                                title="Next Message (Down)"
-                            >
-                                <ChevronDown className="w-3 h-3" />
-                            </button>
+                    {editedMdFile && (
+                        <div className="flex items-center gap-1.5 ml-3 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded text-[10px] text-amber-600 font-medium font-mono" title="Markdown File Edit">
+                            <FileText className="w-3 h-3" />
+                            <span className="truncate max-w-[120px]">{editedMdFile}</span>
                         </div>
+                    )}
+                </div>
 
-                        {/* Markdown Toggle inside Tooltip */}
-                        <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md border border-border/50">
-                            <button
-                                onClick={() => setMarkdownPretty(false)}
-                                className={clsx(
-                                    "p-1 rounded transition-all",
-                                    !isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                                )}
-                                title="Raw Text"
-                            >
-                                <AlignLeft className="w-3 h-3" />
-                            </button>
-                            <button
-                                onClick={() => setMarkdownPretty(true)}
-                                className={clsx(
-                                    "p-1 rounded transition-all",
-                                    isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                                )}
-                                title="Pretty Markdown"
-                            >
-                                <FileCode className="w-3 h-3" />
-                            </button>
-                        </div>
-
-                        <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100">
-                            <X className="w-4 h-4" />
+                {/* Prevent drag inside buttons */}
+                <div className="flex items-center gap-2" onMouseDown={e => e.stopPropagation()}>
+                    {/* Navigation Controls */}
+                    <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md border border-border/50 mr-2">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
+                            disabled={!onPrev}
+                            className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
+                            title="Previous Message (Up)"
+                        >
+                            <ChevronUp className="w-3 h-3" />
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+                            disabled={!onNext}
+                            className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
+                            title="Next Message (Down)"
+                        >
+                            <ChevronDown className="w-3 h-3" />
                         </button>
                     </div>
-                </div>
 
-                <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap select-text">
-                    {isMarkdownPretty && !message.toolUse ? (
-                        <div className="prose prose-xs dark:prose-invert max-w-none break-words">
-                            <ReactMarkdown>{displayContent}</ReactMarkdown>
-                        </div>
-                    ) : (
-                        displayContent
-                    )}
-                </div>
-
-                {isError && (
-                    <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 text-destructive text-xs font-medium">
-                        Error detected in this interaction
+                    {/* Markdown Toggle inside Tooltip */}
+                    <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md border border-border/50">
+                        <button
+                            onClick={() => setMarkdownPretty(false)}
+                            className={clsx(
+                                "p-1 rounded transition-all",
+                                !isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                            )}
+                            title="Raw Text"
+                        >
+                            <AlignLeft className="w-3 h-3" />
+                        </button>
+                        <button
+                            onClick={() => setMarkdownPretty(true)}
+                            className={clsx(
+                                "p-1 rounded transition-all",
+                                isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                            )}
+                            title="Pretty Markdown"
+                        >
+                            <FileCode className="w-3 h-3" />
+                        </button>
                     </div>
-                )}
 
-                <div className="p-2 border-t border-border/50 bg-muted/10 rounded-b-lg flex justify-end gap-3 text-[10px] text-muted-foreground shrink-0 font-mono">
-                    {(message.usage) && (
-                        <>
-                            <span>In: {message.usage.input_tokens.toLocaleString()}</span>
-                            <span>Out: {message.usage.output_tokens.toLocaleString()}</span>
-                        </>
-                    )}
+                    <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100">
+                        <X className="w-4 h-4" />
+                    </button>
                 </div>
             </div>
-        </div>,
-        document.body
+
+            <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap select-text">
+                {isMarkdownPretty && !message.toolUse ? (
+                    <div className="prose prose-xs dark:prose-invert max-w-none break-words">
+                        <ReactMarkdown>{displayContent}</ReactMarkdown>
+                    </div>
+                ) : (
+                    displayContent
+                )}
+            </div>
+
+            {isError && (
+                <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 text-destructive text-xs font-medium">
+                    Error detected in this interaction
+                </div>
+            )}
+
+            <div className="p-2 border-t border-border/50 bg-muted/10 rounded-b-lg flex justify-end gap-3 text-[10px] text-muted-foreground shrink-0 font-mono">
+                {(message.usage) && (
+                    <>
+                        <span>In: {message.usage.input_tokens.toLocaleString()}</span>
+                        <span>Out: {message.usage.output_tokens.toLocaleString()}</span>
+                    </>
+                )}
+            </div>
+        </div>
+        </div >,
+    document.body
     );
 };
 
@@ -344,7 +351,7 @@ export const InteractionCard = memo(({
         if (role === 'assistant' && content) {
             const mdMention = content.match(/(create|update|edit|writing|wrote).+?([a-zA-Z0-9_\-\.]+\.md)/i);
             if (mdMention && mdMention[2]) {
-                // return mdMention[2]; 
+                return mdMention[2];
             }
         }
 

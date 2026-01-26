@@ -15,7 +15,7 @@ use crate::commands::{
         save_user_metadata, update_project_metadata, update_session_metadata, update_user_settings,
         MetadataState,
     },
-    project::{get_claude_folder_path, scan_projects, validate_claude_folder},
+    project::{get_claude_folder_path, get_git_log, scan_projects, validate_claude_folder},
     session::{
         get_recent_edits, get_session_message_count, load_project_sessions, load_session_messages,
         load_session_messages_paginated, restore_file, search_messages,
@@ -52,6 +52,7 @@ pub fn run() {
             get_claude_folder_path,
             validate_claude_folder,
             scan_projects,
+            get_git_log,
             load_project_sessions,
             load_session_messages,
             load_session_messages_paginated,

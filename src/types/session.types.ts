@@ -21,6 +21,14 @@ export interface GitInfo {
   main_project_path?: string;
 }
 
+export interface GitCommit {
+  hash: string;
+  author: string;
+  date: string;
+  message: string;
+  timestamp: number;
+}
+
 // ============================================================================
 // Project & Session
 // ============================================================================

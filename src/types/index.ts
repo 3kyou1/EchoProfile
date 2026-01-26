@@ -97,6 +97,7 @@ export type {
 export type {
   GitWorktreeType,
   GitInfo,
+  GitCommit,
   ClaudeProject,
   ClaudeSession,
   SearchFilters,

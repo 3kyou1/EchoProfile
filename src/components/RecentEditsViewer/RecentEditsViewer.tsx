@@ -28,6 +28,11 @@ export const RecentEditsViewer: React.FC<RecentEditsViewerProps> = ({
   const { isDarkMode } = useTheme();
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
 
+  // Sync internal state when external prop changes (e.g. navigation from Board)
+  React.useEffect(() => {
+    setSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
+
   // Handle "Show More" click - calls backend via onLoadMore
   const handleShowMore = useCallback(() => {
     if (onLoadMore && pagination?.hasMore && !pagination?.isLoadingMore) {

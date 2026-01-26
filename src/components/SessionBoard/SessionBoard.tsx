@@ -20,7 +20,8 @@ export const SessionBoard = () => {
         setSelectedMessageId,
         selectedMessageId,
         dateFilter,
-        setDateFilter
+        setDateFilter,
+        selectedSession
     } = useAppStore();
 
     const { t } = useTranslation();
@@ -128,6 +129,19 @@ export const SessionBoard = () => {
         horizontal: true,
         overscan: 5, // Increased overscan for smooth scrolling in dense view
     });
+
+    // Scroll active session into view when transitioning from Detail view
+    useEffect(() => {
+        if (selectedSession && visibleSessionIds.length > 0) {
+            const index = visibleSessionIds.indexOf(selectedSession.session_id);
+            if (index !== -1) {
+                // Small timeout to ensure virtualizer is ready and layout is stable
+                requestAnimationFrame(() => {
+                    columnVirtualizer.scrollToIndex(index, { align: 'center', behavior: 'smooth' });
+                });
+            }
+        }
+    }, [selectedSession?.session_id]); // Only run when the ID changes (or on mount if set)
 
     if (isLoadingBoard) {
         return (

@@ -99,13 +99,27 @@ export const createBoardSlice: StateCreator<
     [],
     [],
     BoardSlice
-> = (set) => ({
+> = (set, get) => ({
     ...initialBoardState,
 
     loadBoardSessions: async (sessions: ClaudeSession[]) => {
         set({ isLoadingBoard: true });
 
         try {
+            const selectedProject = get().selectedProject;
+            let projectCommits: import("../../types").GitCommit[] = [];
+
+            if (selectedProject?.actual_path) {
+                try {
+                    projectCommits = await invoke<import("../../types").GitCommit[]>(
+                        "get_git_log",
+                        { actualPath: selectedProject.actual_path, limit: 100 }
+                    );
+                } catch (e) {
+                    console.error("Failed to fetch git log:", e);
+                }
+            }
+
             const loadPromises = sessions.map(async (session) => {
                 try {
                     const messages = await invoke<ClaudeMessage[]>(
@@ -127,6 +141,7 @@ export const createBoardSlice: StateCreator<
 
                         // Map derived stats
                         fileEditCount: derivedStats.fileEditCount,
+                        shellCount: derivedStats.shellCount,
                         commitCount: derivedStats.commitCount,
                         filesTouchedCount: derivedStats.filesTouched.size,
                         hasMarkdownEdits: derivedStats.hasMarkdownEdits, // New Flag
@@ -166,6 +181,18 @@ export const createBoardSlice: StateCreator<
                         }
                     });
 
+                    // 3. Correlate with real Git Commits
+                    // Sessions have first_message_time and last_message_time
+                    const startTime = new Date(session.first_message_time).getTime();
+                    const endTime = new Date(session.last_modified).getTime();
+                    // Add a small buffer (5 mins) to catch commits that happened just after the session closed
+                    const buffer = 5 * 60 * 1000;
+
+                    const gitCommits = projectCommits.filter(c => {
+                        const commitTime = c.timestamp * 1000;
+                        return commitTime >= (startTime - buffer) && commitTime <= (endTime + buffer);
+                    });
+
                     const relevance = getSessionRelevance(messages, stats);
                     const depth = getSessionDepth(messages, stats);
 
@@ -176,6 +203,7 @@ export const createBoardSlice: StateCreator<
                             messages,
                             stats,
                             fileEdits,
+                            gitCommits,
                             depth,
                         },
                     };

@@ -1,4 +1,4 @@
-import type { ClaudeMessage, ClaudeSession } from "./index";
+import type { ClaudeMessage, ClaudeSession, GitCommit } from "./index";
 
 export interface BoardSessionStats {
     totalTokens: number;
@@ -10,6 +10,7 @@ export interface BoardSessionStats {
 
     // Derived Metrics
     fileEditCount: number;
+    shellCount: number;
     commitCount: number;
     filesTouchedCount: number; // Count of unique files
     hasMarkdownEdits: boolean; // New Flag for distinct visibility
@@ -30,6 +31,7 @@ export interface BoardSessionData {
     messages: ClaudeMessage[];
     stats: BoardSessionStats;
     fileEdits: SessionFileEdit[];
+    gitCommits: GitCommit[];
     depth: SessionDepth;
 }
 

@@ -138,6 +138,7 @@ mod tests {
             first_message_time: "2025-06-01T10:00:00Z".to_string(),
             last_message_time: "2025-06-01T12:00:00Z".to_string(),
             summary: Some("Test session summary".to_string()),
+            most_used_tools: Vec::new(),
         };
 
         let serialized = serde_json::to_string(&stats).unwrap();

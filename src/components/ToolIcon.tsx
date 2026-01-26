@@ -53,7 +53,7 @@ const SIZE_CLASSES = {
 };
 
 /** Get tool variant from tool name */
-const getToolVariant = (name: string): RendererVariant => {
+export const getToolVariant = (name: string): RendererVariant => {
   const lower = name.toLowerCase();
 
   // Code operations (Blue)

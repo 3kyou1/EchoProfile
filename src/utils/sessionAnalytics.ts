@@ -2,6 +2,7 @@ import type { ClaudeMessage } from "../types";
 
 export interface SessionStats {
     fileEditCount: number;
+    shellCount: number;
     commitCount: number;
     errorCount: number;
     filesTouched: Set<string>;
@@ -12,6 +13,7 @@ export interface SessionStats {
 export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats {
     const stats: SessionStats = {
         fileEditCount: 0,
+        shellCount: 0,
         commitCount: 0,
         errorCount: 0,
         filesTouched: new Set(),
@@ -62,8 +64,10 @@ export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats 
                 }
             }
 
-            // Detect Commits
+            // Detect Shell Commands
             if (['run_command', 'bash', 'execute_command'].includes(name)) {
+                stats.shellCount++;
+
                 const cmd = input.CommandLine || input.command;
                 if (typeof cmd === 'string' && cmd.trim().startsWith('git commit')) {
                     stats.commitCount++;

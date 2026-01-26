@@ -152,10 +152,14 @@ export const SessionLane = ({
                         <div className="flex justify-center gap-1 mb-1">
                             {/* High Level Indicators for Commits / Markdown in Pixel View */}
                             {stats.commitCount > 0 && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-sm" title="Commits" />
+                                <div className="flex items-center justify-center w-3 h-3 rounded bg-indigo-500 text-white shadow-sm" title="Commits">
+                                    <GitCommit className="w-2 h-2" />
+                                </div>
                             )}
                             {stats.hasMarkdownEdits && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-sm" title="Docs" />
+                                <div className="flex items-center justify-center w-3 h-3 rounded bg-amber-500 text-white shadow-sm" title="Docs">
+                                    <Pencil className="w-2 h-2" />
+                                </div>
                             )}
                         </div>
 

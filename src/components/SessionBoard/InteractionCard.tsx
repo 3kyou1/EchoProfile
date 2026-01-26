@@ -5,7 +5,7 @@ import type { ZoomLevel } from "../../types/board.types";
 import { ToolIcon } from "../ToolIcon";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 import { clsx } from "clsx";
-import { FileText, X, FileCode, AlignLeft, Bot, User, Ban, ChevronUp, ChevronDown, GitCommit, PencilLine } from "lucide-react";
+import { FileText, X, FileCode, AlignLeft, Bot, User, Ban, ChevronUp, ChevronDown, GitCommit, PencilLine, GripVertical } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAppStore } from "../../store/useAppStore";
 
@@ -47,51 +47,118 @@ const ExpandedCard = ({
     onPrev?: () => void;
 }) => {
     const { setMarkdownPretty } = useAppStore();
+    const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
-    if (!triggerRect) return null;
+    // Initial positioning logic
+    useEffect(() => {
+        if (!triggerRect || position !== null) return;
 
-    // Calculate position: default to right, sticky to screen
-    const windowWidth = window.innerWidth;
+        // Calculate position: default to right, sticky to screen
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        const cardWidth = 480; // Reasonable reading width
+        const gap = 12;
+
+        let left = triggerRect.right + gap;
+        let top = triggerRect.top;
+
+        // Flip to left if not enough space on right
+        if (left + cardWidth > windowWidth - 20) {
+            left = triggerRect.left - cardWidth - gap;
+        }
+
+        // Adjust top if bottom overflow
+        const maxHeight = Math.min(600, windowHeight - 40);
+        if (top + maxHeight > windowHeight - 20) {
+            top = Math.max(20, windowHeight - maxHeight - 20);
+        }
+
+        // If top is initially offscreen (e.g. card is scrolled partially out), clamp it
+        if (top < 20) top = 20;
+
+        setPosition({ x: left, y: top });
+    }, [triggerRect, position]);
+
+    // Dragging Logic
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging || !dragStartRef.current || !position) return;
+
+            const deltaX = e.clientX - dragStartRef.current.x;
+            const deltaY = e.clientY - dragStartRef.current.y;
+
+            // Update drag start for next frame (delta is per-frameish) 
+            // OR better: calculate absolute new pos relative to initial drag
+            // Simplified: just add delta to current pos state would lag
+            // Correct way for rAF or direct updates:
+
+            // We will just update state directly for now
+            setPosition(prev => {
+                if (!prev) return null;
+                return { x: prev.x + deltaX, y: prev.y + deltaY };
+            });
+
+            dragStartRef.current = { x: e.clientX, y: e.clientY };
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+            dragStartRef.current = null;
+        };
+
+        if (isDragging) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        } else {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging]);
+
+    const handleDragStart = (e: React.MouseEvent) => {
+        e.preventDefault(); // Prevent text selection
+        setIsDragging(true);
+        dragStartRef.current = { x: e.clientX, y: e.clientY };
+    };
+
+    if (!triggerRect || !position) return null;
+
     const windowHeight = window.innerHeight;
-    const cardWidth = 480; // Reasonable reading width
-    const gap = 12;
-
-    let left = triggerRect.right + gap;
-    let top = triggerRect.top;
-
-    // Flip to left if not enough space on right
-    if (left + cardWidth > windowWidth - 20) {
-        left = triggerRect.left - cardWidth - gap;
-    }
-
-    // Adjust top if bottom overflow
     const maxHeight = Math.min(600, windowHeight - 40);
-    if (top + maxHeight > windowHeight - 20) {
-        top = Math.max(20, windowHeight - maxHeight - 20);
-    }
-
-    // If top is initially offscreen (e.g. card is scrolled partially out), clamp it
-    if (top < 20) top = 20;
 
     const displayContent = content || (message.toolUse ? JSON.stringify((message.toolUse as any).input, null, 2) : "No content");
 
     return createPortal(
         <div className="fixed inset-0 z-50 pointer-events-none">
-            {/* Click backdrop to close */}
+            {/* Click backdrop to close - keep pointer events strictly on the bg */}
             <div className="absolute inset-0 pointer-events-auto" onClick={(e) => { e.stopPropagation(); onClose(); }} />
 
             <div
-                className="absolute w-[480px] bg-popover/95 text-popover-foreground border border-border rounded-lg shadow-2xl flex flex-col backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-auto ring-1 ring-border/50"
+                className={clsx(
+                    "absolute w-[480px] bg-popover/95 text-popover-foreground border border-border rounded-lg shadow-2xl flex flex-col backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-auto ring-1 ring-border/50",
+                    isDragging ? "cursor-grabbing shadow-xl scale-[1.01]" : "shadow-2xl"
+                )}
                 style={{
-                    left: `${left}px`,
-                    top: `${top}px`,
+                    left: `${position.x}px`,
+                    top: `${position.y}px`,
                     maxHeight: `${maxHeight}px`,
-                    transformOrigin: left > triggerRect.right ? 'left top' : 'right top'
+                    // transformOrigin: ... handled by initial placement logic mostly
                 }}
                 onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
             >
-                <div className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/30 rounded-t-lg shrink-0 select-none">
+                <div
+                    className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/30 rounded-t-lg shrink-0 select-none cursor-grab active:cursor-grabbing group/header"
+                    onMouseDown={handleDragStart}
+                >
                     <div className="flex items-center gap-2.5">
+                        <GripVertical className="w-4 h-4 text-muted-foreground/30 group-hover/header:text-muted-foreground/60 transition-colors" />
                         <div className="p-1.5 bg-background rounded-md shadow-sm border border-border/50">
                             {message.toolUse ? (
                                 <ToolIcon toolName={(message.toolUse as any).name} className="w-4 h-4 text-accent" />
@@ -116,7 +183,8 @@ const ExpandedCard = ({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    {/* Prevent drag inside buttons */}
+                    <div className="flex items-center gap-2" onMouseDown={e => e.stopPropagation()}>
                         {/* Navigation Controls */}
                         <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md border border-border/50 mr-2">
                             <button

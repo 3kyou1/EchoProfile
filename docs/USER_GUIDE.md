@@ -11,9 +11,13 @@ The board offers three levels of detail, controlled by the toolbar or by scrolli
     -   High-level density view.
     -   Messages are shrunk to single lines varying by token count.
     -   Best for: Spotting long conversations, heavy tool usage patterns, or error clusters.
+    -   **Rich Tooltips**: Hover over any line to see the exact timestamp, tool name, and a natural language summary of the action.
 2.  **Skim View (Kanban)**:
     -   Shows truncated message previews.
-    -   Displays tool icons and status indicators.
+    -   Shows truncated message previews.
+    -   Displays **Natural Language Summaries** for tool actions (e.g., "Run: git status" instead of raw JSON).
+    -   **Agent Headers**: Clearly identifies the active agent (e.g., "GENERAL PURPOSE", "BROWSER") at the top of each card.
+    -   **Action Badges**: Headers summarize tool usage (e.g., "bash (5)", "search (2)") for merged turns.
     -   Best for: Quickly scanning the flow of conversation.
 3.  **Read View (Detail)**:
     -   Shows larger cards with more text.
@@ -43,9 +47,11 @@ Use the **Legend** in the top toolbar to filter and highlight specific types of 
 
 ### High-Level Indicators
 In every zoom level, including **Pixel View**, the column headers feature high-level indicators to help you scan for session types:
--   **Indigo Badge (GitCommit)**: Indicates the session contains version control activity (git commits).
--   **Amber Badge (Pencil)**: Indicates the session contains documentation edits (.md files).
--   **Crown/Anchor**: Represents **Epic** (very long/deep) vs **Shallow** sessions.
+-   **Terminal (Sky Blue)**: Shell command execution count.
+-   **FilePlus (Emerald)**: Count of new files created.
+-   **Pencil/Book (Amber)**: Indicates documentation edits (.md files).
+-   **FileText**: Code edits.
+-   **Indigo Badge**: Real git commits verified in the repository.
 
 ### Interactive File Edits
 The board automatically detects file modifications and documentation updates:

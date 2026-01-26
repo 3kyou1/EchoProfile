@@ -340,10 +340,11 @@ export const InteractionCard = memo(({
             }
         }
 
+        // Also naive regex check for mentions in assistant text
         if (role === 'assistant' && content) {
             const mdMention = content.match(/(create|update|edit|writing|wrote).+?([a-zA-Z0-9_\-\.]+\.md)/i);
             if (mdMention && mdMention[2]) {
-                return mdMention[2];
+                // return mdMention[2]; 
             }
         }
 
@@ -361,11 +362,14 @@ export const InteractionCard = memo(({
     // Minimal Role Indicator (Icon only)
     const RoleIcon = useMemo(() => {
         if (isCommit) return <GitCommit className="w-3.5 h-3.5 text-indigo-500" />;
+        // If markdown edit is detected locally for this card
+        if (editedMdFile) return <FileText className="w-3.5 h-3.5 text-amber-500" />;
         if (isFileEdit) return <PencilLine className="w-3.5 h-3.5 text-emerald-500" />;
+
         if (message.toolUse) return <ToolIcon toolName={(message.toolUse as any).name} className="w-4 h-4 text-accent" />;
         if (role === 'user') return <User className="w-3.5 h-3.5 text-primary" />;
         return <Bot className="w-3.5 h-3.5 text-muted-foreground" />;
-    }, [role, message.toolUse, isCommit, isFileEdit]);
+    }, [role, message.toolUse, isCommit, isFileEdit, editedMdFile]);
 
     // Level 0: Pixel/Heatmap
     if (zoomLevel === 0) {
@@ -379,7 +383,8 @@ export const InteractionCard = memo(({
         // Override with Event Types for the "Session Understanding" view
         if (message.toolUse) {
             bgColor = "bg-accent/60";
-            if (isFileEdit) bgColor = "bg-emerald-500/90"; // High salience for edits
+            if (editedMdFile) bgColor = "bg-amber-500/90"; // High salience for Markdown
+            else if (isFileEdit) bgColor = "bg-emerald-500/90"; // High salience for code
             if (isCommit) bgColor = "bg-indigo-500/90"; // High salience for commits
         }
 
@@ -394,7 +399,7 @@ export const InteractionCard = memo(({
                 onMouseEnter={() => onHover?.('role', role)}
                 onMouseLeave={onLeave}
                 onClick={onClick}
-                title={isCommit ? "Commit" : isFileEdit ? "File Edit" : role}
+                title={isCommit ? "Commit" : editedMdFile ? "Docs Edit" : isFileEdit ? "File Edit" : role}
             />
         );
     }
@@ -419,11 +424,8 @@ export const InteractionCard = memo(({
 
                         {editedMdFile && (
                             <div
-                                className="absolute -top-1 -right-1 p-0.5 bg-emerald-500 rounded-full shadow-sm text-white border border-background"
-                                onMouseEnter={(e) => {
-                                    e.stopPropagation();
-                                    onHover?.('file', editedMdFile);
-                                }}
+                                className="absolute -top-1 -right-1 p-0.5 bg-amber-500 rounded-full shadow-sm text-white border border-background"
+                                title="Markdown Modified"
                             >
                                 <FileText className="w-2 h-2" />
                             </div>
@@ -437,9 +439,10 @@ export const InteractionCard = memo(({
                     </div>
                     <div className="flex-1 min-w-0">
                         {message.toolUse && (
-                            <div className="text-[9px] font-medium uppercase tracking-tight text-accent opacity-90 mb-0.5">
+                            <div className="text-[9px] font-medium uppercase tracking-tight text-accent opacity-90 mb-0.5 flex items-center gap-1.5">
                                 {(message.toolUse as any).name}
-                                {isCommit && <span className="ml-1 text-indigo-500 font-bold">COMMIT</span>}
+                                {isCommit && <span className="ml-1 text-indigo-500 font-bold bg-indigo-500/10 px-1 rounded-[2px] border border-indigo-500/20">COMMIT</span>}
+                                {editedMdFile && <span className="text-amber-500 font-bold bg-amber-500/10 px-1 rounded-[2px] border border-amber-500/20">DOCS</span>}
                             </div>
                         )}
                         <p className={clsx("text-xs line-clamp-2 leading-tight",
@@ -481,18 +484,38 @@ export const InteractionCard = memo(({
                 onMouseLeave={onLeave}
                 onClick={onClick}
             >
-                {editedMdFile && (
+                {editedMdFile ? (
                     <div
-                        className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] text-emerald-600 font-medium mb-1 cursor-help group/md"
-                        onMouseEnter={(e) => {
-                            e.stopPropagation();
-                            onHover?.('file', editedMdFile);
-                        }}
+                        className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-[10px] text-amber-600 font-medium mb-1 cursor-help group/md"
+                        title="Markdown File Edit"
                     >
                         <FileText className="w-3 h-3" />
-                        <span className="truncate">Modified: {editedMdFile}</span>
+                        <span className="truncate">Docs: {editedMdFile}</span>
                     </div>
-                )}
+                ) : editedMdFile === null && isFileEdit ? (
+                    // Generic file edit fallback if needed, but the hook above handles it via null. 
+                    // We can check if we want to show generic file path too? 
+                    // Let's rely on Tool Input display for generic unless specifically MD.
+                    // Actually, existing code showed generic edits in green. Let's restore that logic for non-MD.
+                    // But wait, 'editedMdFile' is null if not .md.
+                    // We need to check if it's ANY file edit to show the green banner.
+                    // Let's parse 'anyFile' here briefly.
+                    (() => {
+                        const tool = message.toolUse as any;
+                        const path = tool?.input?.path || tool?.input?.file_path || tool?.input?.TargetFile;
+                        if (path && typeof path === 'string') {
+                            return (
+                                <div
+                                    className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] text-emerald-600 font-medium mb-1"
+                                >
+                                    <PencilLine className="w-3 h-3" />
+                                    <span className="truncate">Edit: {path}</span>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()
+                ) : null}
 
                 {/* Header (Role + Time + Cancelled) */}
                 <div className="flex justify-between items-center border-b border-border/10 pb-1 mb-0.5">
@@ -502,6 +525,7 @@ export const InteractionCard = memo(({
                         </div>
 
                         {isCommit && <span className="text-[9px] bg-indigo-500/10 text-indigo-600 px-1 rounded border border-indigo-200 uppercase tracking-wider font-bold">GIT</span>}
+                        {editedMdFile && <span className="text-[9px] bg-amber-500/10 text-amber-600 px-1 rounded border border-amber-200 uppercase tracking-wider font-bold">DOCS</span>}
 
                         {isCancelled && (
                             <span className="text-[9px] uppercase font-bold text-orange-500 tracking-wide border border-orange-500/30 px-1 rounded">Cancelled</span>

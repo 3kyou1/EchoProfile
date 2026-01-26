@@ -174,7 +174,7 @@ const ExpandedCard = ({
 export const InteractionCard = memo(({
     message,
     zoomLevel,
-    isActive,
+    isActive, // Keep prop for now to avoid breaking interface, but we'll ignore it visually or just default true
     isExpanded,
     onHover,
     onLeave,
@@ -235,11 +235,10 @@ export const InteractionCard = memo(({
         return null;
     }, [message.toolUse, content, role]);
 
-    // Base classes for the card
+    // Base classes for the card - REMOVED isActive checks
     const baseClasses = clsx(
         "relative rounded transition-all duration-200 cursor-pointer overflow-hidden border border-transparent shadow-sm select-none",
-        !isActive && "opacity-20 scale-[0.98] grayscale blur-[0.5px]",
-        isActive && "hover:border-accent hover:shadow-lg hover:z-50 hover:scale-[1.02]",
+        "hover:border-accent hover:shadow-lg hover:z-50 hover:scale-[1.02]", // Always hoverable
         isError && "bg-destructive/10 border-destructive/20",
         isCancelled && "bg-orange-500/10 border-orange-500/20"
     );
@@ -283,14 +282,16 @@ export const InteractionCard = memo(({
             <>
                 <div
                     ref={cardRef}
-                    className={clsx(baseClasses, "mb-1.5 p-2 bg-card min-h-[60px] flex gap-2 items-start")}
+                    // Removed fixed min-h-[60px] -> min-h-0 or min-h-[30px]
+                    // Reduced padding from p-2 to p-1.5
+                    className={clsx(baseClasses, "mb-1 p-1.5 bg-card flex gap-2 items-start")}
                     onMouseEnter={() => onHover?.('role', role)}
                     onMouseLeave={onLeave}
                     onClick={onClick}
                 >
                     <div className="mt-0.5 relative shrink-0">
-                        {/* Use circle indicator with icon inside for better affordance */}
-                        <div className="w-6 h-6 rounded-full bg-muted/30 flex items-center justify-center">
+                        {/* Smaller circle indicator for compact view */}
+                        <div className="w-5 h-5 rounded-full bg-muted/30 flex items-center justify-center">
                             {RoleIcon}
                         </div>
 
@@ -313,9 +314,8 @@ export const InteractionCard = memo(({
                         )}
                     </div>
                     <div className="flex-1 min-w-0">
-                        {/* Removed text label for Role, just showing tool name if applicable */}
                         {message.toolUse && (
-                            <div className="text-[10px] font-medium uppercase tracking-tight text-accent opacity-90 mb-0.5">
+                            <div className="text-[9px] font-medium uppercase tracking-tight text-accent opacity-90 mb-0.5">
                                 {(message.toolUse as any).name}
                             </div>
                         )}
@@ -349,7 +349,8 @@ export const InteractionCard = memo(({
         <>
             <div
                 ref={cardRef}
-                className={clsx(baseClasses, "mb-2.5 p-3 bg-card flex flex-col gap-2 ring-1 ring-border/5 shadow-md")}
+                // Reduced vertical padding and margin
+                className={clsx(baseClasses, "mb-1.5 p-2 bg-card flex flex-col gap-1.5 ring-1 ring-border/5 shadow-md")}
                 style={{ transformOrigin: 'top center' }}
                 onMouseEnter={() => onHover?.('role', role)}
                 onMouseLeave={onLeave}
@@ -368,36 +369,39 @@ export const InteractionCard = memo(({
                     </div>
                 )}
 
-                <div className="flex justify-between items-start border-b border-border/10 pb-1.5 mb-1">
+                {/* Header (Role + Time + Cancelled) */}
+                <div className="flex justify-between items-center border-b border-border/10 pb-1 mb-0.5">
                     <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-muted/30 flex items-center justify-center shrink-0">
+                        <div className="w-5 h-5 rounded-full bg-muted/30 flex items-center justify-center shrink-0">
                             {RoleIcon}
                         </div>
 
                         {isCancelled && (
-                            <span className="text-[10px] uppercase font-bold text-orange-500 tracking-wide border border-orange-500/30 px-1.5 rounded">Cancelled</span>
+                            <span className="text-[9px] uppercase font-bold text-orange-500 tracking-wide border border-orange-500/30 px-1 rounded">Cancelled</span>
                         )}
                     </div>
-                    <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                    <span className="text-[9px] text-muted-foreground font-mono">
                         {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                 </div>
 
-                <div className="text-xs text-foreground/90 whitespace-pre-wrap break-words leading-normal max-h-[300px] overflow-hidden relative">
+                {/* Content Area */}
+                <div className="text-xs text-foreground/90 whitespace-pre-wrap break-words leading-tight max-h-[300px] overflow-hidden relative">
                     {content || (message.toolUse ? JSON.stringify((message.toolUse as any).input, null, 2) : "No content")}
-                    <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent" />
+                    {/* Gradient to fade out long content */}
+                    <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-card to-transparent pointer-events-none" />
                 </div>
 
                 {(message.usage) && (
-                    <div className="mt-auto pt-2 flex gap-3 text-[10px] text-muted-foreground opacity-60 font-mono">
+                    <div className="mt-auto pt-1 flex gap-2 text-[9px] text-muted-foreground opacity-60 font-mono">
                         <span>In: {message.usage.input_tokens}</span>
                         <span>Out: {message.usage.output_tokens}</span>
                     </div>
                 )}
 
                 {isError && (
-                    <div className="mt-1 p-1.5 bg-destructive/10 rounded text-[10px] text-destructive border border-destructive/20 font-mono italic">
-                        Error detected in interaction
+                    <div className="mt-1 p-1 bg-destructive/10 rounded text-[9px] text-destructive border border-destructive/20 font-mono italic">
+                        Error detected
                     </div>
                 )}
             </div>

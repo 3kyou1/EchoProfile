@@ -128,7 +128,8 @@ export const createBoardSlice: StateCreator<
                         // Map derived stats
                         fileEditCount: derivedStats.fileEditCount,
                         commitCount: derivedStats.commitCount,
-                        filesTouchedCount: derivedStats.filesTouched.size
+                        filesTouchedCount: derivedStats.filesTouched.size,
+                        hasMarkdownEdits: derivedStats.hasMarkdownEdits // New Flag
                     };
 
                     const fileEdits: SessionFileEdit[] = [];

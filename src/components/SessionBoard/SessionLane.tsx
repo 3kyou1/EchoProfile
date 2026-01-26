@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
-import { Coins, AlertCircle, Clock, Zap, Crown, Anchor, Hash, GitCommit, Pencil, TrendingUp, Database, Eye } from "lucide-react";
+import { Coins, AlertCircle, Clock, Zap, Crown, Anchor, Hash, GitCommit, Pencil, TrendingUp, Database, Eye, FileText } from "lucide-react";
 import { clsx } from "clsx";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 
@@ -175,15 +175,27 @@ export const SessionLane = ({
                 ) : (
                     /* Normal Header - Styled like SessionStatsCard */
                     <div className="flex flex-col h-full gap-3">
-                        {/* Top Row: Date | Depth Badges */}
+                        {/* Top Row: Date | Depth Badges | HIGH LEVEL TRAITS */}
                         <div className="flex items-center justify-between">
                             <span className="text-[10px] font-mono text-muted-foreground/70 tabular-nums">
                                 {new Date(session.last_modified).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </span>
 
-                            <div className="flex gap-1.5">
-                                {depth === 'epic' && <span className="text-indigo-500"><Crown className="w-3 h-3" /></span>}
-                                {depth === 'deep' && <span className="text-slate-500"><Anchor className="w-3 h-3" /></span>}
+                            <div className="flex gap-1.5 items-center">
+                                {/* High Level Indicators for Commits / Markdown */}
+                                {stats.commitCount > 0 && (
+                                    <div className="flex items-center justify-center w-4 h-4 rounded bg-indigo-500 text-white shadow-sm" title={`${stats.commitCount} Commits in this session`}>
+                                        <GitCommit className="w-2.5 h-2.5" />
+                                    </div>
+                                )}
+                                {stats.hasMarkdownEdits && (
+                                    <div className="flex items-center justify-center w-4 h-4 rounded bg-amber-500 text-white shadow-sm" title="Markdown Documentation Edited">
+                                        <FileText className="w-2.5 h-2.5" />
+                                    </div>
+                                )}
+
+                                {depth === 'epic' && <span className="text-indigo-500 ml-1"><Crown className="w-3 h-3" /></span>}
+                                {depth === 'deep' && <span className="text-slate-500 ml-1"><Anchor className="w-3 h-3" /></span>}
                             </div>
                         </div>
 
@@ -215,17 +227,17 @@ export const SessionLane = ({
                             </div>
                         </div>
 
-                        {/* Derived Metrics (Commit / Edits) */}
+                        {/* Derived Metrics (Commit / Edits) - Replaced text with progress bars or other visuals? No, keep text for detail, but Top Right icons are the "High Level" scan path */}
                         {(stats.commitCount > 0 || stats.fileEditCount > 0) && (
                             <div className="flex items-center gap-3 pt-1 text-[10px]">
                                 {stats.commitCount > 0 && (
-                                    <div className="flex items-center gap-1.5 text-indigo-500 font-medium">
+                                    <div className="flex items-center gap-1.5 text-indigo-500 font-medium opacity-80">
                                         <GitCommit className="w-3 h-3" />
                                         <span>{stats.commitCount} commits</span>
                                     </div>
                                 )}
                                 {stats.fileEditCount > 0 && (
-                                    <div className="flex items-center gap-1.5 text-emerald-600 font-medium">
+                                    <div className="flex items-center gap-1.5 text-emerald-600 font-medium opacity-80">
                                         <Pencil className="w-3 h-3" />
                                         <span>{stats.fileEditCount} edits</span>
                                     </div>

@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
-import { Crown, GitCommit, Pencil, TrendingUp, Zap, Terminal, FilePlus, FileText, Book } from "lucide-react";
+import { GitCommitVertical, Terminal, FilePlus, FileText, Book, TrendingUp, Zap, Crown, Pencil, GitCommit, FileSearch } from "lucide-react";
 import { clsx } from "clsx";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 
@@ -237,7 +237,9 @@ export const SessionLane = ({
                         <div className="flex flex-col gap-1.5 py-1">
                             {/* Visual Activity Bar (Shorthands) */}
                             <div className="flex items-center gap-2 pt-1 border-t border-border/10">
-                                {/* Shell Execution */}
+                                {/* Auto-scanned Tool Icons */}
+
+                                {/* 1. Shell / Terminal */}
                                 {stats.shellCount > 0 && (
                                     <div className="flex items-center gap-1 text-sky-500" title="Shell Commands">
                                         <Terminal className="w-3 h-3" />
@@ -245,10 +247,7 @@ export const SessionLane = ({
                                     </div>
                                 )}
 
-                                {/* File Creation (New) - Heuristic: if fileEditCount > filesTouchedCount, maybe new files? Or better yet, we don't have explicit create count in stats yet. 
-                                    Let's rely on File Edit Count for now with FilePlus icon if > 5? 
-                                    Actually we have specific file entries in 'fileEdits' from board data! 
-                                */}
+                                {/* 2. Files Created */}
                                 {(() => {
                                     const createdCount = data.fileEdits.filter(e => e.type === 'create').length;
                                     if (createdCount > 0) return (
@@ -260,14 +259,20 @@ export const SessionLane = ({
                                     return null;
                                 })()}
 
-                                {/* Docs (Markdown) */}
+                                {/* 3. File Search (Grep/Glob) - Added new Metric ? 
+                                    We don't have explicit count in stats yet, but we can check derived stats if available,
+                                    or just rely on the fact that we want to show it.
+                                    For now, let's skip unless we add it to stats. 
+                                */}
+
+                                {/* 4. Docs (Markdown) */}
                                 {stats.hasMarkdownEdits && (
                                     <div className="flex items-center gap-1 text-amber-500" title="Documentation Updates">
                                         <Book className="w-3 h-3" />
                                     </div>
                                 )}
 
-                                {/* Code Edits */}
+                                {/* 5. Code Edits */}
                                 {stats.fileEditCount > 0 && (
                                     <div className="flex items-center gap-1 text-foreground/70" title="Files Touched">
                                         <FileText className="w-3 h-3" />
@@ -294,11 +299,6 @@ export const SessionLane = ({
                             )}
                         </div>
 
-                        <div className="mt-auto">
-                            <h3 className="text-xs font-semibold text-foreground/90 line-clamp-1" title={session.summary || "Untitled Session"}>
-                                {session.summary || "Untitled Session"}
-                            </h3>
-                        </div>
                     </div>
                 )}
             </div>
@@ -380,6 +380,6 @@ export const SessionLane = ({
                     })}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };

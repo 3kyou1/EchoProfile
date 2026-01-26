@@ -12,6 +12,8 @@ import {
   Search,
   Terminal,
   Wrench,
+  FilePlus,
+  GitCommitVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RendererVariant } from "@/components/renderers";
@@ -160,7 +162,13 @@ const getIcon = (name: string) => {
 
   // Git operations
   if (lower.includes("git")) {
+    if (lower.includes("commit")) return GitCommitVertical;
     return GitBranch;
+  }
+
+  // File Creation (Explicit)
+  if (lower.includes("create")) {
+    return FilePlus;
   }
 
   // MCP/Server

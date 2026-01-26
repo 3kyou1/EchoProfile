@@ -282,9 +282,8 @@ export const InteractionCard = memo(({
             <>
                 <div
                     ref={cardRef}
-                    // Removed fixed min-h-[60px] -> min-h-0 or min-h-[30px]
-                    // Reduced padding from p-2 to p-1.5
-                    className={clsx(baseClasses, "mb-1 p-1.5 bg-card flex gap-2 items-start")}
+                    // Reduce mb to 0.5 for tighter packing
+                    className={clsx(baseClasses, "mb-0.5 p-1.5 bg-card flex gap-2 items-start")}
                     onMouseEnter={() => onHover?.('role', role)}
                     onMouseLeave={onLeave}
                     onClick={onClick}
@@ -349,8 +348,8 @@ export const InteractionCard = memo(({
         <>
             <div
                 ref={cardRef}
-                // Reduced vertical padding and margin
-                className={clsx(baseClasses, "mb-1.5 p-2 bg-card flex flex-col gap-1.5 ring-1 ring-border/5 shadow-md")}
+                // Reduced vertical spacing to 1 or 0.5
+                className={clsx(baseClasses, "mb-1 p-2 bg-card flex flex-col gap-1.5 ring-1 ring-border/5 shadow-md")}
                 style={{ transformOrigin: 'top center' }}
                 onMouseEnter={() => onHover?.('role', role)}
                 onMouseLeave={onLeave}

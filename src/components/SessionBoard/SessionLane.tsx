@@ -114,21 +114,25 @@ export const SessionLane = ({
                 "border-b border-border/50 shrink-0 z-10 backdrop-blur-sm sticky top-0",
                 zoomLevel === 0 ? "p-2 bg-background/90" : "p-4",
                 (zoomLevel !== 0 && depth === 'epic') ? "bg-indigo-50/80 dark:bg-indigo-950/40" : (zoomLevel !== 0 ? "bg-card/40" : "")
-            )}>
+            )}
+                style={{
+                    height: zoomLevel === 0 ? '110px' : '150px' // Enforce consistent height
+                }}
+            >
                 {/* Pixel View Header */}
                 {zoomLevel === 0 ? (
-                    <div className="flex flex-col items-center gap-1.5 text-center">
+                    <div className="flex flex-col items-center gap-1.5 text-center h-full justify-between">
                         {/* Mini badge for depth */}
-                        {depth === 'epic' && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" title="Epic Session" />}
-                        {depth === 'deep' && <div className="w-2 h-2 rounded-full bg-slate-500" title="Deep Session" />}
+                        {depth === 'epic' && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse mb-1" title="Epic Session" />}
+                        {depth === 'deep' && <div className="w-2 h-2 rounded-full bg-slate-500 mb-1" title="Deep Session" />}
 
-                        <div className="text-[10px] font-bold text-muted-foreground rotate-0 truncate max-w-full" title={session.summary || session.session_id}>
+                        <div className="text-[10px] font-bold text-muted-foreground rotate-0 truncate max-w-full leading-tight" title={session.summary || session.session_id}>
                             {/* Just show truncated ID or short date */}
                             {new Date(session.last_modified).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
                         </div>
 
                         {/* Vertical Sparkline - using simple stacking bars for stats visually in a tiny column */}
-                        <div className="flex flex-col gap-0.5 w-full items-center mt-1">
+                        <div className="flex flex-col gap-0.5 w-full items-center mt-auto">
                             <span className="text-[8px] font-mono opacity-50">{stats.toolCount}t</span>
                             <div className="w-full h-0.5 bg-foreground/10" />
                             <span className="text-[8px] font-mono font-bold text-accent">{Math.round(stats.totalTokens / 1000)}k</span>
@@ -136,35 +140,36 @@ export const SessionLane = ({
                     </div>
                 ) : (
                     /* Normal Header */
-                    <>
-                        <div className="flex items-center gap-2 mb-1.5">
-                            {depth === 'epic' && <span className="bg-indigo-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Crown className="w-3 h-3" /> EPIC</span>}
-                            {depth === 'deep' && <span className="bg-slate-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Anchor className="w-3 h-3" /> DEEP</span>}
-                            {depth === 'shallow' && <span className="bg-muted text-muted-foreground text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">SHALLOW</span>}
-                        </div>
-
-                        <h3 className="text-sm font-bold truncate mb-1 text-foreground" title={session.summary || session.session_id}>
+                    <div className="flex flex-col h-full">
+                        <h3 className="text-sm font-bold truncate mb-2 text-foreground" title={session.summary || session.session_id}>
                             {session.summary || "Untitled Session"}
                         </h3>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-3 opacity-70">
-                            <Clock className="w-3 h-3" />
-                            <span>{new Date(session.last_modified).toLocaleDateString()}</span>
+
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground opacity-70">
+                                <Clock className="w-3 h-3" />
+                                <span>{new Date(session.last_modified).toLocaleDateString()}</span>
+                            </div>
+
+                            {/* Moved badges to be inline with metadata row to save space */}
+                            {depth === 'epic' && <span className="bg-indigo-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 ml-auto shrink-0"><Crown className="w-3 h-3" /> EPIC</span>}
+                            {depth === 'deep' && <span className="bg-slate-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 ml-auto shrink-0"><Anchor className="w-3 h-3" /> DEEP</span>}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/5 rounded border border-accent/10">
-                                <Coins className="w-3 h-3 text-accent" />
+                        <div className="mt-auto grid grid-cols-2 gap-2">
+                            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-accent/5 rounded border border-accent/10">
+                                <Coins className="w-3.5 h-3.5 text-accent" />
                                 <span className="text-[11px] font-mono font-bold leading-none">{stats.totalTokens.toLocaleString()}</span>
                             </div>
                             <div className={clsx(
-                                "flex items-center gap-1.5 px-2 py-1 rounded border",
+                                "flex items-center gap-1.5 px-2 py-1.5 rounded border",
                                 stats.errorCount > 0 ? "bg-destructive/5 border-destructive/20 text-destructive" : "bg-muted/5 border-border/50 text-muted-foreground"
                             )}>
-                                <AlertCircle className="w-3 h-3" />
+                                <AlertCircle className="w-3.5 h-3.5" />
                                 <span className="text-[11px] font-mono font-bold leading-none">{stats.errorCount}</span>
                             </div>
                         </div>
-                    </>
+                    </div>
                 )}
             </div>
 

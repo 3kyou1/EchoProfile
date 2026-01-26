@@ -453,7 +453,11 @@ export const InteractionCard = memo(({
 
     // Level 0: Pixel/Heatmap
     if (zoomLevel === 0) {
-        const totalTokens = (message.usage?.input_tokens || 0) + (message.usage?.output_tokens || 0);
+        const totalMessagesCount = (siblings?.length || 0) + 1;
+        const totalTokens = [message, ...(siblings || [])].reduce((sum, m) =>
+            sum + (m.usage?.input_tokens || 0) + (m.usage?.output_tokens || 0), 0
+        );
+
         // Normalize height: min 4px, max 24px, typical range handled logarithmically or linearly capped
         const height = Math.min(Math.max(totalTokens / 40, 4), 24);
 
@@ -462,33 +466,26 @@ export const InteractionCard = memo(({
         else if (role === "assistant") bgColor = "bg-slate-400/60 dark:bg-slate-600/60"; // Neutral Grey for Output
 
         // Override with Event Types for the "Session Understanding" view
-        // Priority: Commit > Markdown > Specialized Tool > Code > General Tool
         if (toolUseBlock) {
             const toolName = (toolUseBlock as any).name;
             const variant = getToolVariant(toolName);
 
-            // Map variants to colors based on ToolIcon logic
-            // We use opacity versions for the pixel view to blend slightly
             switch (variant) {
                 case 'code': bgColor = "bg-[var(--tool-code)] opacity-90"; break;
                 case 'file': bgColor = "bg-[var(--tool-file)] opacity-90"; break;
                 case 'search': bgColor = "bg-[var(--tool-search)] opacity-90"; break;
                 case 'task': bgColor = "bg-[var(--tool-task)] opacity-90"; break;
-                case 'terminal': bgColor = "bg-[var(--tool-terminal)] opacity-90"; break; // Terminal/Shell
+                case 'terminal': bgColor = "bg-[var(--tool-terminal)] opacity-90"; break;
                 case 'git': bgColor = "bg-[var(--tool-git)] opacity-90"; break;
                 case 'web': bgColor = "bg-[var(--tool-web)] opacity-90"; break;
                 case 'document': bgColor = "bg-[var(--tool-document)] opacity-90"; break;
                 default: bgColor = "bg-purple-400/70 dark:bg-purple-500/70";
             }
 
-            // Explicit overrides for higher semantic meaning
-            if (isCommit) bgColor = "bg-indigo-600 dark:bg-indigo-500"; // Commit: Solid Indigo
-            else if (editedMdFile) bgColor = "bg-amber-500 dark:bg-amber-500/90"; // Docs: Amber
-            else if (isFileEdit) bgColor = "bg-emerald-500 dark:bg-emerald-500/90"; // Code: Emerald
+            if (isCommit) bgColor = "bg-indigo-600 dark:bg-indigo-500";
+            else if (editedMdFile) bgColor = "bg-amber-500 dark:bg-amber-500/90";
+            else if (isFileEdit) bgColor = "bg-emerald-500 dark:bg-emerald-500/90";
         }
-
-        if (isError) bgColor = "bg-red-500 dark:bg-red-500/90";
-        if (isCancelled) bgColor = "bg-orange-400/80 dark:bg-orange-400/80";
 
         if (isError) bgColor = "bg-red-500 dark:bg-red-500/90";
         if (isCancelled) bgColor = "bg-orange-400/80 dark:bg-orange-400/80";
@@ -507,7 +504,7 @@ export const InteractionCard = memo(({
                     <TooltipTrigger asChild>
                         <div
                             ref={cardRef}
-                            className={clsx(baseClasses, bgColor, "w-full ring-0 border-0 rounded-[1px] mb-px")} // Added 1px margin bottom for separation
+                            className={clsx(baseClasses, bgColor, "w-full ring-0 border-0 rounded-[1px] mb-px")}
                             style={{ height: `${height}px` }}
                             onMouseEnter={() => onHover?.('role', role)}
                             onMouseLeave={onLeave}
@@ -517,21 +514,35 @@ export const InteractionCard = memo(({
                     <TooltipContent side="right" className="p-2 max-w-[300px] border border-border/50 bg-popover text-popover-foreground shadow-xl">
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-between gap-4">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">{agentName}</span>
-                                <span className="text-[10px] text-muted-foreground font-mono">{new Date(message.timestamp).toLocaleTimeString()}</span>
-                            </div>
-
-                            {/* Role/Action Header */}
-                            <div className="flex items-center gap-1.5 text-xs font-medium">
-                                {RoleIcon}
-                                <span className="uppercase text-[10px] font-bold tracking-wide opacity-80">
-                                    {toolUseBlock ? (toolUseBlock as any).name : role}
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                                    {agentName} {totalMessagesCount > 1 && `(x${totalMessagesCount})`}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                    {new Date(message.timestamp).toLocaleTimeString()}
                                 </span>
                             </div>
 
-                            {/* Content */}
-                            <div className="text-[11px] leading-tight text-foreground/90 font-mono line-clamp-4 whitespace-pre-wrap break-words">
-                                {tooltipContent}
+                            <div className="flex items-center gap-1.5 text-xs font-medium">
+                                {RoleIcon}
+                                <div className="flex flex-col">
+                                    <span className="uppercase text-[10px] font-bold tracking-wide opacity-80">
+                                        {toolUseBlock ? (toolUseBlock as any).name : role}
+                                    </span>
+                                    {totalMessagesCount > 1 && (
+                                        <span className="text-[10px] text-muted-foreground">
+                                            {totalMessagesCount} messages • {totalTokens.toLocaleString()} tokens
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="text-[11px] leading-tight text-foreground/90 font-mono line-clamp-4 whitespace-pre-wrap break-words border-t border-border/20 pt-1 mt-0.5">
+                                {totalMessagesCount > 1 ? (
+                                    <div className="flex flex-col gap-1">
+                                        <div className="italic opacity-70">Block containing {totalMessagesCount} sequential entries.</div>
+                                        <div className="line-clamp-3">{tooltipContent}</div>
+                                    </div>
+                                ) : tooltipContent}
                             </div>
                         </div>
                     </TooltipContent>

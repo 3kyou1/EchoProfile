@@ -60,6 +60,8 @@ function App() {
     hideProject,
     unhideProject,
     isProjectHidden,
+    dateFilter,
+    setDateFilter,
   } = useAppStore();
 
   const {
@@ -348,6 +350,8 @@ function App() {
                       pagination={projectTokenStatsPagination}
                       onLoadMore={() => selectedProject && loadMoreProjectTokenStats(selectedProject.path)}
                       isLoading={isLoadingTokenStats}
+                      dateFilter={dateFilter}
+                      setDateFilter={setDateFilter}
                     />
                   </div>
                 </OverlayScrollbarsComponent>

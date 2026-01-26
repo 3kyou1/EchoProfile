@@ -15,6 +15,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { useAnalytics } from "../../hooks/useAnalytics";
 import type { AnalyticsDashboardProps } from "./types";
 import { ProjectStatsView, SessionStatsView, GlobalStatsView } from "./views";
+import { DatePickerHeader } from "../ui/DatePickerHeader";
 
 export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   isViewingGlobalStats = false,
@@ -26,6 +27,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     sessionTokenStats,
     globalSummary,
     isLoadingGlobalStats,
+    dateFilter,
+    setDateFilter,
   } = useAppStore();
 
   const { state: analyticsState } = useAnalytics();
@@ -97,45 +100,57 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   return (
     <div className="flex-1 p-6 overflow-auto bg-background">
       <div className="relative">
-        {/* Tab Selector */}
-        {hasSessionData && (
-          <div className="flex items-center gap-1 mb-6 p-1 bg-muted/30 rounded-lg w-fit">
-            <button
-              onClick={() => setActiveTab("project")}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 text-[11px] font-medium rounded-md transition-all duration-200",
-                activeTab === "project"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Layers
+        {/* Header Controls */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          {/* Tab Selector */}
+          {hasSessionData && (
+            <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg w-fit">
+              <button
+                onClick={() => setActiveTab("project")}
                 className={cn(
-                  "w-3.5 h-3.5",
-                  activeTab === "project" ? "text-metric-purple" : "text-muted-foreground/60"
+                  "flex items-center gap-2 px-4 py-2 text-[11px] font-medium rounded-md transition-all duration-200",
+                  activeTab === "project"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
-              />
-              {t("analytics.projectOverview")}
-            </button>
-            <button
-              onClick={() => setActiveTab("session")}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 text-[11px] font-medium rounded-md transition-all duration-200",
-                activeTab === "session"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Activity
+              >
+                <Layers
+                  className={cn(
+                    "w-3.5 h-3.5",
+                    activeTab === "project" ? "text-metric-purple" : "text-muted-foreground/60"
+                  )}
+                />
+                {t("analytics.projectOverview")}
+              </button>
+              <button
+                onClick={() => setActiveTab("session")}
                 className={cn(
-                  "w-3.5 h-3.5",
-                  activeTab === "session" ? "text-metric-green" : "text-muted-foreground/60"
+                  "flex items-center gap-2 px-4 py-2 text-[11px] font-medium rounded-md transition-all duration-200",
+                  activeTab === "session"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
-              />
-              {t("analytics.sessionDetails")}
-            </button>
+              >
+                <Activity
+                  className={cn(
+                    "w-3.5 h-3.5",
+                    activeTab === "session" ? "text-metric-green" : "text-muted-foreground/60"
+                  )}
+                />
+                {t("analytics.sessionDetails")}
+              </button>
+            </div>
+          )}
+
+          {/* Global Date Picker */}
+          <div className="flex items-center gap-2">
+            <DatePickerHeader
+              dateFilter={dateFilter}
+              setDateFilter={setDateFilter}
+              className="bg-card/50"
+            />
           </div>
-        )}
+        </div>
 
         {hasSessionData && activeTab === "session" ? (
           <SessionStatsView

@@ -745,6 +745,8 @@ pub async fn get_project_token_stats(
     project_path: String,
     offset: Option<usize>,
     limit: Option<usize>,
+    start_date: Option<String>,
+    end_date: Option<String>,
 ) -> Result<PaginatedTokenStats, String> {
     let start = std::time::Instant::now();
     let offset = offset.unwrap_or(0);
@@ -759,7 +761,6 @@ pub async fn get_project_token_stats(
         .collect();
 
     let scan_time = start.elapsed();
-    let total_count = session_files.len();
 
     // Process all sessions in parallel using sync function
     let mut all_stats: Vec<SessionTokenStats> = session_files
@@ -768,6 +769,30 @@ pub async fn get_project_token_stats(
         .collect();
 
     let process_time = start.elapsed();
+
+    // Filter by date if provided
+    if let (Some(s_str), Some(e_str)) = (start_date, end_date) {
+        if let (Ok(s_dt), Ok(e_dt)) = (
+            DateTime::parse_from_rfc3339(&s_str),
+            DateTime::parse_from_rfc3339(&e_str),
+        ) {
+            let s_utc = s_dt.with_timezone(&Utc);
+            // Include full end day by setting it to the end of the day if needed, 
+            // but usually RFC3339 should be specific.
+            let e_utc = e_dt.with_timezone(&Utc);
+            
+            all_stats.retain(|stat| {
+                if let Ok(ts_dt) = DateTime::parse_from_rfc3339(&stat.last_message_time) {
+                    let ts_utc = ts_dt.with_timezone(&Utc);
+                    ts_utc >= s_utc && ts_utc <= e_utc
+                } else {
+                    false
+                }
+            });
+        }
+    }
+
+    let total_count = all_stats.len();
 
     // Sort by total tokens (descending)
     all_stats.sort_by(|a, b| b.total_tokens.cmp(&a.total_tokens));
@@ -779,9 +804,11 @@ pub async fn get_project_token_stats(
     let has_more = offset + paginated_items.len() < total_count;
     let total_time = start.elapsed();
 
+    #[cfg(debug_assertions)]
     eprintln!(
-        "📊 get_project_token_stats: {} sessions, scan={}ms, process={}ms, total={}ms",
+        "📊 get_project_token_stats: {} sessions ({} after filter), scan={}ms, process={}ms, total={}ms",
         total_count,
+        paginated_items.len(),
         scan_time.as_millis(),
         process_time.as_millis(),
         total_time.as_millis()
@@ -799,6 +826,8 @@ pub async fn get_project_token_stats(
 #[tauri::command]
 pub async fn get_project_stats_summary(
     project_path: String,
+    start_date: Option<String>,
+    end_date: Option<String>,
 ) -> Result<ProjectStatsSummary, String> {
     let start = std::time::Instant::now();
     let project_name = PathBuf::from(&project_path)
@@ -806,6 +835,13 @@ pub async fn get_project_stats_summary(
         .and_then(|n| n.to_str())
         .unwrap_or("Unknown")
         .to_string();
+
+    let s_limit = start_date
+        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+        .map(|d| d.with_timezone(&Utc));
+    let e_limit = end_date
+        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+        .map(|d| d.with_timezone(&Utc));
 
     // Phase 1: Collect all session files
     let session_files: Vec<PathBuf> = WalkDir::new(&project_path)
@@ -817,10 +853,23 @@ pub async fn get_project_stats_summary(
     let scan_time = start.elapsed();
 
     // Phase 2: Process all session files in parallel
-    let file_stats: Vec<ProjectSessionFileStats> = session_files
+    let mut file_stats: Vec<ProjectSessionFileStats> = session_files
         .par_iter()
         .filter_map(process_session_file_for_project_stats)
         .collect();
+
+    // Filter by date
+    if s_limit.is_some() || e_limit.is_some() {
+        file_stats.retain(|stats| {
+            if stats.timestamps.is_empty() { return false; }
+            let last_ts = *stats.timestamps.last().unwrap();
+            
+            let is_after_start = s_limit.map(|s| last_ts >= s).unwrap_or(true);
+            let is_before_end = e_limit.map(|e| last_ts <= e).unwrap_or(true);
+            
+            is_after_start && is_before_end
+        });
+    }
     let process_time = start.elapsed();
 
     // Phase 3: Aggregate results

@@ -25,7 +25,7 @@ export {
 
 // Project-level calculations
 export {
-  generateLast7DaysData,
+  generateTrendData,
   calculateDailyGrowth,
   extractProjectGrowth,
   type GrowthMetrics,

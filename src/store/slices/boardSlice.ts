@@ -7,7 +7,6 @@ import type {
     ZoomLevel,
     SessionFileEdit,
     SessionDepth,
-    DateFilter,
 } from "../../types/board.types";
 import type { ClaudeMessage, ClaudeSession } from "../../types";
 import { analyzeSessionMessages } from "../../utils/sessionAnalytics";
@@ -24,7 +23,6 @@ export interface BoardSliceState {
     } | null;
     selectedMessageId: string | null;
     isMarkdownPretty: boolean;
-    dateFilter: DateFilter;
 }
 
 export interface BoardSliceActions {
@@ -33,7 +31,6 @@ export interface BoardSliceActions {
     setActiveBrush: (brush: BoardSliceState["activeBrush"]) => void;
     setSelectedMessageId: (id: string | null) => void;
     setMarkdownPretty: (pretty: boolean) => void;
-    setDateFilter: (filter: DateFilter) => void;
     clearBoard: () => void;
 }
 
@@ -48,7 +45,6 @@ const initialBoardState: BoardSliceState = {
     activeBrush: null,
     selectedMessageId: null,
     isMarkdownPretty: true, // Default to pretty printing
-    dateFilter: { start: null, end: null },
 };
 
 /**
@@ -113,7 +109,7 @@ export const createBoardSlice: StateCreator<
                 try {
                     projectCommits = await invoke<import("../../types").GitCommit[]>(
                         "get_git_log",
-                        { actualPath: selectedProject.actual_path, limit: 100 }
+                        { actualPath: selectedProject.actual_path, limit: 1000 }
                     );
                 } catch (e) {
                     console.error("Failed to fetch git log:", e);
@@ -225,7 +221,7 @@ export const createBoardSlice: StateCreator<
                     const relA = (a.data.session as any).relevance || 0;
                     const relB = (b.data.session as any).relevance || 0;
                     if (relA !== relB) return relB - relA;
-                    return new Date(b.data.session.last_modified).getTime() - new Date(a.data.session.last_modified).getTime();
+                    return new Date(b.data.session.last_message_time).getTime() - new Date(a.data.session.last_message_time).getTime();
                 });
 
             sortedResults.forEach((res) => {
@@ -251,30 +247,7 @@ export const createBoardSlice: StateCreator<
     setSelectedMessageId: (id) => set({ selectedMessageId: id }),
     setMarkdownPretty: (isMarkdownPretty) => set({ isMarkdownPretty }),
 
-    setDateFilter: (filter: DateFilter) => {
-        set((state) => {
-            const { allSortedSessionIds, boardSessions } = state;
 
-            let visibleSessionIds = allSortedSessionIds;
-
-            if (filter.start || filter.end) {
-                const startMs = filter.start ? filter.start.getTime() : 0;
-                const endMs = filter.end ? filter.end.getTime() + (24 * 60 * 60 * 1000) : Infinity; // Include the end date fully (next day midnight)
-
-                visibleSessionIds = allSortedSessionIds.filter((id: string) => {
-                    const session = boardSessions[id];
-                    if (!session) return false;
-                    const sessionDate = new Date(session.session.last_modified).getTime();
-                    return sessionDate >= startMs && sessionDate < endMs;
-                });
-            }
-
-            return {
-                dateFilter: filter,
-                visibleSessionIds
-            };
-        });
-    },
 
     clearBoard: () => set(initialBoardState),
 });

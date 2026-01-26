@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import { SessionLane } from "./SessionLane";
@@ -11,7 +11,7 @@ import { clsx } from "clsx";
 export const SessionBoard = () => {
     const {
         boardSessions,
-        visibleSessionIds,
+        allSortedSessionIds,
         isLoadingBoard,
         zoomLevel,
         activeBrush,
@@ -23,6 +23,30 @@ export const SessionBoard = () => {
         setDateFilter,
         selectedSession
     } = useAppStore();
+
+    // Compute visible session IDs reactively based on date filter
+    // Compute visible session IDs reactively based on date filter
+    const visibleSessionIds = useMemo(() => {
+        if (!dateFilter?.start && !dateFilter?.end) {
+            return allSortedSessionIds;
+        }
+
+        const startMs = dateFilter.start ? dateFilter.start.getTime() : 0;
+        const endMs = dateFilter.end ? dateFilter.end.getTime() + (24 * 60 * 60 * 1000) : Infinity; // Add 24h to include end date fully
+
+
+        const filtered = allSortedSessionIds.filter(id => {
+            const session = boardSessions[id];
+            if (!session) return false;
+            // Use last_message_time if available, otherwise fallback to last_modified
+            const timeStr = session.session.last_message_time || session.session.last_modified;
+            const sessionDate = new Date(timeStr).getTime();
+            return sessionDate >= startMs && sessionDate < endMs;
+        });
+
+        console.log(`[SessionBoard] Filtered down to ${filtered.length} sessions (from ${allSortedSessionIds.length})`);
+        return filtered;
+    }, [allSortedSessionIds, boardSessions, dateFilter]);
 
     const { t } = useTranslation();
     const parentRef = useRef<HTMLDivElement>(null);

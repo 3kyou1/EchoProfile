@@ -3,12 +3,11 @@ import {
     Layout,
     Layers,
     Eye,
-    MousePointer2,
-    Calendar,
-    XCircle
+    MousePointer2
 } from "lucide-react";
 import { clsx } from "clsx";
-import { useCallback } from "react";
+import React, { useCallback } from "react";
+import { DatePickerHeader } from "../ui/DatePickerHeader";
 
 interface BoardControlsProps {
     zoomLevel: ZoomLevel;
@@ -37,36 +36,7 @@ export const BoardControls = ({
         }
     }, [zoomLevel, onZoomChange]);
 
-    const formatDateForInput = (date: Date | null) => {
-        if (!date) return "";
-        // date input expects YYYY-MM-DD
-        // Use local time formatting (e.g., Canada uses YYYY-MM-DD)
-        const offset = date.getTimezoneOffset();
-        const localDate = new Date(date.getTime() - (offset * 60 * 1000));
-        return localDate.toISOString().split('T')[0];
-    };
 
-    const handleDateChange = (type: 'start' | 'end', value: string) => {
-        if (!setDateFilter || !dateFilter) return;
-
-        const newDate = value ? new Date(value) : null;
-        // Adjust for timezone to ensure we mean "Starts at 00:00 local time"
-        if (newDate) {
-            const offset = newDate.getTimezoneOffset();
-            newDate.setTime(newDate.getTime() + (offset * 60 * 1000));
-        }
-
-        setDateFilter({
-            ...dateFilter,
-            [type]: newDate
-        });
-    };
-
-    const clearDateFilter = () => {
-        if (setDateFilter) setDateFilter({ start: null, end: null });
-    };
-
-    const hasFilter = dateFilter?.start || dateFilter?.end;
 
     return (
         <div
@@ -116,38 +86,10 @@ export const BoardControls = ({
             <div className="flex items-center gap-6">
                 {/* Date Filter */}
                 {dateFilter && setDateFilter && (
-                    <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg border border-border/50">
-                        <div className="flex items-center gap-2 px-2 border-r border-border/50 pr-3">
-                            <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Filter</span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                            <input
-                                type="date"
-                                className="bg-transparent text-[10px] font-mono text-foreground outline-none border-b border-transparent focus:border-accent w-24 dark:[color-scheme:dark]"
-                                value={formatDateForInput(dateFilter.start)}
-                                onChange={(e) => handleDateChange('start', e.target.value)}
-                            />
-                            <span className="text-muted-foreground text-[10px]">-</span>
-                            <input
-                                type="date"
-                                className="bg-transparent text-[10px] font-mono text-foreground outline-none border-b border-transparent focus:border-accent w-24 dark:[color-scheme:dark]"
-                                value={formatDateForInput(dateFilter.end)}
-                                onChange={(e) => handleDateChange('end', e.target.value)}
-                            />
-                        </div>
-
-                        {hasFilter && (
-                            <button
-                                onClick={clearDateFilter}
-                                className="ml-1 p-1 hover:bg-destructive/10 hover:text-destructive text-muted-foreground rounded-full transition-colors"
-                                title="Clear Dates"
-                            >
-                                <XCircle className="w-3.5 h-3.5" />
-                            </button>
-                        )}
-                    </div>
+                    <DatePickerHeader
+                        dateFilter={dateFilter}
+                        setDateFilter={setDateFilter}
+                    />
                 )}
 
                 <div className="flex items-center gap-3">

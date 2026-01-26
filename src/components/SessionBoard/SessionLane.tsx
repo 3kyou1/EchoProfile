@@ -65,46 +65,52 @@ export const SessionLane = ({
             return content.trim().length > 0 || isTool;
         });
 
-        if (zoomLevel !== 0) {
-            // Grouping Logic for Zoom Levels 1 & 2
-            const grouped: { head: any, siblings: any[] }[] = [];
-            let currentGroup: { head: any, siblings: any[] } | null = null;
+        // Grouping Logic for all Zoom Levels
+        const grouped: { head: any, siblings: any[] }[] = [];
+        let currentGroup: { head: any, siblings: any[] } | null = null;
 
-            filtered.forEach((msg) => {
-                const role = msg.role || msg.type;
-                const isTool = isToolEvent(msg);
+        filtered.forEach((msg) => {
+            const role = msg.role || msg.type;
+            const isTool = isToolEvent(msg);
 
-                if (currentGroup) {
-                    const headRole = currentGroup.head.role || currentGroup.head.type;
-                    // Merge Strategy:
+            if (currentGroup) {
+                const headRole = currentGroup.head.role || currentGroup.head.type;
+                const headIsTool = isToolEvent(currentGroup.head);
+
+                // For Zoom Level 0, we want to group by "color band" (semantic type)
+                if (zoomLevel === 0) {
+                    const bothAreAssistant = role === 'assistant' && headRole === 'assistant';
+                    const bothAreUser = role === 'user' && headRole === 'user';
+
+                    // Same role, same tool status = same color
+                    if ((bothAreAssistant || bothAreUser) && isTool === headIsTool) {
+                        currentGroup.siblings.push(msg);
+                        return;
+                    }
+                } else {
+                    // Grouping Logic for Zoom Levels 1 & 2
                     // 1. Tool Sequence: If both are tool events, merge them (implies continuous execution loop).
                     // 2. Text -> Tool: If current is tool and head is assistant (mostly text), merge.
-
-                    const headIsTool = isToolEvent(currentGroup.head);
                     const bothAreTools = isTool && headIsTool;
                     const textToTool = isTool && headRole === 'assistant' && role === 'assistant';
 
                     if (bothAreTools || textToTool) {
                         currentGroup.siblings.push(msg);
-                        return; // Continue to next msg
+                        return;
                     }
-
-                    // If not merging, push current group and start new one
-                    grouped.push(currentGroup);
-                    currentGroup = { head: msg, siblings: [] };
-                } else {
-                    currentGroup = { head: msg, siblings: [] };
                 }
-            });
 
-            if (currentGroup) {
                 grouped.push(currentGroup);
+                currentGroup = { head: msg, siblings: [] };
+            } else {
+                currentGroup = { head: msg, siblings: [] };
             }
-            return grouped;
-        }
+        });
 
-        // For Zoom 0 (heatmap), no grouping
-        return filtered.map(m => ({ head: m, siblings: [] }));
+        if (currentGroup) {
+            grouped.push(currentGroup);
+        }
+        return grouped;
     }, [messages, zoomLevel]);
 
     const rowVirtualizer = useVirtualizer({

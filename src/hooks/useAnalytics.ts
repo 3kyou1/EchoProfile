@@ -22,6 +22,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     isLoadingTokenStats,
     sessionTokenStats,
     projectTokenStats,
+    dateFilter,
 
     // Store actions
     setAnalyticsCurrentView,
@@ -43,7 +44,6 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     loadSessionComparison,
     loadSessionTokenStats,
     loadRecentEdits,
-    loadBoardSessions,
     clearTokenStats,
   } = useAppStore();
 
@@ -296,15 +296,37 @@ export const useAnalytics = (): UseAnalyticsReturn => {
       throw new Error(t('common.hooks.noProjectSelected'));
     }
 
+    const { boardSessions, loadBoardSessions, dateFilter, setDateFilter } = useAppStore.getState();
+    const hasAnySessionsLoaded = Object.keys(boardSessions).length > 0;
+
     setAnalyticsCurrentView("board");
     clearAnalyticsErrors();
 
-    // 프로젝트의 최근 세션들을 보드에 로드 (최대 10개)
-    if (sessions.length > 0) {
-      const sessionsToLoad = sessions.slice(0, 10);
-      await loadBoardSessions(sessionsToLoad);
+    // If no sessions are loaded for this board yet, load them all
+    // Or if the project changed (we check if any loaded session doesn't belong to current project)
+    const firstSession = Object.values(boardSessions)[0];
+    const needsFullReload = !hasAnySessionsLoaded || (firstSession && firstSession.session.project_name !== selectedProject.name);
+
+    if (needsFullReload && sessions.length > 0) {
+      // Load all sessions to "map the full range" as requested
+      // Note: This might be slow if there are 100s, but we'll start with this and optimize if needed.
+      await loadBoardSessions(sessions);
+
+      // Initialize date filter to the full range once loaded
+      if (sessions.length > 0 && !dateFilter.start && !dateFilter.end) {
+        // sessions are sorted by last_modified descending already
+        const lastSession = sessions[0];
+        const firstSessionInTime = sessions[sessions.length - 1];
+
+        if (lastSession && firstSessionInTime) {
+          setDateFilter({
+            start: new Date(firstSessionInTime.first_message_time),
+            end: new Date(lastSession.last_modified)
+          });
+        }
+      }
     }
-  }, [t, selectedProject, sessions, setAnalyticsCurrentView, clearAnalyticsErrors, loadBoardSessions]);
+  }, [t, selectedProject, sessions, setAnalyticsCurrentView, clearAnalyticsErrors]);
 
   /**
    * 현재 뷰의 분석 데이터 강제 새로고침
@@ -508,6 +530,40 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     analytics.currentView,
     isLoadingTokenStats,
     loadSessionTokenStats,
+  ]);
+
+  /**
+   * 사이드 이팩트: 필터 변경 시 토큰 통계 자동 새로고침
+   */
+  useEffect(() => {
+    if (selectedProject) {
+      if (computed.isTokenStatsView) {
+        loadProjectTokenStats(selectedProject.path);
+      } else if (computed.isAnalyticsView) {
+        const updateSummary = async () => {
+          setAnalyticsLoadingProjectSummary(true);
+          try {
+            const summary = await loadProjectStatsSummary(selectedProject.path);
+            setAnalyticsProjectSummary(summary);
+          } catch (err) {
+            console.error(err);
+          } finally {
+            setAnalyticsLoadingProjectSummary(false);
+          }
+        };
+        updateSummary();
+      }
+    }
+  }, [
+    dateFilter.start?.getTime(),
+    dateFilter.end?.getTime(),
+    computed.isTokenStatsView,
+    computed.isAnalyticsView,
+    selectedProject?.path,
+    loadProjectTokenStats,
+    loadProjectStatsSummary,
+    setAnalyticsLoadingProjectSummary,
+    setAnalyticsProjectSummary
   ]);
 
   return {

@@ -10,8 +10,8 @@ The board offers three levels of detail, controlled by the toolbar or by scrolli
 1.  **Pixel View (Heatmap)**: 
     -   High-level density view.
     -   Messages are shrunk to single lines varying by token count.
+    -   **Merged Tooltips**: Sequential messages of the same type are merged into "color bands". Hovering shows the total message count (e.g., x15) and combined token usage for that interaction block.
     -   Best for: Spotting long conversations, heavy tool usage patterns, or error clusters.
-    -   **Rich Tooltips**: Hover over any line to see the exact timestamp, tool name, and a natural language summary of the action.
 2.  **Skim View (Kanban)**:
     -   Shows truncated message previews.
     -   Shows truncated message previews.

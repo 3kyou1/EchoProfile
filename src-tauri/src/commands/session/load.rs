@@ -41,7 +41,7 @@ struct SessionMetadataCache {
     entries: HashMap<String, CachedSessionMetadata>,
 }
 
-const CACHE_VERSION: u32 = 4;
+const CACHE_VERSION: u32 = 5;
 
 /// Get the cache file path for a project
 fn get_cache_path(project_path: &str) -> PathBuf {
@@ -751,8 +751,8 @@ pub async fn load_project_sessions(
         }
     }
 
-    // 6. Sort
-    sessions.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
+    // 6. Sort by last message time (conversation time) instead of filesystem modification time
+    sessions.sort_by(|a, b| b.last_message_time.cmp(&a.last_message_time));
 
     // 8. Summary propagation
     let mut summary_map: HashMap<String, String> = HashMap::new();

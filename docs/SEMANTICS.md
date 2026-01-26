@@ -6,7 +6,8 @@ This document describes how `claude-code-history-viewer` interprets raw data fro
 
 A **Session** corresponds to a single conversation history file (e.g., `*.json`, `*.jsonl`) found in the user's Claude configuration directory.
 
-- **Source**: `~/.claude/projects/<project_id>/sessions/<session_id>.json`
+- **Source**: `~/.claude/projects/<project_id>/<session_uuid>.jsonl`
+- **Session Timing**: The application uses the timestamp of the **first and last messages** in the conversation to determine its chronological position, rather than the filesystem's "Last Modified" time. This ensures that manually moving or restoring old session files doesn't break their position in your timeline.
 - **Relevance Score**: The app calculates a heuristic "Relevance" score for each session to surface interesting ones (e.g., those with errors, heavy tool use, or documentation work).
 
 ## 2. Interaction Nodes

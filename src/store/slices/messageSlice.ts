@@ -275,9 +275,19 @@ export const createMessageSlice: StateCreator<
       });
       get().setError(null);
 
+      const { dateFilter } = get();
+
+      // Ensure end date includes the full day
+      const endDate = dateFilter.end ? new Date(dateFilter.end) : null;
+      if (endDate) {
+        endDate.setHours(23, 59, 59, 999);
+      }
+
       const response = await fetchProjectTokenStats(projectPath, {
         offset: 0,
         limit: TOKENS_STATS_PAGE_SIZE,
+        start_date: dateFilter.start?.toISOString(),
+        end_date: endDate?.toISOString(),
       });
 
       set({
@@ -318,10 +328,19 @@ export const createMessageSlice: StateCreator<
       });
 
       const nextOffset = getNextOffset(projectTokenStatsPagination);
+      const { dateFilter } = get();
+
+      // Ensure end date includes the full day
+      const endDate = dateFilter.end ? new Date(dateFilter.end) : null;
+      if (endDate) {
+        endDate.setHours(23, 59, 59, 999);
+      }
 
       const response = await fetchProjectTokenStats(projectPath, {
         offset: nextOffset,
         limit: TOKENS_STATS_PAGE_SIZE,
+        start_date: dateFilter.start?.toISOString(),
+        end_date: endDate?.toISOString(),
       });
 
       set({
@@ -346,7 +365,18 @@ export const createMessageSlice: StateCreator<
   },
 
   loadProjectStatsSummary: async (projectPath: string) => {
-    return fetchProjectStatsSummary(projectPath);
+    const { dateFilter } = get();
+
+    // Ensure end date includes the full day
+    const endDate = dateFilter.end ? new Date(dateFilter.end) : null;
+    if (endDate) {
+      endDate.setHours(23, 59, 59, 999);
+    }
+
+    return fetchProjectStatsSummary(projectPath, {
+      start_date: dateFilter.start?.toISOString(),
+      end_date: endDate?.toISOString(),
+    });
   },
 
   loadSessionComparison: async (sessionId: string, projectPath: string) => {

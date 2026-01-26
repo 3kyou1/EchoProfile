@@ -18,7 +18,7 @@ import {
   DailyTrendChart,
   TokenDistributionChart,
 } from "../components";
-import { formatNumber, generateLast7DaysData, extractProjectGrowth } from "../utils";
+import { formatNumber, generateTrendData, extractProjectGrowth } from "../utils";
 
 interface ProjectStatsViewProps {
   projectSummary: ProjectStatsSummary | null;
@@ -29,9 +29,9 @@ export const ProjectStatsView: React.FC<ProjectStatsViewProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // Generate 7-day daily data using utility function
+  // Generate full range daily data using utility function
   const dailyData = useMemo(
-    () => generateLast7DaysData(projectSummary?.daily_stats),
+    () => generateTrendData(projectSummary?.daily_stats),
     [projectSummary?.daily_stats]
   );
 

@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
-import { Coins, AlertCircle, Clock } from "lucide-react";
+import { Coins, AlertCircle, Clock, Zap, Crown, Anchor } from "lucide-react";
 import { clsx } from "clsx";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 
@@ -27,7 +27,7 @@ export const SessionLane = ({
     onScroll
 }: SessionLaneProps) => {
     const parentRef = useRef<HTMLDivElement>(null);
-    const { session, messages, stats } = data;
+    const { session, messages, stats, depth } = data;
     const selectedMessageId = useAppStore(state => state.selectedMessageId);
 
     // Filter out "no-content" messages before virtualization
@@ -77,43 +77,41 @@ export const SessionLane = ({
     };
 
     const isInteractionActive = (msg: any) => {
-        if (!activeBrush) return true;
-        if (!msg) return false;
+        // Highlighting disabled globally for now, always return true
+        return true;
+    };
 
-        if (activeBrush.type === 'file') {
-            const toolUse = msg.toolUse as any;
-            const path = toolUse?.input?.path || toolUse?.input?.file_path || "";
-            if (typeof path !== 'string') return false;
-
-            if (activeBrush.value === '.md') {
-                return path.toLowerCase().endsWith('.md');
-            }
-            return path === activeBrush.value;
+    // Determine styles for different session depths
+    const getDepthStyles = () => {
+        switch (depth) {
+            case 'epic':
+                return "w-[480px] min-w-[480px] bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200/50 dark:border-indigo-800/50";
+            case 'deep':
+                return "w-[380px] min-w-[380px] bg-slate-50/50 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50";
+            default: // shallow
+                return "w-[320px] min-w-[320px] bg-card/20";
         }
-
-        const role = msg.role || msg.type;
-        if (activeBrush.type === 'role' && role === activeBrush.value) return true;
-
-        if (activeBrush.type === 'status' && activeBrush.value === 'error') {
-            const isError = (msg.stopReasonSystem?.toLowerCase().includes("error")) ||
-                (msg.toolUseResult as any)?.is_error ||
-                (msg.toolUseResult as any)?.stderr?.length > 0;
-            return isError;
-        }
-
-        if (activeBrush.type === 'tool') {
-            if (!msg.toolUse) return false;
-            if (activeBrush.value === 'tool') return true;
-            return (msg.toolUse as any).name === activeBrush.value;
-        }
-
-        return false;
     };
 
     return (
-        <div className="flex flex-col h-full w-[320px] min-w-[320px] border-r border-border/40 bg-card/20 group hover:bg-card/40 transition-colors">
+        <div className={clsx(
+            "flex flex-col h-full border-r transition-all relative group",
+            getDepthStyles()
+        )}>
+            {/* Vertical Connector Line (Visual Flow) */}
+            <div className="absolute left-6 top-0 bottom-0 w-px bg-border/40 z-0 pointer-events-none" />
+
             {/* Column Header */}
-            <div className="p-4 border-b border-border/50 shrink-0">
+            <div className={clsx(
+                "p-4 border-b border-border/50 shrink-0 z-10 backdrop-blur-sm sticky top-0",
+                depth === 'epic' ? "bg-indigo-50/80 dark:bg-indigo-950/40" : "bg-card/40"
+            )}>
+                <div className="flex items-center gap-2 mb-1.5">
+                    {depth === 'epic' && <span className="bg-indigo-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Crown className="w-3 h-3" /> EPIC</span>}
+                    {depth === 'deep' && <span className="bg-slate-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Anchor className="w-3 h-3" /> DEEP</span>}
+                    {depth === 'shallow' && <span className="bg-muted text-muted-foreground text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">SHALLOW</span>}
+                </div>
+
                 <h3 className="text-sm font-bold truncate mb-1 text-foreground" title={session.summary || session.session_id}>
                     {session.summary || "Untitled Session"}
                 </h3>
@@ -141,7 +139,7 @@ export const SessionLane = ({
             <div
                 ref={parentRef}
                 onScroll={handleScroll}
-                className="session-lane-scroll flex-1 overflow-y-auto px-1 py-4 scrollbar-thin overflow-x-hidden"
+                className="session-lane-scroll flex-1 overflow-y-auto px-1 py-4 scrollbar-thin overflow-x-hidden relative"
             >
                 <div
                     style={{
@@ -154,16 +152,6 @@ export const SessionLane = ({
                         const message = visibleMessages[virtualRow.index];
                         if (!message) return null;
 
-                        let zIndex = 1;
-                        if (activeBrush) {
-                            if (activeBrush.type === 'role' && (message.role || message.type) === activeBrush.value) zIndex = 10;
-                            if (activeBrush.type === 'file') {
-                                const toolUse = message.toolUse as any;
-                                const path = toolUse?.input?.path || toolUse?.input?.file_path || "";
-                                if (typeof path === 'string' && (path === activeBrush.value || (activeBrush.value === '.md' && path.toLowerCase().endsWith('.md')))) zIndex = 20;
-                            }
-                        }
-
                         return (
                             <div
                                 key={message.uuid}
@@ -174,14 +162,15 @@ export const SessionLane = ({
                                     width: '100%',
                                     height: `${virtualRow.size}px`,
                                     transform: `translateY(${virtualRow.start}px)`,
-                                    zIndex: zIndex,
-                                    padding: zoomLevel === 0 ? '0 1px' : '0 8px'
+                                    // Padding adjusted to account for the connector line on the left
+                                    paddingLeft: zoomLevel === 0 ? '1px' : '32px',
+                                    paddingRight: zoomLevel === 0 ? '1px' : '8px',
                                 }}
                             >
                                 <InteractionCard
                                     message={message}
                                     zoomLevel={zoomLevel}
-                                    isActive={isInteractionActive(message)}
+                                    isActive={true}
                                     isExpanded={selectedMessageId === message.uuid}
                                     onHover={onHoverInteraction}
                                     onLeave={onLeaveInteraction}

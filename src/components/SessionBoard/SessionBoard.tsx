@@ -104,7 +104,15 @@ export const SessionBoard = () => {
     const columnVirtualizer = useVirtualizer({
         count: visibleSessionIds.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 320,
+        estimateSize: (index) => {
+            const sessionId = visibleSessionIds[index];
+            const data = boardSessions[sessionId];
+
+            // "Epic" sessions get wider columns
+            if (data?.depth === 'epic') return 480;
+            if (data?.depth === 'deep') return 380;
+            return 320;
+        },
         horizontal: true,
         overscan: 2,
     });
@@ -191,7 +199,6 @@ export const SessionBoard = () => {
                                     data={data}
                                     zoomLevel={zoomLevel}
                                     activeBrush={activeBrush}
-                                    // Removed onHoverInteraction to disable brushing on hover
                                     onInteractionClick={(id) => {
                                         if (selectedMessageId === id) {
                                             setSelectedMessageId(null);

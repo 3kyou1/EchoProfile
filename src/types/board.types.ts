@@ -16,11 +16,14 @@ export interface SessionFileEdit {
     type: "write" | "edit" | "create";
 }
 
+export type SessionDepth = "epic" | "deep" | "shallow";
+
 export interface BoardSessionData {
     session: ClaudeSession;
     messages: ClaudeMessage[];
     stats: BoardSessionStats;
     fileEdits: SessionFileEdit[];
+    depth: SessionDepth;
 }
 
 export type ZoomLevel = 0 | 1 | 2; // 0: PIXEL, 1: SKIM, 2: READ

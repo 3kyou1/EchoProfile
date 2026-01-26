@@ -6,6 +6,7 @@ import type {
     BoardSessionStats,
     ZoomLevel,
     SessionFileEdit,
+    SessionDepth,
 } from "../../types/board.types";
 import type { ClaudeMessage, ClaudeSession } from "../../types";
 
@@ -68,6 +69,20 @@ const getSessionRelevance = (messages: ClaudeMessage[], stats: BoardSessionStats
 
     return Math.min(score, 1.0);
 };
+
+const getSessionDepth = (messages: ClaudeMessage[], stats: BoardSessionStats): SessionDepth => {
+    // Epic: Significant work, many tools, long history
+    if (messages.length > 50 || stats.toolCount > 20 || stats.totalTokens > 50000) {
+        return "epic";
+    }
+    // Deep: Moderate work
+    if (messages.length > 15 || stats.toolCount > 5) {
+        return "deep";
+    }
+    // Shallow: Simple Q&A or short interactions
+    return "shallow";
+};
+
 
 export const createBoardSlice: StateCreator<
     FullAppStore,
@@ -140,6 +155,7 @@ export const createBoardSlice: StateCreator<
                     });
 
                     const relevance = getSessionRelevance(messages, stats);
+                    const depth = getSessionDepth(messages, stats);
 
                     return {
                         sessionId: session.session_id,
@@ -148,6 +164,7 @@ export const createBoardSlice: StateCreator<
                             messages,
                             stats,
                             fileEdits,
+                            depth,
                         },
                     };
                 } catch (err) {

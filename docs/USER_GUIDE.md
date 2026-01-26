@@ -39,7 +39,22 @@ Use the **Legend** in the top toolbar to filter and highlight specific types of 
 -   **Sticky Mode**: Once clicked, the selection "sticks". Only matching cards remain fully opaque; others fade out.
 -   **No Hover Noise**: Brushing is **explicit**. Hovering over cards will NOT change the highlight mode, ensuring a stable view while you analyze data.
 
+## Understand Your Timeline
+
+### High-Level Indicators
+In every zoom level, including **Pixel View**, the column headers feature high-level indicators to help you scan for session types:
+-   **Indigo Badge (GitCommit)**: Indicates the session contains version control activity (git commits).
+-   **Amber Badge (Pencil)**: Indicates the session contains documentation edits (.md files).
+-   **Crown/Anchor**: Represents **Epic** (very long/deep) vs **Shallow** sessions.
+
+### Interactive File Edits
+The board automatically detects file modifications and documentation updates:
+-   **Docs Badge**: Highlighted in **Amber**, these badges appear on cards where documentation was updated.
+-   **Deep Linking**: Click on any documentation file pill (e.g., `CLAUDE.md`) in a card or the **Expanded Popover** to switch directly to the **Recent Edits** view with that file pre-filtered. This allows you to inspect the exact diffs instantly.
+-   **Robust Detection**: The system uses both tool-usage tracking (supporting `multi_replace_file_content`) and text heuristics to ensure documentation updates are caught even when mentioned in assistant responses.
+
 ## Understanding Data
 
 -   **Virtual Edits**: The board highlights file modifications (e.g., `write_to_file`) based on the conversation history. These represent the AI's *actions*, which may usually correspond to file changes on disk.
 -   **Errors**: Red indicators highlight tool failures (stderr output) or API errors.
+-   **Tokens Activity**: The Pixel View uses vertical bar height to represent token density, allowing you to visually identify the "weight" of different parts of the conversation.

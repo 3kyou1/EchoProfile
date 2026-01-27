@@ -312,16 +312,22 @@ export const useAnalytics = (): UseAnalyticsReturn => {
       // Note: This might be slow if there are 100s, but we'll start with this and optimize if needed.
       await loadBoardSessions(sessions);
 
-      // Initialize date filter to the full range once loaded
-      if (sessions.length > 0 && !dateFilter.start && !dateFilter.end) {
-        // sessions are sorted by last_modified descending already
-        const lastSession = sessions[0];
-        const firstSessionInTime = sessions[sessions.length - 1];
+      // Initialize or Update date filter to the full range
+      // We do this if we just reloaded the board (new project) OR if the filter is empty
+      if (sessions.length > 0 && (needsFullReload || (!dateFilter.start && !dateFilter.end))) {
+        // Calculate true min/max range across all sessions
+        const timestamps = sessions.flatMap(s => [
+          new Date(s.first_message_time).getTime(),
+          new Date(s.last_modified).getTime()
+        ]).filter(t => !isNaN(t) && t > 0);
 
-        if (lastSession && firstSessionInTime) {
+        if (timestamps.length > 0) {
+          const minTime = Math.min(...timestamps);
+          const maxTime = Math.max(...timestamps);
+
           setDateFilter({
-            start: new Date(firstSessionInTime.first_message_time),
-            end: new Date(lastSession.last_modified)
+            start: new Date(minTime), // Start exactly at first file/msg
+            end: new Date(maxTime)    // End exactly at last modified
           });
         }
       }

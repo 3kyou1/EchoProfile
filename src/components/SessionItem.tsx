@@ -29,6 +29,7 @@ interface SessionItemProps {
   session: ClaudeSession;
   isSelected: boolean;
   onSelect: () => void;
+  onHover?: () => void;
   formatTimeAgo: (date: string) => string;
 }
 
@@ -36,6 +37,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   session,
   isSelected,
   onSelect,
+  onHover,
   formatTimeAgo,
 }) => {
   const { t } = useTranslation();
@@ -113,10 +115,10 @@ export const SessionItem: React.FC<SessionItemProps> = ({
 
   // Handle click (select session)
   const handleClick = useCallback(() => {
-    if (!isEditing && !isSelected) {
+    if (!isEditing) {
       onSelect();
     }
-  }, [isEditing, isSelected, onSelect]);
+  }, [isEditing, onSelect]);
 
   // Handle context menu rename action
   const handleRenameClick = useCallback(
@@ -140,6 +142,12 @@ export const SessionItem: React.FC<SessionItemProps> = ({
       )}
       style={{ width: "calc(100% - 8px)" }}
       onClick={handleClick}
+      onMouseEnter={() => {
+        // Only trigger hover action if we are NOT in editing mode and a hover handler is provided
+        if (!isEditing && onHover) {
+          onHover();
+        }
+      }}
     >
       {/* Session Header */}
       <div className="flex items-start gap-2.5">
@@ -151,7 +159,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
               : "bg-muted/50 text-muted-foreground"
           )}
         >
-          <MessageCircle className="w-3 h-3" />
+          <span title="Session"><MessageCircle className="w-3 h-3" /></span>
         </div>
 
         {/* Session Name / Edit Mode */}
@@ -271,7 +279,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
             isSelected ? "text-accent/80" : "text-muted-foreground"
           )}
         >
-          <Clock className="w-3 h-3" />
+          <span title="Last Modified"><Clock className="w-3 h-3" /></span>
           {formatTimeAgo(session.last_modified)}
         </span>
         <span
@@ -280,19 +288,21 @@ export const SessionItem: React.FC<SessionItemProps> = ({
             isSelected ? "text-accent/80" : "text-muted-foreground"
           )}
         >
-          <Hash className="w-3 h-3" />
+          <span title="Message Count"><Hash className="w-3 h-3" /></span>
           {session.message_count}
         </span>
         {session.has_tool_use && (
-          <Wrench
-            className={cn(
-              "w-3 h-3",
-              isSelected ? "text-accent" : "text-accent/50"
-            )}
-          />
+          <span title="Contains Tool Use">
+            <Wrench
+              className={cn(
+                "w-3 h-3",
+                isSelected ? "text-accent" : "text-accent/50"
+              )}
+            />
+          </span>
         )}
         {session.has_errors && (
-          <AlertTriangle className="w-3 h-3 text-destructive" />
+          <span title="Contains Errors"><AlertTriangle className="w-3 h-3 text-destructive" /></span>
         )}
       </div>
     </div>

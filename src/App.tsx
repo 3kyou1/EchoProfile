@@ -230,6 +230,16 @@ function App() {
     );
   }
 
+  // Handle session hover for "skim to preview" in board view
+  const handleSessionHover = useCallback((session: ClaudeSession) => {
+    // Only if we are in Board View
+    if (computed.isBoardView) {
+      // Just update the selected session pointer without triggering view changes or full loadings
+      // This assumes SessionBoard reacts to store's selectedSession
+      useAppStore.getState().setSelectedSession(session);
+    }
+  }, [computed.isBoardView]);
+
   return (
     <>
       <div className="h-screen flex flex-col bg-background">
@@ -246,6 +256,7 @@ function App() {
             selectedSession={selectedSession}
             onProjectSelect={handleProjectSelect}
             onSessionSelect={handleSessionSelect}
+            onSessionHover={handleSessionHover}
             onGlobalStatsClick={handleGlobalStatsClick}
             isLoading={isLoadingProjects || isLoadingSessions}
             isViewingGlobalStats={isViewingGlobalStats}
@@ -366,6 +377,7 @@ function App() {
                   onClearSearch={clearSessionSearch}
                   onNextMatch={goToNextMatch}
                   onPrevMatch={goToPrevMatch}
+                  onBack={() => setAnalyticsCurrentView("board")}
                 />
               ) : (
                 /* Empty State */

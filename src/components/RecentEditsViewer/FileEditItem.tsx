@@ -116,7 +116,7 @@ export const FileEditItem: React.FC<FileEditItemProps> = ({ edit, isDarkMode }) 
               isExpanded ? "bg-accent/20 text-accent" : "bg-muted/50 text-muted-foreground"
             )}
           >
-            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            {isExpanded ? <span title="Collapse"><ChevronDown className="w-4 h-4" /></span> : <span title="Expand"><ChevronRight className="w-4 h-4" /></span>}
           </div>
 
           {/* Operation type icon */}
@@ -129,9 +129,9 @@ export const FileEditItem: React.FC<FileEditItemProps> = ({ edit, isDarkMode }) 
             )}
           >
             {edit.operation_type === "write" ? (
-              <FilePlus className="w-4 h-4" />
+              <span title="File Created"><FilePlus className="w-4 h-4" /></span>
             ) : (
-              <FileEdit className="w-4 h-4" />
+              <span title="File Edited"><FileEdit className="w-4 h-4" /></span>
             )}
           </div>
 
@@ -178,7 +178,7 @@ export const FileEditItem: React.FC<FileEditItemProps> = ({ edit, isDarkMode }) 
           <div
             className={`flex items-center space-x-1.5 ${layout.smallText} text-muted-foreground bg-muted/50 px-2 py-1 rounded-lg`}
           >
-            <Clock className="w-3 h-3" />
+            <span title="Timestamp"><Clock className="w-3 h-3" /></span>
             <span title={formatTimestamp(edit.timestamp)}>
               {getRelativeTime(edit.timestamp, tCommon)}
             </span>
@@ -215,10 +215,10 @@ export const FileEditItem: React.FC<FileEditItemProps> = ({ edit, isDarkMode }) 
               restoreStatus === "success"
                 ? "bg-success/20 text-success ring-1 ring-success/30"
                 : restoreStatus === "error"
-                ? "bg-destructive/20 text-destructive ring-1 ring-destructive/30"
-                : restoreStatus === "loading"
-                ? "bg-muted text-muted-foreground cursor-wait"
-                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  ? "bg-destructive/20 text-destructive ring-1 ring-destructive/30"
+                  : restoreStatus === "loading"
+                    ? "bg-muted text-muted-foreground cursor-wait"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
             )}
             title={t("recentEdits.restoreFile")}
           >

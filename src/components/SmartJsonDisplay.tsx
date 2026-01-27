@@ -13,22 +13,22 @@ interface SmartJsonDisplayProps {
 
 // Icon mapping for common keys
 const KEY_ICONS: Record<string, React.ReactNode> = {
-    path: <FileText className="w-3 h-3 text-emerald-500" />,
-    file_path: <FileText className="w-3 h-3 text-emerald-500" />,
-    filename: <FileText className="w-3 h-3 text-emerald-500" />,
-    command: <Terminal className="w-3 h-3 text-sky-500" />,
-    cmd: <Terminal className="w-3 h-3 text-sky-500" />,
-    query: <Search className="w-3 h-3 text-amber-500" />,
-    id: <Hash className="w-3 h-3 text-purple-500" />,
-    task_id: <Hash className="w-3 h-3 text-purple-500" />,
-    uuid: <Fingerprint className="w-3 h-3 text-purple-500" />,
-    list: <List className="w-3 h-3 text-blue-500" />,
-    prompt: <MessageSquare className="w-3 h-3 text-slate-500" />,
-    description: <MessageSquare className="w-3 h-3 text-slate-500" />,
-    error: <AlertCircle className="w-3 h-3 text-red-500" />,
-    status: <CheckCircle2 className="w-3 h-3 text-green-500" />,
-    code: <Code className="w-3 h-3 text-pink-500" />,
-    allowed_tools: <Play className="w-3 h-3 text-orange-500" />
+    path: <span title="Path"><FileText className="w-3 h-3 text-emerald-500" /></span>,
+    file_path: <span title="File Path"><FileText className="w-3 h-3 text-emerald-500" /></span>,
+    filename: <span title="Filename"><FileText className="w-3 h-3 text-emerald-500" /></span>,
+    command: <span title="Command"><Terminal className="w-3 h-3 text-sky-500" /></span>,
+    cmd: <span title="Command"><Terminal className="w-3 h-3 text-sky-500" /></span>,
+    query: <span title="Query"><Search className="w-3 h-3 text-amber-500" /></span>,
+    id: <span title="ID"><Hash className="w-3 h-3 text-purple-500" /></span>,
+    task_id: <span title="Task ID"><Hash className="w-3 h-3 text-purple-500" /></span>,
+    uuid: <span title="UUID"><Fingerprint className="w-3 h-3 text-purple-500" /></span>,
+    list: <span title="List"><List className="w-3 h-3 text-blue-500" /></span>,
+    prompt: <span title="Prompt"><MessageSquare className="w-3 h-3 text-slate-500" /></span>,
+    description: <span title="Description"><MessageSquare className="w-3 h-3 text-slate-500" /></span>,
+    error: <span title="Error"><AlertCircle className="w-3 h-3 text-red-500" /></span>,
+    status: <span title="Status"><CheckCircle2 className="w-3 h-3 text-green-500" /></span>,
+    code: <span title="Code"><Code className="w-3 h-3 text-pink-500" /></span>,
+    allowed_tools: <span title="Allowed Tools"><Play className="w-3 h-3 text-orange-500" /></span>
 };
 
 const formatValue = (key: string, value: any): React.ReactNode => {

@@ -15,6 +15,9 @@ export interface BoardSessionStats {
     filesTouchedCount: number; // Count of unique files
     hasMarkdownEdits: boolean; // New Flag for distinct visibility
     toolBreakdown: Record<string, number>;
+    searchCount: number;
+    webCount: number;
+    mcpCount: number;
 }
 
 export interface SessionFileEdit {

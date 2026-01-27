@@ -8,6 +8,9 @@ export interface SessionStats {
     filesTouched: Set<string>;
     hasMarkdownEdits: boolean; // New Flag
     toolBreakdown: Record<string, number>;
+    searchCount: number;
+    webCount: number;
+    mcpCount: number;
 }
 
 export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats {
@@ -18,7 +21,10 @@ export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats 
         errorCount: 0,
         filesTouched: new Set(),
         hasMarkdownEdits: false,
-        toolBreakdown: {}
+        toolBreakdown: {},
+        searchCount: 0,
+        webCount: 0,
+        mcpCount: 0
     };
 
     messages.forEach(msg => {
@@ -72,6 +78,21 @@ export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats 
                 if (typeof cmd === 'string' && cmd.trim().startsWith('git commit')) {
                     stats.commitCount++;
                 }
+            }
+
+            // Detect Search
+            if (name.toLowerCase().includes('search') || name.toLowerCase().includes('grep')) {
+                stats.searchCount++;
+            }
+
+            // Detect Web
+            if (name.toLowerCase().includes('web') || name.toLowerCase().includes('fetch') || name.toLowerCase().includes('http')) {
+                stats.webCount++;
+            }
+
+            // Detect MCP
+            if (name.toLowerCase().includes('mcp') || name.toLowerCase().includes('server')) {
+                stats.mcpCount++;
             }
         }
     });

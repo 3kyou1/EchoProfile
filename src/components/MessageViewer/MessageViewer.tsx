@@ -35,6 +35,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   onClearSearch,
   onNextMatch,
   onPrevMatch,
+  onBack,
 }) => {
   const { t } = useTranslation();
   const scrollContainerRef = useRef<OverlayScrollbarsComponentRef>(null);
@@ -286,6 +287,22 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           "backdrop-blur-sm border-zinc-700/50"
         )}
       >
+        {/* Back Button */}
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className={cn(
+              "p-2 mr-2 rounded-lg transition-all duration-200",
+              "bg-zinc-800/60 hover:bg-zinc-700/80 text-zinc-400 hover:text-zinc-100",
+              "border border-zinc-700/40 hover:border-zinc-600/50"
+            )}
+            title={t("common.back")}
+          >
+            <ChevronDown className="w-4 h-4 rotate-90" />
+          </button>
+        )}
+
         {/* Filter Toggle - Segmented control style */}
         <div className="flex items-center bg-zinc-800/60 rounded-lg p-0.5 border border-zinc-700/40">
           <button
@@ -504,11 +521,11 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
 
         {/* 스크롤 준비 중 로딩 오버레이 */}
         {flattenedMessages.length > 0 && scrollElementReady &&
-         scrollReadyForSessionId !== selectedSession?.session_id && (
-          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-            <LoadingSpinner size="sm" variant="muted" />
-          </div>
-        )}
+          scrollReadyForSessionId !== selectedSession?.session_id && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+              <LoadingSpinner size="sm" variant="muted" />
+            </div>
+          )}
 
         {/* 가상화된 메시지 렌더링 */}
         {flattenedMessages.length > 0 && scrollElementReady && (

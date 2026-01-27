@@ -186,5 +186,9 @@ export const ToolIcon = ({ toolName, className, colored = false, size = "default
   const colorClass = colored ? VARIANT_COLORS[variant] : "";
   const sizeClass = SIZE_CLASSES[size];
 
-  return <Icon className={cn(sizeClass, colorClass, className)} />;
+  return (
+    <span title={toolName}>
+      <Icon className={cn(sizeClass, colorClass, className)} />
+    </span>
+  );
 };

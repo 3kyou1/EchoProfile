@@ -41,6 +41,8 @@ interface SessionLaneProps {
     onLeaveInteraction?: () => void;
     onScroll?: (scrollTop: number) => void;
     onFileClick?: (file: string) => void;
+    isSelected?: boolean;
+    onNavigate?: (messageId: string) => void;
 }
 
 export const SessionLane = ({
@@ -50,7 +52,9 @@ export const SessionLane = ({
     onHoverInteraction,
     onLeaveInteraction,
     onScroll,
-    onFileClick
+    onFileClick,
+    isSelected,
+    onNavigate
 }: SessionLaneProps) => {
     const parentRef = useRef<HTMLDivElement>(null);
     const { session, messages, stats, depth } = data;
@@ -167,14 +171,23 @@ export const SessionLane = ({
 
     const getDepthStyles = () => {
         if (zoomLevel === 0) {
-            return "w-[80px] min-w-[80px] bg-background border-r border-border/30";
+            return clsx(
+                "w-[80px] min-w-[80px] bg-background border-r border-border/30",
+                isSelected && "bg-accent/5 ring-1 ring-inset ring-accent/40"
+            );
         }
 
         switch (depth) {
             case 'deep':
-                return "w-[380px] min-w-[380px] bg-slate-50/50 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50";
+                return clsx(
+                    "w-[380px] min-w-[380px] bg-slate-50/50 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50",
+                    isSelected && "ring-2 ring-inset ring-accent/50 bg-accent/5 shadow-xl shadow-accent/5"
+                );
             default:
-                return "w-[320px] min-w-[320px] bg-card/20";
+                return clsx(
+                    "w-[320px] min-w-[320px] bg-card/20",
+                    isSelected && "ring-2 ring-inset ring-accent/50 bg-accent/5 shadow-xl shadow-accent/5"
+                );
         }
     };
 
@@ -186,7 +199,10 @@ export const SessionLane = ({
             getDepthStyles()
         )}>
             {zoomLevel !== 0 && (
-                <div className="absolute left-6 top-0 bottom-0 w-px bg-border/40 z-0 pointer-events-none" />
+                <div className={clsx(
+                    "absolute left-6 top-0 bottom-0 w-px z-0 pointer-events-none transition-colors",
+                    isSelected ? "bg-accent/40" : "bg-border/40"
+                )} />
             )}
 
             <div className={clsx(
@@ -197,7 +213,7 @@ export const SessionLane = ({
                 {zoomLevel === 0 ? (
                     <div className="flex flex-col items-center gap-1.5 text-center h-full justify-between">
                         <div className="flex gap-1">
-                            {stats?.commitCount > 0 && <GitCommit className="w-2.5 h-2.5 text-indigo-500" />}
+                            {stats?.commitCount > 0 && <span title="Git Commits"><GitCommit className="w-2.5 h-2.5 text-indigo-500" /></span>}
                         </div>
                         <div className="text-[10px] font-bold text-muted-foreground">
                             {new Date(session.last_modified).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
@@ -212,13 +228,49 @@ export const SessionLane = ({
                             <span className="text-[10px] font-mono text-muted-foreground/70">
                                 {new Date(session.last_modified).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}  •  {new Date(session.last_modified).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                             </span>
-                            <div className="flex gap-1.5 items-center">
-                                {stats.commitCount > 0 && <GitCommit className="w-3 h-3 text-indigo-500" />}
-                                {stats.hasMarkdownEdits && <Pencil className="w-3 h-3 text-amber-500" />}
+                            <div className="flex gap-3 items-center">
+                                {/* Activity Summary Row 1: Tokens & Git & Edits */}
+
+                                {stats.commitCount > 0 && (
+                                    <div className="flex items-center gap-1 text-indigo-500" title="Git Commits">
+                                        <GitCommit className="w-3 h-3" />
+                                        <span className="text-[10px] font-bold">{stats.commitCount}</span>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center gap-1 text-emerald-500" title="Input Tokens">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-[10px] font-mono">{formatNumber(stats.inputTokens || 0)}</span>
+                                </div>
+
+                                <div className="flex items-center gap-1 text-purple-500" title="Output Tokens">
+                                    <Zap className="w-3 h-3" />
+                                    <span className="text-[10px] font-mono">{formatNumber(stats.outputTokens || 0)}</span>
+                                </div>
+
+                                {stats.shellCount > 0 && (
+                                    <div className="flex items-center gap-1 text-sky-500" title="Shell Commands">
+                                        <Terminal className="w-3 h-3" />
+                                        <span className="text-[10px] font-mono">{stats.shellCount}</span>
+                                    </div>
+                                )}
+
+
+
+                                {(() => {
+                                    const createdCount = data.fileEdits.filter(e => e.type === 'create').length;
+                                    if (createdCount > 0) return (
+                                        <div className="flex items-center gap-1 text-emerald-500" title="Files Created">
+                                            <FilePlus className="w-3 h-3" />
+                                            <span className="text-[10px] font-mono">{createdCount}</span>
+                                        </div>
+                                    );
+                                    return null;
+                                })()}
                             </div>
                         </div>
 
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex items-baseline gap-2 pb-1 border-b border-border/20">
                             <div className="text-xl font-bold font-mono text-foreground">
                                 {formatNumber(stats.totalTokens)}
                                 <span className="text-[10px] text-muted-foreground font-normal ml-1">tokens</span>
@@ -226,17 +278,6 @@ export const SessionLane = ({
                             <div className="ml-auto text-[10px] text-muted-foreground flex gap-2">
                                 <span>{messages.length} msgs</span>
                                 <span>{formatDuration(durationMinutes)}</span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-[10px] border-b border-border/20 pb-2">
-                            <div className="flex items-center gap-1 text-emerald-500">
-                                <TrendingUp className="w-3 h-3" />
-                                <span>{formatNumber(stats.inputTokens || 0)}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-purple-500">
-                                <Zap className="w-3 h-3" />
-                                <span>{formatNumber(stats.outputTokens || 0)}</span>
                             </div>
                         </div>
 
@@ -267,6 +308,28 @@ export const SessionLane = ({
                                 })()}
 
                                 {/* 3. File Search (Grep/Glob) */}
+                                {stats.searchCount > 0 && (
+                                    <div className="flex items-center gap-1 text-amber-500" title="Code Search">
+                                        <Search className="w-3 h-3" />
+                                        <span className="text-[10px] font-bold font-mono">{stats.searchCount}</span>
+                                    </div>
+                                )}
+
+                                {/* Web Search/Fetch */}
+                                {stats.webCount > 0 && (
+                                    <div className="flex items-center gap-1 text-sky-400" title="Web Search/Fetch">
+                                        <Globe className="w-3 h-3" />
+                                        <span className="text-[10px] font-bold font-mono">{stats.webCount}</span>
+                                    </div>
+                                )}
+
+                                {/* MCP Tools */}
+                                {stats.mcpCount > 0 && (
+                                    <div className="flex items-center gap-1 text-purple-500" title="MCP Tools">
+                                        <Plug className="w-3 h-3" />
+                                        <span className="text-[10px] font-bold font-mono">{stats.mcpCount}</span>
+                                    </div>
+                                )}
 
                                 {/* 4. Docs (Markdown) */}
                                 {stats.hasMarkdownEdits && (
@@ -376,6 +439,7 @@ export const SessionLane = ({
                                     onNext={nextItem ? () => onInteractionClick?.(nextItem.head.uuid) : undefined}
                                     onPrev={prevItem ? () => onInteractionClick?.(prevItem.head.uuid) : undefined}
                                     onFileClick={onFileClick}
+                                    onNavigate={() => onNavigate?.(message.uuid)}
                                     siblings={item.siblings}
                                 />
                             </div>

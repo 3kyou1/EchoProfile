@@ -78,7 +78,7 @@ export const BoardControls = ({
                     </button>
                 </div>
                 <div className="hidden md:flex items-center gap-2 text-[10px] text-muted-foreground opacity-60">
-                    <MousePointer2 className="w-3 h-3" />
+                    <span title="Scroll header to zoom"><MousePointer2 className="w-3 h-3" /></span>
                     <span>Scroll header to zoom</span>
                 </div>
             </div>

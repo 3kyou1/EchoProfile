@@ -5,7 +5,7 @@ import type { ZoomLevel } from "../../types/board.types";
 import { ToolIcon, getToolVariant } from "../ToolIcon";
 import { extractClaudeMessageContent } from "../../utils/messageUtils";
 import { clsx } from "clsx";
-import { FileText, X, FileCode, AlignLeft, Bot, User, Ban, ChevronUp, ChevronDown, GitCommit as GitIcon, PencilLine, GripVertical, CheckCircle2, Link2, Layers } from "lucide-react";
+import { FileText, X, FileCode, AlignLeft, Bot, User, Ban, ChevronUp, ChevronDown, GitCommit as GitIcon, PencilLine, GripVertical, CheckCircle2, Link2, Layers, Timer, Scissors, AlertTriangle, Zap } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAppStore } from "../../store/useAppStore";
 import { SmartJsonDisplay } from "../SmartJsonDisplay";
@@ -24,6 +24,7 @@ interface InteractionCardProps {
     onPrev?: () => void;
     onFileClick?: (file: string) => void;
     siblings?: ClaudeMessage[]; // For merged cards
+    onNavigate?: () => void;
 }
 
 const ExpandedCard = ({
@@ -37,7 +38,8 @@ const ExpandedCard = ({
     onClose,
     onNext,
     onPrev,
-    onFileClick
+    onFileClick,
+    onNavigate
 }: {
     message: ClaudeMessage;
     content: string;
@@ -50,14 +52,15 @@ const ExpandedCard = ({
     onNext?: () => void;
     onPrev?: () => void;
     onFileClick?: (file: string) => void;
+    onNavigate?: () => void;
 }) => {
     const { setMarkdownPretty } = useAppStore();
-    const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+    const [position, setPosition] = useState<{ x: number; y: number; anchorY: 'top' | 'bottom' } | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
     // Unified Tool Use Extraction
-    const toolUseBlock = message.toolUse || (Array.isArray(message.content) ? (message.content as any[]).find(b => b.type === 'tool_use') : null);
+    const toolUseBlock = (message as any).toolUse || (Array.isArray(message.content) ? (message.content as any[]).find(b => b.type === 'tool_use') : null);
 
     // Initial positioning logic
     useEffect(() => {
@@ -70,23 +73,39 @@ const ExpandedCard = ({
         const gap = 12;
 
         let left = triggerRect.right + gap;
+
+        // Default to top alignment
         let top = triggerRect.top;
+        let anchorY: 'top' | 'bottom' = 'top';
 
         // Flip to left if not enough space on right
         if (left + cardWidth > windowWidth - 20) {
             left = triggerRect.left - cardWidth - gap;
         }
 
-        // Adjust top if bottom overflow
-        const maxHeight = Math.min(600, windowHeight - 40);
-        if (top + maxHeight > windowHeight - 20) {
-            top = Math.max(20, windowHeight - maxHeight - 20);
+        // Heuristic: If trigger is in the bottom half of the screen, prefer bottom alignment (grow up or anchor bottom)
+        const isBottomHalf = triggerRect.top > windowHeight / 2;
+
+        // If we anchor to top, we might overflow bottom.
+        // If we anchor to bottom, we want to align the BOTTOM of the card with the BOTTOM of the trigger (or viewport).
+
+        if (isBottomHalf) {
+            // Anchor to bottom
+            anchorY = 'bottom';
+            // y will be the distance from the bottom of the viewport
+            top = windowHeight - triggerRect.bottom;
+
+            // If bottom edge is too close to bottom of screen (e.g. huge trigger?), clamp it.
+            if (top < 20) top = 20;
+        } else {
+            // Anchor to top
+            anchorY = 'top';
+            // If top is offscreen?
+            if (top < 20) top = 20;
+            // Overflow check is handled by max-height usually.
         }
 
-        // If top is initially offscreen (e.g. card is scrolled partially out), clamp it
-        if (top < 20) top = 20;
-
-        setPosition({ x: left, y: top });
+        setPosition({ x: left, y: top, anchorY });
     }, [triggerRect, position]);
 
     // Dragging Logic
@@ -97,15 +116,27 @@ const ExpandedCard = ({
             const deltaX = e.clientX - dragStartRef.current.x;
             const deltaY = e.clientY - dragStartRef.current.y;
 
-            // Update drag start for next frame (delta is per-frameish) 
-            // OR better: calculate absolute new pos relative to initial drag
-            // Simplified: just add delta to current pos state would lag
-            // Correct way for rAF or direct updates:
+            // For dragging, we just update Y directly. If we were 'bottom' anchored,
+            // dragging downwards means increasing 'bottom' value? No, Y is usually Top.
+            // If we support dragging, we should probably normalize to TOP positioning once drag starts.
+            // Simplified: Always switch to TOP positioning on drag.
 
-            // We will just update state directly for now
             setPosition(prev => {
                 if (!prev) return null;
-                return { x: prev.x + deltaX, y: prev.y + deltaY };
+
+                // If we were bottom anchored, convert to top for dragging consistency
+                if (prev.anchorY === 'bottom') {
+                    // Need to convert 'bottom' offset to 'top' offset.
+                    // But we don't know height!
+                    // Actually, dragging with mixed anchors is hard without ref to element height.
+                    // IMPORTANT: We can just apply deltaY to `y` and keep anchorY.
+                    // If anchorY is bottom, y is distance from bottom.
+                    // Moving mouse DOWN (positive deltaY) should DECREASE distance from bottom.
+                    // So we subtract deltaY.
+                    return { x: prev.x + deltaX, y: prev.y - deltaY, anchorY: 'bottom' };
+                }
+
+                return { x: prev.x + deltaX, y: prev.y + deltaY, anchorY: 'top' };
             });
 
             dragStartRef.current = { x: e.clientX, y: e.clientY };
@@ -160,11 +191,18 @@ const ExpandedCard = ({
                 )}
                 style={{
                     left: `${position.x}px`,
-                    top: `${position.y}px`,
+                    top: position.anchorY === 'top' ? `${position.y}px` : undefined,
+                    bottom: position.anchorY === 'bottom' ? `${position.y}px` : undefined,
                     maxHeight: `${maxHeight}px`,
                     // transformOrigin: ... handled by initial placement logic mostly
                 }}
-                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+                onClick={(e) => {
+                    e.stopPropagation();
+                    // Generic tap on body goes to detail view if not selecting text
+                    if (window.getSelection()?.toString().length === 0) {
+                        onNavigate?.();
+                    }
+                }} // Prevent closing when clicking inside
             >
                 <div
                     className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/30 rounded-t-lg shrink-0 select-none cursor-grab active:cursor-grabbing group/header"
@@ -260,14 +298,24 @@ const ExpandedCard = ({
                             </button>
                         </div>
 
-                        <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100">
+                        {/* Open in Full View inside Tooltip */}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onNavigate?.(); }}
+                            className="p-1 hover:bg-muted rounded text-xs text-muted-foreground hover:text-foreground transition-colors mr-1"
+                            title="Open in Message View"
+                        >
+                            <span className="sr-only">Open</span>
+                            Open
+                        </button>
+
+                        <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100" title="Close">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap select-text">
-                    {isMarkdownPretty && !message.toolUse ? (
+                    {isMarkdownPretty && !(message as any).toolUse ? (
                         <div className="prose prose-xs dark:prose-invert max-w-none break-words">
                             <ReactMarkdown>{content}</ReactMarkdown>
                         </div>
@@ -283,10 +331,10 @@ const ExpandedCard = ({
                 )}
 
                 <div className="p-2 border-t border-border/50 bg-muted/10 rounded-b-lg flex justify-end gap-3 text-[10px] text-muted-foreground shrink-0 font-mono">
-                    {(message.usage) && (
+                    {((message as any).usage) && (
                         <>
-                            <span>In: {(message.usage.input_tokens || 0).toLocaleString()}</span>
-                            <span>Out: {(message.usage.output_tokens || 0).toLocaleString()}</span>
+                            <span>In: {(message as any).usage.input_tokens || 0}</span>
+                            <span>Out: {(message as any).usage.output_tokens || 0}</span>
                         </>
                     )}
                 </div>
@@ -307,7 +355,8 @@ export const InteractionCard = memo(({
     onFileClick,
     onNext,
     onPrev,
-    siblings
+    siblings,
+    onNavigate
 }: InteractionCardProps) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null);
@@ -325,27 +374,27 @@ export const InteractionCard = memo(({
     const content = extractClaudeMessageContent(message) || "";
     // Unified Tool Use Extraction
     const toolUseBlock = useMemo(() => {
-        if (message.toolUse) return message.toolUse;
+        if ((message as any).toolUse) return (message as any).toolUse;
         if (Array.isArray(message.content)) {
             const block = (message.content as any[]).find(b => b.type === 'tool_use');
             if (block) return block;
         }
         return null;
-    }, [message.toolUse, message.content]);
+    }, [message]);
 
     const isTool = !!toolUseBlock;
 
 
-    const isError = (message.stopReasonSystem?.toLowerCase().includes("error")) ||
-        (message.toolUseResult as any)?.is_error ||
-        (message.toolUseResult as any)?.stderr?.length > 0;
+    const isError = ((message as any).stopReasonSystem?.toLowerCase().includes("error")) ||
+        ((message as any).toolUseResult as any)?.is_error ||
+        ((message as any).toolUseResult as any)?.stderr?.length > 0;
 
-    const isCancelled = (message.stop_reason as string) === "customer_cancelled" ||
-        message.stopReasonSystem === "customer_cancelled" ||
-        (message.stop_reason as string) === "consumer_cancelled" ||
+    const isCancelled = ((message as any).stop_reason as string) === "customer_cancelled" ||
+        (message as any).stopReasonSystem === "customer_cancelled" ||
+        ((message as any).stop_reason as string) === "consumer_cancelled" ||
         content.includes("request canceled by user");
 
-    const role = message.role || message.type;
+    const role = (message as any).role || message.type;
 
     // New Heuristics for Pixel View Coloring
     const isCommit = useMemo(() => {
@@ -356,14 +405,16 @@ export const InteractionCard = memo(({
             return typeof cmd === 'string' && cmd.includes('git commit');
         }
         return false;
-    }, [message, isTool, toolUseBlock]);
+    }, [isTool, toolUseBlock]);
 
     const verifiedCommit = useMemo(() => {
         if (!isCommit || !gitCommits || gitCommits.length === 0) return null;
 
-        const tool = message.toolUse as any;
-        const cmd = tool.input?.CommandLine || tool.input?.command;
+        const tool = (message as any).toolUse as any;
+        const cmd = tool?.input?.CommandLine || tool?.input?.command;
         // Extract message from "git commit -m '...'"
+        if (!cmd) return null;
+
         const commitMsgMatch = (cmd as string).match(/-m\s+["'](.+?)["']/);
         const targetMsg = commitMsgMatch ? commitMsgMatch[1] : "";
 
@@ -424,26 +475,26 @@ export const InteractionCard = memo(({
     const RoleIcon = useMemo(() => {
         if (isCommit) return (
             <div className="relative">
-                <GitIcon className="w-3.5 h-3.5 text-indigo-500" />
+                <span title="Git Commit"><GitIcon className="w-3.5 h-3.5 text-indigo-500" /></span>
                 {verifiedCommit && (
                     <div className="absolute -top-1 -right-1">
-                        <CheckCircle2 className="w-2 h-2 text-blue-500 fill-white" />
+                        <span title="Verified Commit"><CheckCircle2 className="w-2 h-2 text-blue-500 fill-white" /></span>
                     </div>
                 )}
             </div>
         );
         // If markdown edit is detected locally for this card
-        if (editedMdFile) return <FileText className="w-3.5 h-3.5 text-amber-500" />;
-        if (isFileEdit) return <PencilLine className="w-3.5 h-3.5 text-emerald-500" />;
+        if (editedMdFile) return <span title="Documentation Edit"><FileText className="w-3.5 h-3.5 text-amber-500" /></span>;
+        if (isFileEdit) return <span title="File Edit"><PencilLine className="w-3.5 h-3.5 text-emerald-500" /></span>;
 
-        if (message.toolUse) return <ToolIcon toolName={(message.toolUse as any).name} className="w-4 h-4 text-accent" />;
+        if ((message as any).toolUse) return <ToolIcon toolName={((message as any).toolUse as any).name} className="w-4 h-4 text-accent" />;
 
         // URL/Reference detected
-        if (hasUrls && role === 'assistant') return <Link2 className="w-3.5 h-3.5 text-sky-500" />;
+        if (hasUrls && role === 'assistant') return <span title="Contains Links"><Link2 className="w-3.5 h-3.5 text-sky-500" /></span>;
 
-        if (role === 'user') return <User className="w-3.5 h-3.5 text-primary" />;
-        return <Bot className="w-3.5 h-3.5 text-muted-foreground" />;
-    }, [role, message.toolUse, isCommit, isFileEdit, editedMdFile, verifiedCommit, hasUrls]);
+        if (role === 'user') return <span title="User Message"><User className="w-3.5 h-3.5 text-primary" /></span>;
+        return <span title="Assistant Message"><Bot className="w-3.5 h-3.5 text-muted-foreground" /></span>;
+    }, [role, message, isCommit, isFileEdit, editedMdFile, verifiedCommit, hasUrls]);
 
     // Skip "No content" entries if they are not tools and empty
     // MOVED here to be after all hooks to prevent "Rendered more hooks" errors
@@ -455,7 +506,7 @@ export const InteractionCard = memo(({
     if (zoomLevel === 0) {
         const totalMessagesCount = (siblings?.length || 0) + 1;
         const totalTokens = [message, ...(siblings || [])].reduce((sum, m) =>
-            sum + (m.usage?.input_tokens || 0) + (m.usage?.output_tokens || 0), 0
+            sum + ((m as any).usage?.input_tokens || 0) + ((m as any).usage?.output_tokens || 0), 0
         );
 
         // Normalize height: min 4px, max 24px, typical range handled logarithmically or linearly capped
@@ -559,6 +610,7 @@ export const InteractionCard = memo(({
                     onNext={onNext}
                     onPrev={onPrev}
                     onFileClick={onFileClick}
+                    onNavigate={onNavigate}
                 />}
             </>
         );
@@ -580,10 +632,12 @@ export const InteractionCard = memo(({
                     onMouseLeave={onLeave}
                     onClick={onClick}
                 >
-                    {/* Agent Name Header */}
-                    <div className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-none select-none">
-                        {agentName}
-                    </div>
+                    {/* Agent Name Header - Only if NOT General Purpose */}
+                    {agentName !== "General Purpose" && (
+                        <div className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-none select-none">
+                            {agentName}
+                        </div>
+                    )}
 
                     <div className="flex gap-2 items-start w-full">
                         <div className="mt-0.5 relative shrink-0">
@@ -645,6 +699,8 @@ export const InteractionCard = memo(({
                     onClose={() => onClick?.()}
                     onNext={onNext}
                     onPrev={onPrev}
+                    onFileClick={onFileClick}
+                    onNavigate={onNavigate}
                 />}
             </>
         );
@@ -713,7 +769,7 @@ export const InteractionCard = memo(({
 
                             allMsgs.forEach(m => {
                                 let tName = '';
-                                if (m.toolUse) tName = (m.toolUse as any).name;
+                                if ((m as any).toolUse) tName = ((m as any).toolUse as any).name;
                                 else if (Array.isArray(m.content)) {
                                     const b = (m.content as any[]).find(x => x.type === 'tool_use');
                                     if (b) tName = b.name;
@@ -768,16 +824,64 @@ export const InteractionCard = memo(({
                     <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-card to-transparent pointer-events-none" />
                 </div>
 
-                {(message.usage) && (
-                    <div className="mt-auto pt-1 flex gap-2 text-[9px] text-muted-foreground opacity-60 font-mono">
+                {(message.type === 'assistant' && message.usage) && (
+                    <div className="mt-auto pt-1 flex gap-2 text-[9px] text-muted-foreground opacity-60 font-mono items-center">
                         <span>In: {message.usage.input_tokens}</span>
                         <span>Out: {message.usage.output_tokens}</span>
+
+                        {/* Cache Hit Indicator */}
+                        {message.usage.cache_read_input_tokens && message.usage.cache_read_input_tokens > 0 && (
+                            <div className="flex items-center gap-0.5 text-emerald-500" title={`Cache Hit: ${message.usage.cache_read_input_tokens} tokens`}>
+                                <Zap className="w-3 h-3 fill-emerald-500/20" />
+                                <span>{(message.usage.cache_read_input_tokens / 1000).toFixed(1)}k</span>
+                            </div>
+                        )}
+
+                        {/* Duration Indicator */}
+                        {(message as any).durationMs && (
+                            <div className="flex items-center gap-0.5 ml-auto" title={`Duration: ${((message as any).durationMs / 1000).toFixed(1)}s`}>
+                                <Timer className="w-3 h-3" />
+                                <span>{((message as any).durationMs / 1000).toFixed(1)}s</span>
+                            </div>
+                        )}
                     </div>
                 )}
 
+                {/* Exit Code / Status Footer Layer */}
+                <div className="flex gap-2 mt-1">
+                    {/* Exit Code */}
+                    {(() => {
+                        // Check for tool result content item or direct toolUseResult property
+                        // Safe access via discriminated union logic or loose check
+                        const result = (message as any).toolUseResult;
+                        if (!result) return null;
+
+                        const code = result.exitCode ?? result.return_code;
+                        if (code === undefined) return null;
+
+                        return (
+                            <div className={clsx("flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border self-start",
+                                code === 0 ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/20" : "text-destructive bg-destructive/5 border-destructive/20"
+                            )} title={`Exit Code: ${code}`}>
+                                {code === 0 ? <CheckCircle2 className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+                                <span className="font-bold">EXIT {code}</span>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Cutoff Indicator */}
+                    {(message as any).stop_reason === 'max_tokens' && (
+                        <div className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border self-start text-orange-600 bg-orange-500/5 border-orange-500/20" title="Generation truncated due to max_tokens">
+                            <Scissors className="w-2.5 h-2.5" />
+                            <span className="font-bold">CUTOFF</span>
+                        </div>
+                    )}
+                </div>
+
                 {isError && (
-                    <div className="mt-1 p-1 bg-destructive/10 rounded text-[9px] text-destructive border border-destructive/20 font-mono italic">
-                        Error detected
+                    <div className="mt-1 p-1 bg-destructive/10 rounded text-[9px] text-destructive border border-destructive/20 font-mono italic flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        <span>Error detected</span>
                     </div>
                 )}
             </div>

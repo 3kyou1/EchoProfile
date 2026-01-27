@@ -841,70 +841,32 @@ describe("ProjectTree user flow scenarios", () => {
     });
   });
 
-  describe("session visibility based on selection", () => {
-    it("should only show sessions for the selected project", () => {
-      const expandedProjects = new Set(["/project-a", "/project-b", "/project-c"]);
-      const selectedProjectPath = "/project-b";
+  describe("session visibility based on expansion", () => {
+    it("should determine session visibility correctly", () => {
+      const expandedProjects = new Set(["/project-a", "/project-c"]);
 
-      // Helper to determine if sessions should be shown for a project
-      // Sessions only show when: expanded AND selected
-      const shouldShowSessions = (projectPath: string) =>
-        expandedProjects.has(projectPath) && projectPath === selectedProjectPath;
+      // Helper to determine if sessions should be shown
+      const shouldShowSessions = (projectPath: string) => expandedProjects.has(projectPath);
 
-      // Even though project-a is expanded, sessions should NOT show (not selected)
-      expect(shouldShowSessions("/project-a")).toBe(false);
-
-      // Project-b is expanded AND selected, sessions SHOULD show
-      expect(shouldShowSessions("/project-b")).toBe(true);
-
-      // Project-c is expanded but not selected, sessions should NOT show
-      expect(shouldShowSessions("/project-c")).toBe(false);
-    });
-
-    it("should not show sessions when no project is selected", () => {
-      const expandedProjects = new Set(["/project-a"]);
-      const selectedProjectPath: string | null = null;
-
-      const shouldShowSessions = (projectPath: string) =>
-        expandedProjects.has(projectPath) && projectPath === selectedProjectPath;
-
-      expect(shouldShowSessions("/project-a")).toBe(false);
-    });
-
-    it("should update session visibility when selection changes", () => {
-      const expandedProjects = new Set(["/project-a", "/project-b"]);
-      let selectedProjectPath = "/project-a";
-
-      const shouldShowSessions = (projectPath: string) =>
-        expandedProjects.has(projectPath) && projectPath === selectedProjectPath;
-
-      // Initially project-a is selected
       expect(shouldShowSessions("/project-a")).toBe(true);
       expect(shouldShowSessions("/project-b")).toBe(false);
-
-      // User clicks project-b (changes selection)
-      selectedProjectPath = "/project-b";
-
-      // Now project-b shows sessions, project-a does not
-      expect(shouldShowSessions("/project-a")).toBe(false);
-      expect(shouldShowSessions("/project-b")).toBe(true);
+      expect(shouldShowSessions("/project-c")).toBe(true);
     });
 
-    it("should handle worktree scenario: main and linked both expanded, only selected shows sessions", () => {
-      const mainRepoPath = "/Users/jack/main-project";
-      const linkedWorktreePath = "/tmp/feature/main-project";
+    it("should filter sessions by selected project correctly", () => {
+      const allSessions: ClaudeSession[] = [
+        { session_id: "s1", project_path: "/project-a" } as ClaudeSession,
+        { session_id: "s2", project_path: "/project-a" } as ClaudeSession,
+        { session_id: "s3", project_path: "/project-b" } as ClaudeSession,
+      ];
 
-      const expandedProjects = new Set([mainRepoPath, linkedWorktreePath]);
-      const selectedProjectPath = linkedWorktreePath;
+      // Sessions for project A
+      const projectASessions = allSessions.filter(s => s.project_path === "/project-a");
+      expect(projectASessions).toHaveLength(2);
 
-      const shouldShowSessions = (projectPath: string) =>
-        expandedProjects.has(projectPath) && projectPath === selectedProjectPath;
-
-      // Main repo is expanded but not selected - no sessions shown
-      expect(shouldShowSessions(mainRepoPath)).toBe(false);
-
-      // Linked worktree is expanded AND selected - sessions shown
-      expect(shouldShowSessions(linkedWorktreePath)).toBe(true);
+      // Sessions for project B
+      const projectBSessions = allSessions.filter(s => s.project_path === "/project-b");
+      expect(projectBSessions).toHaveLength(1);
     });
   });
 });

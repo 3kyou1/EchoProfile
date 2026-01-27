@@ -54,7 +54,6 @@ interface ProjectTreeProps {
 export const ProjectTree: React.FC<ProjectTreeProps> = ({
   projects,
   sessions,
-  selectedProject,
   selectedSession,
   onProjectSelect,
   onSessionSelect,
@@ -419,8 +418,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                               </span>
                             </button>
 
-                            {/* Sessions for this project - only show for selected project */}
-                            {isProjectExp && selectedProject?.path === project.path && sessions.length > 0 && !isLoading && (
+                            {/* Sessions for this project */}
+                            {isProjectExp && sessions.length > 0 && !isLoading && (
                               <div className="ml-4 pl-2 space-y-1 py-1.5 border-l border-accent/30">
                                 {sessions.map((session) => (
                                   <SessionItem
@@ -434,8 +433,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                               </div>
                             )}
 
-                            {/* Loading - only show for selected project */}
-                            {isProjectExp && selectedProject?.path === project.path && isLoading && (
+                            {/* Loading */}
+                            {isProjectExp && isLoading && (
                               <div className="ml-4 pl-2 space-y-2 py-2 border-l border-accent/30">
                                 {[1, 2].map((i) => (
                                   <div key={i} className="flex items-center gap-2 py-1.5 px-2">
@@ -446,8 +445,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                               </div>
                             )}
 
-                            {/* Empty - only show for selected project */}
-                            {isProjectExp && selectedProject?.path === project.path && sessions.length === 0 && !isLoading && (
+                            {/* Empty */}
+                            {isProjectExp && sessions.length === 0 && !isLoading && (
                               <div className="ml-5 py-2 text-2xs text-muted-foreground">
                                 {t("components:session.notFound", "No sessions")}
                               </div>
@@ -625,8 +624,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                               </span>
                             </button>
 
-                            {/* Sessions for this project - only show for selected project */}
-                            {isProjectExp && selectedProject?.path === project.path && sessions.length > 0 && !isLoading && (
+                            {/* Sessions for this project */}
+                            {isProjectExp && sessions.length > 0 && !isLoading && (
                               <div className={cn(
                                 "ml-4 pl-2 space-y-1 py-1.5",
                                 isMain ? "border-l border-accent/30" : "border-l border-emerald-500/30"
@@ -643,8 +642,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                               </div>
                             )}
 
-                            {/* Loading - only show for selected project */}
-                            {isProjectExp && selectedProject?.path === project.path && isLoading && (
+                            {/* Loading */}
+                            {isProjectExp && isLoading && (
                               <div className={cn(
                                 "ml-4 pl-2 space-y-2 py-2",
                                 isMain ? "border-l border-accent/30" : "border-l border-emerald-500/30"
@@ -658,8 +657,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                               </div>
                             )}
 
-                            {/* Empty - only show for selected project */}
-                            {isProjectExp && selectedProject?.path === project.path && sessions.length === 0 && !isLoading && (
+                            {/* Empty */}
+                            {isProjectExp && sessions.length === 0 && !isLoading && (
                               <div className="ml-5 py-2 text-2xs text-muted-foreground">
                                 {t("components:session.notFound", "No sessions")}
                               </div>
@@ -741,8 +740,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                     )}
                   </button>
 
-                  {/* Sessions List - only show for selected project */}
-                  {isExpanded && selectedProject?.path === project.path && sessions.length > 0 && !isLoading && (
+                  {/* Sessions List */}
+                  {isExpanded && sessions.length > 0 && !isLoading && (
                     <div className="ml-6 pl-3 border-l-2 border-accent/20 space-y-1 py-2">
                       {sessions.map((session) => (
                         <SessionItem
@@ -756,8 +755,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                     </div>
                   )}
 
-                  {/* Loading State - only show for selected project */}
-                  {isExpanded && selectedProject?.path === project.path && isLoading && (
+                  {/* Loading State */}
+                  {isExpanded && isLoading && (
                     <div className="ml-6 pl-3 border-l-2 border-accent/20 space-y-2 py-2">
                       {[1, 2, 3].map((i) => (
                         <div key={i} className="flex items-center gap-2.5 py-2 px-3">
@@ -771,8 +770,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                     </div>
                   )}
 
-                  {/* Empty Sessions - only show for selected project */}
-                  {isExpanded && selectedProject?.path === project.path && sessions.length === 0 && !isLoading && (
+                  {/* Empty Sessions */}
+                  {isExpanded && sessions.length === 0 && !isLoading && (
                     <div className="ml-7 py-3 text-2xs text-muted-foreground">
                       {t("components:session.notFound", "No sessions")}
                     </div>

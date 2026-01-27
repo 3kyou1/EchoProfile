@@ -192,9 +192,3 @@ export {
   extractSettings,
   formatPresetDate,
 } from "./preset.types";
-
-// ============================================================================
-// MCP Preset Types
-// ============================================================================
-export type { MCPPresetData, MCPPresetInput } from "./mcpPreset.types";
-export { parseMCPServers, formatMCPPresetDate } from "./mcpPreset.types";

@@ -14,7 +14,6 @@ use crate::commands::{
         write_text_file,
     },
     feedback::{get_system_info, open_github_issues, send_feedback},
-    mcp_presets::{delete_mcp_preset, get_mcp_preset, load_mcp_presets, save_mcp_preset},
     metadata::{
         get_metadata_folder_path, get_session_display_name, is_project_hidden, load_user_metadata,
         save_user_metadata, update_project_metadata, update_session_metadata, update_user_settings,
@@ -87,11 +86,6 @@ pub fn run() {
             load_presets,
             get_preset,
             delete_preset,
-            // MCP preset commands
-            save_mcp_preset,
-            load_mcp_presets,
-            get_mcp_preset,
-            delete_mcp_preset,
             // Claude Code settings commands
             get_settings_by_scope,
             save_settings,

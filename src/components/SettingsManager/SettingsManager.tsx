@@ -61,6 +61,9 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
   const [settings, setSettings] = React.useState<AllSettingsResponse | null>(
     null
   );
+  const [mcpServers, setMcpServers] = React.useState<
+    Record<string, MCPServerConfig>
+  >({});
   const [activeScope, setActiveScope] = React.useState<SettingsScope>("user");
   const [editorMode, setEditorMode] = React.useState<EditorMode>("visual");
   const [featureTab, setFeatureTab] = React.useState<FeatureTab>("editor");
@@ -78,8 +81,12 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      const settingsResult = await invoke<AllSettingsResponse>("get_all_settings", { projectPath });
+      const [settingsResult, mcpResult] = await Promise.all([
+        invoke<AllSettingsResponse>("get_all_settings", { projectPath }),
+        invoke<{ servers: Record<string, MCPServerConfig> }>("get_mcp_servers"),
+      ]);
       setSettings(settingsResult);
+      setMcpServers(mcpResult.servers || {});
     } catch (err) {
       setError(String(err));
     } finally {
@@ -129,45 +136,28 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
     [activeScope, projectPath, loadSettings]
   );
 
-  // MCP scope state
-  const [mcpScope, setMcpScope] = React.useState<SettingsScope>("user");
-
-  // Get MCP servers for the selected MCP scope
-  const mcpScopeSettings: ClaudeCodeSettings = React.useMemo(() => {
-    const content = settings?.[mcpScope];
-    if (!content) return {};
-    try {
-      return JSON.parse(content) as ClaudeCodeSettings;
-    } catch {
-      return {};
-    }
-  }, [settings, mcpScope]);
-
-  const mcpServersForScope = mcpScopeSettings.mcpServers ?? {};
-
   const handleMCPUpdate = React.useCallback(
     async (servers: Record<string, MCPServerConfig>) => {
-      // MCP servers are stored in the selected MCP scope
-      const scopeContent = settings?.[mcpScope];
-      const scopeSettings = scopeContent
-        ? (JSON.parse(scopeContent) as ClaudeCodeSettings)
+      // MCP servers are stored in user settings
+      const userSettings = settings?.user
+        ? (JSON.parse(settings.user) as ClaudeCodeSettings)
         : {};
       const newSettings: ClaudeCodeSettings = {
-        ...scopeSettings,
+        ...userSettings,
         mcpServers: servers,
       };
       try {
         await invoke("save_settings", {
-          scope: mcpScope,
+          scope: "user",
           content: JSON.stringify(newSettings, null, 2),
-          projectPath: mcpScope !== "user" ? projectPath : undefined,
+          projectPath: undefined,
         });
         await loadSettings();
       } catch (err) {
         console.error("Failed to save MCP settings:", err);
       }
     },
-    [settings, mcpScope, projectPath, loadSettings]
+    [settings, loadSettings]
   );
 
   const isReadOnly = activeScope === "managed";
@@ -375,35 +365,11 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
           {/* MCP Tab */}
           <TabsContent value="mcp">
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">
-                  {t("settingsManager.mcp.title")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {settings && (
-                  <Tabs
-                    value={mcpScope}
-                    onValueChange={(v) => setMcpScope(v as SettingsScope)}
-                    className="w-full"
-                  >
-                    <ScopeTabs availableScopes={availableScopes} />
-
-                    {(["user", "project", "local"] as SettingsScope[]).map((scope) => (
-                      <TabsContent key={scope} value={scope} className="mt-4">
-                        {settings[scope] === null && scope !== "user" ? (
-                          <EmptyState scope={scope} />
-                        ) : (
-                          <MCPServerManager
-                            servers={scope === mcpScope ? mcpServersForScope : {}}
-                            onUpdate={handleMCPUpdate}
-                            readOnly={scope === "managed"}
-                          />
-                        )}
-                      </TabsContent>
-                    ))}
-                  </Tabs>
-                )}
+              <CardContent className="pt-6">
+                <MCPServerManager
+                  servers={mcpServers}
+                  onUpdate={handleMCPUpdate}
+                />
               </CardContent>
             </Card>
           </TabsContent>

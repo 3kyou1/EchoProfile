@@ -64,9 +64,8 @@ const getSessionRelevance = (messages: ClaudeMessage[], stats: BoardSessionStats
 
     // Mentioning .md files or documentation might be high value for summaries
     const hasDocWork = messages.some(m => {
-        const toolUse = (m.type === 'assistant' && m.toolUse) ? m.toolUse : null;
-        if (!toolUse) return false;
-        const input = (toolUse as any).input;
+        if (m.type !== 'assistant' || !m.toolUse) return false;
+        const input = m.toolUse.input as Record<string, unknown>;
         const path = input?.path || input?.file_path || "";
         return typeof path === 'string' && path.toLowerCase().endsWith('.md');
     });
@@ -159,13 +158,13 @@ export const createBoardSlice: StateCreator<
 
                         if (msg.type === 'assistant' && msg.toolUse) {
                             stats.toolCount++;
-                            const toolUse = msg.toolUse as any;
-                            const name = toolUse.name;
-                            const input = toolUse.input;
+                            const toolUse = msg.toolUse;
+                            const name = toolUse.name as string;
+                            const input = toolUse.input as Record<string, unknown>;
 
                             // Hoist explicit file edit events for the timeline visualization
                             if (['write_to_file', 'replace_file_content', 'create_file', 'edit_file'].includes(name)) {
-                                const path = input?.path || input?.file_path || input?.TargetFile || "";
+                                const path = (input?.path || input?.file_path || input?.TargetFile || "") as string;
                                 if (path) {
                                     fileEdits.push({
                                         path,
@@ -219,8 +218,8 @@ export const createBoardSlice: StateCreator<
             const sortedResults = results
                 .filter((r): r is NonNullable<typeof r> => r !== null)
                 .sort((a, b) => {
-                    const relA = (a.data.session as any).relevance || 0;
-                    const relB = (b.data.session as any).relevance || 0;
+                    const relA = a.data.session.relevance || 0;
+                    const relB = b.data.session.relevance || 0;
                     if (relA !== relB) return relB - relA;
                     return new Date(b.data.session.last_message_time).getTime() - new Date(a.data.session.last_message_time).getTime();
                 });

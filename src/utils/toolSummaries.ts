@@ -1,9 +1,9 @@
 
-export const getNaturalLanguageSummary = (toolName: string, input: any): string => {
+export const getNaturalLanguageSummary = (toolName: string, input: Record<string, unknown> | null | undefined): string => {
     const name = toolName.toLowerCase();
 
     // Normalize path helper
-    const getPath = (obj: any) => {
+    const getPath = (obj: Record<string, unknown> | null | undefined) => {
         const p = obj?.path || obj?.file_path || obj?.filename || obj?.TargetFile || obj?.AbsolutePath || '';
         // Return only the filename if path is long
         const parts = String(p).split(/[/\\]/);
@@ -17,7 +17,7 @@ export const getNaturalLanguageSummary = (toolName: string, input: any): string 
     };
 
     if (name.includes('read') || name === 'read_resource') {
-        const p = getPath(input) || input?.Uri;
+        const p = getPath(input) || (input?.Uri as string);
         return p ? `Read ${p}` : 'Read file';
     }
 
@@ -27,13 +27,13 @@ export const getNaturalLanguageSummary = (toolName: string, input: any): string 
     }
 
     if (name === 'list_dir' || name === 'ls' || name === 'list_files') {
-        const p = input?.DirectoryPath || input?.path || input?.SearchDirectory;
+        const p = (input?.DirectoryPath || input?.path || input?.SearchDirectory) as string;
         const shortPath = p ? String(p).split(/[/\\]/).pop() : '';
         return shortPath ? `List ${shortPath}/` : 'List files';
     }
 
     if (name === 'run_command' || name === 'bash' || name === 'execute_command') {
-        const cmd = input?.CommandLine || input?.command || input?.cmd;
+        const cmd = (input?.CommandLine || input?.command || input?.cmd) as string;
         if (cmd) {
             // Detect common commands
             if (cmd.startsWith('git commit')) return 'Git Commit';
@@ -46,20 +46,20 @@ export const getNaturalLanguageSummary = (toolName: string, input: any): string 
     }
 
     if (name === 'grep_search' || name === 'glob_search' || name === 'find_by_name') {
-        const query = input?.Query || input?.query || input?.Pattern;
-        const path = getPath(input) || input?.SearchPath || input?.SearchDirectory;
+        const query = (input?.Query || input?.query || input?.Pattern) as string;
+        const path = (getPath(input) || input?.SearchPath || input?.SearchDirectory) as string;
         if (query && path) return `Search "${query}" in ${path}`;
         if (query) return `Search "${query}"`;
         return 'Search files';
     }
 
     if (name === 'search_web' || name === 'google_search') {
-        const q = input?.query || input?.q;
+        const q = (input?.query || input?.q) as string;
         return q ? `Web search: "${q}"` : 'Web search';
     }
 
     if (name === 'browser_subagent') {
-        const task = input?.TaskName || input?.Task;
+        const task = (input?.TaskName || input?.Task) as string;
         return task ? `Browser: ${task}` : 'Browser Task';
     }
 
@@ -72,13 +72,13 @@ export const getNaturalLanguageSummary = (toolName: string, input: any): string 
     return name.replace(/_/g, ' ');
 };
 
-export const getAgentName = (toolName: string, input: any): string => {
+export const getAgentName = (toolName: string, input: Record<string, unknown> | null | undefined): string => {
     const name = toolName.toLowerCase();
 
     if (name === 'browser_subagent') return "Browser";
     if (name.includes('subagent')) {
         // Try to extract from task name if logical
-        if (input?.TaskName) return input.TaskName;
+        if (input?.TaskName) return input.TaskName as string;
         return "Subagent";
     }
 

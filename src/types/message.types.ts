@@ -171,7 +171,7 @@ export interface ClaudeAssistantMessage extends BaseClaudeMessage {
   type: "assistant";
   role: "assistant";
   model?: string;
-  stop_reason?: "tool_use" | "end_turn" | "max_tokens";
+  stop_reason?: "tool_use" | "end_turn" | "max_tokens" | "customer_cancelled" | "consumer_cancelled" | string;
   usage?: {
     input_tokens?: number;
     output_tokens?: number;
@@ -183,6 +183,7 @@ export interface ClaudeAssistantMessage extends BaseClaudeMessage {
   costUSD?: number;
   durationMs?: number;
   toolUse?: Record<string, unknown>;
+  toolUseResult?: Record<string, unknown> | string;
 }
 
 /** System information, warnings, errors, or internal events */

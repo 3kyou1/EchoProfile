@@ -207,6 +207,16 @@ function App() {
     ]
   );
 
+  // Handle session hover for "skim to preview" in board view
+  const handleSessionHover = useCallback((session: ClaudeSession) => {
+    // Only if we are in Board View
+    if (computed.isBoardView) {
+      // Just update the selected session pointer without triggering view changes or full loadings
+      // This assumes SessionBoard reacts to store's selectedSession
+      useAppStore.getState().setSelectedSession(session);
+    }
+  }, [computed.isBoardView]);
+
   // Error State
   if (error && error.type !== AppErrorType.CLAUDE_FOLDER_NOT_FOUND) {
     return (
@@ -229,16 +239,6 @@ function App() {
       </div>
     );
   }
-
-  // Handle session hover for "skim to preview" in board view
-  const handleSessionHover = useCallback((session: ClaudeSession) => {
-    // Only if we are in Board View
-    if (computed.isBoardView) {
-      // Just update the selected session pointer without triggering view changes or full loadings
-      // This assumes SessionBoard reacts to store's selectedSession
-      useAppStore.getState().setSelectedSession(session);
-    }
-  }, [computed.isBoardView]);
 
   return (
     <>

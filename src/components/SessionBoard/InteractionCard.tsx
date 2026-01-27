@@ -2,8 +2,16 @@ import { memo, useMemo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ClaudeMessage, GitCommit } from "../../types";
 import type { ZoomLevel } from "../../types/board.types";
-import { ToolIcon, getToolVariant } from "../ToolIcon";
-import { extractClaudeMessageContent } from "../../utils/messageUtils";
+import { ToolIcon } from "../ToolIcon";
+import { getToolVariant } from "@/utils/toolIconUtils";
+import {
+    extractClaudeMessageContent,
+    getMessageRole,
+    getToolUseBlock,
+    isClaudeAssistantMessage,
+    isClaudeUserMessage,
+    isClaudeSystemMessage
+} from "../../utils/messageUtils";
 import { clsx } from "clsx";
 import { FileText, X, FileCode, AlignLeft, Bot, User, Ban, ChevronUp, ChevronDown, GitCommit as GitIcon, PencilLine, GripVertical, CheckCircle2, Link2, Layers, Timer, Scissors, AlertTriangle, Zap, Plug } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -11,7 +19,6 @@ import { useAppStore } from "../../store/useAppStore";
 import { SmartJsonDisplay } from "../SmartJsonDisplay";
 import { getNaturalLanguageSummary, getAgentName } from "../../utils/toolSummaries";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-
 interface InteractionCardProps {
     message: ClaudeMessage;
     zoomLevel: ZoomLevel;
@@ -60,7 +67,7 @@ const ExpandedCard = ({
     const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
     // Unified Tool Use Extraction
-    const toolUseBlock = (message as any).toolUse || (Array.isArray(message.content) ? (message.content as any[]).find(b => b.type === 'tool_use') : null);
+    const toolUseBlock = getToolUseBlock(message);
 
     // Initial positioning logic
     useEffect(() => {
@@ -116,23 +123,10 @@ const ExpandedCard = ({
             const deltaX = e.clientX - dragStartRef.current.x;
             const deltaY = e.clientY - dragStartRef.current.y;
 
-            // For dragging, we just update Y directly. If we were 'bottom' anchored,
-            // dragging downwards means increasing 'bottom' value? No, Y is usually Top.
-            // If we support dragging, we should probably normalize to TOP positioning once drag starts.
-            // Simplified: Always switch to TOP positioning on drag.
-
             setPosition(prev => {
                 if (!prev) return null;
 
-                // If we were bottom anchored, convert to top for dragging consistency
                 if (prev.anchorY === 'bottom') {
-                    // Need to convert 'bottom' offset to 'top' offset.
-                    // But we don't know height!
-                    // Actually, dragging with mixed anchors is hard without ref to element height.
-                    // IMPORTANT: We can just apply deltaY to `y` and keep anchorY.
-                    // If anchorY is bottom, y is distance from bottom.
-                    // Moving mouse DOWN (positive deltaY) should DECREASE distance from bottom.
-                    // So we subtract deltaY.
                     return { x: prev.x + deltaX, y: prev.y - deltaY, anchorY: 'bottom' };
                 }
 
@@ -159,7 +153,7 @@ const ExpandedCard = ({
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging]);
+    }, [isDragging, position]);
 
     const handleDragStart = (e: React.MouseEvent) => {
         e.preventDefault(); // Prevent text selection
@@ -167,11 +161,11 @@ const ExpandedCard = ({
         dragStartRef.current = { x: e.clientX, y: e.clientY };
     };
 
-    // const displayContent = content || (toolUseBlock ? JSON.stringify((toolUseBlock as any).input, null, 2) : "No content");
+    // const displayContent = content || (toolUseBlock ? JSON.stringify(toolUseBlock.input, null, 2) : "No content");
     // We now render JsonViewer inside the portal if needed, or string content
     const ToolContent = useMemo(() => {
         if (!toolUseBlock) return null;
-        return <SmartJsonDisplay data={(toolUseBlock as any).input} className="max-w-[440px]" />
+        return <SmartJsonDisplay data={toolUseBlock.input} className="max-w-[440px]" />
     }, [toolUseBlock]);
 
     if (!triggerRect || !position) return null;
@@ -212,7 +206,7 @@ const ExpandedCard = ({
                         <GripVertical className="w-4 h-4 text-muted-foreground/30 group-hover/header:text-muted-foreground/60 transition-colors" />
                         <div className="p-1.5 bg-background rounded-md shadow-sm border border-border/50">
                             {toolUseBlock ? (
-                                <ToolIcon toolName={(toolUseBlock as any).name} className="w-4 h-4 text-accent" />
+                                <ToolIcon toolName={toolUseBlock.name} className="w-4 h-4 text-accent" />
                             ) : (
                                 role === 'user' ? (
                                     <User className="w-3 h-3 text-primary" />
@@ -226,7 +220,7 @@ const ExpandedCard = ({
                             <span className={clsx("font-bold uppercase text-[11px] tracking-wide",
                                 toolUseBlock ? "text-accent" : (role === 'user' ? 'text-primary' : 'text-foreground')
                             )}>
-                                {toolUseBlock ? (toolUseBlock as any).name : role}
+                                {toolUseBlock ? toolUseBlock.name : role}
                             </span>
                             <span className="text-[10px] text-muted-foreground font-mono leading-none">
                                 {new Date(message.timestamp).toLocaleTimeString()}
@@ -315,7 +309,7 @@ const ExpandedCard = ({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap select-text">
-                    {isMarkdownPretty && !(message as any).toolUse ? (
+                    {isMarkdownPretty && !toolUseBlock ? (
                         <div className="prose prose-xs dark:prose-invert max-w-none break-words">
                             <ReactMarkdown>{content}</ReactMarkdown>
                         </div>
@@ -331,10 +325,10 @@ const ExpandedCard = ({
                 )}
 
                 <div className="p-2 border-t border-border/50 bg-muted/10 rounded-b-lg flex justify-end gap-3 text-[10px] text-muted-foreground shrink-0 font-mono">
-                    {((message as any).usage) && (
+                    {isClaudeAssistantMessage(message) && message.usage && (
                         <>
-                            <span>In: {(message as any).usage.input_tokens || 0}</span>
-                            <span>Out: {(message as any).usage.output_tokens || 0}</span>
+                            <span>In: {message.usage.input_tokens || 0}</span>
+                            <span>Out: {message.usage.output_tokens || 0}</span>
                         </>
                     )}
                 </div>
@@ -373,33 +367,25 @@ export const InteractionCard = memo(({
 
     const content = extractClaudeMessageContent(message) || "";
     // Unified Tool Use Extraction
-    const toolUseBlock = useMemo(() => {
-        if ((message as any).toolUse) return (message as any).toolUse;
-        if (Array.isArray(message.content)) {
-            const block = (message.content as any[]).find(b => b.type === 'tool_use');
-            if (block) return block;
-        }
-        return null;
-    }, [message]);
+    const toolUseBlock = useMemo(() => getToolUseBlock(message), [message]);
 
     const isTool = !!toolUseBlock;
 
 
-    const isError = ((message as any).stopReasonSystem?.toLowerCase().includes("error")) ||
-        ((message as any).toolUseResult as any)?.is_error ||
-        ((message as any).toolUseResult as any)?.stderr?.length > 0;
+    const isError = (isClaudeSystemMessage(message) && message.stopReasonSystem?.toLowerCase().includes("error")) ||
+        (isClaudeAssistantMessage(message) && typeof message.toolUseResult === 'object' && message.toolUseResult !== null && (message.toolUseResult as Record<string, unknown>).is_error === true) ||
+        (isClaudeAssistantMessage(message) && typeof message.toolUseResult === 'object' && message.toolUseResult !== null && typeof (message.toolUseResult as Record<string, unknown>).stderr === 'string' && ((message.toolUseResult as Record<string, unknown>).stderr as string).length > 0);
 
-    const isCancelled = ((message as any).stop_reason as string) === "customer_cancelled" ||
-        (message as any).stopReasonSystem === "customer_cancelled" ||
-        ((message as any).stop_reason as string) === "consumer_cancelled" ||
+    const isCancelled = (isClaudeAssistantMessage(message) && (message.stop_reason === "customer_cancelled" || message.stop_reason === "consumer_cancelled")) ||
+        (isClaudeSystemMessage(message) && message.stopReasonSystem === "customer_cancelled") ||
         content.includes("request canceled by user");
 
-    const role = (message as any).role || message.type;
+    const role = getMessageRole(message);
 
     // New Heuristics for Pixel View Coloring
     const isCommit = useMemo(() => {
-        if (!isTool) return false;
-        const tool = toolUseBlock as any;
+        if (!isTool || !toolUseBlock) return false;
+        const tool = toolUseBlock;
         if (['run_command', 'bash', 'execute_command'].includes(tool.name)) {
             const cmd = tool.input?.CommandLine || tool.input?.command;
             return typeof cmd === 'string' && cmd.includes('git commit');
@@ -408,10 +394,9 @@ export const InteractionCard = memo(({
     }, [isTool, toolUseBlock]);
 
     const verifiedCommit = useMemo(() => {
-        if (!isCommit || !gitCommits || gitCommits.length === 0) return null;
+        if (!isCommit || !gitCommits || gitCommits.length === 0 || !toolUseBlock) return null;
 
-        const tool = (message as any).toolUse as any;
-        const cmd = tool?.input?.CommandLine || tool?.input?.command;
+        const cmd = toolUseBlock.input?.CommandLine || toolUseBlock.input?.command;
         // Extract message from "git commit -m '...'"
         if (!cmd) return null;
 
@@ -424,19 +409,18 @@ export const InteractionCard = memo(({
             const nearbyTime = Math.abs(c.timestamp * 1000 - new Date(message.timestamp).getTime()) < 60000;
             return sameMsg || nearbyTime;
         });
-    }, [isCommit, gitCommits, message]);
+    }, [isCommit, gitCommits, message, toolUseBlock]);
 
     const isFileEdit = useMemo(() => {
-        if (!isTool) return false;
-        const tool = toolUseBlock as any;
+        if (!isTool || !toolUseBlock) return false;
+        const tool = toolUseBlock;
         return ['write_to_file', 'replace_file_content', 'multi_replace_file_content', 'create_file', 'edit_file', 'Edit', 'Replace'].includes(tool.name) || /write|edit|replace|patch/i.test(tool.name);
     }, [isTool, toolUseBlock]);
 
     const editedMdFile = useMemo(() => {
         if (toolUseBlock) {
-            const toolUse = toolUseBlock as any;
-            const name = toolUse.name;
-            const input = toolUse.input;
+            const name = toolUseBlock.name;
+            const input = toolUseBlock.input;
 
             if (['write_to_file', 'replace_file_content', 'multi_replace_file_content', 'create_file', 'edit_file'].includes(name) || /write|edit|replace|patch/i.test(name)) {
                 const path = input?.path || input?.file_path || input?.TargetFile || "";
@@ -448,7 +432,7 @@ export const InteractionCard = memo(({
 
         // Also naive regex check for mentions in assistant text
         if (role === 'assistant' && content) {
-            const mdMention = content.match(/(create|update|edit|writing|wrote).+?([a-zA-Z0-9_\-\.]+\.md)/i);
+            const mdMention = content.match(/(create|update|edit|writing|wrote).+?([a-zA-Z0-9_\-. ]+\.md)/i);
             if (mdMention && mdMention[2]) {
                 return mdMention[2];
             }
@@ -465,7 +449,7 @@ export const InteractionCard = memo(({
 
     const isMcp = useMemo(() => {
         if (toolUseBlock) {
-            return (toolUseBlock as any).name === 'mcp';
+            return toolUseBlock.name === 'mcp';
         }
         return content.includes('<command-name>/mcp') || content.includes('mcp_server');
     }, [toolUseBlock, content]);
@@ -509,14 +493,14 @@ export const InteractionCard = memo(({
         if (editedMdFile) return <span title="Documentation Edit"><FileText className="w-3.5 h-3.5 text-amber-500" /></span>;
         if (isFileEdit) return <span title="File Edit"><PencilLine className="w-3.5 h-3.5 text-emerald-500" /></span>;
 
-        if ((message as any).toolUse) return <ToolIcon toolName={((message as any).toolUse as any).name} className="w-4 h-4 text-accent" />;
+        if (toolUseBlock) return <ToolIcon toolName={toolUseBlock.name} className="w-4 h-4 text-accent" />;
 
         // URL/Reference detected
         if (hasUrls && role === 'assistant') return <span title="Contains Links"><Link2 className="w-3.5 h-3.5 text-sky-500" /></span>;
 
         if (role === 'user') return <span title="User Message"><User className="w-3.5 h-3.5 text-primary" /></span>;
         return <span title="Assistant Message"><Bot className="w-3.5 h-3.5 text-muted-foreground" /></span>;
-    }, [role, message, isCommit, isFileEdit, editedMdFile, verifiedCommit, hasUrls, isMcp, isRawError]);
+    }, [role, isCommit, isFileEdit, editedMdFile, verifiedCommit, hasUrls, isMcp, isRawError, toolUseBlock]);
 
     // Skip "No content" entries if they are not tools and empty
     // MOVED here to be after all hooks to prevent "Rendered more hooks" errors
@@ -527,9 +511,10 @@ export const InteractionCard = memo(({
     // Level 0: Pixel/Heatmap
     if (zoomLevel === 0) {
         const totalMessagesCount = (siblings?.length || 0) + 1;
-        const totalTokens = [message, ...(siblings || [])].reduce((sum, m) =>
-            sum + ((m as any).usage?.input_tokens || 0) + ((m as any).usage?.output_tokens || 0), 0
-        );
+        const totalTokens = [message, ...(siblings || [])].reduce((sum, m) => {
+            const usage = isClaudeAssistantMessage(m) ? m.usage : null;
+            return sum + (usage?.input_tokens || 0) + (usage?.output_tokens || 0);
+        }, 0);
 
         // Normalize height: min 4px, max 24px, typical range handled logarithmically or linearly capped
         const height = Math.min(Math.max(totalTokens / 40, 4), 24);
@@ -540,7 +525,7 @@ export const InteractionCard = memo(({
 
         // Override with Event Types for the "Session Understanding" view
         if (toolUseBlock) {
-            const toolName = (toolUseBlock as any).name;
+            const toolName = toolUseBlock.name;
             const variant = getToolVariant(toolName);
 
             switch (variant) {
@@ -564,11 +549,11 @@ export const InteractionCard = memo(({
         if (isCancelled) bgColor = "bg-orange-400/80 dark:bg-orange-400/80";
 
         const agentName = toolUseBlock
-            ? getAgentName((toolUseBlock as any).name, (toolUseBlock as any).input)
+            ? getAgentName(toolUseBlock.name, toolUseBlock.input)
             : "General Purpose";
 
         const tooltipContent = toolUseBlock
-            ? getNaturalLanguageSummary((toolUseBlock as any).name, (toolUseBlock as any).input)
+            ? getNaturalLanguageSummary(toolUseBlock.name, toolUseBlock.input)
             : content;
 
         return (
@@ -582,7 +567,15 @@ export const InteractionCard = memo(({
                             onMouseEnter={() => onHover?.('role', role)}
                             onMouseLeave={onLeave}
                             onClick={onClick}
-                        />
+                        >
+                            {/* Content Icon Overlay (Pixel View) */}
+                            {!isExpanded && (
+                                <div className="absolute top-0.5 right-0.5 pointer-events-none opacity-40">
+                                    {isError && <AlertTriangle className="w-2.5 h-2.5 text-destructive" />}
+                                    {isCancelled && <Ban className="w-2.5 h-2.5 text-orange-500" />}
+                                </div>
+                            )}
+                        </div>
                     </TooltipTrigger>
                     <TooltipContent side="right" className="p-2 max-w-[300px] border border-border/50 bg-popover text-popover-foreground shadow-xl">
                         <div className="flex flex-col gap-1">
@@ -599,7 +592,7 @@ export const InteractionCard = memo(({
                                 {RoleIcon}
                                 <div className="flex flex-col">
                                     <span className="uppercase text-[10px] font-bold tracking-wide opacity-80">
-                                        {toolUseBlock ? (toolUseBlock as any).name : role}
+                                        {toolUseBlock ? toolUseBlock.name : role}
                                     </span>
                                     {totalMessagesCount > 1 && (
                                         <span className="text-[10px] text-muted-foreground">
@@ -625,7 +618,7 @@ export const InteractionCard = memo(({
                     content={content}
                     editedMdFile={editedMdFile}
                     role={role}
-                    isError={isError as any}
+                    isError={Boolean(isError)}
                     triggerRect={triggerRect}
                     isMarkdownPretty={isMarkdownPretty}
                     onClose={() => onClick?.()}
@@ -641,7 +634,7 @@ export const InteractionCard = memo(({
     // Level 1: Skim/Kanban
     if (zoomLevel === 1) {
         const agentName = toolUseBlock
-            ? getAgentName((toolUseBlock as any).name, (toolUseBlock as any).input)
+            ? getAgentName(toolUseBlock.name, toolUseBlock.input)
             : "General Purpose";
 
         return (
@@ -686,7 +679,7 @@ export const InteractionCard = memo(({
                         <div className="flex-1 min-w-0">
                             {toolUseBlock && (
                                 <div className="text-[9px] font-medium uppercase tracking-tight text-accent opacity-90 mb-0.5 flex items-center gap-1.5">
-                                    {(toolUseBlock as any).name}
+                                    {toolUseBlock.name}
                                     {siblings && siblings.length > 0 && (
                                         <span className="flex items-center gap-0.5 text-[8px] bg-accent/10 text-accent px-1 rounded-sm border border-accent/20">
                                             <Layers className="w-2 h-2" />
@@ -701,7 +694,7 @@ export const InteractionCard = memo(({
                                 role === 'user' ? 'text-foreground font-medium' : 'text-foreground/80'
                             )}>
                                 {toolUseBlock
-                                    ? getNaturalLanguageSummary((toolUseBlock as any).name, (toolUseBlock as any).input)
+                                    ? getNaturalLanguageSummary(toolUseBlock.name, toolUseBlock.input)
                                     : content}
                             </p>
                         </div>
@@ -715,7 +708,7 @@ export const InteractionCard = memo(({
                     content={content}
                     editedMdFile={editedMdFile}
                     role={role}
-                    isError={isError as any}
+                    isError={Boolean(isError)}
                     triggerRect={triggerRect}
                     isMarkdownPretty={isMarkdownPretty}
                     onClose={() => onClick?.()}
@@ -757,8 +750,7 @@ export const InteractionCard = memo(({
                     // We need to check if it's ANY file edit to show the green banner.
                     // Let's parse 'anyFile' here briefly.
                     (() => {
-                        const tool = toolUseBlock as any;
-                        const path = tool?.input?.path || tool?.input?.file_path || tool?.input?.TargetFile;
+                        const path = toolUseBlock?.input?.path || toolUseBlock?.input?.file_path || toolUseBlock?.input?.TargetFile;
                         if (path && typeof path === 'string') {
                             return (
                                 <div
@@ -790,12 +782,8 @@ export const InteractionCard = memo(({
                             let hasTools = false;
 
                             allMsgs.forEach(m => {
-                                let tName = '';
-                                if ((m as any).toolUse) tName = ((m as any).toolUse as any).name;
-                                else if (Array.isArray(m.content)) {
-                                    const b = (m.content as any[]).find(x => x.type === 'tool_use');
-                                    if (b) tName = b.name;
-                                }
+                                const toolBlock = getToolUseBlock(m);
+                                let tName = toolBlock ? toolBlock.name : '';
 
                                 if (tName) {
                                     // Normalize names for grouping
@@ -841,7 +829,7 @@ export const InteractionCard = memo(({
 
                 {/* Content Area */}
                 <div className="text-xs text-foreground/90 whitespace-pre-wrap break-words leading-tight max-h-[300px] overflow-hidden relative">
-                    {content ? content : (toolUseBlock ? <SmartJsonDisplay data={(toolUseBlock as any).input} /> : "No content")}
+                    {content ? content : (toolUseBlock ? <SmartJsonDisplay data={toolUseBlock.input} /> : "No content")}
                     {/* Gradient to fade out long content */}
                     <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-card to-transparent pointer-events-none" />
                 </div>
@@ -860,10 +848,10 @@ export const InteractionCard = memo(({
                         )}
 
                         {/* Duration Indicator */}
-                        {(message as any).durationMs && (
-                            <div className="flex items-center gap-0.5 ml-auto" title={`Duration: ${((message as any).durationMs / 1000).toFixed(1)}s`}>
+                        {message.durationMs && (
+                            <div className="flex items-center gap-0.5 ml-auto" title={`Duration: ${(message.durationMs / 1000).toFixed(1)}s`}>
                                 <Timer className="w-3 h-3" />
-                                <span>{((message as any).durationMs / 1000).toFixed(1)}s</span>
+                                <span>{(message.durationMs / 1000).toFixed(1)}s</span>
                             </div>
                         )}
                     </div>
@@ -875,24 +863,26 @@ export const InteractionCard = memo(({
                     {(() => {
                         // Check for tool result content item or direct toolUseResult property
                         // Safe access via discriminated union logic or loose check
-                        const result = (message as any).toolUseResult;
-                        if (!result) return null;
+                        const result = (isClaudeAssistantMessage(message) || isClaudeUserMessage(message)) ? message.toolUseResult : null;
+                        if (!result || typeof result !== 'object') return null;
 
-                        const code = result.exitCode ?? result.return_code;
+                        const res = result as Record<string, unknown>;
+                        const code = res.exitCode ?? res.return_code;
                         if (code === undefined) return null;
 
+                        const codeNum = Number(code);
                         return (
                             <div className={clsx("flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border self-start",
-                                code === 0 ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/20" : "text-destructive bg-destructive/5 border-destructive/20"
-                            )} title={`Exit Code: ${code}`}>
-                                {code === 0 ? <CheckCircle2 className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
-                                <span className="font-bold">EXIT {code}</span>
+                                codeNum === 0 ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/20" : "text-destructive bg-destructive/5 border-destructive/20"
+                            )} title={`Exit Code: ${codeNum}`}>
+                                {codeNum === 0 ? <CheckCircle2 className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+                                <span className="font-bold">EXIT {codeNum}</span>
                             </div>
                         );
                     })()}
 
                     {/* Cutoff Indicator */}
-                    {(message as any).stop_reason === 'max_tokens' && (
+                    {isClaudeAssistantMessage(message) && message.stop_reason === 'max_tokens' && (
                         <div className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border self-start text-orange-600 bg-orange-500/5 border-orange-500/20" title="Generation truncated due to max_tokens">
                             <Scissors className="w-2.5 h-2.5" />
                             <span className="font-bold">CUTOFF</span>
@@ -912,13 +902,14 @@ export const InteractionCard = memo(({
                 content={content}
                 editedMdFile={editedMdFile}
                 role={role}
-                isError={isError as any}
+                isError={Boolean(isError)}
                 triggerRect={triggerRect}
                 isMarkdownPretty={isMarkdownPretty}
                 onClose={() => onClick?.()}
                 onNext={onNext}
                 onPrev={onPrev}
                 onFileClick={onFileClick}
+                onNavigate={onNavigate}
             />}
         </>
     );

@@ -42,14 +42,18 @@ export const DatePickerHeader = ({
 
         setDateFilter({
             ...dateFilter,
-            const clearDateFilter = () => {
-                setDateFilter({ start: null, end: null });
-            };
+            [type]: localDate
+        });
+    };
 
-            const hasFilter = dateFilter.start || dateFilter.end;
+    const clearDateFilter = () => {
+        setDateFilter({ start: null, end: null });
+    };
 
-            return(
-        <div className = { cn("flex items-center gap-2 bg-muted/30 p-1 rounded-lg border border-border/50", className) } >
+    const hasFilter = dateFilter.start || dateFilter.end;
+
+    return (
+        <div className={cn("flex items-center gap-2 bg-muted/30 p-1 rounded-lg border border-border/50", className)} >
             <div className="flex items-center gap-2 px-2 border-r border-border/50 pr-3">
                 <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Filter</span>
@@ -71,7 +75,7 @@ export const DatePickerHeader = ({
                 />
             </div>
 
-            { hasFilter && (
+            {hasFilter && (
                 <button
                     onClick={clearDateFilter}
                     className="ml-1 p-1 hover:bg-destructive/10 hover:text-destructive text-muted-foreground rounded-full transition-colors"

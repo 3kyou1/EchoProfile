@@ -3,18 +3,15 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";
 import { InteractionCard } from "./InteractionCard";
-import { Terminal, FilePlus, FileText, Book, TrendingUp, Zap, Pencil, GitCommit, Search, Globe, Plug } from "lucide-react";
+import { Terminal, FilePlus, FileText, Book, TrendingUp, Zap, GitCommit, Search, Globe, Plug } from "lucide-react";
 import { clsx } from "clsx";
-import { extractClaudeMessageContent } from "../../utils/messageUtils";
-
-// Helper to check if a message is a tool use or system tool event
-const isToolEvent = (msg: any) => {
-    if (msg.toolUse) return true;
-    if (Array.isArray(msg.content) && msg.content.some((b: any) => b.type === 'tool_use')) return true;
-    // Also include tool results if separated
-    if (msg.toolUseResult) return true;
-    return false;
-};
+import {
+    extractClaudeMessageContent,
+    isToolEvent,
+    getMessageRole,
+    isClaudeAssistantMessage
+} from "../../utils/messageUtils";
+import type { ClaudeAssistantMessage, ClaudeMessage } from "../../types";
 
 // Helper for formatting duration
 const formatDuration = (minutes: number): string => {
@@ -43,6 +40,9 @@ interface SessionLaneProps {
     onFileClick?: (file: string) => void;
     isSelected?: boolean;
     onNavigate?: (messageId: string) => void;
+    onNext?: () => void;
+    onPrev?: () => void;
+    siblings?: ClaudeMessage[]; // For merged cards
 }
 
 export const SessionLane = ({
@@ -71,16 +71,16 @@ export const SessionLane = ({
         });
 
         // Grouping Logic for all Zoom Levels
-        const grouped: { head: any, siblings: any[] }[] = [];
-        let currentGroup: { head: any, siblings: any[] } | null = null;
+        const grouped: { head: ClaudeMessage, siblings: ClaudeMessage[] }[] = [];
+        let currentGroup: { head: ClaudeMessage, siblings: ClaudeMessage[] } | null = null;
 
         filtered.forEach((msg) => {
             // Helper to get role safely from union
-            const role = (msg as any).role || msg.type;
+            const role = getMessageRole(msg);
             const isTool = isToolEvent(msg);
 
             if (currentGroup) {
-                const headRole = (currentGroup.head as any).role || currentGroup.head.type;
+                const headRole = getMessageRole(currentGroup.head);
                 const headIsTool = isToolEvent(currentGroup.head);
 
                 // For Zoom Level 0, we want to group by "color band" (semantic type)
@@ -132,8 +132,11 @@ export const SessionLane = ({
                 // Approximate total tokens for group?
                 // For heatmap, we disabled grouping above, so siblings is empty
                 let totalTokens = 0;
-                if (msg.type === 'assistant' && msg.usage) {
-                    totalTokens = (msg.usage.input_tokens || 0) + (msg.usage.output_tokens || 0);
+                if (isClaudeAssistantMessage(msg)) { // Updated usage
+                    const assistantMsg = msg; // No cast needed due to type guard
+                    if (assistantMsg.usage) {
+                        totalTokens = (assistantMsg.usage.input_tokens || 0) + (assistantMsg.usage.output_tokens || 0);
+                    }
                 }
                 return Math.min(Math.max(totalTokens / 50, 4), 20);
             }
@@ -171,8 +174,8 @@ export const SessionLane = ({
 
     const getLaneBackground = () => {
         // Detect Model from first assistant message with a model field
-        const modelMsg = messages.find(m => (m as any).role === 'assistant' && (m as any).model);
-        const model = (modelMsg as any)?.model || "";
+        const modelMsg = messages.find(m => m.type === 'assistant' && (m as ClaudeAssistantMessage).model) as ClaudeAssistantMessage | undefined;
+        const model = modelMsg?.model || "";
 
         if (model.includes("opus")) {
             // Opus: Visible Blue
@@ -413,8 +416,8 @@ export const SessionLane = ({
                         const nextItem = visibleItems[virtualRow.index + 1];
                         const prevItem = visibleItems[virtualRow.index - 1];
 
-                        const role = (message as any).role || message.type;
-                        const prevRole = prevItem ? ((prevItem.head as any).role || prevItem.head.type) : null;
+                        const role = getMessageRole(message);
+                        const prevRole = prevItem ? getMessageRole(prevItem.head) : null;
 
                         // Spacing Logic: Tighter if same role, wider if turn switch
                         const marginTop = (prevRole && prevRole !== role && zoomLevel !== 0) ? 12 : 2;

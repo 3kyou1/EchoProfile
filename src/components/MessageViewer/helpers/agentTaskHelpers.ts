@@ -4,16 +4,26 @@
  * Functions for grouping and processing agent task messages.
  */
 
-import type { ClaudeMessage } from "../../../types";
+import type { ClaudeMessage, ClaudeUserMessage } from "../../../types";
 import type { AgentTask } from "../../toolResultRenderer";
 import type { AgentTaskGroupResult } from "../types";
-import { extractClaudeMessageContent } from "../../../utils/messageUtils";
+import { extractClaudeMessageContent, isClaudeUserMessage } from "../../../utils/messageUtils";
 
 /**
  * Check if a message is an agent task launch (isAsync: true)
  */
-const isAgentTaskLaunchMessage = (message: ClaudeMessage): boolean => {
-  if (message.type !== 'user' || !message.toolUseResult || typeof message.toolUseResult !== "object") return false;
+/**
+ * Check if a message is an agent task launch (isAsync: true)
+ */
+const isAgentTaskLaunchMessage = (
+  message: ClaudeMessage
+): message is ClaudeUserMessage & { toolUseResult: Record<string, unknown> } => {
+  if (
+    !isClaudeUserMessage(message) ||
+    !message.toolUseResult ||
+    typeof message.toolUseResult !== "object"
+  )
+    return false;
   const result = message.toolUseResult as Record<string, unknown>;
   return result.isAsync === true && typeof result.agentId === "string";
 };
@@ -22,21 +32,39 @@ const isAgentTaskLaunchMessage = (message: ClaudeMessage): boolean => {
  * Check if a message is an agent task completion
  * Handles: status "completed"/"error", or synchronous completion (isAsync === false)
  */
-const isAgentTaskCompletionMessage = (message: ClaudeMessage): boolean => {
-  if (message.type !== 'user' || !message.toolUseResult || typeof message.toolUseResult !== "object") return false;
+/**
+ * Check if a message is an agent task completion
+ * Handles: status "completed"/"error", or synchronous completion (isAsync === false)
+ */
+const isAgentTaskCompletionMessage = (
+  message: ClaudeMessage
+): message is ClaudeUserMessage & { toolUseResult: Record<string, unknown> } => {
+  if (
+    !isClaudeUserMessage(message) ||
+    !message.toolUseResult ||
+    typeof message.toolUseResult !== "object"
+  )
+    return false;
   const result = message.toolUseResult as Record<string, unknown>;
   if (typeof result.agentId !== "string") return false;
   // Synchronous completion (isAsync === false)
   if (result.isAsync === false) return true;
   // Async completion with status "completed" or "error" (and isAsync is undefined)
-  return result.isAsync === undefined &&
-    (result.status === "completed" || result.status === "error");
+  return (
+    result.isAsync === undefined &&
+    (result.status === "completed" || result.status === "error")
+  );
 };
 
 /**
  * Check if a message is an agent task launch (alias for isAgentTaskLaunchMessage)
  */
-const isAgentTaskMessage = (message: ClaudeMessage): boolean => {
+/**
+ * Check if a message is an agent task launch (alias for isAgentTaskLaunchMessage)
+ */
+const isAgentTaskMessage = (
+  message: ClaudeMessage
+): message is ClaudeUserMessage & { toolUseResult: Record<string, unknown> } => {
   return isAgentTaskLaunchMessage(message);
 };
 
@@ -46,7 +74,7 @@ const isAgentTaskMessage = (message: ClaudeMessage): boolean => {
 const extractAgentTask = (message: ClaudeMessage): AgentTask | null => {
   if (!isAgentTaskMessage(message)) return null;
   // We know it's a user message with toolUseResult because isAgentTaskMessage checked it
-  const result = (message as any).toolUseResult as Record<string, unknown>;
+  const result = (message as { toolUseResult: Record<string, unknown> }).toolUseResult;
   return {
     agentId: String(result.agentId),
     description: String(result.description || ""),
@@ -114,7 +142,7 @@ export const groupAgentTasks = (
   // Now find completion messages and link them to groups by agentId
   for (const msg of messages) {
     if (isAgentTaskCompletionMessage(msg)) {
-      const result = (msg as any).toolUseResult as Record<string, unknown>;
+      const result = msg.toolUseResult;
       const agentId = String(result.agentId);
       const group = agentIdToGroup.get(agentId);
 

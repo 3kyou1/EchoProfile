@@ -1,3 +1,4 @@
+import { isClaudeAssistantMessage, isClaudeUserMessage } from "./messageUtils";
 import type { ClaudeMessage } from "../types";
 
 export interface SessionStats {
@@ -35,10 +36,13 @@ export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats 
             isError = true;
         }
 
-        if (msg.type === 'user' && msg.toolUseResult) {
-            const result = msg.toolUseResult as any;
-            if (result.is_error === true || (typeof result.stderr === 'string' && result.stderr.trim().length > 0)) {
-                isError = true;
+        if (isClaudeUserMessage(msg) && msg.toolUseResult) {
+            const result = msg.toolUseResult;
+            if (typeof result === 'object' && result !== null) {
+                const res = result as Record<string, unknown>;
+                if (res.is_error === true || (typeof res.stderr === 'string' && res.stderr.trim().length > 0)) {
+                    isError = true;
+                }
             }
         }
 
@@ -47,10 +51,10 @@ export function analyzeSessionMessages(messages: ClaudeMessage[]): SessionStats 
         }
 
         // 2. Scan Tool Usage
-        if (msg.type === 'assistant' && msg.toolUse) {
-            const tool = msg.toolUse as any;
-            const name = tool.name;
-            const input = tool.input || {};
+        if (isClaudeAssistantMessage(msg) && msg.toolUse) {
+            const tool = msg.toolUse;
+            const name = (tool.name as string) || "";
+            const input = (tool.input as Record<string, unknown>) || {};
 
             // Track tool name in breakdown
             stats.toolBreakdown[name] = (stats.toolBreakdown[name] || 0) + 1;

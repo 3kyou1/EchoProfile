@@ -1,4 +1,77 @@
-import type { ClaudeMessage } from "../types";
+import type {
+  ClaudeMessage,
+  ToolUseContent,
+  ClaudeAssistantMessage,
+  ClaudeUserMessage,
+  ClaudeSystemMessage,
+} from "../types";
+
+export type MessageRole = "user" | "assistant" | "system" | string;
+
+/**
+ * Type guards for Claude messages
+ */
+export const isClaudeAssistantMessage = (
+  message: ClaudeMessage
+): message is ClaudeAssistantMessage => message.type === "assistant";
+
+export const isClaudeUserMessage = (
+  message: ClaudeMessage
+): message is ClaudeUserMessage => message.type === "user";
+
+export const isClaudeSystemMessage = (
+  message: ClaudeMessage
+): message is ClaudeSystemMessage => message.type === "system";
+
+/**
+ * Gets the role of a message (user, assistant, system, etc.)
+ */
+export const getMessageRole = (message: ClaudeMessage): MessageRole => {
+  if ("role" in message) return message.role;
+  return message.type;
+};
+
+/**
+ * Extracts a tool_use block from a message if it exists
+ */
+export const getToolUseBlock = (
+  message: ClaudeMessage
+): ToolUseContent | null => {
+  // Check direct toolUse property (processed Assistant messages)
+  if (
+    message.type === "assistant" &&
+    (message as ClaudeAssistantMessage).toolUse
+  ) {
+    const toolUse = (message as ClaudeAssistantMessage).toolUse;
+    if (toolUse && typeof toolUse.name === "string") {
+      return {
+        type: "tool_use",
+        id: (toolUse.id as string) || "",
+        name: toolUse.name,
+        input: (toolUse.input as Record<string, unknown>) || {},
+      };
+    }
+  }
+
+  // Check content array
+  if (Array.isArray(message.content)) {
+    const block = message.content.find(
+      (b): b is ToolUseContent => b.type === "tool_use"
+    );
+    return block || null;
+  }
+
+  return null;
+};
+
+/**
+ * Checks if a message represents a tool interaction (use or result)
+ */
+export const isToolEvent = (message: ClaudeMessage): boolean => {
+  if (getToolUseBlock(message)) return true;
+  if ("toolUseResult" in message && message.toolUseResult) return true;
+  return false;
+};
 
 export const extractClaudeMessageContent = (
   message: ClaudeMessage

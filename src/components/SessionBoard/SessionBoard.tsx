@@ -47,7 +47,6 @@ export const SessionBoard = () => {
         // Deduplicate IDs to prevent React key collisions and visual glitches
         const uniqueFiltered = Array.from(new Set(filtered));
 
-        console.log(`[SessionBoard] Filtered down to ${uniqueFiltered.length} unique sessions (from ${allSortedSessionIds.length} raw)`);
         return uniqueFiltered;
     }, [allSortedSessionIds, boardSessions, dateFilter]);
 

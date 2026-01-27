@@ -7,7 +7,7 @@ import {
 import { clsx } from 'clsx';
 
 interface SmartJsonDisplayProps {
-    data: any;
+    data: Record<string, unknown> | null | undefined;
     className?: string;
 }
 
@@ -31,7 +31,7 @@ const KEY_ICONS: Record<string, React.ReactNode> = {
     allowed_tools: <span title="Allowed Tools"><Play className="w-3 h-3 text-orange-500" /></span>
 };
 
-const formatValue = (key: string, value: any): React.ReactNode => {
+const formatValue = (key: string, value: unknown): React.ReactNode => {
     if (value === null || value === undefined) return <span className="text-muted-foreground italic">null</span>;
 
     // Arrays (like allowed_tools) - render as tags
@@ -97,7 +97,7 @@ export const SmartJsonDisplay = ({ data, className }: SmartJsonDisplayProps) => 
         <div className={clsx("text-xs flex flex-col gap-2", className)}>
             {sortedKeys.map(key => {
                 const icon = KEY_ICONS[key.toLowerCase()] || <div className="w-3 h-3 opacity-20 bg-current rounded-full" />; // Dot fallback
-                const value = data[key];
+                const value = (data as Record<string, unknown>)[key];
 
                 // Special layout for 'description' or 'prompt' - full width block
                 if (['description', 'prompt', 'task'].includes(key) && typeof value === 'string') {

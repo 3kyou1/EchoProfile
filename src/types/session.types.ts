@@ -58,6 +58,7 @@ export interface ClaudeSession {
   has_tool_use: boolean;
   has_errors: boolean;
   summary?: string;
+  relevance?: number;
 }
 
 // ============================================================================

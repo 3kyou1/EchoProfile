@@ -343,18 +343,26 @@ BoardControls click / InteractionCard hover/click
 
 ## Implementation Order
 
-| Step | Scope | Why first |
-|------|-------|-----------|
-| 1. Fix variant divergence | `renderers/types.ts`, `toolIconUtils.ts` | Everything downstream depends on consistent variants |
-| 2. Extract CardSemantics | `InteractionCard.tsx` | Reduces inline conditionals, creates brush attachment point |
-| 3. Add `isShell` + terminal badges | `InteractionCard.tsx` | Visual payoff, validates CardSemantics extraction |
-| 4. Create `brushMatchers.ts` | New utility | Testable independently |
-| 5. Wire hover brush | `InteractionCard` → `SessionBoard` | Smallest change, immediate feedback |
-| 6. Add CSS dim/match classes | `index.css` | Visual feedback for step 5 |
-| 7. Lane header match ratio | `SessionLane.tsx` | Cross-session overview |
-| 8. BoardControls dropdowns | `BoardControls.tsx` | Full brush UI |
-| 9. Click-to-stick | `boardSlice` + `InteractionCard` | Persistent selection |
-| 10. Memoize tool frequency | `InteractionCard.tsx` zoom 2 | Performance safety net |
+| Step | Scope | Status |
+|------|-------|--------|
+| 1. Fix variant divergence | `renderers/types.ts`, `toolIconUtils.ts` | **Done** `cbb5886` — Bash/KillShell → `"terminal"`, `toolIconUtils` delegates to canonical `TOOL_VARIANTS` first |
+| 2. Extract CardSemantics | `InteractionCard.tsx` | **Done** `2aff3b5` — Single `useMemo` replaces 8 scattered hooks; tool frequency memoized |
+| 3. Add `isShell` + terminal badges | `InteractionCard.tsx` | **Done** `40b1c78` — SHELL badge at zoom 1/2, command banner at zoom 2 |
+| 4. Create `brushMatchers.ts` | New file: `src/utils/brushMatchers.ts` | **TODO** — Pure `matchesBrush(brush, card)` predicate, testable without React |
+| 5. Wire hover brush | `InteractionCard` → `SessionBoard` | **TODO** — Connect existing `onHover`/`onLeave` callbacks to `setActiveBrush` |
+| 6. Add CSS dim/match classes | `index.css` + `InteractionCard.tsx` | **TODO** — `brush-match` (ring highlight) / `brush-dim` (opacity+grayscale) |
+| 7. Lane header match ratio | `SessionLane.tsx` | **TODO** — Show `12/47 ████░░░░` per lane when brush active |
+| 8. BoardControls dropdowns | `BoardControls.tsx` | **TODO** — `[role ▾] [tool ▾] [file ▾] [status ▾] [× Clear]`, populated from visible sessions |
+| 9. Click-to-stick | `boardSlice` + `InteractionCard` | **TODO** — `stickyBrush` state; badge clicks lock brush, Escape clears |
+
+### Key files for remaining work
+
+- **Step 4**: Create `src/utils/brushMatchers.ts`. Import `CardSemantics` shape and `RendererVariant` from existing types. See spec section "Brush Matching Utility" above.
+- **Step 5**: `InteractionCard.tsx` already has `onHover`/`onLeave` props wired to `mouseEnter`/`mouseLeave`. Currently passes `('role', role)` — change to pass the semantics variant. `SessionBoard.tsx` already passes `setActiveBrush` down.
+- **Step 6**: Add `.brush-match` and `.brush-dim` classes to `src/index.css`. Apply via `clsx` in InteractionCard using `semantics` + `matchesBrush()`.
+- **Step 7**: `SessionLane.tsx` already receives `activeBrush` prop. Add `useMemo` to count matches across `visibleItems`.
+- **Step 8**: `BoardControls.tsx` already accepts `onBrushChange` prop (stubbed). Build dropdowns populated from `boardSessions` data.
+- **Step 9**: Add `stickyBrush: boolean` to `boardSlice.ts`. Hover clears brush only when not sticky.
 
 ---
 

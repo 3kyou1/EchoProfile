@@ -367,28 +367,41 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                           return (
                             <div key={project.path}>
                               {/* Project Item */}
-                              <button
+                              <div
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => {
-                                  const isSelected = selectedProject?.path === project.path;
-                                  const isExpanded = isProjectExpanded(project.path);
-
-                                  if (isExpanded || !isSelected) {
-                                    onProjectSelect(project);
+                                  onProjectSelect(project);
+                                  if (!isProjectExpanded(project.path)) {
+                                    toggleProject(project.path);
                                   }
-                                  toggleProject(project.path);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    onProjectSelect(project);
+                                    if (!isProjectExpanded(project.path)) {
+                                      toggleProject(project.path);
+                                    }
+                                  }
                                 }}
                                 onContextMenu={(e) => handleContextMenu(e, project)}
                                 className={cn(
                                   "w-full px-2 py-1.5 flex items-center gap-2",
-                                  "text-left transition-all duration-200 rounded-md",
+                                  "text-left transition-all duration-200 rounded-md cursor-pointer outline-none focus:ring-2 focus:ring-accent",
                                   "hover:bg-accent/10",
                                   isProjectExp && "bg-accent/15"
                                 )}
                               >
-                                {/* Expand Icon */}
+                                {/* Expand Icon (Clickable separately) */}
                                 <span
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleProject(project.path);
+                                  }}
                                   className={cn(
-                                    "transition-all duration-200",
+                                    "p-0.5 -m-0.5 rounded hover:bg-black/10 transition-all duration-200",
                                     isProjectExp ? "text-accent" : "text-muted-foreground"
                                   )}
                                 >
@@ -424,7 +437,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                                 <span className="text-2xs text-muted-foreground/60 font-mono">
                                   {project.session_count}
                                 </span>
-                              </button>
+                              </div>
 
                               {/* Sessions for this project - only show for selected project */}
                               {isProjectExp && selectedProject?.path === project.path && sessions.length > 0 && !isLoading && (
@@ -562,30 +575,43 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                           return (
                             <div key={project.path}>
                               {/* Project Item */}
-                              <button
+                              <div
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => {
-                                  const isSelected = selectedProject?.path === project.path;
-                                  const isExpanded = isProjectExpanded(project.path);
-
-                                  if (isExpanded || !isSelected) {
-                                    onProjectSelect(project);
+                                  onProjectSelect(project);
+                                  if (!isProjectExpanded(project.path)) {
+                                    toggleProject(project.path);
                                   }
-                                  toggleProject(project.path);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    onProjectSelect(project);
+                                    if (!isProjectExpanded(project.path)) {
+                                      toggleProject(project.path);
+                                    }
+                                  }
                                 }}
                                 onContextMenu={(e) => handleContextMenu(e, project)}
                                 className={cn(
                                   "w-full px-2 py-1.5 flex items-center gap-2",
-                                  "text-left transition-all duration-200 rounded-md",
+                                  "text-left transition-all duration-200 rounded-md cursor-pointer outline-none focus:ring-2 focus:ring-accent",
                                   isMain
                                     ? "hover:bg-accent/10"
                                     : "hover:bg-emerald-500/10",
                                   isProjectExp && (isMain ? "bg-accent/15" : "bg-emerald-500/15")
                                 )}
                               >
-                                {/* Expand Icon */}
+                                {/* Expand Icon (Clickable separately) */}
                                 <span
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleProject(project.path);
+                                  }}
                                   className={cn(
-                                    "transition-all duration-200",
+                                    "p-0.5 -m-0.5 rounded hover:bg-black/10 transition-all duration-200",
                                     isProjectExp
                                       ? (isMain ? "text-accent" : "text-emerald-500")
                                       : "text-muted-foreground"
@@ -636,7 +662,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                                 <span className="text-2xs text-muted-foreground/60 font-mono">
                                   {project.session_count}
                                 </span>
-                              </button>
+                              </div>
 
                               {/* Sessions for this project - only show for selected project */}
                               {isProjectExp && selectedProject?.path === project.path && sessions.length > 0 && !isLoading && (
@@ -695,29 +721,42 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                 return (
                   <div key={project.path}>
                     {/* Project Item */}
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
-                        const isSelected = selectedProject?.path === project.path;
-                        const isExpanded = isProjectExpanded(project.path);
-
-                        if (isExpanded || !isSelected) {
-                          onProjectSelect(project);
+                        onProjectSelect(project);
+                        if (!isProjectExpanded(project.path)) {
+                          toggleProject(project.path);
                         }
-                        toggleProject(project.path);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          onProjectSelect(project);
+                          if (!isProjectExpanded(project.path)) {
+                            toggleProject(project.path);
+                          }
+                        }
                       }}
                       onContextMenu={(e) => handleContextMenu(e, project)}
                       className={cn(
                         "w-full px-4 py-2.5 flex items-center gap-2.5",
-                        "text-left transition-all duration-300",
+                        "text-left transition-all duration-300 cursor-pointer outline-none focus:ring-2 focus:ring-accent",
                         "hover:bg-accent/8 hover:pl-5",
                         "border-l-2 border-transparent",
                         isExpanded && "bg-accent/10 border-l-accent pl-5"
                       )}
                     >
-                      {/* Expand Icon */}
+                      {/* Expand Icon (Clickable separately) */}
                       <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleProject(project.path);
+                        }}
                         className={cn(
-                          "transition-all duration-300",
+                          "transition-all duration-300 p-0.5 -m-0.5 rounded hover:bg-black/10",
                           isExpanded ? "text-accent" : "text-muted-foreground"
                         )}
                       >
@@ -758,7 +797,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                           {sessions.length}
                         </span>
                       )}
-                    </button>
+                    </div>
 
                     {/* Sessions List - only show for selected project */}
                     {isExpanded && selectedProject?.path === project.path && sessions.length > 0 && !isLoading && (

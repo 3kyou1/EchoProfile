@@ -377,7 +377,7 @@ function App() {
                   onClearSearch={clearSessionSearch}
                   onNextMatch={goToNextMatch}
                   onPrevMatch={goToPrevMatch}
-                  onBack={() => setAnalyticsCurrentView("board")}
+                  onBack={() => analyticsActions.switchToBoard()}
                 />
               ) : (
                 /* Empty State */

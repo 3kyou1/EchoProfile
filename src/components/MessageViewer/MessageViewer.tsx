@@ -52,6 +52,10 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     hideMessage,
     showMessage,
     restoreMessages,
+    // Navigation state
+    targetMessageUuid,
+    shouldHighlightTarget,
+    clearTargetMessage,
   } = useAppStore();
 
   // Search state management
@@ -83,6 +87,15 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   }, [sessionSearch.currentMatchIndex, sessionSearch.matches]);
 
   const currentMatchUuid = currentMatch?.messageUuid ?? null;
+  // ... (skip down to render loop)
+  // We need to apply the highlight logic in the map function
+
+  // ... inside map ...
+  // const isMessage = item.type === "message";
+  // const isMatch = isMessage && matchedUuids.has(item.message.uuid);
+  // const isTarget = isMessage && shouldHighlightTarget && targetMessageUuid === item.message.uuid;
+  // const isCurrentMatch = (isMessage && currentMatchUuid === item.message.uuid) || isTarget;
+
 
   // 카카오톡 스타일: 항상 전체 메시지 표시 (필터링 없음)
   const displayMessages = messages;
@@ -212,6 +225,31 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     getScrollIndex,
     scrollElementReady,
   });
+
+  // Handle Deep Linking / Scrolling to Target
+  useEffect(() => {
+    if (targetMessageUuid && scrollElementReady && flattenedMessages.length > 0) {
+      // Find the index of the target message in the flattened list
+      const index = flattenedMessages.findIndex(
+        (item) => item.type === "message" && item.message.uuid === targetMessageUuid
+      );
+
+      if (index !== -1) {
+        // Scroll with a slight delay to ensure rendering is stable, using 'start' alignment
+        // We use a timeout to let the virtualizer settle if it just loaded
+        setTimeout(() => {
+          virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
+        }, 100);
+
+        // Auto-clear the target after a few seconds so the highlight fades
+        const timer = setTimeout(() => {
+          clearTargetMessage();
+        }, 3000);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [targetMessageUuid, scrollElementReady, flattenedMessages, virtualizer, clearTargetMessage]);
 
   // 검색어 초기화 핸들러
   const handleClearSearch = useCallback(() => {
@@ -546,8 +584,11 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               // Hidden placeholders don't have search match info
               const isMessage = item.type === "message";
               const isMatch = isMessage && matchedUuids.has(item.message.uuid);
-              const isCurrentMatch = isMessage && currentMatchUuid === item.message.uuid;
-              const messageMatchIndex = isCurrentMatch ? currentMatch?.matchIndex : undefined;
+
+              const isTarget = isMessage && shouldHighlightTarget && targetMessageUuid === item.message.uuid;
+              const isCurrentMatch = (isMessage && currentMatchUuid === item.message.uuid) || isTarget;
+
+              const messageMatchIndex = (isMessage && currentMatchUuid === item.message.uuid) ? currentMatch?.matchIndex : undefined;
 
               return (
                 <VirtualizedMessageRow

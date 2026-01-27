@@ -269,23 +269,13 @@ export const SessionBoard = () => {
                                         }
                                     }}
                                     onNavigate={(messageId) => {
-                                        // 1. Ensure this session is selected (it should be if we are clicking a card)
-                                        // Already handled by hover usually, but let's be safe:
+                                        // 1. Ensure this session is selected
                                         if (selectedSession?.session_id !== sessionId) {
                                             useAppStore.getState().setSelectedSession(data.session);
                                         }
-                                        // 2. Set view to messages
+                                        // 2. Navigate
+                                        useAppStore.getState().navigateToMessage(messageId);
                                         useAppStore.getState().setAnalyticsCurrentView("messages");
-
-                                        // 3. Scroll to message (SearchState handles this via currentMatch usually, 
-                                        // but for direct navigation we might need a jump-to mechanism or just search for ID)
-                                        // Using search state to "find" the message by ID might be the easiest way to ensure virtualization scrolls to it.
-                                        // Or we can rely on persisted scroll state if we implement it? 
-                                        // "jumpto" logic is needed.
-                                        // Let's Set search query to the ID? No, that filters.
-                                        // We can set `sessionSearch` matches manually?
-                                        // Or just let the user scroll.
-                                        // Ideally, we start a "Search" for this ID?
                                     }}
                                     onScroll={handleLaneScroll}
                                     onFileClick={(file) => {

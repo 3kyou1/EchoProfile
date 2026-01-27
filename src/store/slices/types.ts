@@ -150,9 +150,17 @@ export interface AppStoreState {
   selectedMessageId: string | null;
   isMarkdownPretty: boolean;
   dateFilter: import("../../types/board.types").DateFilter;
+
+  // Navigation state
+  targetMessageUuid: string | null;
+  shouldHighlightTarget: boolean;
 }
 
 export interface AppStoreActions {
+  // Navigation actions
+  navigateToMessage: (uuid: string) => void;
+  clearTargetMessage: () => void;
+
   // Project actions
   initializeApp: () => Promise<void>;
   scanProjects: () => Promise<void>;

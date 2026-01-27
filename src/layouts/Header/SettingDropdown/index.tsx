@@ -7,12 +7,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Settings, RefreshCw, MessageSquare, Folder, Loader2, Wrench } from "lucide-react";
+import { Settings, RefreshCw, MessageSquare, Folder, Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 import { useUpdater } from "@/hooks/useUpdater";
-import { useAnalytics } from "@/hooks/useAnalytics";
 import { useTranslation } from "react-i18next";
 import { useModal } from "@/contexts/modal";
 import { ThemeMenuGroup } from "./ThemeMenuGroup";
@@ -23,7 +22,6 @@ export const SettingDropdown = () => {
   const updater = useUpdater();
   const { t } = useTranslation();
   const { openModal } = useModal();
-  const { actions: analyticsActions } = useAnalytics();
 
   const isCheckingForUpdates = updater.state.isChecking;
 
@@ -52,10 +50,6 @@ export const SettingDropdown = () => {
           <DropdownMenuItem onClick={() => openModal("feedback")}>
             <MessageSquare className="mr-2 h-4 w-4 text-foreground" />
             <span>{t("feedback.title")}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => analyticsActions.switchToSettings()}>
-            <Wrench className="mr-2 h-4 w-4 text-foreground" />
-            <span>{t("settingsManager.title")}</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <FilterMenuGroup />

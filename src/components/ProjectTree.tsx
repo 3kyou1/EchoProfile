@@ -124,16 +124,16 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
     }
   };
 
-  // Nested expansion: each project/group can be expanded independently
+  // Accordion behavior: only one project can be expanded at a time
+  // This prevents showing sessions from the wrong project
   const toggleProject = useCallback((projectPath: string) => {
     setExpandedProjects((prev) => {
-      const next = new Set(prev);
-      if (next.has(projectPath)) {
-        next.delete(projectPath);
-      } else {
-        next.add(projectPath);
+      // If the project is already expanded, collapse it
+      if (prev.has(projectPath)) {
+        return new Set();
       }
-      return next;
+      // Otherwise, expand only this project (collapse all others)
+      return new Set([projectPath]);
     });
   }, []);
 

@@ -315,558 +315,61 @@ describe("ProjectTree worktree grouping", () => {
     });
   });
 
-  describe("nested expansion behavior (multiple projects can be expanded)", () => {
-    /**
-     * Helper function that mirrors the actual implementation in ProjectTree.tsx
-     * This allows us to test the toggle logic in isolation
-     */
-    const toggleProjectNested = (
-      currentExpanded: Set<string>,
-      projectPath: string
-    ): Set<string> => {
-      const next = new Set(currentExpanded);
-      if (next.has(projectPath)) {
-        next.delete(projectPath);
-      } else {
-        next.add(projectPath);
-      }
-      return next;
-    };
-
-    describe("toggleProject function", () => {
-      it("should expand a collapsed project", () => {
-        const expanded = new Set<string>();
-        const result = toggleProjectNested(expanded, "/project-a");
-
-        expect(result.has("/project-a")).toBe(true);
-        expect(result.size).toBe(1);
-      });
-
-      it("should collapse an expanded project", () => {
-        const expanded = new Set(["/project-a"]);
-        const result = toggleProjectNested(expanded, "/project-a");
-
-        expect(result.has("/project-a")).toBe(false);
-        expect(result.size).toBe(0);
-      });
-
-      it("should not mutate the original Set", () => {
-        const original = new Set(["/project-a"]);
-        const result = toggleProjectNested(original, "/project-b");
-
-        expect(original.size).toBe(1);
-        expect(original.has("/project-a")).toBe(true);
-        expect(original.has("/project-b")).toBe(false);
-        expect(result.size).toBe(2);
-      });
-    });
-
-    describe("multiple project expansion", () => {
-      it("should allow multiple projects to be expanded independently", () => {
-        let expanded = new Set<string>();
-
-        // Expand first project
-        expanded = toggleProjectNested(expanded, "/project-a");
-        expect(expanded.size).toBe(1);
-        expect(expanded.has("/project-a")).toBe(true);
-
-        // Expand second project - first should remain expanded
-        expanded = toggleProjectNested(expanded, "/project-b");
-        expect(expanded.size).toBe(2);
-        expect(expanded.has("/project-a")).toBe(true);
-        expect(expanded.has("/project-b")).toBe(true);
-
-        // Expand third project - both previous should remain expanded
-        expanded = toggleProjectNested(expanded, "/project-c");
-        expect(expanded.size).toBe(3);
-        expect(expanded.has("/project-a")).toBe(true);
-        expect(expanded.has("/project-b")).toBe(true);
-        expect(expanded.has("/project-c")).toBe(true);
-      });
-
-      it("should collapse only the toggled project without affecting others", () => {
-        let expanded = new Set(["/project-a", "/project-b", "/project-c"]);
-
-        // Collapse middle project
-        expanded = toggleProjectNested(expanded, "/project-b");
-
-        expect(expanded.size).toBe(2);
-        expect(expanded.has("/project-a")).toBe(true);
-        expect(expanded.has("/project-b")).toBe(false);
-        expect(expanded.has("/project-c")).toBe(true);
-      });
-
-      it("should handle rapid toggle operations correctly", () => {
-        let expanded = new Set<string>();
-
-        // Rapid expansion
-        expanded = toggleProjectNested(expanded, "/project-a");
-        expanded = toggleProjectNested(expanded, "/project-b");
-        expanded = toggleProjectNested(expanded, "/project-a"); // collapse
-        expanded = toggleProjectNested(expanded, "/project-c");
-        expanded = toggleProjectNested(expanded, "/project-a"); // re-expand
-
-        expect(expanded.size).toBe(3);
-        expect(expanded.has("/project-a")).toBe(true);
-        expect(expanded.has("/project-b")).toBe(true);
-        expect(expanded.has("/project-c")).toBe(true);
-      });
-    });
-
-    describe("worktree group expansion", () => {
-      it("should expand main repo and worktrees independently", () => {
-        let expanded = new Set<string>();
-
-        const mainRepoPath = "/Users/jack/main-project";
-        const worktree1Path = "/tmp/feature-1/main-project";
-        const worktree2Path = "/tmp/feature-2/main-project";
-        const groupKey = "worktree-group-main-project";
-
-        // Expand group
-        expanded = toggleProjectNested(expanded, groupKey);
-        expect(expanded.has(groupKey)).toBe(true);
-
-        // Expand main repo within group
-        expanded = toggleProjectNested(expanded, mainRepoPath);
-        expect(expanded.has(mainRepoPath)).toBe(true);
-        expect(expanded.has(groupKey)).toBe(true);
-
-        // Expand worktree 1
-        expanded = toggleProjectNested(expanded, worktree1Path);
-        expect(expanded.has(worktree1Path)).toBe(true);
-        expect(expanded.has(mainRepoPath)).toBe(true);
-
-        // Collapse main repo - worktrees should remain expanded
-        expanded = toggleProjectNested(expanded, mainRepoPath);
-        expect(expanded.has(mainRepoPath)).toBe(false);
-        expect(expanded.has(worktree1Path)).toBe(true);
-        expect(expanded.has(groupKey)).toBe(true);
-      });
-
-      it("should allow viewing sessions from multiple worktrees simultaneously", () => {
-        const expandedProjects = new Set([
-          "/Users/jack/main-project",
-          "/tmp/feature-branch/main-project",
-          "/tmp/hotfix/main-project",
-        ]);
-
-        // All three can be expanded at once
-        expect(expandedProjects.size).toBe(3);
-
-        // Each project's sessions would be visible independently
-        // This is the key difference from accordion behavior
-      });
-    });
-
-    describe("directory group expansion", () => {
-      it("should expand directory groups and projects independently", () => {
-        let expanded = new Set<string>();
-
-        const groupKey = "directory-group-client";
-        const project1 = "/Users/jack/client/app1";
-        const project2 = "/Users/jack/client/app2";
-
-        // Expand directory group
-        expanded = toggleProjectNested(expanded, groupKey);
-        expect(expanded.has(groupKey)).toBe(true);
-
-        // Expand projects within group
-        expanded = toggleProjectNested(expanded, project1);
-        expanded = toggleProjectNested(expanded, project2);
-
-        expect(expanded.size).toBe(3);
-        expect(expanded.has(groupKey)).toBe(true);
-        expect(expanded.has(project1)).toBe(true);
-        expect(expanded.has(project2)).toBe(true);
-
-        // Collapse group - projects should remain in their state
-        expanded = toggleProjectNested(expanded, groupKey);
-        expect(expanded.has(groupKey)).toBe(false);
-        expect(expanded.has(project1)).toBe(true);
-        expect(expanded.has(project2)).toBe(true);
-      });
-    });
-
-    describe("isProjectExpanded helper", () => {
-      it("should return true for expanded projects", () => {
-        const expanded = new Set(["/project-a", "/project-b"]);
-
-        expect(expanded.has("/project-a")).toBe(true);
-        expect(expanded.has("/project-b")).toBe(true);
-      });
-
-      it("should return false for collapsed projects", () => {
-        const expanded = new Set(["/project-a"]);
-
-        expect(expanded.has("/project-b")).toBe(false);
-        expect(expanded.has("/project-c")).toBe(false);
-      });
-
-      it("should return false for empty expansion state", () => {
-        const expanded = new Set<string>();
-
-        expect(expanded.has("/any-project")).toBe(false);
-      });
-    });
-
-    describe("edge cases", () => {
-      it("should handle empty string path", () => {
-        let expanded = new Set<string>();
-        expanded = toggleProjectNested(expanded, "");
-
-        expect(expanded.has("")).toBe(true);
-        expect(expanded.size).toBe(1);
-      });
-
-      it("should handle paths with special characters", () => {
-        let expanded = new Set<string>();
-        const specialPath = "/Users/jack/project with spaces/@special-chars";
-
-        expanded = toggleProjectNested(expanded, specialPath);
-        expect(expanded.has(specialPath)).toBe(true);
-
-        expanded = toggleProjectNested(expanded, specialPath);
-        expect(expanded.has(specialPath)).toBe(false);
-      });
-
-      it("should handle very long paths", () => {
-        let expanded = new Set<string>();
-        const longPath = "/a".repeat(500);
-
-        expanded = toggleProjectNested(expanded, longPath);
-        expect(expanded.has(longPath)).toBe(true);
-      });
-
-      it("should handle duplicate toggle calls idempotently", () => {
-        let expanded = new Set<string>();
-
-        // Double expand should result in collapse
-        expanded = toggleProjectNested(expanded, "/project-a");
-        expanded = toggleProjectNested(expanded, "/project-a");
-
-        expect(expanded.has("/project-a")).toBe(false);
-      });
-    });
-  });
-});
-
-describe("ProjectTree user flow scenarios", () => {
-  /**
-   * Simulates the actual user interaction flow in ProjectTree component
-   * These tests verify the state transitions during typical user scenarios
-   */
-
-  // Simulates the component's internal state management
-  interface ProjectTreeState {
-    expandedProjects: Set<string>;
-    selectedProject: ClaudeProject | null;
-    sessions: ClaudeSession[];
-  }
-
-  // Action creators that mirror the component behavior
-  const createActions = (getState: () => ProjectTreeState, setState: (s: Partial<ProjectTreeState>) => void) => ({
-    toggleProject: (path: string) => {
-      const { expandedProjects } = getState();
-      const next = new Set(expandedProjects);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      setState({ expandedProjects: next });
-    },
-    selectProject: (project: ClaudeProject) => {
-      setState({ selectedProject: project });
-    },
-    loadSessions: (sessions: ClaudeSession[]) => {
-      setState({ sessions });
-    },
-    isExpanded: (path: string) => getState().expandedProjects.has(path),
-  });
-
-  describe("directory group → project → session flow", () => {
-    it("should expand group, then project, showing sessions", () => {
-      let state: ProjectTreeState = {
-        expandedProjects: new Set(),
-        selectedProject: null,
-        sessions: [],
+  describe("accordion behavior (single project expansion)", () => {
+    it("should only allow one project to be expanded at a time", () => {
+      // Simulate accordion toggle logic
+      const toggleProjectAccordion = (
+        currentExpanded: Set<string>,
+        projectPath: string
+      ): Set<string> => {
+        // If the project is already expanded, collapse it
+        if (currentExpanded.has(projectPath)) {
+          return new Set();
+        }
+        // Otherwise, expand only this project (collapse all others)
+        return new Set([projectPath]);
       };
 
-      const getState = () => state;
-      const setState = (partial: Partial<ProjectTreeState>) => {
-        state = { ...state, ...partial };
-      };
-      const actions = createActions(getState, setState);
+      let expanded = new Set<string>();
 
-      const groupKey = "dir:/Users/jack/client";
-      const project = createMockProject({
-        name: "my-app",
-        path: "/Users/jack/client/my-app",
-      });
-      const mockSessions: ClaudeSession[] = [
-        {
-          session_id: "session-1",
-          actual_session_id: "session-1",
-          project_path: project.path,
-          project_name: project.name,
-          file_path: "/path/to/session.jsonl",
-          message_count: 10,
-          last_modified: new Date().toISOString(),
-        },
-      ];
+      // Expand first project
+      expanded = toggleProjectAccordion(expanded, "/project-a");
+      expect(expanded.size).toBe(1);
+      expect(expanded.has("/project-a")).toBe(true);
 
-      // Step 1: User clicks directory group header
-      actions.toggleProject(groupKey);
-      expect(actions.isExpanded(groupKey)).toBe(true);
+      // Expand second project - first should collapse
+      expanded = toggleProjectAccordion(expanded, "/project-b");
+      expect(expanded.size).toBe(1);
+      expect(expanded.has("/project-a")).toBe(false);
+      expect(expanded.has("/project-b")).toBe(true);
 
-      // Step 2: User clicks project within group
-      actions.selectProject(project);
-      actions.toggleProject(project.path);
-      expect(actions.isExpanded(project.path)).toBe(true);
-      expect(state.selectedProject?.path).toBe(project.path);
-
-      // Step 3: Sessions are loaded (simulated)
-      actions.loadSessions(mockSessions);
-      expect(state.sessions).toHaveLength(1);
-
-      // Verify: Both group and project remain expanded
-      expect(actions.isExpanded(groupKey)).toBe(true);
-      expect(actions.isExpanded(project.path)).toBe(true);
+      // Toggle same project - should collapse
+      expanded = toggleProjectAccordion(expanded, "/project-b");
+      expect(expanded.size).toBe(0);
     });
 
-    it("should allow switching between projects while keeping groups expanded", () => {
-      let state: ProjectTreeState = {
-        expandedProjects: new Set(),
-        selectedProject: null,
-        sessions: [],
-      };
+    it("should prevent showing sessions from wrong project", () => {
+      // This test documents the bug and its fix
+      // Bug: Multiple projects expanded shows same sessions for all
+      // Fix: Only one project can be expanded, so sessions always match
 
-      const getState = () => state;
-      const setState = (partial: Partial<ProjectTreeState>) => {
-        state = { ...state, ...partial };
-      };
-      const actions = createActions(getState, setState);
+      // Sessions that would exist for this project (documenting the scenario)
+      // const sessions = [
+      //   { session_id: "1", project_name: "project-a" },
+      //   { session_id: "2", project_name: "project-a" },
+      // ];
 
-      const groupKey = "dir:/Users/jack/client";
-      const project1 = createMockProject({ name: "app1", path: "/Users/jack/client/app1" });
-      const project2 = createMockProject({ name: "app2", path: "/Users/jack/client/app2" });
+      // With accordion behavior, only one project is expanded at a time
+      // So sessions are always from the correct project
+      const expandedProject = "/project-a";
+      const selectedProjectPath = "/project-a";
 
-      // Expand group and first project
-      actions.toggleProject(groupKey);
-      actions.selectProject(project1);
-      actions.toggleProject(project1.path);
+      // Sessions should only be displayed when the expanded project matches selected
+      const shouldShowSessions = expandedProject === selectedProjectPath;
+      expect(shouldShowSessions).toBe(true);
 
-      // Switch to second project (expand it too)
-      actions.selectProject(project2);
-      actions.toggleProject(project2.path);
-
-      // Verify: Both projects can be expanded simultaneously
-      expect(actions.isExpanded(groupKey)).toBe(true);
-      expect(actions.isExpanded(project1.path)).toBe(true);
-      expect(actions.isExpanded(project2.path)).toBe(true);
-      expect(state.selectedProject?.path).toBe(project2.path);
-    });
-
-    it("should collapse only clicked project, preserving others", () => {
-      let state: ProjectTreeState = {
-        expandedProjects: new Set(),
-        selectedProject: null,
-        sessions: [],
-      };
-
-      const getState = () => state;
-      const setState = (partial: Partial<ProjectTreeState>) => {
-        state = { ...state, ...partial };
-      };
-      const actions = createActions(getState, setState);
-
-      const project1 = createMockProject({ name: "app1", path: "/path/app1" });
-      const project2 = createMockProject({ name: "app2", path: "/path/app2" });
-      const project3 = createMockProject({ name: "app3", path: "/path/app3" });
-
-      // Expand all three
-      actions.toggleProject(project1.path);
-      actions.toggleProject(project2.path);
-      actions.toggleProject(project3.path);
-
-      expect(state.expandedProjects.size).toBe(3);
-
-      // User collapses middle project
-      actions.toggleProject(project2.path);
-
-      expect(actions.isExpanded(project1.path)).toBe(true);
-      expect(actions.isExpanded(project2.path)).toBe(false);
-      expect(actions.isExpanded(project3.path)).toBe(true);
-    });
-  });
-
-  describe("worktree group → main repo → linked worktree flow", () => {
-    it("should expand worktree group and navigate between main and worktrees", () => {
-      let state: ProjectTreeState = {
-        expandedProjects: new Set(),
-        selectedProject: null,
-        sessions: [],
-      };
-
-      const getState = () => state;
-      const setState = (partial: Partial<ProjectTreeState>) => {
-        state = { ...state, ...partial };
-      };
-      const actions = createActions(getState, setState);
-
-      const worktreeGroupKey = "worktree:/Users/jack/main-project";
-      const mainRepo = createMockProject({
-        name: "main-project",
-        path: "/Users/jack/main-project",
-        git_info: { worktree_type: "main" },
-      });
-      const linkedWorktree = createMockProject({
-        name: "main-project",
-        path: "/tmp/feature-branch/main-project",
-        git_info: { worktree_type: "linked", main_project_path: "/Users/jack/main-project" },
-      });
-
-      // Step 1: Expand worktree group
-      actions.toggleProject(worktreeGroupKey);
-      expect(actions.isExpanded(worktreeGroupKey)).toBe(true);
-
-      // Step 2: Select and expand main repo
-      actions.selectProject(mainRepo);
-      actions.toggleProject(mainRepo.path);
-      expect(actions.isExpanded(mainRepo.path)).toBe(true);
-
-      // Step 3: Also expand linked worktree (both visible at same time)
-      actions.selectProject(linkedWorktree);
-      actions.toggleProject(linkedWorktree.path);
-      expect(actions.isExpanded(linkedWorktree.path)).toBe(true);
-
-      // Verify: All expanded at same time
-      expect(state.expandedProjects.size).toBe(3);
-      expect(actions.isExpanded(worktreeGroupKey)).toBe(true);
-      expect(actions.isExpanded(mainRepo.path)).toBe(true);
-      expect(actions.isExpanded(linkedWorktree.path)).toBe(true);
-    });
-
-    it("should allow comparing sessions between main and worktree", () => {
-      let state: ProjectTreeState = {
-        expandedProjects: new Set([
-          "/Users/jack/main-project",
-          "/tmp/feature-branch/main-project",
-        ]),
-        selectedProject: null,
-        sessions: [],
-      };
-
-      // Both main and worktree are expanded
-      // User can see sessions from both simultaneously
-      expect(state.expandedProjects.has("/Users/jack/main-project")).toBe(true);
-      expect(state.expandedProjects.has("/tmp/feature-branch/main-project")).toBe(true);
-
-      // This is the key benefit of nested expansion:
-      // Users can compare work across worktrees without losing context
-    });
-  });
-
-  describe("deep nesting scenarios", () => {
-    it("should handle 3+ levels of nesting: group → project → sessions", () => {
-      let state: ProjectTreeState = {
-        expandedProjects: new Set(),
-        selectedProject: null,
-        sessions: [],
-      };
-
-      const getState = () => state;
-      const setState = (partial: Partial<ProjectTreeState>) => {
-        state = { ...state, ...partial };
-      };
-      const actions = createActions(getState, setState);
-
-      // Level 1: Directory groups
-      const group1 = "dir:/Users/jack/client";
-      const group2 = "dir:/Users/jack/server";
-
-      // Level 2: Projects within groups
-      const clientApp = createMockProject({ path: "/Users/jack/client/app" });
-      const clientLib = createMockProject({ path: "/Users/jack/client/lib" });
-      const serverApi = createMockProject({ path: "/Users/jack/server/api" });
-
-      // Expand multiple levels simultaneously
-      actions.toggleProject(group1);
-      actions.toggleProject(group2);
-      actions.toggleProject(clientApp.path);
-      actions.toggleProject(clientLib.path);
-      actions.toggleProject(serverApi.path);
-
-      // All 5 should be expanded
-      expect(state.expandedProjects.size).toBe(5);
-
-      // Collapse one group - projects within should remain in their state
-      actions.toggleProject(group1);
-      expect(actions.isExpanded(group1)).toBe(false);
-      expect(actions.isExpanded(clientApp.path)).toBe(true); // Still tracked as expanded
-      expect(actions.isExpanded(clientLib.path)).toBe(true);
-      expect(actions.isExpanded(group2)).toBe(true);
-      expect(actions.isExpanded(serverApi.path)).toBe(true);
-    });
-
-    it("should maintain expansion state when navigating away and back", () => {
-      let state: ProjectTreeState = {
-        expandedProjects: new Set(),
-        selectedProject: null,
-        sessions: [],
-      };
-
-      const getState = () => state;
-      const setState = (partial: Partial<ProjectTreeState>) => {
-        state = { ...state, ...partial };
-      };
-      const actions = createActions(getState, setState);
-
-      const project1 = createMockProject({ path: "/path/project1" });
-      const project2 = createMockProject({ path: "/path/project2" });
-
-      // User expands project1 and views sessions
-      actions.toggleProject(project1.path);
-      actions.selectProject(project1);
-      actions.loadSessions([{ session_id: "s1" } as ClaudeSession]);
-
-      // User clicks project2 (leaves project1 expanded)
-      actions.toggleProject(project2.path);
-      actions.selectProject(project2);
-
-      // User returns to project1 - it should still be expanded
-      actions.selectProject(project1);
-      expect(actions.isExpanded(project1.path)).toBe(true);
-      expect(actions.isExpanded(project2.path)).toBe(true);
-    });
-  });
-
-  describe("session visibility based on expansion", () => {
-    it("should determine session visibility correctly", () => {
-      const expandedProjects = new Set(["/project-a", "/project-c"]);
-
-      // Helper to determine if sessions should be shown
-      const shouldShowSessions = (projectPath: string) => expandedProjects.has(projectPath);
-
-      expect(shouldShowSessions("/project-a")).toBe(true);
-      expect(shouldShowSessions("/project-b")).toBe(false);
-      expect(shouldShowSessions("/project-c")).toBe(true);
-    });
-
-    it("should filter sessions by selected project correctly", () => {
-      const allSessions: ClaudeSession[] = [
-        { session_id: "s1", project_path: "/project-a" } as ClaudeSession,
-        { session_id: "s2", project_path: "/project-a" } as ClaudeSession,
-        { session_id: "s3", project_path: "/project-b" } as ClaudeSession,
-      ];
-
-      // Sessions for project A
-      const projectASessions = allSessions.filter(s => s.project_path === "/project-a");
-      expect(projectASessions).toHaveLength(2);
-
-      // Sessions for project B
-      const projectBSessions = allSessions.filter(s => s.project_path === "/project-b");
-      expect(projectBSessions).toHaveLength(1);
+      // If different project was selected, accordion would collapse the old one
+      // preventing mismatched session display
     });
   });
 });

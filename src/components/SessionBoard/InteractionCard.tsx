@@ -13,7 +13,7 @@ import {
     isClaudeSystemMessage
 } from "../../utils/messageUtils";
 import { clsx } from "clsx";
-import { FileText, X, FileCode, AlignLeft, Bot, User, Ban, ChevronUp, ChevronDown, GitCommit as GitIcon, PencilLine, GripVertical, CheckCircle2, Link2, Layers, Timer, Scissors, AlertTriangle, Zap, Plug } from "lucide-react";
+import { FileText, X, FileCode, AlignLeft, Bot, User, Ban, ChevronUp, ChevronDown, GitCommit as GitIcon, PencilLine, GripVertical, CheckCircle2, Link2, Layers, Timer, Scissors, AlertTriangle, Zap, Plug, Terminal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAppStore } from "../../store/useAppStore";
 import { SmartJsonDisplay } from "../SmartJsonDisplay";
@@ -446,10 +446,9 @@ export const InteractionCard = memo(({
     }, [message, toolUseBlock, content, role]);
 
     // Destructure for backward-compatible access in render blocks
-    // Destructure commonly-used semantics; access semantics.variant, semantics.isShell,
-    // semantics.shellCommand directly when needed (e.g. brushing, terminal badges)
+    // Destructure commonly-used semantics; access semantics.variant directly when needed (e.g. brushing)
     const {
-        isTool, isError, isCancelled, isCommit,
+        isTool, isError, isCancelled, isCommit, isShell, shellCommand,
         isFileEdit, editedMdFile, hasUrls, isMcp, isRawError,
     } = semantics;
 
@@ -721,8 +720,15 @@ export const InteractionCard = memo(({
                                         </span>
                                     )}
                                     {isCommit && <span className="ml-1 text-indigo-500 font-bold bg-indigo-500/10 px-1 rounded-[2px] border border-indigo-500/20">COMMIT</span>}
+                                    {isShell && <span className="ml-1 text-[var(--tool-terminal)] font-bold bg-[var(--tool-terminal)]/10 px-1 rounded-[2px] border border-[var(--tool-terminal)]/20">SHELL</span>}
                                     {editedMdFile && <span className="text-amber-500 font-bold bg-amber-500/10 px-1 rounded-[2px] border border-amber-500/20">DOCS</span>}
                                 </div>
+                            )}
+                            {/* Shell command preview */}
+                            {isShell && shellCommand && (
+                                <p className="text-[10px] font-mono text-[var(--tool-terminal)] truncate opacity-70 mb-0.5">
+                                    $ {shellCommand.length > 60 ? shellCommand.slice(0, 60) + '…' : shellCommand}
+                                </p>
                             )}
                             <p className={clsx("text-xs line-clamp-2 leading-tight",
                                 role === 'user' ? 'text-foreground font-medium' : 'text-foreground/80'
@@ -797,6 +803,11 @@ export const InteractionCard = memo(({
                         }
                         return null;
                     })()
+                ) : isShell && shellCommand ? (
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--tool-terminal)]/10 border border-[var(--tool-terminal)]/20 rounded text-[10px] text-[var(--tool-terminal)] font-medium mb-1">
+                        <Terminal className="w-3.5 h-3.5 shrink-0" />
+                        <code className="font-mono truncate">$ {shellCommand}</code>
+                    </div>
                 ) : null}
 
                 {/* Header (Role + Time + Cancelled) */}
@@ -807,6 +818,7 @@ export const InteractionCard = memo(({
                         </div>
 
                         {isCommit && <span className="text-[9px] bg-indigo-500/10 text-indigo-600 px-1 rounded border border-indigo-200 uppercase tracking-wider font-bold">GIT</span>}
+                        {isShell && <span className="text-[9px] bg-[var(--tool-terminal)]/10 text-[var(--tool-terminal)] px-1 rounded border border-[var(--tool-terminal)]/20 uppercase tracking-wider font-bold">SHELL</span>}
                         {editedMdFile && <span className="text-[9px] bg-amber-500/10 text-amber-600 px-1 rounded border border-amber-200 uppercase tracking-wider font-bold">DOCS</span>}
 
                         {/* Tool Frequency Summary (memoized) */}

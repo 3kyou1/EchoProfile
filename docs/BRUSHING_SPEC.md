@@ -372,3 +372,26 @@ BoardControls click / InteractionCard hover/click
 2. **Multi-brush:** Allow selecting multiple brush values simultaneously (e.g., terminal AND error)? Defer to v2.
 3. **File brush granularity:** Brush by exact path or by directory? Start with exact path, add directory grouping later.
 4. **Brush persistence:** Save last brush to Zustand store/localStorage across sessions? Nice-to-have.
+
+---
+
+## Known Issues / Next Steps
+
+### BUG: Board doesn't reload for new/active sessions
+
+**Symptom:** A live session appears in the sidebar and detail view but renders as an empty lane in the SessionBoard — no header, no content, just a highlighted region on hover.
+
+**Root cause:** `switchToBoard()` in `src/hooks/useAnalytics.ts:294-308` skips `loadBoardSessions()` if sessions are already cached for the current project (`needsFullReload` is false). A session that started after the board was first opened gets a lane allocated (the project scanner found the JSONL file) but with an empty `messages` array because `loadBoardSessions` never re-ran for it.
+
+**Location:** `src/hooks/useAnalytics.ts` lines 300-308:
+```typescript
+const needsFullReload = !hasAnySessionsLoaded ||
+    (firstSession && firstSession.session.project_name !== selectedProject.name);
+```
+
+**Fix options:**
+1. **Minimal:** Compare `sessions.length` against `Object.keys(boardSessions).length` — if the sidebar has more sessions than the board, force reload.
+2. **Better:** Track the set of loaded session IDs and diff against the current `sessions` list. Only load new/changed sessions incrementally (reuse the Rust incremental parsing that already exists for `load_project_sessions`).
+3. **Best:** Add a refresh button to BoardControls that forces `loadBoardSessions` with the current session list. Combine with option 2 for automatic detection.
+
+**Also affects:** Sessions that are actively being written to — the mmap snapshot captures file state at load time. A manual refresh would also re-read the latest JSONL content.

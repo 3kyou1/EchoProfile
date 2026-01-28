@@ -300,7 +300,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
       throw new Error(t('common.hooks.noProjectSelected'));
     }
 
-    const { boardSessions, loadBoardSessions, dateFilter, setDateFilter } = useAppStore.getState();
+    const { boardSessions, loadBoardSessions, dateFilter, setDateFilter, sessions } = useAppStore.getState();
     const hasAnySessionsLoaded = Object.keys(boardSessions).length > 0;
 
     setAnalyticsCurrentView("board");

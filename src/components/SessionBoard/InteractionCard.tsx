@@ -622,7 +622,7 @@ export const InteractionCard = memo(({
                                 // Override baseClasses borders/rings unless matched
                                 !brushMatch && "ring-0 border-0",
                                 // Dim if brushing active but no match
-                                activeBrush && !brushMatch && "opacity-20 grayscale",
+                                activeBrush && !brushMatch && "opacity-10 brightness-75 saturate-50",
                                 // Ensure match is visible
                                 brushMatch && "ring-1 ring-accent z-10 opacity-100"
                             )}

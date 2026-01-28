@@ -115,7 +115,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
 
   // Handle click (select session)
   const handleClick = useCallback(() => {
-    if (!isEditing && !isSelected) {
+    if (!isEditing) {
       onSelect();
     }
   }, [isEditing, isSelected, onSelect]);

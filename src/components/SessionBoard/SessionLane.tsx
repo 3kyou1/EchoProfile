@@ -272,8 +272,7 @@ export const SessionLane = ({
 
             <div className={clsx(
                 "border-b border-border/50 shrink-0 z-10 backdrop-blur-sm sticky top-0 px-4 py-3 flex flex-col",
-                zoomLevel === 0 ? "h-[110px] bg-background/90" : "min-h-[165px]",
-                zoomLevel !== 0 ? "bg-card/40" : ""
+                zoomLevel === 0 ? "h-[110px] bg-background/90" : "bg-card/40"
             )}>
                 {zoomLevel === 0 ? (
                     <div className="flex flex-col items-center gap-1.5 text-center h-full justify-between">

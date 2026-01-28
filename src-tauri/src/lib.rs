@@ -5,8 +5,9 @@ pub mod utils;
 #[cfg(test)]
 pub mod test_utils;
 
-#[cfg(not(debug_assertions))]
-use dotenvy_macro::dotenv;
+// // #[cfg(not(debug_assertions))]
+// use dotenvy_macro::dotenv; // Commented out as it's currently unused due to Aptabase being disabled
+
 
 use crate::commands::{
     feedback::{get_system_info, open_github_issues, send_feedback},
@@ -40,11 +41,14 @@ pub fn run() {
         .plugin(tauri_plugin_os::init());
 
     // Aptabase analytics - enabled for release builds only
+    // DISABLED: Aptabase plugin causes build failures when key is missing and runtime panics
+    /*
     #[cfg(not(debug_assertions))]
     {
         builder =
             builder.plugin(tauri_plugin_aptabase::Builder::new(dotenv!("APTABASE_KEY")).build());
     }
+    */
 
     builder
         .manage(MetadataState::default())

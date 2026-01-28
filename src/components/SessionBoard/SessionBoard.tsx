@@ -8,6 +8,10 @@ import { useTranslation } from "react-i18next";
 import { MessageSquare } from "lucide-react";
 import { clsx } from "clsx";
 
+import { getToolUseBlock } from "../../utils/messageUtils";
+import { getToolVariant } from "@/utils/toolIconUtils";
+import { buildSearchIndex, clearSearchIndex } from "../../utils/searchIndex";
+
 export const SessionBoard = () => {
     const {
         boardSessions,
@@ -15,14 +19,28 @@ export const SessionBoard = () => {
         isLoadingBoard,
         zoomLevel,
         activeBrush,
-        setZoomLevel,
         setActiveBrush,
+        stickyBrush,
+        setStickyBrush,
+        setZoomLevel,
         setSelectedMessageId,
         selectedMessageId,
         dateFilter,
         setDateFilter,
         selectedSession
     } = useAppStore();
+
+    // Clear brush on Escape (Step 9)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setActiveBrush(null);
+                setStickyBrush(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [setActiveBrush, setStickyBrush]);
 
     // Compute visible session IDs reactively based on date filter
     // Compute visible session IDs reactively based on date filter
@@ -49,6 +67,46 @@ export const SessionBoard = () => {
 
         return uniqueFiltered;
     }, [allSortedSessionIds, boardSessions, dateFilter]);
+
+    // Compute brushing options for visible sessions (Step 8)
+    // Helper to extract brush options from a list of session IDs
+    const getBrushOptions = useCallback((sessionIds: string[]) => {
+        const models = new Set<string>();
+        const tools = new Set<string>();
+        const files = new Set<string>();
+        const statuses = new Set<string>(['error', 'cancelled']);
+
+        sessionIds.forEach(id => {
+            const data = boardSessions[id];
+            if (!data) return;
+
+            data.messages.forEach(msg => {
+                if (msg.type === 'assistant' && msg.model) {
+                    models.add(msg.model);
+                }
+
+                const toolBlock = getToolUseBlock(msg);
+                if (toolBlock) {
+                    const variant = getToolVariant(toolBlock.name);
+                    tools.add(variant);
+                    const path = toolBlock.input?.path || toolBlock.input?.file_path || toolBlock.input?.TargetFile;
+                    if (path && typeof path === 'string') {
+                        files.add(path);
+                    }
+                }
+            });
+        });
+
+        return {
+            models: Array.from(models).sort(),
+            tools: Array.from(tools).sort(),
+            files: Array.from(files).sort(),
+            statuses: Array.from(statuses).sort()
+        };
+    }, [boardSessions]);
+
+    const visibleBrushOptions = useMemo(() => getBrushOptions(visibleSessionIds), [getBrushOptions, visibleSessionIds]);
+    const allBrushOptions = useMemo(() => getBrushOptions(allSortedSessionIds), [getBrushOptions, allSortedSessionIds]);
 
     const { t } = useTranslation();
     const parentRef = useRef<HTMLDivElement>(null);
@@ -125,6 +183,20 @@ export const SessionBoard = () => {
             scrollSyncRef.current.isSyncing = false;
         });
     }, []);
+
+    const handleBoardHover = useCallback((type: "model" | "status" | "tool" | "file", value: string) => {
+        setActiveBrush({ type, value });
+    }, [setActiveBrush]);
+
+    const handleBoardLeave = useCallback(() => {
+        if (!stickyBrush) {
+            setActiveBrush(null);
+        }
+    }, [stickyBrush, setActiveBrush]);
+
+    const handleToggleSticky = useCallback(() => {
+        setStickyBrush(!stickyBrush);
+    }, [stickyBrush, setStickyBrush]);
 
     // Force re-measure when zoom level changes or list changes
     useEffect(() => {
@@ -211,7 +283,16 @@ export const SessionBoard = () => {
                 zoomLevel={zoomLevel}
                 onZoomChange={setZoomLevel}
                 activeBrush={activeBrush}
+                stickyBrush={stickyBrush}
                 onBrushChange={setActiveBrush}
+                modelOptions={allBrushOptions.models}
+                statusOptions={allBrushOptions.statuses}
+                toolOptions={allBrushOptions.tools}
+                fileOptions={allBrushOptions.files}
+                availableModels={visibleBrushOptions.models}
+                availableTools={visibleBrushOptions.tools}
+                availableFiles={visibleBrushOptions.files}
+                availableStatuses={visibleBrushOptions.statuses}
                 dateFilter={dateFilter}
                 setDateFilter={setDateFilter}
             />
@@ -259,6 +340,9 @@ export const SessionBoard = () => {
                                     data={data}
                                     zoomLevel={zoomLevel}
                                     activeBrush={activeBrush}
+                                    onHover={handleBoardHover}
+                                    onLeave={handleBoardLeave}
+                                    onToggleSticky={handleToggleSticky}
                                     isSelected={selectedSession?.session_id === sessionId}
                                     onInteractionClick={(id) => {
                                         if (selectedMessageId === id) {
@@ -270,7 +354,23 @@ export const SessionBoard = () => {
                                     onNavigate={(messageId) => {
                                         // 1. Ensure this session is selected
                                         if (selectedSession?.session_id !== sessionId) {
-                                            useAppStore.getState().setSelectedSession(data.session);
+                                            // Optimistic update using cached board data to prevent loading state
+                                            useAppStore.setState({
+                                                selectedSession: data.session,
+                                                messages: data.messages,
+                                                isLoadingMessages: false,
+                                                pagination: {
+                                                    currentOffset: data.messages.length,
+                                                    pageSize: data.messages.length,
+                                                    totalCount: data.messages.length,
+                                                    hasMore: false,
+                                                    isLoadingMore: false,
+                                                }
+                                            });
+
+                                            // Rebuild search index for the new session
+                                            clearSearchIndex();
+                                            buildSearchIndex(data.messages);
                                         }
                                         // 2. Navigate
                                         useAppStore.getState().navigateToMessage(messageId);

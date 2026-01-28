@@ -224,24 +224,28 @@ export const ClaudeMessageNode = React.memo(({
                   filterType={filterType}
                   isCurrentMatch={isCurrentMatch}
                   currentMatchIndex={currentMatchIndex}
-                  skipToolResults={!!message.toolUseResult}
+                  skipToolResults={
+                    (message.type === "user" || message.type === "assistant") &&
+                    !!message.toolUseResult
+                  }
                 />
               </div>
             )}
 
-          {message.toolUse && (
+          {message.type === "assistant" && message.toolUse && (
             <ClaudeToolUseDisplay toolUse={message.toolUse} />
           )}
 
-          {message.toolUseResult && (
-            <ToolExecutionResultRouter
-              toolResult={message.toolUseResult}
-              depth={0}
-              searchQuery={searchQuery}
-              isCurrentMatch={isCurrentMatch}
-              currentMatchIndex={currentMatchIndex}
-            />
-          )}
+          {(message.type === "user" || message.type === "assistant") &&
+            message.toolUseResult && (
+              <ToolExecutionResultRouter
+                toolResult={message.toolUseResult}
+                depth={0}
+                searchQuery={searchQuery}
+                isCurrentMatch={isCurrentMatch}
+                currentMatchIndex={currentMatchIndex}
+              />
+            )}
         </div>
       </div>
     </div>

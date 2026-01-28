@@ -7,22 +7,13 @@
 import type { ClaudeMessage, ProgressData } from "../../../types";
 import type { AgentProgressEntry, AgentProgressGroupResult } from "../types";
 
-/**
- * Check if a message is an agent progress message
- */
-const isAgentProgressMessage = (message: ClaudeMessage): boolean => {
-  if (message.type !== "progress") return false;
-  const data = message.data as ProgressData | undefined;
-  return data?.type === "agent_progress" && typeof data?.agentId === "string";
-};
-
-/**
- * Extract agentId from a progress message
- */
-export const getAgentIdFromProgress = (message: ClaudeMessage): string | null => {
-  if (!isAgentProgressMessage(message)) return null;
-  const data = message.data as ProgressData;
-  return data.agentId || null;
+export const getAgentIdFromProgress = (
+  message: ClaudeMessage
+): string | null => {
+  if (message.type !== "progress") return null;
+  const progressMsg = message as any; // Cast as we know it's a progress message here
+  const data = progressMsg.data as ProgressData;
+  return data?.type === "agent_progress" ? data.agentId || null : null;
 };
 
 /**
@@ -42,11 +33,11 @@ export const groupAgentProgressMessages = (
     const agentId = getAgentIdFromProgress(msg);
 
     if (agentId) {
-      // This is a progress message
+      const progressMsg = msg as any;
       const entry: AgentProgressEntry = {
-        data: msg.data as ProgressData,
-        timestamp: msg.timestamp,
-        uuid: msg.uuid,
+        data: progressMsg.data as ProgressData,
+        timestamp: progressMsg.timestamp,
+        uuid: progressMsg.uuid,
       };
 
       // Check if this continues the current group (same agentId and previous was also progress)

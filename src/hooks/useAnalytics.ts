@@ -45,6 +45,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     loadSessionTokenStats,
     loadRecentEdits,
     clearTokenStats,
+    clearBoard,
   } = useAppStore();
 
   /**
@@ -61,7 +62,8 @@ export const useAnalytics = (): UseAnalyticsReturn => {
    * 캐시 전략: 같은 프로젝트/세션의 데이터가 있으면 재사용
    */
   const switchToTokenStats = useCallback(async () => {
-    if (!selectedProject) {
+    const project = useAppStore.getState().selectedProject;
+    if (!project) {
       throw new Error(t('common.hooks.noProjectSelected'));
     }
 
@@ -71,7 +73,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     // 캐시 확인
     const hasCachedProjectTokenStats =
       projectTokenStats && projectTokenStats.length > 0 &&
-      projectTokenStats[0]?.project_name === selectedProject.name;
+      projectTokenStats[0]?.project_name === project.name;
     const hasCachedSessionTokenStats =
       selectedSession &&
       sessionTokenStats?.session_id === selectedSession.actual_session_id;
@@ -86,7 +88,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
 
       // 프로젝트 전체 통계 로드 (캐시 없으면)
       if (!hasCachedProjectTokenStats) {
-        promises.push(loadProjectTokenStats(selectedProject.path));
+        promises.push(loadProjectTokenStats(project.path));
       }
 
       // 현재 세션 통계 로드 (선택된 경우, 캐시 없으면)
@@ -101,9 +103,8 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     }
   }, [
     t,
-    selectedProject,
-    selectedSession,
     projectTokenStats,
+    selectedSession,
     sessionTokenStats?.session_id,
     setAnalyticsCurrentView,
     clearAnalyticsErrors,
@@ -117,7 +118,8 @@ export const useAnalytics = (): UseAnalyticsReturn => {
    * NOTE: Token Statistics 로딩과 완전히 분리됨 - 각 뷰는 독립적으로 동작
    */
   const switchToAnalytics = useCallback(async () => {
-    if (!selectedProject) {
+    const project = useAppStore.getState().selectedProject;
+    if (!project) {
       throw new Error(t('common.hooks.noProjectSelected'));
     }
 
@@ -126,7 +128,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
 
     // 캐시 확인: 같은 프로젝트의 데이터가 이미 있는지
     const hasCachedProjectSummary =
-      analytics.projectSummary?.project_name === selectedProject.name;
+      analytics.projectSummary?.project_name === project.name;
     const hasCachedSessionComparison =
       selectedSession &&
       analytics.sessionComparison?.session_id === selectedSession.actual_session_id;
@@ -147,7 +149,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
       if (!hasCachedProjectSummary) {
         setAnalyticsLoadingProjectSummary(true);
         try {
-          const summary = await loadProjectStatsSummary(selectedProject.path);
+          const summary = await loadProjectStatsSummary(project.path);
           setAnalyticsProjectSummary(summary);
         } catch (error) {
           const errorMessage =
@@ -170,7 +172,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
             sessionPromises.push(
               loadSessionComparison(
                 selectedSession.actual_session_id,
-                selectedProject.path
+                project.path
               ).then((comparison) => {
                 setAnalyticsSessionComparison(comparison);
               })
@@ -222,7 +224,8 @@ export const useAnalytics = (): UseAnalyticsReturn => {
    * 캐시 전략: 같은 프로젝트의 데이터가 있으면 재사용
    */
   const switchToRecentEdits = useCallback(async () => {
-    if (!selectedProject) {
+    const project = useAppStore.getState().selectedProject;
+    if (!project) {
       throw new Error(t('common.hooks.noProjectSelected'));
     }
 
@@ -233,7 +236,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     const hasCachedRecentEdits =
       analytics.recentEdits &&
       analytics.recentEdits.files.length > 0 &&
-      analytics.recentEdits.project_cwd === selectedProject.path;
+      analytics.recentEdits.project_cwd === project.path;
 
     // 캐시가 있으면 로드 스킵
     if (hasCachedRecentEdits) {
@@ -242,7 +245,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
 
     try {
       setAnalyticsLoadingRecentEdits(true);
-      const result = await loadRecentEdits(selectedProject.path);
+      const result = await loadRecentEdits(project.path);
 
       // Update both the result and pagination state
       setAnalyticsRecentEdits({
@@ -292,7 +295,8 @@ export const useAnalytics = (): UseAnalyticsReturn => {
    * 프로젝트의 최근 세션들을 로드하여 보드 시각화
    */
   const switchToBoard = useCallback(async () => {
-    if (!selectedProject) {
+    const project = useAppStore.getState().selectedProject;
+    if (!project) {
       throw new Error(t('common.hooks.noProjectSelected'));
     }
 
@@ -305,7 +309,9 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     // If no sessions are loaded for this board yet, load them all
     // Or if the project changed (we check if any loaded session doesn't belong to current project)
     const firstSession = Object.values(boardSessions)[0];
-    const needsFullReload = !hasAnySessionsLoaded || (firstSession && firstSession.session.project_name !== selectedProject.name);
+    const needsFullReload = !hasAnySessionsLoaded ||
+      (firstSession && firstSession.session.project_name !== project.name) ||
+      (sessions.length > Object.keys(boardSessions).length);
 
     if (needsFullReload && sessions.length > 0) {
       // Load all sessions to "map the full range" as requested
@@ -382,7 +388,8 @@ export const useAnalytics = (): UseAnalyticsReturn => {
   const clearAll = useCallback(() => {
     resetAnalytics();
     clearTokenStats();
-  }, [resetAnalytics, clearTokenStats]);
+    clearBoard();
+  }, [resetAnalytics, clearTokenStats, clearBoard]);
 
   /**
    * 계산된 값들 (메모이제이션으로 성능 최적화)

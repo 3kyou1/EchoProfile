@@ -15,8 +15,8 @@ export const hasSystemCommandContent = (message: ClaudeMessage): boolean => {
   if (!content || typeof content !== "string") return false;
   // Check for actual XML tag pairs, not just strings in backticks
   return /<command-name>[\s\S]*?<\/command-name>/.test(content) ||
-         /<local-command-caveat>[\s\S]*?<\/local-command-caveat>/.test(content) ||
-         /<command-message>[\s\S]*?<\/command-message>/.test(content);
+    /<local-command-caveat>[\s\S]*?<\/local-command-caveat>/.test(content) ||
+    /<command-message>[\s\S]*?<\/command-message>/.test(content);
 };
 
 /**
@@ -30,10 +30,16 @@ export const hasSystemCommandContent = (message: ClaudeMessage): boolean => {
  */
 export const isEmptyMessage = (message: ClaudeMessage): boolean => {
   // Messages with tool use or results should be shown
-  if (message.toolUse || message.toolUseResult) return false;
+  if (
+    (message.type === "assistant" && message.toolUse) ||
+    ((message.type === "user" || message.type === "assistant") &&
+      message.toolUseResult)
+  ) {
+    return false;
+  }
 
   // Progress messages should be shown
-  if (message.type === "progress" && message.data) return false;
+  if (message.type === "progress" && (message as any).data) return false;
 
   // Check for array content (tool results, etc.)
   if (message.content && Array.isArray(message.content) && message.content.length > 0) {

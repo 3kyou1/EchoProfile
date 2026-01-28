@@ -142,13 +142,20 @@ const extractSearchableText = (message: ClaudeMessage): string => {
     }
 
     // toolUse name 추출
-    if (isRecord(message.toolUse) && hasStringProperty(message.toolUse, "name")) {
+    if (
+      message.type === "assistant" &&
+      isRecord(message.toolUse) &&
+      hasStringProperty(message.toolUse, "name")
+    ) {
       parts.push(message.toolUse.name as string);
     }
 
     // toolUseResult 추출 (큰 내용은 처음 부분만 인덱싱)
     const MAX_CONTENT_LENGTH = 5000; // 최대 5KB만 인덱싱
-    if (message.toolUseResult) {
+    if (
+      (message.type === "user" || message.type === "assistant") &&
+      message.toolUseResult
+    ) {
       const result = message.toolUseResult;
       if (typeof result === "string") {
         parts.push(result.slice(0, MAX_CONTENT_LENGTH));
@@ -213,7 +220,11 @@ const extractToolIds = (message: ClaudeMessage): string => {
     }
 
     // toolUse 객체의 id
-    if (isRecord(message.toolUse) && hasStringProperty(message.toolUse, "id")) {
+    if (
+      message.type === "assistant" &&
+      isRecord(message.toolUse) &&
+      hasStringProperty(message.toolUse, "id")
+    ) {
       ids.push(message.toolUse.id as string);
     }
   } catch (error) {

@@ -13,7 +13,7 @@ import { useResizablePanel } from "./hooks/useResizablePanel";
 import { track, TrackingEvents } from "./hooks/useEventTracking";
 
 import { useTranslation } from "react-i18next";
-import { AppErrorType, type ClaudeSession, type ClaudeProject } from "./types";
+import { AppErrorType, type ClaudeSession, type ClaudeProject, type SessionTokenStats } from "./types";
 import type { GroupingMode } from "./types/metadata.types";
 import { AlertTriangle, MessageSquare, Database, BarChart3, FileEdit, Coins } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -141,6 +141,16 @@ function App() {
     initialize();
   }, [initializeApp, loadLanguage]);
 
+  const handleTokenStatClick = useCallback((stats: SessionTokenStats) => {
+    const session = sessions.find(s => s.session_id === stats.session_id);
+
+    if (session) {
+      handleSessionSelect(session);
+    } else {
+      console.warn("Session not found in loaded list:", stats.session_id);
+    }
+  }, [sessions, handleSessionSelect]);
+
   useEffect(() => {
     const handleLanguageChange = (lng: string) => {
       const currentLang = lng.startsWith("zh")
@@ -177,31 +187,30 @@ function App() {
         return;
       }
 
-      const wasTokenStatsOpen = computed.isTokenStatsView;
+      const activeView = useAppStore.getState().analytics.currentView;
       setIsViewingGlobalStats(false);
 
-      // 이전 프로젝트의 캐시 초기화
+      // Reset cache for previous project
       analyticsActions.clearAll();
 
       await selectProject(project);
 
-      // 이전 뷰 유지하면서 새 프로젝트 데이터 로드
-      if (wasTokenStatsOpen) {
-        try {
+      // Maintain previous view with new project data
+      try {
+        if (activeView === "tokenStats") {
           await analyticsActions.switchToTokenStats();
-        } catch (error) {
-          console.error("Failed to auto-load token stats:", error);
+        } else if (activeView === "board") {
+          await analyticsActions.switchToBoard();
+        } else if (activeView === "recentEdits") {
+          await analyticsActions.switchToRecentEdits();
+        } else {
+          await analyticsActions.switchToBoard();
         }
-      } else {
-        try {
-          await analyticsActions.switchToAnalytics();
-        } catch (error) {
-          console.error("Failed to auto-load analytics:", error);
-        }
+      } catch (error) {
+        console.error(`Failed to auto-load ${activeView} view:`, error);
       }
     },
     [
-      computed.isTokenStatsView,
       selectProject,
       analyticsActions,
     ]
@@ -363,6 +372,7 @@ function App() {
                       isLoading={isLoadingTokenStats}
                       dateFilter={dateFilter}
                       setDateFilter={setDateFilter}
+                      onSessionClick={handleTokenStatClick}
                     />
                   </div>
                 </OverlayScrollbarsComponent>

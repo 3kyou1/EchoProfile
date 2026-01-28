@@ -53,9 +53,9 @@ export const DatePickerHeader = ({
     const hasFilter = dateFilter.start || dateFilter.end;
 
     return (
-        <div className={cn("flex items-center gap-2 bg-muted/30 p-1 rounded-lg border border-border/50", className)} >
-            <div className="flex items-center gap-2 px-2 border-r border-border/50 pr-3">
-                <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+        <div className={cn("flex items-center gap-1.5 bg-muted/30 p-0.5 rounded-lg border border-border/50", className)} >
+            <div className="flex items-center gap-1.5 px-1.5 border-r border-border/50 pr-2">
+                <Calendar className="w-3 h-3 text-muted-foreground" />
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Filter</span>
             </div>
 

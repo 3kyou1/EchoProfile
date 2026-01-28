@@ -8,6 +8,7 @@ import type {
     SessionFileEdit,
     SessionDepth,
 } from "../../types/board.types";
+import type { ActiveBrush } from "@/utils/brushMatchers";
 import type { ClaudeMessage, ClaudeSession } from "../../types";
 import { analyzeSessionMessages } from "../../utils/sessionAnalytics";
 
@@ -17,10 +18,8 @@ export interface BoardSliceState {
     allSortedSessionIds: string[]; // This is the full sorted list
     isLoadingBoard: boolean;
     zoomLevel: ZoomLevel;
-    activeBrush: {
-        type: "role" | "status" | "tool" | "file";
-        value: string;
-    } | null;
+    activeBrush: ActiveBrush | null;
+    stickyBrush: boolean;
     selectedMessageId: string | null;
     isMarkdownPretty: boolean;
 }
@@ -29,6 +28,7 @@ export interface BoardSliceActions {
     loadBoardSessions: (sessions: ClaudeSession[]) => Promise<void>;
     setZoomLevel: (level: ZoomLevel) => void;
     setActiveBrush: (brush: BoardSliceState["activeBrush"]) => void;
+    setStickyBrush: (sticky: boolean) => void;
     setSelectedMessageId: (id: string | null) => void;
     setMarkdownPretty: (pretty: boolean) => void;
     clearBoard: () => void;
@@ -43,6 +43,7 @@ const initialBoardState: BoardSliceState = {
     isLoadingBoard: false,
     zoomLevel: 1, // Default to SKIM
     activeBrush: null,
+    stickyBrush: false,
     selectedMessageId: null,
     isMarkdownPretty: true, // Default to pretty printing
 };
@@ -244,10 +245,9 @@ export const createBoardSlice: StateCreator<
 
     setZoomLevel: (zoomLevel: ZoomLevel) => set({ zoomLevel }),
     setActiveBrush: (activeBrush) => set({ activeBrush }),
+    setStickyBrush: (stickyBrush) => set({ stickyBrush }),
     setSelectedMessageId: (id) => set({ selectedMessageId: id }),
     setMarkdownPretty: (isMarkdownPretty) => set({ isMarkdownPretty }),
-
-
 
     clearBoard: () => set(initialBoardState),
 });

@@ -748,6 +748,7 @@ pub async fn get_project_token_stats(
     start_date: Option<String>,
     end_date: Option<String>,
 ) -> Result<PaginatedTokenStats, String> {
+    #[cfg(debug_assertions)]
     let start = std::time::Instant::now();
     let offset = offset.unwrap_or(0);
     let limit = limit.unwrap_or(20);
@@ -760,6 +761,7 @@ pub async fn get_project_token_stats(
         .map(|e| e.path().to_path_buf())
         .collect();
 
+    #[cfg(debug_assertions)]
     let scan_time = start.elapsed();
 
     // Process all sessions in parallel using sync function
@@ -768,6 +770,7 @@ pub async fn get_project_token_stats(
         .filter_map(extract_session_token_stats_sync)
         .collect();
 
+    #[cfg(debug_assertions)]
     let process_time = start.elapsed();
 
     // Filter by date if provided
@@ -802,6 +805,7 @@ pub async fn get_project_token_stats(
         all_stats.into_iter().skip(offset).take(limit).collect();
 
     let has_more = offset + paginated_items.len() < total_count;
+    #[cfg(debug_assertions)]
     let total_time = start.elapsed();
 
     #[cfg(debug_assertions)]

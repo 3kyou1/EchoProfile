@@ -59,6 +59,7 @@ interface TokenStatsViewerProps {
   isLoading?: boolean;
   dateFilter?: { start: Date | null; end: Date | null };
   setDateFilter?: (filter: { start: Date | null; end: Date | null }) => void;
+  onSessionClick?: (stats: SessionTokenStats) => void;
 }
 
 import { DatePickerHeader } from "./ui/DatePickerHeader";
@@ -72,6 +73,7 @@ export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
   isLoading = false,
   dateFilter,
   setDateFilter,
+  onSessionClick,
 }) => {
   const { t } = useTranslation();
 
@@ -221,7 +223,13 @@ export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
                 className="animate-slide-up"
                 style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
               >
-                <SessionStatsCard stats={stats} showSessionId compact summary={stats.summary} />
+                <SessionStatsCard
+                  stats={stats}
+                  showSessionId
+                  compact
+                  summary={stats.summary}
+                  onClick={() => onSessionClick?.(stats)}
+                />
               </div>
             ))}
 
@@ -332,7 +340,10 @@ export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
               <MessageSquare className="w-4 h-4 text-accent" />
               {t("analytics.currentSession")}
             </h3>
-            <SessionStatsCard stats={sessionStats} />
+            <SessionStatsCard
+              stats={sessionStats}
+              onClick={() => onSessionClick?.(sessionStats)}
+            />
           </div>
         )}
 

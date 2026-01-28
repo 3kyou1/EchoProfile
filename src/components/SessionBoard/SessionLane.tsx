@@ -9,8 +9,11 @@ import {
     extractClaudeMessageContent,
     isToolEvent,
     getMessageRole,
-    isClaudeAssistantMessage
+    isClaudeAssistantMessage,
+    getToolUseBlock
 } from "../../utils/messageUtils";
+import { getToolVariant } from "@/utils/toolIconUtils";
+import { matchesBrush, type ActiveBrush } from "@/utils/brushMatchers";
 import type { ClaudeAssistantMessage, ClaudeMessage } from "../../types";
 
 // Helper for formatting duration
@@ -32,10 +35,11 @@ const formatNumber = (num: number): string => {
 interface SessionLaneProps {
     data: BoardSessionData;
     zoomLevel: ZoomLevel;
-    activeBrush?: { type: string; value: string } | null;
+    activeBrush?: ActiveBrush | null;
+    onHover?: (type: ActiveBrush["type"], value: string) => void;
+    onLeave?: () => void;
+    onToggleSticky?: () => void;
     onInteractionClick?: (messageUuid: string) => void;
-    onHoverInteraction?: (type: "role" | "status" | "tool" | "file", value: string) => void;
-    onLeaveInteraction?: () => void;
     onScroll?: (scrollTop: number) => void;
     onFileClick?: (file: string) => void;
     isSelected?: boolean;
@@ -48,9 +52,10 @@ interface SessionLaneProps {
 export const SessionLane = ({
     data,
     zoomLevel,
+    activeBrush,
+    onHover,
+    onToggleSticky,
     onInteractionClick,
-    onHoverInteraction,
-    onLeaveInteraction,
     onScroll,
     onFileClick,
     isSelected,
@@ -118,6 +123,36 @@ export const SessionLane = ({
         }
         return grouped;
     }, [messages, zoomLevel]);
+
+    // Compute match ratio for lane header (Step 7)
+    const matchStats = useMemo(() => {
+        if (!activeBrush) return null;
+
+        let matched = 0;
+        visibleItems.forEach(item => {
+            const msg = item.head;
+            const toolBlock = getToolUseBlock(msg);
+            const variant = toolBlock ? getToolVariant(toolBlock.name) : "neutral";
+            const role = getMessageRole(msg);
+
+            // Basic semantics for header match count
+            // This mirrors the logic in InteractionCard but without the full weight of the component
+            const cardMatches = matchesBrush(activeBrush, {
+                role,
+                model: isClaudeAssistantMessage(msg) ? msg.model : undefined,
+                variant,
+                isError: false, // Simplifying for header count
+                isCancelled: false,
+                isCommit: false,
+                isShell: false,
+                editedFiles: []
+            });
+
+            if (cardMatches) matched++;
+        });
+
+        return { matched, total: visibleItems.length };
+    }, [activeBrush, visibleItems]);
 
     const rowVirtualizer = useVirtualizer({
         count: visibleItems.length,
@@ -255,9 +290,11 @@ export const SessionLane = ({
                 ) : (
                     <div className="flex flex-col h-full gap-2">
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-mono text-muted-foreground/70">
-                                {new Date(session.last_modified).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}  •  {new Date(session.last_modified).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                            </span>
+                            <div className="flex items-center gap-1.5 overflow-hidden">
+                                <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
+                                    {new Date(session.last_modified).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}  •  {new Date(session.last_modified).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                </span>
+                            </div>
                             <div className="flex gap-3 items-center">
                                 {/* Activity Summary Row 1: Tokens & Git & Edits */}
 
@@ -290,7 +327,11 @@ export const SessionLane = ({
                                 {(() => {
                                     const createdCount = data.fileEdits.filter(e => e.type === 'create').length;
                                     if (createdCount > 0) return (
-                                        <div className="flex items-center gap-1 text-emerald-500" title="Files Created">
+                                        <div
+                                            className="flex items-center gap-1 text-emerald-500 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors"
+                                            title="Files Created - Click to Filter"
+                                            onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'file'); }}
+                                        >
                                             <FilePlus className="w-3 h-3" />
                                             <span className="text-[10px] font-mono">{createdCount}</span>
                                         </div>
@@ -305,7 +346,20 @@ export const SessionLane = ({
                                 {formatNumber(stats.totalTokens)}
                                 <span className="text-[10px] text-muted-foreground font-normal ml-1">tokens</span>
                             </div>
-                            <div className="ml-auto text-[10px] text-muted-foreground flex gap-2">
+                            <div className="ml-auto text-[10px] text-muted-foreground flex items-center gap-3">
+                                {matchStats && (
+                                    <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-accent/10 text-accent rounded-sm border border-accent/20 animate-in fade-in slide-in-from-right-1">
+                                        <span className="font-bold">{matchStats.matched}/{matchStats.total}</span>
+                                        <div className="flex gap-px opacity-60">
+                                            {Array.from({ length: 8 }).map((_, i) => (
+                                                <span key={i} className={clsx(
+                                                    "w-1 h-3 rounded-[1px]",
+                                                    i < (matchStats.matched / matchStats.total) * 8 ? "bg-accent" : "bg-accent/20"
+                                                )} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 <span>{messages.length} msgs</span>
                                 <span>{formatDuration(durationMinutes)}</span>
                             </div>
@@ -319,7 +373,15 @@ export const SessionLane = ({
 
                                 {/* 1. Shell / Terminal */}
                                 {stats.shellCount > 0 && (
-                                    <div className="flex items-center gap-1 text-sky-500" title="Shell Commands">
+                                    <div
+                                        className={clsx(
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "text-sky-500",
+                                            activeBrush?.type === 'tool' && activeBrush.value === 'terminal' && "brush-match bg-accent/10"
+                                        )}
+                                        title="Shell Commands - Click to Filter"
+                                        onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'terminal'); }}
+                                    >
                                         <Terminal className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.shellCount}</span>
                                     </div>
@@ -329,7 +391,15 @@ export const SessionLane = ({
                                 {(() => {
                                     const createdCount = data.fileEdits.filter(e => e.type === 'create').length;
                                     if (createdCount > 0) return (
-                                        <div className="flex items-center gap-1 text-emerald-500" title="Files Created">
+                                        <div
+                                            className={clsx(
+                                                "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                                "text-emerald-500",
+                                                activeBrush?.type === 'tool' && activeBrush.value === 'file' && "brush-match bg-accent/10"
+                                            )}
+                                            title="Files Created - Click to Filter"
+                                            onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'file'); }}
+                                        >
                                             <FilePlus className="w-3 h-3" />
                                             <span className="text-[10px] font-bold font-mono">{createdCount}</span>
                                         </div>
@@ -339,7 +409,15 @@ export const SessionLane = ({
 
                                 {/* 3. File Search (Grep/Glob) */}
                                 {stats.searchCount > 0 && (
-                                    <div className="flex items-center gap-1 text-amber-500" title="Code Search">
+                                    <div
+                                        className={clsx(
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "text-amber-500",
+                                            activeBrush?.type === 'tool' && activeBrush.value === 'search' && "brush-match bg-accent/10"
+                                        )}
+                                        title="Code Search - Click to Filter"
+                                        onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'search'); }}
+                                    >
                                         <Search className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.searchCount}</span>
                                     </div>
@@ -347,7 +425,15 @@ export const SessionLane = ({
 
                                 {/* Web Search/Fetch */}
                                 {stats.webCount > 0 && (
-                                    <div className="flex items-center gap-1 text-sky-400" title="Web Search/Fetch">
+                                    <div
+                                        className={clsx(
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "text-sky-400",
+                                            activeBrush?.type === 'tool' && activeBrush.value === 'web' && "brush-match bg-accent/10"
+                                        )}
+                                        title="Web Search/Fetch - Click to Filter"
+                                        onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'web'); }}
+                                    >
                                         <Globe className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.webCount}</span>
                                     </div>
@@ -355,7 +441,15 @@ export const SessionLane = ({
 
                                 {/* MCP Tools */}
                                 {stats.mcpCount > 0 && (
-                                    <div className="flex items-center gap-1 text-purple-500" title="MCP Tools">
+                                    <div
+                                        className={clsx(
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "text-purple-500",
+                                            activeBrush?.type === 'tool' && activeBrush.value === 'mcp' && "brush-match bg-accent/10"
+                                        )}
+                                        title="MCP Tools - Click to Filter"
+                                        onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'mcp'); }} // Assuming 'mcp' variant exists, if not 'neutral' or fallback
+                                    >
                                         <Plug className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.mcpCount}</span>
                                     </div>
@@ -363,14 +457,30 @@ export const SessionLane = ({
 
                                 {/* 4. Docs (Markdown) */}
                                 {stats.hasMarkdownEdits && (
-                                    <div className="flex items-center gap-1 text-amber-500" title="Documentation Updates">
+                                    <div
+                                        className={clsx(
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "text-amber-500",
+                                            activeBrush?.type === 'tool' && activeBrush.value === 'document' && "brush-match bg-accent/10"
+                                        )}
+                                        title="Documentation Updates - Click to Filter"
+                                        onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'document'); }}
+                                    >
                                         <Book className="w-3 h-3" />
                                     </div>
                                 )}
 
                                 {/* 5. Code Edits */}
                                 {stats.fileEditCount > 0 && (
-                                    <div className="flex items-center gap-1 text-foreground/70" title="Files Touched">
+                                    <div
+                                        className={clsx(
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "text-foreground/70",
+                                            activeBrush?.type === 'tool' && activeBrush.value === 'code' && "brush-match bg-accent/10"
+                                        )}
+                                        title="Files Touched - Click to Filter"
+                                        onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'code'); }}
+                                    >
                                         <FileText className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.fileEditCount}</span>
                                     </div>
@@ -462,9 +572,9 @@ export const SessionLane = ({
                                     message={message}
                                     zoomLevel={zoomLevel}
                                     isExpanded={selectedMessageId === message.uuid}
+                                    activeBrush={activeBrush}
                                     gitCommits={data.gitCommits}
-                                    onHover={onHoverInteraction}
-                                    onLeave={onLeaveInteraction}
+                                    onToggleSticky={onToggleSticky}
                                     onClick={() => onInteractionClick?.(message.uuid)}
                                     onNext={nextItem ? () => onInteractionClick?.(nextItem.head.uuid) : undefined}
                                     onPrev={prevItem ? () => onInteractionClick?.(prevItem.head.uuid) : undefined}

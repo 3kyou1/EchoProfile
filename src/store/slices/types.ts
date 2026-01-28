@@ -147,6 +147,7 @@ export interface AppStoreState {
     type: "role" | "status" | "tool" | "file";
     value: string;
   } | null;
+  stickyBrush: boolean;
   selectedMessageId: string | null;
   isMarkdownPretty: boolean;
   dateFilter: import("../../types/board.types").DateFilter;
@@ -262,6 +263,7 @@ export interface AppStoreActions {
   loadBoardSessions: (sessions: ClaudeSession[]) => Promise<void>;
   setZoomLevel: (level: import("../../types/board.types").ZoomLevel) => void;
   setActiveBrush: (brush: { type: "role" | "status" | "tool" | "file"; value: string } | null) => void;
+  setStickyBrush: (sticky: boolean) => void;
   clearBoard: () => void;
   setSelectedMessageId: (id: string | null) => void;
   setMarkdownPretty: (pretty: boolean) => void;

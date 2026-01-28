@@ -115,10 +115,10 @@ export const SessionItem: React.FC<SessionItemProps> = ({
 
   // Handle click (select session)
   const handleClick = useCallback(() => {
-    if (!isEditing) {
+    if (!isEditing && !isSelected) {
       onSelect();
     }
-  }, [isEditing, onSelect]);
+  }, [isEditing, isSelected, onSelect]);
 
   // Handle context menu rename action
   const handleRenameClick = useCallback(

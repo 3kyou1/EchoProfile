@@ -1,5 +1,6 @@
 import { memo, useMemo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { matchesBrush, type ActiveBrush } from "@/utils/brushMatchers";
 import type { ClaudeMessage, GitCommit } from "../../types";
 import type { ZoomLevel } from "../../types/board.types";
 import { ToolIcon } from "../ToolIcon";
@@ -24,14 +25,14 @@ interface InteractionCardProps {
     zoomLevel: ZoomLevel;
     isExpanded: boolean; // For click expansion
     gitCommits?: GitCommit[];
-    onHover?: (type: "role" | "status" | "tool" | "file", value: string) => void;
-    onLeave?: () => void;
     onClick?: () => void;
     onNext?: () => void;
     onPrev?: () => void;
     onFileClick?: (file: string) => void;
     siblings?: ClaudeMessage[]; // For merged cards
     onNavigate?: () => void;
+    activeBrush?: ActiveBrush | null;
+    onToggleSticky?: () => void;
 }
 
 const ExpandedCard = ({
@@ -343,14 +344,14 @@ export const InteractionCard = memo(({
     zoomLevel,
     isExpanded,
     gitCommits,
-    onHover,
-    onLeave,
     onClick,
     onFileClick,
     onNext,
     onPrev,
     siblings,
-    onNavigate
+    onNavigate,
+    activeBrush,
+    onToggleSticky
 }: InteractionCardProps) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null);
@@ -439,17 +440,33 @@ export const InteractionCard = memo(({
             content.includes('[ERROR]') ||
             (content.includes('<local-command-stdout>') && content.toLowerCase().includes('failed'));
 
+        // Model detection
+        const model = isClaudeAssistantMessage(message) ? message.model : undefined;
+
+        // Brush matching (Step 4 & 6)
+        const brushMatch = matchesBrush(activeBrush || null, {
+            role,
+            model,
+            variant: variant || "neutral",
+            isError: isError || isRawError,
+            isCancelled,
+            isCommit,
+            isShell,
+            editedFiles: editedMdFile ? [editedMdFile] : []
+        });
+
         return {
             isTool, variant, isError, isCancelled, isCommit, isShell, shellCommand,
             isFileEdit, editedMdFile, hasUrls, isMcp, isRawError,
+            brushMatch
         };
-    }, [message, toolUseBlock, content, role]);
+    }, [message, toolUseBlock, content, role, activeBrush]);
 
     // Destructure for backward-compatible access in render blocks
     // Destructure commonly-used semantics; access semantics.variant directly when needed (e.g. brushing)
     const {
         isTool, isError, isCancelled, isCommit, isShell, shellCommand,
-        isFileEdit, editedMdFile, hasUrls, isMcp, isRawError,
+        isFileEdit, editedMdFile, hasUrls, isMcp, isRawError, brushMatch
     } = semantics;
 
     // Verified git commit (depends on semantics.isCommit + external gitCommits)
@@ -469,13 +486,16 @@ export const InteractionCard = memo(({
         });
     }, [isCommit, gitCommits, message, toolUseBlock]);
 
-    // Base classes for the card - REMOVED isActive checks
+    // Base classes for the card
+    const brushClass = (activeBrush && brushMatch) ? "brush-match" : "";
+
     const baseClasses = clsx(
         "relative rounded transition-all duration-200 cursor-pointer overflow-hidden border border-transparent shadow-sm select-none",
         "hover:border-accent hover:shadow-lg hover:z-50 hover:scale-[1.02]", // Always hoverable
         (isError || isRawError) && "bg-destructive/10 border-destructive/20",
         isCancelled && "bg-orange-500/10 border-orange-500/20",
-        isMcp && !isError && !isRawError && "bg-orange-500/5 border-orange-500/10"
+        isMcp && !isError && !isRawError && "bg-orange-500/5 border-orange-500/10",
+        brushClass
     );
 
     // Minimal Role Indicator (Icon only)
@@ -595,10 +615,18 @@ export const InteractionCard = memo(({
                     <TooltipTrigger asChild>
                         <div
                             ref={cardRef}
-                            className={clsx(baseClasses, bgColor, "w-full ring-0 border-0 rounded-[1px] mb-px")}
+                            className={clsx(
+                                baseClasses,
+                                bgColor,
+                                "w-full rounded-[1px] mb-px",
+                                // Override baseClasses borders/rings unless matched
+                                !brushMatch && "ring-0 border-0",
+                                // Dim if brushing active but no match
+                                activeBrush && !brushMatch && "opacity-20 grayscale",
+                                // Ensure match is visible
+                                brushMatch && "ring-1 ring-accent z-10 opacity-100"
+                            )}
                             style={{ height: `${height}px` }}
-                            onMouseEnter={() => onHover?.('role', role)}
-                            onMouseLeave={onLeave}
                             onClick={onClick}
                         >
                             {/* Content Icon Overlay (Pixel View) */}
@@ -676,8 +704,6 @@ export const InteractionCard = memo(({
                     ref={cardRef}
                     // Change to flex-col to accommodate header
                     className={clsx(baseClasses, "mb-0.5 p-1.5 bg-card flex flex-col gap-1")}
-                    onMouseEnter={() => onHover?.('role', role)}
-                    onMouseLeave={onLeave}
                     onClick={onClick}
                 >
                     {/* Agent Name Header - Only if NOT General Purpose */}
@@ -690,7 +716,13 @@ export const InteractionCard = memo(({
                     <div className="flex gap-2 items-start w-full">
                         <div className="mt-0.5 relative shrink-0">
                             {/* Smaller circle indicator for compact view */}
-                            <div className="w-5 h-5 rounded-full bg-muted/30 flex items-center justify-center">
+                            <div
+                                className="w-5 h-5 rounded-full bg-muted/30 flex items-center justify-center hover:bg-muted/50 cursor-pointer transition-colors"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleSticky?.();
+                                }}
+                            >
                                 {RoleIcon}
                             </div>
 
@@ -711,7 +743,13 @@ export const InteractionCard = memo(({
                         </div>
                         <div className="flex-1 min-w-0">
                             {toolUseBlock && (
-                                <div className="text-[9px] font-medium uppercase tracking-tight text-accent opacity-90 mb-0.5 flex items-center gap-1.5">
+                                <div
+                                    className="text-[9px] font-medium uppercase tracking-tight text-accent opacity-90 mb-0.5 flex items-center gap-1.5 hover:opacity-100 cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleSticky?.();
+                                    }}
+                                >
                                     {toolUseBlock.name}
                                     {siblings && siblings.length > 0 && (
                                         <span className="flex items-center gap-0.5 text-[8px] bg-accent/10 text-accent px-1 rounded-sm border border-accent/20">
@@ -769,8 +807,6 @@ export const InteractionCard = memo(({
                 // Reduced vertical spacing to 1 or 0.5
                 className={clsx(baseClasses, "mb-1 p-2 bg-card flex flex-col gap-1.5 ring-1 ring-border/5 shadow-md")}
                 style={{ transformOrigin: 'top center' }}
-                onMouseEnter={() => onHover?.('role', role)}
-                onMouseLeave={onLeave}
                 onClick={onClick}
             >
                 {editedMdFile ? (
@@ -813,19 +849,33 @@ export const InteractionCard = memo(({
                 {/* Header (Role + Time + Cancelled) */}
                 <div className="flex justify-between items-center border-b border-border/10 pb-1 mb-0.5">
                     <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-muted/30 flex items-center justify-center shrink-0">
+                        <div
+                            className="w-5 h-5 rounded-full bg-muted/30 flex items-center justify-center shrink-0 hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleSticky?.();
+                            }}
+                        >
                             {RoleIcon}
                         </div>
 
-                        {isCommit && <span className="text-[9px] bg-indigo-500/10 text-indigo-600 px-1 rounded border border-indigo-200 uppercase tracking-wider font-bold">GIT</span>}
-                        {isShell && <span className="text-[9px] bg-[var(--tool-terminal)]/10 text-[var(--tool-terminal)] px-1 rounded border border-[var(--tool-terminal)]/20 uppercase tracking-wider font-bold">SHELL</span>}
-                        {editedMdFile && <span className="text-[9px] bg-amber-500/10 text-amber-600 px-1 rounded border border-amber-200 uppercase tracking-wider font-bold">DOCS</span>}
+                        {isCommit && <span className="text-[9px] bg-indigo-500/10 text-indigo-600 px-1 rounded border border-indigo-200 uppercase tracking-wider font-bold cursor-pointer">GIT</span>}
+                        {isShell && <span className="text-[9px] bg-[var(--tool-terminal)]/10 text-[var(--tool-terminal)] px-1 rounded border border-[var(--tool-terminal)]/20 uppercase tracking-wider font-bold cursor-pointer">SHELL</span>}
+                        {editedMdFile && <span className="text-[9px] bg-amber-500/10 text-amber-600 px-1 rounded border border-amber-200 uppercase tracking-wider font-bold cursor-pointer">DOCS</span>}
 
                         {/* Tool Frequency Summary (memoized) */}
                         {toolFrequency && (
                             <div className="flex items-center gap-1.5 ml-1">
                                 {(Object.entries(toolFrequency) as [string, number][]).sort((a, b) => b[1] - a[1]).map(([name, count]) => (
-                                    <div key={name} className="flex items-center gap-0.5 text-[9px] text-muted-foreground/80 bg-muted/30 px-1 rounded-sm border border-border/20" title={`${count}x ${name}`}>
+                                    <div
+                                        key={name}
+                                        className="flex items-center gap-0.5 text-[9px] text-muted-foreground/80 bg-muted/30 px-1 rounded-sm border border-border/20 hover:bg-muted/50 cursor-pointer transition-colors"
+                                        title={`${count}x ${name}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onToggleSticky?.();
+                                        }}
+                                    >
                                         <span className={clsx("w-1.5 h-1.5 rounded-full inline-block mr-0.5",
                                             name === 'bash' ? 'bg-sky-500' :
                                                 name === 'search' ? 'bg-amber-500' :

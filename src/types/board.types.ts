@@ -45,14 +45,32 @@ export interface DateFilter {
     end: Date | null;
 }
 
+// ... imports
+import type { RendererVariant } from "@/components/renderers/types";
+
+// ... existing code ...
+
+export interface ActiveBrush {
+    type: "model" | "status" | "tool" | "file";
+    value: string;
+}
+
+export interface BrushableCard {
+    role: string;
+    model?: string;
+    variant: RendererVariant;
+    isError: boolean;
+    isCancelled: boolean;
+    isCommit: boolean;
+    isShell: boolean;
+    editedFiles: string[];
+}
+
 export interface BoardState {
     sessions: Record<string, BoardSessionData>;
     visibleSessionIds: string[];
     isLoadingBoard: boolean;
     zoomLevel: ZoomLevel;
-    activeBrush: {
-        type: "role" | "status" | "tool" | "file";
-        value: string;
-    } | null;
+    activeBrush: ActiveBrush | null;
     dateFilter: DateFilter;
 }

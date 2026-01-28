@@ -34,6 +34,7 @@ export interface SessionStatsCardProps {
   showSessionId?: boolean;
   compact?: boolean;
   summary?: string;
+  onClick?: () => void;
 }
 
 export const SessionStatsCard = memo(({
@@ -41,6 +42,7 @@ export const SessionStatsCard = memo(({
   showSessionId = false,
   compact = false,
   summary,
+  onClick,
 }: SessionStatsCardProps) => {
   const { t } = useTranslation();
 
@@ -64,8 +66,9 @@ export const SessionStatsCard = memo(({
         "bg-card/60 backdrop-blur-sm",
         "border border-border/40",
         "transition-all duration-200",
-        "hover:border-border/60"
+        onClick ? "hover:border-accent hover:shadow-md cursor-pointer" : "hover:border-border/60"
       )}
+      onClick={onClick}
     >
       <div className={compact ? "p-3" : "p-4"}>
         {/* Main Stats Row */}

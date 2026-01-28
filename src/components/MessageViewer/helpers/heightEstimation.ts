@@ -65,7 +65,7 @@ export function estimateMessageHeight(item: FlattenedMessage): number {
   }
 
   // Messages with tool results tend to be taller
-  if (message.toolUseResult) {
+  if ((message.type === "user" || message.type === "assistant") && message.toolUseResult) {
     return HEIGHT_DEFAULTS.toolResult;
   }
 

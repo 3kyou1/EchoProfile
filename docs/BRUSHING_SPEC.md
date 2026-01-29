@@ -348,30 +348,36 @@ BoardControls click / InteractionCard hover/click
 | 1. Fix variant divergence | `renderers/types.ts`, `toolIconUtils.ts` | **Done** `cbb5886` — Bash/KillShell → `"terminal"`, `toolIconUtils` delegates to canonical `TOOL_VARIANTS` first |
 | 2. Extract CardSemantics | `InteractionCard.tsx` | **Done** `2aff3b5` — Single `useMemo` replaces 8 scattered hooks; tool frequency memoized |
 | 3. Add `isShell` + terminal badges | `InteractionCard.tsx` | **Done** `40b1c78` — SHELL badge at zoom 1/2, command banner at zoom 2 |
-| 4. Create `brushMatchers.ts` | New file: `src/utils/brushMatchers.ts` | **TODO** — Pure `matchesBrush(brush, card)` predicate, testable without React |
-| 5. Wire hover brush | `InteractionCard` → `SessionBoard` | **TODO** — Connect existing `onHover`/`onLeave` callbacks to `setActiveBrush` |
-| 6. Add CSS dim/match classes | `index.css` + `InteractionCard.tsx` | **TODO** — `brush-match` (ring highlight) / `brush-dim` (opacity+grayscale) |
-| 7. Lane header match ratio | `SessionLane.tsx` | **TODO** — Show `12/47 ████░░░░` per lane when brush active |
-| 8. BoardControls dropdowns | `BoardControls.tsx` | **TODO** — `[role ▾] [tool ▾] [file ▾] [status ▾] [× Clear]`, populated from visible sessions |
-| 9. Click-to-stick | `boardSlice` + `InteractionCard` | **TODO** — `stickyBrush` state; badge clicks lock brush, Escape clears |
+| 4. Create `brushMatchers.ts` | `src/utils/brushMatchers.ts` | **Done** — Pure `matchesBrush(brush, card)` predicate with special handling for model, git, code, document brushes |
+| 5. Wire hover brush | `InteractionCard` → `SessionBoard` | **Done** — `onHover`/`onLeave` callbacks connected; badge clicks set brush |
+| 6. Add CSS dim/match classes | `index.css` + `InteractionCard.tsx` | **Done** — `.brush-match` class with ring highlight; non-matching cards get `opacity-25` |
+| 7. Lane header highlighting | `SessionLane.tsx` | **Done** — Tool icons in header get `brush-match bg-accent/10` when their category is brushed |
+| 8. BoardControls dropdowns | `BoardControls.tsx` | **Done** — Model, Status, Tool, File dropdowns populated from visible sessions |
+| 9. Click-to-stick | `boardSlice` + `InteractionCard` | **Done** — `stickyBrush` state; Lock icon indicator when sticky |
 
-### Key files for remaining work
+### Implementation Notes
 
-- **Step 4**: Create `src/utils/brushMatchers.ts`. Import `CardSemantics` shape and `RendererVariant` from existing types. See spec section "Brush Matching Utility" above.
-- **Step 5**: `InteractionCard.tsx` already has `onHover`/`onLeave` props wired to `mouseEnter`/`mouseLeave`. Currently passes `('role', role)` — change to pass the semantics variant. `SessionBoard.tsx` already passes `setActiveBrush` down.
-- **Step 6**: Add `.brush-match` and `.brush-dim` classes to `src/index.css`. Apply via `clsx` in InteractionCard using `semantics` + `matchesBrush()`.
-- **Step 7**: `SessionLane.tsx` already receives `activeBrush` prop. Add `useMemo` to count matches across `visibleItems`.
-- **Step 8**: `BoardControls.tsx` already accepts `onBrushChange` prop (stubbed). Build dropdowns populated from `boardSessions` data.
-- **Step 9**: Add `stickyBrush: boolean` to `boardSlice.ts`. Hover clears brush only when not sticky.
+**Brush types evolved from spec:**
+- Original spec proposed `role` brush — implementation uses `model` brush instead (opus/sonnet/haiku filtering)
+- Added `isGit` to BrushableCard for generic git command detection (separate from `isCommit` for verified commits)
+- Special handling in `matchesBrush` for `document` (matches variant OR `.md` files), `code` (matches variant OR file edits), `git` (matches variant OR git commands)
+
+**Key files:**
+- `src/utils/brushMatchers.ts` — Pure predicate logic
+- `src/types/board.types.ts` — `ActiveBrush`, `BrushableCard` interfaces
+- `src/components/SessionBoard/InteractionCard.tsx` — Card semantics + brush visual treatment
+- `src/components/SessionBoard/SessionLane.tsx` — Header icon highlighting
+- `src/components/SessionBoard/BoardControls.tsx` — Filter dropdowns
+- `src/index.css:802` — `.brush-match` CSS class
 
 ---
 
-## Open Questions
+## Future Enhancements
 
-1. **Group-level matching:** When messages are grouped (zoom 0/1), should one match in the group highlight the entire group? Recommended: yes.
-2. **Multi-brush:** Allow selecting multiple brush values simultaneously (e.g., terminal AND error)? Defer to v2.
-3. **File brush granularity:** Brush by exact path or by directory? Start with exact path, add directory grouping later.
-4. **Brush persistence:** Save last brush to Zustand store/localStorage across sessions? Nice-to-have.
+1. **Multi-brush:** Allow selecting multiple brush values simultaneously (e.g., terminal AND error)
+2. **Brush persistence:** Save last brush to localStorage across sessions
+3. **Match count in lane header:** Show `12/47` numeric ratio when brush active (currently only icon highlighting)
+4. **Directory-level file brush:** Group files by directory in the file dropdown
 
 ---
 

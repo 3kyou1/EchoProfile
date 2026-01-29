@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppStore } from "../../store/useAppStore";
 import type { BoardSessionData, ZoomLevel } from "../../types/board.types";

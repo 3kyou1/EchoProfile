@@ -836,7 +836,7 @@ export const InteractionCard = memo(({
             <div
                 ref={cardRef}
                 // Reduced vertical spacing to 1 or 0.5
-                className={clsx(baseClasses, "mb-1 p-2 bg-card flex flex-col gap-1.5 ring-1 ring-border/5 shadow-md")}
+                className={clsx(baseClasses, "mb-1 p-2 bg-card flex flex-col gap-1.5", !isHighlighted && "ring-1 ring-border/5 shadow-md")}
                 style={{ transformOrigin: 'top center' }}
                 onClick={onClick}
             >

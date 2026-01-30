@@ -251,7 +251,7 @@ export const SessionLane = ({
                 {zoomLevel === 0 ? (
                     <div className="flex flex-col items-center gap-1.5 text-center h-full justify-between">
                         <div className="flex gap-1">
-                            {stats?.commitCount > 0 && <span title={t("board.gitCommits")}><GitCommit className="w-2.5 h-2.5 text-indigo-500" /></span>}
+                            {stats?.commitCount > 0 && <span title={t("session.board.gitCommits")}><GitCommit className="w-2.5 h-2.5 text-indigo-500" /></span>}
                         </div>
                         <div className="text-[10px] font-bold text-muted-foreground">
                             {new Date(session.last_modified).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
@@ -272,7 +272,7 @@ export const SessionLane = ({
                                 {/* Activity Summary Row 1: Tokens & Git & Edits */}
 
                                 {stats.commitCount > 0 && (
-                                    <div className="flex items-center gap-1 text-indigo-500" title={t("board.gitCommits")}>
+                                    <div className="flex items-center gap-1 text-indigo-500" title={t("session.board.gitCommits")}>
                                         <GitCommit className="w-3 h-3" />
                                         <span className="text-[10px] font-bold">{stats.commitCount}</span>
                                     </div>
@@ -330,7 +330,7 @@ export const SessionLane = ({
                                             "text-sky-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'terminal' && "brush-match bg-accent/10"
                                         )}
-                                        title={t("board.clickToFilter.shell")}
+                                        title={t("session.board.clickToFilter.shell")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'terminal'); }}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
@@ -359,7 +359,7 @@ export const SessionLane = ({
                                                     "text-emerald-500",
                                                     activeBrush?.type === 'tool' && activeBrush.value === 'file' && "brush-match bg-accent/10"
                                                 )}
-                                                title={t("board.clickToFilter.filesCreated", { count: createdCount, total: stats.fileToolCount })}
+                                                title={t("session.board.clickToFilter.filesCreated", { count: createdCount, total: stats.fileToolCount })}
                                                 onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'file'); }}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter' || e.key === ' ') {
@@ -381,7 +381,7 @@ export const SessionLane = ({
                                                     "text-blue-500",
                                                     activeBrush?.type === 'tool' && activeBrush.value === 'file' && "brush-match bg-accent/10"
                                                 )}
-                                                title={t("board.clickToFilter.fileOperations")}
+                                                title={t("session.board.clickToFilter.fileOperations")}
                                                 onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'file'); }}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter' || e.key === ' ') {
@@ -407,7 +407,7 @@ export const SessionLane = ({
                                             "text-amber-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'search' && "brush-match bg-accent/10"
                                         )}
-                                        title={t("board.clickToFilter.search")}
+                                        title={t("session.board.clickToFilter.search")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'search'); }}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
@@ -430,7 +430,7 @@ export const SessionLane = ({
                                             "text-sky-400",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'web' && "brush-match bg-accent/10"
                                         )}
-                                        title={t("board.clickToFilter.web")}
+                                        title={t("session.board.clickToFilter.web")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'web'); }}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
@@ -453,7 +453,7 @@ export const SessionLane = ({
                                             "text-purple-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'mcp' && "brush-match bg-accent/10"
                                         )}
-                                        title={t("board.clickToFilter.mcp")}
+                                        title={t("session.board.clickToFilter.mcp")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'mcp'); }}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
@@ -476,7 +476,7 @@ export const SessionLane = ({
                                             "text-orange-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'git' && "brush-match bg-accent/10"
                                         )}
-                                        title={t("board.clickToFilter.git")}
+                                        title={t("session.board.clickToFilter.git")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'git'); }}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
@@ -499,7 +499,7 @@ export const SessionLane = ({
                                             "text-amber-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'document' && "brush-match bg-accent/10"
                                         )}
-                                        title={t("board.clickToFilter.docs")}
+                                        title={t("session.board.clickToFilter.docs")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'document'); }}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
@@ -522,7 +522,7 @@ export const SessionLane = ({
                                             "text-foreground/70",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'code' && "brush-match bg-accent/10"
                                         )}
-                                        title={t("board.clickToFilter.edits")}
+                                        title={t("session.board.clickToFilter.edits")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'code'); }}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
@@ -545,7 +545,7 @@ export const SessionLane = ({
                                             "text-sky-500/70",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'code' && "brush-match bg-accent/10"
                                         )}
-                                        title={t("board.clickToFilter.reads")}
+                                        title={t("session.board.clickToFilter.reads")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'code'); }}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
@@ -564,7 +564,7 @@ export const SessionLane = ({
                             {/* Actual Git History (Ground Truth) */}
                             {data.gitCommits && data.gitCommits.length > 0 && (
                                 <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 pt-1 border-t border-border/10">
-                                    <div className="text-[8px] uppercase font-bold text-blue-500/70 tracking-tighter w-full">{t("board.gitCommits")}</div>
+                                    <div className="text-[8px] uppercase font-bold text-blue-500/70 tracking-tighter w-full">{t("session.board.gitCommits")}</div>
                                     {data.gitCommits.slice(0, 2).map(commit => (
                                         <div key={commit.hash} className="flex items-center gap-1.5 text-[9px] text-blue-600/80 font-mono bg-blue-500/5 px-1.5 py-0.5 rounded border border-blue-500/10 max-w-full overflow-hidden" title={commit.message}>
                                             <GitCommit className="w-2.5 h-2.5 shrink-0" />
@@ -573,7 +573,7 @@ export const SessionLane = ({
                                         </div>
                                     ))}
                                     {data.gitCommits.length > 2 && (
-                                        <span className="text-[9px] text-muted-foreground/40 self-center">{t("board.moreItems", { count: data.gitCommits.length - 2 })}</span>
+                                        <span className="text-[9px] text-muted-foreground/40 self-center">{t("session.board.moreItems", { count: data.gitCommits.length - 2 })}</span>
                                     )}
                                 </div>
                             )}

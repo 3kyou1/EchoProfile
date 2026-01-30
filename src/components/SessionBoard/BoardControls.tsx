@@ -69,8 +69,8 @@ export const BoardControls = ({
                             "p-1 rounded-md transition-all",
                             zoomLevel === 0 ? "bg-background shadow-sm text-accent" : "text-muted-foreground hover:text-foreground"
                         )}
-                        title={t("board.controls.pixelView")}
-                        aria-label={t("board.controls.pixelView")}
+                        title={t("session.board.controls.pixelView")}
+                        aria-label={t("session.board.controls.pixelView")}
                     >
                         <Layout className="w-3.5 h-3.5" />
                     </button>
@@ -80,8 +80,8 @@ export const BoardControls = ({
                             "p-1 rounded-md transition-all",
                             zoomLevel === 1 ? "bg-background shadow-sm text-accent" : "text-muted-foreground hover:text-foreground"
                         )}
-                        title={t("board.controls.skimView")}
-                        aria-label={t("board.controls.skimView")}
+                        title={t("session.board.controls.skimView")}
+                        aria-label={t("session.board.controls.skimView")}
                     >
                         <Layers className="w-3.5 h-3.5" />
                     </button>
@@ -91,8 +91,8 @@ export const BoardControls = ({
                             "p-1 rounded-md transition-all",
                             zoomLevel === 2 ? "bg-background shadow-sm text-accent" : "text-muted-foreground hover:text-foreground"
                         )}
-                        title={t("board.controls.readView")}
-                        aria-label={t("board.controls.readView")}
+                        title={t("session.board.controls.readView")}
+                        aria-label={t("session.board.controls.readView")}
                     >
                         <Eye className="w-3.5 h-3.5" />
                     </button>
@@ -108,10 +108,10 @@ export const BoardControls = ({
                         onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'model', value: v })}
                     >
                         <SelectTrigger className="h-7 w-32 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder={t("board.controls.model")} />
+                            <SelectValue placeholder={t("session.board.controls.model")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("board.controls.all")}</SelectItem>
+                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
                             {modelOptions.map(r => (
                                 <SelectItem
                                     key={r}
@@ -130,10 +130,10 @@ export const BoardControls = ({
                         onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'status', value: v })}
                     >
                         <SelectTrigger className="h-7 w-28 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder={t("board.controls.status")} />
+                            <SelectValue placeholder={t("session.board.controls.status")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("board.controls.all")}</SelectItem>
+                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
                             {statusOptions.map(s => (
                                 <SelectItem
                                     key={s}
@@ -152,10 +152,10 @@ export const BoardControls = ({
                         onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'tool', value: v })}
                     >
                         <SelectTrigger className="h-7 w-32 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder={t("board.controls.tool")} />
+                            <SelectValue placeholder={t("session.board.controls.tool")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("board.controls.all")}</SelectItem>
+                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
                             {toolOptions.map(toolOption => (
                                 <SelectItem
                                     key={toolOption}
@@ -174,10 +174,10 @@ export const BoardControls = ({
                         onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'file', value: v })}
                     >
                         <SelectTrigger className="h-7 w-40 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder={t("board.controls.file")} />
+                            <SelectValue placeholder={t("session.board.controls.file")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("board.controls.all")}</SelectItem>
+                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
                             {fileOptions.map(f => (
                                 <SelectItem
                                     key={f}

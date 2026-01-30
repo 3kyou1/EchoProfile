@@ -279,8 +279,8 @@ const ExpandedCard = memo(({
                                 onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
                                 disabled={!onPrev}
                                 className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
-                                title={t("board.prevMsg")}
-                                aria-label={t("board.prevMsg")}
+                                title={t("session.board.prevMsg")}
+                                aria-label={t("session.board.prevMsg")}
                             >
                                 <ChevronUp className="w-3 h-3" />
                             </button>
@@ -288,8 +288,8 @@ const ExpandedCard = memo(({
                                 onClick={(e) => { e.stopPropagation(); onNext?.(); }}
                                 disabled={!onNext}
                                 className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
-                                title={t("board.nextMsg")}
-                                aria-label={t("board.nextMsg")}
+                                title={t("session.board.nextMsg")}
+                                aria-label={t("session.board.nextMsg")}
                             >
                                 <ChevronDown className="w-3 h-3" />
                             </button>
@@ -303,8 +303,8 @@ const ExpandedCard = memo(({
                                     "p-1 rounded transition-all",
                                     !isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                 )}
-                                title={t("board.rawText")}
-                                aria-label={t("board.rawText")}
+                                title={t("session.board.rawText")}
+                                aria-label={t("session.board.rawText")}
                             >
                                 <AlignLeft className="w-3 h-3" />
                             </button>
@@ -314,8 +314,8 @@ const ExpandedCard = memo(({
                                     "p-1 rounded transition-all",
                                     isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                 )}
-                                title={t("board.prettyMarkdown")}
-                                aria-label={t("board.prettyMarkdown")}
+                                title={t("session.board.prettyMarkdown")}
+                                aria-label={t("session.board.prettyMarkdown")}
                             >
                                 <FileCode className="w-3 h-3" />
                             </button>
@@ -325,11 +325,11 @@ const ExpandedCard = memo(({
                         <button
                             onClick={(e) => { e.stopPropagation(); onNavigate?.(); }}
                             className="p-1 hover:bg-muted rounded text-xs text-muted-foreground hover:text-foreground transition-colors mr-1"
-                            title={t("board.openInView")}
-                            aria-label={t("board.openInView")}
+                            title={t("session.board.openInView")}
+                            aria-label={t("session.board.openInView")}
                         >
-                            <span className="sr-only">{t("board.open")}</span>
-                            {t("board.open")}
+                            <span className="sr-only">{t("session.board.open")}</span>
+                            {t("session.board.open")}
                         </button>
 
                         <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100" title={t("common.close")}
@@ -345,21 +345,21 @@ const ExpandedCard = memo(({
                             <ReactMarkdown>{content}</ReactMarkdown>
                         </div>
                     ) : (
-                        content ? content : (ToolContent || t("board.noContent"))
+                        content ? content : (ToolContent || t("session.board.noContent"))
                     )}
                 </div>
 
                 {isError && (
                     <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 text-destructive text-xs font-medium">
-                        {t("board.errorDetected")}
+                        {t("session.board.errorDetected")}
                     </div>
                 )}
 
                 <div className="p-2 border-t border-border/50 bg-muted/10 rounded-b-lg flex justify-end gap-3 text-[10px] text-muted-foreground shrink-0 font-mono">
                     {isClaudeAssistantMessage(message) && message.usage && (
                         <>
-                            <span>{t("board.input")} {message.usage.input_tokens || 0}</span>
-                            <span>{t("board.output")} {message.usage.output_tokens || 0}</span>
+                            <span>{t("session.board.input")} {message.usage.input_tokens || 0}</span>
+                            <span>{t("session.board.output")} {message.usage.output_tokens || 0}</span>
                         </>
                     )}
                 </div>
@@ -644,7 +644,7 @@ export const InteractionCard = memo(({
                         <div className="text-[11px] leading-tight text-foreground/90 font-mono line-clamp-4 whitespace-pre-wrap break-words border-t border-border/20 pt-1 mt-0.5">
                             {totalMessagesCount > 1 ? (
                                 <div className="flex flex-col gap-1">
-                                    <div className="italic opacity-70">{t("board.blockContaining", { count: totalMessagesCount })}</div>
+                                    <div className="italic opacity-70">{t("session.board.blockContaining", { count: totalMessagesCount })}</div>
                                     <div className="line-clamp-3">{tooltipContent}</div>
                                 </div>
                             ) : tooltipContent}
@@ -845,7 +845,7 @@ export const InteractionCard = memo(({
 
                 {/* Content Area */}
                 <div className="text-xs text-foreground/90 whitespace-pre-wrap break-words leading-tight max-h-[300px] overflow-hidden relative">
-                    {content ? content : (toolUseBlock ? <SmartJsonDisplay data={toolUseBlock.input} /> : t("board.noContent"))}
+                    {content ? content : (toolUseBlock ? <SmartJsonDisplay data={toolUseBlock.input} /> : t("session.board.noContent"))}
                     {/* Gradient to fade out long content */}
                     <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-card to-transparent pointer-events-none" />
                 </div>

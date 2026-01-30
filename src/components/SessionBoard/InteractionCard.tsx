@@ -1,6 +1,6 @@
 import { memo, useMemo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { matchesBrush, type ActiveBrush } from "@/utils/brushMatchers";
+import { type ActiveBrush } from "@/utils/brushMatchers";
 import type { ClaudeMessage, GitCommit } from "../../types";
 import type { ZoomLevel } from "../../types/board.types";
 import { ToolIcon } from "../ToolIcon";
@@ -10,8 +10,7 @@ import {
     getMessageRole,
     getToolUseBlock,
     isClaudeAssistantMessage,
-    isClaudeUserMessage,
-    isClaudeSystemMessage
+    isClaudeUserMessage
 } from "../../utils/messageUtils";
 import { clsx } from "clsx";
 import { FileText, X, FileCode, AlignLeft, Bot, User, Ban, ChevronUp, ChevronDown, GitCommit as GitIcon, PencilLine, GripVertical, CheckCircle2, Link2, Layers, Timer, Scissors, AlertTriangle, Zap, Plug, Terminal } from "lucide-react";
@@ -20,6 +19,8 @@ import { useAppStore } from "../../store/useAppStore";
 import { SmartJsonDisplay } from "../SmartJsonDisplay";
 import { getNaturalLanguageSummary, getAgentName } from "../../utils/toolSummaries";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useTranslation } from "react-i18next";
+import { getCardSemantics } from "@/utils/cardSemantics";
 interface InteractionCardProps {
     message: ClaudeMessage;
     zoomLevel: ZoomLevel;
@@ -35,7 +36,40 @@ interface InteractionCardProps {
     onToggleSticky?: () => void;
 }
 
-const ExpandedCard = ({
+const FileEditDisplay = ({ toolUseBlock }: { toolUseBlock: any }) => {
+    const path = toolUseBlock?.input?.path || toolUseBlock?.input?.file_path || toolUseBlock?.input?.TargetFile;
+    if (path && typeof path === 'string') {
+        const displayText = path.split(/[\\/]/).pop();
+        return (
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] text-emerald-600 font-medium mb-1">
+                <PencilLine className="w-3 h-3" />
+                <span className="truncate" title={path}>Edit: {displayText}</span>
+            </div>
+        );
+    }
+    return null;
+};
+
+const ExitCodeDisplay = ({ message }: { message: ClaudeMessage }) => {
+    const result = (isClaudeAssistantMessage(message) || isClaudeUserMessage(message)) ? message.toolUseResult : null;
+    if (!result || typeof result !== 'object') return null;
+
+    const res = result as Record<string, unknown>;
+    const code = res.exitCode ?? res.return_code;
+    if (code === undefined) return null;
+
+    const codeNum = Number(code);
+    return (
+        <div className={clsx("flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border self-start",
+            codeNum === 0 ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/20" : "text-destructive bg-destructive/5 border-destructive/20"
+        )} title={`Exit Code: ${codeNum}`}>
+            {codeNum === 0 ? <CheckCircle2 className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+            <span className="font-bold">EXIT {codeNum}</span>
+        </div>
+    );
+};
+
+const ExpandedCard = memo(({
     message,
     content,
     editedMdFile,
@@ -62,6 +96,7 @@ const ExpandedCard = ({
     onFileClick?: (file: string) => void;
     onNavigate?: () => void;
 }) => {
+    const { t } = useTranslation();
     const { setMarkdownPretty } = useAppStore();
     const [position, setPosition] = useState<{ x: number; y: number; anchorY: 'top' | 'bottom' } | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -75,9 +110,9 @@ const ExpandedCard = ({
         if (!triggerRect || position !== null) return;
 
         // Calculate position: default to right, sticky to screen
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        const cardWidth = 480; // Reasonable reading width
+        // const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+        const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 768;
+        // const cardWidth = 480; // Reasonable reading width
         const gap = 12;
 
         let left = triggerRect.right + gap;
@@ -159,7 +194,7 @@ const ExpandedCard = ({
 
     if (!triggerRect || !position) return null;
 
-    const windowHeight = window.innerHeight;
+    const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 768;
     const maxHeight = Math.min(600, windowHeight - 40);
 
     return createPortal(
@@ -243,7 +278,7 @@ const ExpandedCard = ({
                                 onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
                                 disabled={!onPrev}
                                 className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
-                                title="Previous Message (Up)"
+                                title={t("board.prevMsg")}
                             >
                                 <ChevronUp className="w-3 h-3" />
                             </button>
@@ -251,7 +286,7 @@ const ExpandedCard = ({
                                 onClick={(e) => { e.stopPropagation(); onNext?.(); }}
                                 disabled={!onNext}
                                 className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
-                                title="Next Message (Down)"
+                                title={t("board.nextMsg")}
                             >
                                 <ChevronDown className="w-3 h-3" />
                             </button>
@@ -265,7 +300,7 @@ const ExpandedCard = ({
                                     "p-1 rounded transition-all",
                                     !isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                 )}
-                                title="Raw Text"
+                                title={t("board.rawText")}
                             >
                                 <AlignLeft className="w-3 h-3" />
                             </button>
@@ -275,7 +310,7 @@ const ExpandedCard = ({
                                     "p-1 rounded transition-all",
                                     isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                 )}
-                                title="Pretty Markdown"
+                                title={t("board.prettyMarkdown")}
                             >
                                 <FileCode className="w-3 h-3" />
                             </button>
@@ -285,13 +320,13 @@ const ExpandedCard = ({
                         <button
                             onClick={(e) => { e.stopPropagation(); onNavigate?.(); }}
                             className="p-1 hover:bg-muted rounded text-xs text-muted-foreground hover:text-foreground transition-colors mr-1"
-                            title="Open in Message View"
+                            title={t("board.openInView")}
                         >
-                            <span className="sr-only">Open</span>
-                            Open
+                            <span className="sr-only">{t("board.open")}</span>
+                            {t("board.open")}
                         </button>
 
-                        <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100" title="Close">
+                        <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100" title={t("common.close")}>
                             <X className="w-4 h-4" />
                         </button>
                     </div>
@@ -303,21 +338,21 @@ const ExpandedCard = ({
                             <ReactMarkdown>{content}</ReactMarkdown>
                         </div>
                     ) : (
-                        content ? content : (ToolContent || "No content")
+                        content ? content : (ToolContent || t("board.noContent"))
                     )}
                 </div>
 
                 {isError && (
                     <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 text-destructive text-xs font-medium">
-                        Error detected in this interaction
+                        {t("board.errorDetected")}
                     </div>
                 )}
 
                 <div className="p-2 border-t border-border/50 bg-muted/10 rounded-b-lg flex justify-end gap-3 text-[10px] text-muted-foreground shrink-0 font-mono">
                     {isClaudeAssistantMessage(message) && message.usage && (
                         <>
-                            <span>In: {message.usage.input_tokens || 0}</span>
-                            <span>Out: {message.usage.output_tokens || 0}</span>
+                            <span>{t("board.input")} {message.usage.input_tokens || 0}</span>
+                            <span>{t("board.output")} {message.usage.output_tokens || 0}</span>
                         </>
                     )}
                 </div>
@@ -325,7 +360,9 @@ const ExpandedCard = ({
         </div >,
         document.body
     );
-};
+}
+);
+ExpandedCard.displayName = "ExpandedCard";
 
 export const InteractionCard = memo(({
     message,
@@ -341,6 +378,7 @@ export const InteractionCard = memo(({
     activeBrush,
     onToggleSticky
 }: InteractionCardProps) => {
+    const { t } = useTranslation();
     const cardRef = useRef<HTMLDivElement>(null);
     const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null);
     const isMarkdownPretty = useAppStore(state => state.isMarkdownPretty);
@@ -359,112 +397,9 @@ export const InteractionCard = memo(({
     const role = getMessageRole(message);
 
     // --- CardSemantics: all semantic properties computed once ---
-    const semantics = useMemo(() => {
-        const isTool = !!toolUseBlock;
-        const variant = toolUseBlock ? getToolVariant(toolUseBlock.name) : null;
-
-        // Error detection
-        const isError = (isClaudeSystemMessage(message) && message.stopReasonSystem?.toLowerCase().includes("error")) ||
-            (isClaudeAssistantMessage(message) && typeof message.toolUseResult === 'object' && message.toolUseResult !== null && (message.toolUseResult as Record<string, unknown>).is_error === true) ||
-            (isClaudeAssistantMessage(message) && typeof message.toolUseResult === 'object' && message.toolUseResult !== null && typeof (message.toolUseResult as Record<string, unknown>).stderr === 'string' && ((message.toolUseResult as Record<string, unknown>).stderr as string).length > 0);
-
-        // Cancellation detection
-        const isCancelled = (isClaudeAssistantMessage(message) && (message.stop_reason === "customer_cancelled" || message.stop_reason === "consumer_cancelled")) ||
-            (isClaudeSystemMessage(message) && message.stopReasonSystem === "customer_cancelled") ||
-            content.includes("request canceled by user");
-
-        // Git commit detection
-        let isCommit = false;
-        if (isTool && toolUseBlock) {
-            if (['run_command', 'bash', 'execute_command'].includes(toolUseBlock.name)) {
-                const cmd = toolUseBlock.input?.CommandLine || toolUseBlock.input?.command;
-                isCommit = typeof cmd === 'string' && cmd.includes('git commit');
-            }
-        }
-
-        // Generic Git command detection (includes commits AND other git ops)
-        let isGit = false;
-        if (isTool && toolUseBlock) {
-            // 1. Explicit tool variant
-            if (variant === 'git') isGit = true;
-            // 2. Shell command starting with git
-            if (['run_command', 'bash', 'execute_command'].includes(toolUseBlock.name)) {
-                const cmd = toolUseBlock.input?.CommandLine || toolUseBlock.input?.command;
-                if (typeof cmd === 'string' && cmd.trim().startsWith('git')) {
-                    isGit = true;
-                }
-            }
-        }
-
-        // Shell detection (terminal variant, excluding git ops)
-        const isShell = isTool && variant === 'terminal' && !isCommit && !isGit;
-
-        // Shell command text (for display in zoom 1/2)
-        const shellCommand = isShell && toolUseBlock
-            ? (toolUseBlock.input?.CommandLine || toolUseBlock.input?.command || null) as string | null
-            : null;
-
-        // File edit detection
-        const isFileEdit = isTool && toolUseBlock
-            ? (['write_to_file', 'replace_file_content', 'multi_replace_file_content', 'create_file', 'edit_file', 'Edit', 'Replace'].includes(toolUseBlock.name) || /write|edit|replace|patch/i.test(toolUseBlock.name))
-            : false;
-
-        // Markdown file detection
-        let editedMdFile: string | null = null;
-        if (toolUseBlock) {
-            const name = toolUseBlock.name;
-            const input = toolUseBlock.input;
-            if (['write_to_file', 'replace_file_content', 'multi_replace_file_content', 'create_file', 'edit_file'].includes(name) || /write|edit|replace|patch/i.test(name)) {
-                const path = input?.path || input?.file_path || input?.TargetFile || "";
-                if (typeof path === 'string' && path.toLowerCase().endsWith('.md')) {
-                    editedMdFile = path;
-                }
-            }
-        }
-        if (!editedMdFile && role === 'assistant' && content) {
-            const mdMention = content.match(/(create|update|edit|writing|wrote).+?([a-zA-Z0-9_\-. ]+\.md)/i);
-            if (mdMention && mdMention[2]) {
-                editedMdFile = mdMention[2];
-            }
-        }
-
-        // URL detection
-        const hasUrls = content ? /https?:\/\/[^\s]+/.test(content) : false;
-
-        // MCP detection
-        const isMcp = toolUseBlock
-            ? toolUseBlock.name === 'mcp'
-            : (content.includes('<command-name>/mcp') || content.includes('mcp_server'));
-
-        // Raw error detection (in content text)
-        const isRawError = content.includes('<local-command-stdout>Failed') ||
-            content.includes('Error:') ||
-            content.includes('[ERROR]') ||
-            (content.includes('<local-command-stdout>') && content.toLowerCase().includes('failed'));
-
-        // Model detection
-        const model = isClaudeAssistantMessage(message) ? message.model : undefined;
-
-        // Brush matching (Step 4 & 6)
-        const brushMatch = matchesBrush(activeBrush || null, {
-            role,
-            model,
-            variant: variant || "neutral",
-            isError: isError || isRawError,
-            isCancelled,
-            isCommit,
-            isGit,
-            isShell,
-            isFileEdit,
-            editedFiles: editedMdFile ? [editedMdFile] : []
-        });
-
-        return {
-            isTool, variant, isError, isCancelled, isCommit, isGit, isShell, shellCommand,
-            isFileEdit, editedMdFile, hasUrls, isMcp, isRawError,
-            brushMatch
-        };
-    }, [message, toolUseBlock, content, role, activeBrush]);
+    const semantics = useMemo(() =>
+        getCardSemantics(message, content, toolUseBlock, role, activeBrush),
+        [message, toolUseBlock, content, role, activeBrush]);
 
     // Destructure for backward-compatible access in render blocks
     // Destructure commonly-used semantics; access semantics.variant directly when needed (e.g. brushing)
@@ -700,7 +635,7 @@ export const InteractionCard = memo(({
                         <div className="text-[11px] leading-tight text-foreground/90 font-mono line-clamp-4 whitespace-pre-wrap break-words border-t border-border/20 pt-1 mt-0.5">
                             {totalMessagesCount > 1 ? (
                                 <div className="flex flex-col gap-1">
-                                    <div className="italic opacity-70">Block containing {totalMessagesCount} sequential entries.</div>
+                                    <div className="italic opacity-70">{t("board.blockContaining", { count: totalMessagesCount })}</div>
                                     <div className="line-clamp-3">{tooltipContent}</div>
                                 </div>
                             ) : tooltipContent}
@@ -837,27 +772,7 @@ export const InteractionCard = memo(({
                         <span className="truncate">Docs: {editedMdFile}</span>
                     </div>
                 ) : editedMdFile === null && isFileEdit ? (
-                    // Generic file edit fallback if needed, but the hook above handles it via null. 
-                    // We can check if we want to show generic file path too? 
-                    // Let's rely on Tool Input display for generic unless specifically MD.
-                    // Actually, existing code showed generic edits in green. Let's restore that logic for non-MD.
-                    // But wait, 'editedMdFile' is null if not .md.
-                    // We need to check if it's ANY file edit to show the green banner.
-                    // Let's parse 'anyFile' here briefly.
-                    (() => {
-                        const path = toolUseBlock?.input?.path || toolUseBlock?.input?.file_path || toolUseBlock?.input?.TargetFile;
-                        if (path && typeof path === 'string') {
-                            return (
-                                <div
-                                    className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] text-emerald-600 font-medium mb-1"
-                                >
-                                    <PencilLine className="w-3 h-3" />
-                                    <span className="truncate">Edit: {path}</span>
-                                </div>
-                            );
-                        }
-                        return null;
-                    })()
+                    <FileEditDisplay toolUseBlock={toolUseBlock} />
                 ) : isShell && shellCommand ? (
                     <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--tool-terminal)]/10 border border-[var(--tool-terminal)]/20 rounded text-[10px] text-[var(--tool-terminal)] font-medium mb-1">
                         <Terminal className="w-3.5 h-3.5 shrink-0" />
@@ -950,27 +865,7 @@ export const InteractionCard = memo(({
 
                 {/* Exit Code / Status Footer Layer */}
                 <div className="flex gap-2 mt-1">
-                    {/* Exit Code */}
-                    {(() => {
-                        // Check for tool result content item or direct toolUseResult property
-                        // Safe access via discriminated union logic or loose check
-                        const result = (isClaudeAssistantMessage(message) || isClaudeUserMessage(message)) ? message.toolUseResult : null;
-                        if (!result || typeof result !== 'object') return null;
-
-                        const res = result as Record<string, unknown>;
-                        const code = res.exitCode ?? res.return_code;
-                        if (code === undefined) return null;
-
-                        const codeNum = Number(code);
-                        return (
-                            <div className={clsx("flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border self-start",
-                                codeNum === 0 ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/20" : "text-destructive bg-destructive/5 border-destructive/20"
-                            )} title={`Exit Code: ${codeNum}`}>
-                                {codeNum === 0 ? <CheckCircle2 className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
-                                <span className="font-bold">EXIT {codeNum}</span>
-                            </div>
-                        );
-                    })()}
+                    <ExitCodeDisplay message={message} />
 
                     {/* Cutoff Indicator */}
                     {isClaudeAssistantMessage(message) && message.stop_reason === 'max_tokens' && (

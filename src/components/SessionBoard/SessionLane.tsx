@@ -12,25 +12,12 @@ import {
     isClaudeAssistantMessage,
     getToolUseBlock
 } from "../../utils/messageUtils";
-import { getToolVariant } from "@/utils/toolIconUtils";
-import { matchesBrush, type ActiveBrush } from "@/utils/brushMatchers";
+import { getCardSemantics } from "@/utils/cardSemantics";
+import { formatDuration, formatNumber } from "@/utils/formatters";
+import type { ActiveBrush } from "@/utils/brushMatchers";
 import type { ClaudeMessage } from "../../types";
 
-// Helper for formatting duration
-const formatDuration = (minutes: number): string => {
-    if (minutes < 1) return "<1m";
-    if (minutes < 60) return `${Math.round(minutes)}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-};
 
-// Helper for formatting large numbers
-const formatNumber = (num: number): string => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toLocaleString();
-};
 
 interface SessionLaneProps {
     data: BoardSessionData;
@@ -132,42 +119,13 @@ export const SessionLane = ({
         let matched = 0;
         visibleItems.forEach(item => {
             const msg = item.head;
+            const content = extractClaudeMessageContent(msg) || "";
             const toolBlock = getToolUseBlock(msg);
-            const variant = toolBlock ? getToolVariant(toolBlock.name) : "neutral";
             const role = getMessageRole(msg);
 
-            // Basic semantics for header match count
-            // This mirrors the logic in InteractionCard but without the full weight of the component
-            const isFileEdit = toolBlock ? (['write_to_file', 'replace_file_content', 'multi_replace_file_content', 'create_file', 'edit_file', 'Edit', 'Replace'].includes(toolBlock.name) || /write|edit|replace|patch/i.test(toolBlock.name)) : false;
-
-            let isGit = false;
-            if (toolBlock) {
-                if (variant === 'git') isGit = true;
-                if (['run_command', 'bash', 'execute_command'].includes(toolBlock.name)) {
-                    const cmd = toolBlock.input?.CommandLine || toolBlock.input?.command;
-                    // Safe cast since input is Record<string, unknown>
-                    if (typeof cmd === 'string' && cmd.trim().startsWith('git')) {
-                        isGit = true;
-                    }
-                }
-            }
-
-            const isShell = variant === 'terminal' && !isGit; // Exclude git keys from shell brush
-
-            const cardMatches = matchesBrush(activeBrush, {
-                role,
-                model: isClaudeAssistantMessage(msg) ? msg.model : undefined,
-                variant,
-                isError: false, // Simplifying for header count
-                isCancelled: false,
-                isCommit: false,
-                isGit,
-                isShell,
-                isFileEdit,
-                editedFiles: []
-            });
-
-            if (cardMatches) matched++;
+            // Use shared semantic logic
+            const semantics = getCardSemantics(msg, content, toolBlock, role, activeBrush);
+            if (semantics.brushMatch) matched++;
         });
 
         return { matched, total: visibleItems.length };

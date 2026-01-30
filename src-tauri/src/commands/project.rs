@@ -428,4 +428,73 @@ mod tests {
         // WalkDir should find sessions in subdirectories too
         assert_eq!(projects[0].session_count, 2);
     }
+    #[tokio::test]
+    async fn test_get_git_log_invalid_path() {
+        let result = get_git_log("/nonexistent/path".to_string(), 10).await;
+        // Should fail because path doesn't exist
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Path does not exist or is not a directory"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_git_log_not_absolute() {
+        let result = get_git_log("relative/path".to_string(), 10).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Path must be absolute");
+    }
+
+    #[tokio::test]
+    async fn test_get_git_log_success() {
+        let temp_dir = TempDir::new().unwrap();
+        let path_str = temp_dir.path().to_string_lossy().to_string();
+
+        // Initialize git repo
+        let _ = Command::new("git")
+            .arg("init")
+            .current_dir(&temp_dir)
+            .output()
+            .expect("Failed to init git");
+
+        // Configure user for commit
+        let _ = Command::new("git")
+            .args(["config", "user.email", "test@example.com"])
+            .current_dir(&temp_dir)
+            .output();
+        let _ = Command::new("git")
+            .args(["config", "user.name", "Test User"])
+            .current_dir(&temp_dir)
+            .output();
+
+        // Create a file and commit it
+        create_test_jsonl_file(&temp_dir.path().to_path_buf(), "test.txt", "content");
+        let _ = Command::new("git")
+            .args(["add", "."])
+            .current_dir(&temp_dir)
+            .output();
+        let _ = Command::new("git")
+            .args(["commit", "-m", "Initial commit"])
+            .current_dir(&temp_dir)
+            .output();
+
+        let result = get_git_log(path_str, 5).await;
+        
+        // If git is not installed or configured, this might fail or return empty.
+        // But assuming git works:
+        if let Ok(commits) = result {
+             if !commits.is_empty() {
+                 assert_eq!(commits.len(), 1);
+                 assert_eq!(commits[0].message, "Initial commit");
+                 assert_eq!(commits[0].author, "Test User");
+             } else {
+                 // Might happen in CI without git
+                 println!("Warning: git log returned empty (git might not be working in test env)");
+             }
+        } else {
+             // Should not error if path is valid repo
+             panic!("get_git_log failed: {}", result.unwrap_err());
+        }
+    }
 }

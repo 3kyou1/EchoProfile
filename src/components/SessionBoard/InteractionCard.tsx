@@ -450,36 +450,36 @@ export const InteractionCard = memo(({
     const RoleIcon = useMemo(() => {
         if (isCommit) return (
             <div className="relative">
-                <span title="Git Commit"><GitIcon className="w-3.5 h-3.5 text-indigo-500" /></span>
+                <span title={t("interaction.gitCommit")}><GitIcon className="w-3.5 h-3.5 text-indigo-500" /></span>
                 {verifiedCommit && (
                     <div className="absolute -top-1 -right-1">
-                        <span title="Verified Commit"><CheckCircle2 className="w-2 h-2 text-blue-500 fill-white" /></span>
+                        <span title={t("interaction.verifiedCommit")}><CheckCircle2 className="w-2 h-2 text-blue-500 fill-white" /></span>
                     </div>
                 )}
             </div>
         );
 
         // Error takes precedence
-        if (isRawError) return <span title="Error Detected"><AlertTriangle className="w-3.5 h-3.5 text-destructive" /></span>;
+        if (isRawError) return <span title={t("interaction.errorDetectedIcon")}><AlertTriangle className="w-3.5 h-3.5 text-destructive" /></span>;
 
         // Generic Git (non-commit)
-        if (isGit) return <span title="Git Operation"><GitIcon className="w-3.5 h-3.5 text-orange-500" /></span>;
+        if (isGit) return <span title={t("interaction.gitOperation")}><GitIcon className="w-3.5 h-3.5 text-orange-500" /></span>;
 
         // MCP Tool
-        if (isMcp) return <span title="MCP Interaction"><Plug className="w-3.5 h-3.5 text-orange-500" /></span>;
+        if (isMcp) return <span title={t("interaction.mcpInteraction")}><Plug className="w-3.5 h-3.5 text-orange-500" /></span>;
 
         // If markdown edit is detected locally for this card
-        if (editedMdFile) return <span title="Documentation Edit"><FileText className="w-3.5 h-3.5 text-amber-500" /></span>;
-        if (isFileEdit) return <span title="File Edit"><PencilLine className="w-3.5 h-3.5 text-emerald-500" /></span>;
+        if (editedMdFile) return <span title={t("interaction.documentationEdit")}><FileText className="w-3.5 h-3.5 text-amber-500" /></span>;
+        if (isFileEdit) return <span title={t("interaction.fileEdit")}><PencilLine className="w-3.5 h-3.5 text-emerald-500" /></span>;
 
         if (toolUseBlock) return <ToolIcon toolName={toolUseBlock.name} className="w-4 h-4 text-accent" />;
 
         // URL/Reference detected
-        if (hasUrls && role === 'assistant') return <span title="Contains Links"><Link2 className="w-3.5 h-3.5 text-sky-500" /></span>;
+        if (hasUrls && role === 'assistant') return <span title={t("interaction.containsLinks")}><Link2 className="w-3.5 h-3.5 text-sky-500" /></span>;
 
-        if (role === 'user') return <span title="User Message"><User className="w-3.5 h-3.5 text-primary" /></span>;
-        return <span title="Assistant Message"><Bot className="w-3.5 h-3.5 text-muted-foreground" /></span>;
-    }, [role, isCommit, isGit, isFileEdit, editedMdFile, verifiedCommit, hasUrls, isMcp, isRawError, toolUseBlock]);
+        if (role === 'user') return <span title={t("interaction.userMessage")}><User className="w-3.5 h-3.5 text-primary" /></span>;
+        return <span title={t("interaction.assistantMessage")}><Bot className="w-3.5 h-3.5 text-muted-foreground" /></span>;
+    }, [role, isCommit, isGit, isFileEdit, editedMdFile, verifiedCommit, hasUrls, isMcp, isRawError, toolUseBlock, t]);
 
     // Memoized tool frequency summary for zoom level 2 header
     const toolFrequency = useMemo(() => {
@@ -554,7 +554,7 @@ export const InteractionCard = memo(({
 
         const agentName = toolUseBlock
             ? getAgentName(toolUseBlock.name, toolUseBlock.input)
-            : "General Purpose";
+            : t("interaction.generalPurpose");
 
         const tooltipContent = toolUseBlock
             ? getNaturalLanguageSummary(toolUseBlock.name, toolUseBlock.input)
@@ -635,7 +635,7 @@ export const InteractionCard = memo(({
                                 </span>
                                 {totalMessagesCount > 1 && (
                                     <span className="text-[10px] text-muted-foreground">
-                                        {totalMessagesCount} messages • {totalTokens.toLocaleString()} tokens
+                                        {t("interaction.messagesAndTokens", { messages: totalMessagesCount, tokens: totalTokens.toLocaleString() })}
                                     </span>
                                 )}
                             </div>
@@ -657,9 +657,10 @@ export const InteractionCard = memo(({
 
     // Level 1: Skim/Kanban
     if (zoomLevel === 1) {
+        const generalPurpose = t("interaction.generalPurpose");
         const agentName = toolUseBlock
             ? getAgentName(toolUseBlock.name, toolUseBlock.input)
-            : "General Purpose";
+            : generalPurpose;
 
         return (
             <>
@@ -670,7 +671,7 @@ export const InteractionCard = memo(({
                     onClick={onClick}
                 >
                     {/* Agent Name Header - Only if NOT General Purpose */}
-                    {agentName !== "General Purpose" && (
+                    {agentName !== generalPurpose && (
                         <div className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-none select-none">
                             {agentName}
                         </div>
@@ -692,14 +693,14 @@ export const InteractionCard = memo(({
                             {editedMdFile && (
                                 <div
                                     className="absolute -top-1 -right-1 p-0.5 bg-amber-500 rounded-full shadow-sm text-white border border-background"
-                                    title="Markdown Modified"
+                                    title={t("interaction.markdownModified")}
                                 >
                                     <FileText className="w-2 h-2" />
                                 </div>
                             )}
 
                             {isCancelled && (
-                                <div className="absolute -bottom-1 -right-1 p-0.5 bg-orange-500 rounded-full shadow-sm text-white border border-background" title="Cancelled by User">
+                                <div className="absolute -bottom-1 -right-1 p-0.5 bg-orange-500 rounded-full shadow-sm text-white border border-background" title={t("interaction.cancelledByUser")}>
                                     <Ban className="w-2 h-2" />
                                 </div>
                             )}
@@ -851,8 +852,8 @@ export const InteractionCard = memo(({
 
                 {(message.type === 'assistant' && message.usage) && (
                     <div className="mt-auto pt-1 flex gap-2 text-[9px] text-muted-foreground opacity-60 font-mono items-center">
-                        <span>In: {message.usage.input_tokens}</span>
-                        <span>Out: {message.usage.output_tokens}</span>
+                        <span>{t("interaction.inputTokens")} {message.usage.input_tokens}</span>
+                        <span>{t("interaction.outputTokens")} {message.usage.output_tokens}</span>
 
                         {/* Cache Hit Indicator */}
                         {message.usage.cache_read_input_tokens && message.usage.cache_read_input_tokens > 0 && (

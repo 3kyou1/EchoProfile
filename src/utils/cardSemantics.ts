@@ -1,6 +1,6 @@
 
 import type { ClaudeMessage } from "../types";
-import { isClaudeAssistantMessage, isClaudeSystemMessage, getToolUseBlock } from "../utils/messageUtils";
+import { isClaudeAssistantMessage, isClaudeSystemMessage, isClaudeUserMessage, getToolUseBlock } from "../utils/messageUtils";
 import { getToolVariant } from "@/utils/toolIconUtils";
 import { matchesBrush, type ActiveBrush } from "@/utils/brushMatchers";
 
@@ -31,10 +31,21 @@ export function getCardSemantics(
     const isTool = !!toolUseBlock;
     const variant = toolUseBlock ? getToolVariant(toolUseBlock.name) : null;
 
-    // Error detection
+    // Error detection - check both assistant and user messages for tool result errors
+    const hasToolError = (msg: ClaudeMessage) => {
+        const isAssistantOrUser = isClaudeAssistantMessage(msg) || isClaudeUserMessage(msg);
+        if (!isAssistantOrUser) return false;
+        
+        const result = (msg as { toolUseResult?: Record<string, unknown> | string }).toolUseResult;
+        if (typeof result !== 'object' || result === null) return false;
+        
+        return (result as Record<string, unknown>).is_error === true || 
+               (typeof (result as Record<string, unknown>).stderr === 'string' && 
+                ((result as Record<string, unknown>).stderr as string).length > 0);
+    };
+    
     const isError = (isClaudeSystemMessage(message) && message.stopReasonSystem?.toLowerCase().includes("error")) ||
-        (isClaudeAssistantMessage(message) && typeof message.toolUseResult === 'object' && message.toolUseResult !== null && (message.toolUseResult as Record<string, unknown>).is_error === true) ||
-        (isClaudeAssistantMessage(message) && typeof message.toolUseResult === 'object' && message.toolUseResult !== null && typeof (message.toolUseResult as Record<string, unknown>).stderr === 'string' && ((message.toolUseResult as Record<string, unknown>).stderr as string).length > 0);
+        hasToolError(message);
 
     // Cancellation detection
     const isCancelled = (isClaudeAssistantMessage(message) && (message.stop_reason === "customer_cancelled" || message.stop_reason === "consumer_cancelled")) ||
@@ -77,15 +88,20 @@ export function getCardSemantics(
         ? (['write_to_file', 'replace_file_content', 'multi_replace_file_content', 'create_file', 'edit_file', 'Edit', 'Replace'].includes(toolUseBlock.name) || /write|edit|replace|patch/i.test(toolUseBlock.name))
         : false;
 
-    // Markdown file detection
+    // Collect all edited file paths for brush matching
+    const editedFiles: string[] = [];
     let editedMdFile: string | null = null;
+    
     if (toolUseBlock) {
         const name = toolUseBlock.name;
         const input = toolUseBlock.input;
         if (['write_to_file', 'replace_file_content', 'multi_replace_file_content', 'create_file', 'edit_file'].includes(name) || /write|edit|replace|patch/i.test(name)) {
             const path = input?.path || input?.file_path || input?.TargetFile || "";
-            if (typeof path === 'string' && path.toLowerCase().endsWith('.md')) {
-                editedMdFile = path;
+            if (typeof path === 'string' && path) {
+                editedFiles.push(path);
+                if (path.toLowerCase().endsWith('.md')) {
+                    editedMdFile = path;
+                }
             }
         }
     }
@@ -124,7 +140,7 @@ export function getCardSemantics(
         isGit,
         isShell,
         isFileEdit,
-        editedFiles: editedMdFile ? [editedMdFile] : []
+        editedFiles
     });
 
     return {

@@ -14,31 +14,32 @@ export const getToolVariant = (name: string): RendererVariant => {
     // Fuzzy fallback for unknown tools (MCP plugins, custom tools, legacy names)
     const lower = name.toLowerCase();
 
-    if (lower.includes("read") || lower.includes("write") || lower.includes("edit") || lower.includes("lsp") || lower.includes("notebook") || lower.includes("replace")) {
+    // Use word boundaries or specific patterns to avoid false positives
+    if (/\b(read|write|edit|lsp|notebook|replace)\b/.test(lower)) {
         return "code";
     }
-    if (lower.includes("grep") || lower.includes("search")) {
+    if (/\b(grep|search)\b/.test(lower)) {
         return "search";
     }
-    if (lower.includes("glob") || lower.includes("ls") || lower === "file" || lower.includes("create")) {
+    if (/\b(glob|ls|create)\b/.test(lower) || lower === "file") {
         return "file";
     }
-    if (lower.includes("task") || lower.includes("todo") || lower.includes("agent")) {
+    if (/\b(task|todo|agent)\b/.test(lower)) {
         return "task";
     }
-    if (lower.includes("bash") || lower.includes("command") || lower.includes("shell") || lower.includes("kill")) {
+    if (/\b(bash|command|shell|kill)\b/.test(lower)) {
         return "terminal";
     }
-    if (lower.includes("git")) {
+    if (/\bgit\b/.test(lower)) {
         return "git";
     }
-    if (lower.includes("web") || lower.includes("fetch") || lower.includes("http")) {
+    if (/\b(web|fetch|http)\b/.test(lower)) {
         return "web";
     }
-    if (lower.includes("mcp") || lower.includes("server")) {
+    if (/\b(mcp|server)\b/.test(lower)) {
         return "mcp";
     }
-    if (lower.includes("document") || lower.includes("pdf")) {
+    if (/\b(document|pdf)\b/.test(lower)) {
         return "document";
     }
 

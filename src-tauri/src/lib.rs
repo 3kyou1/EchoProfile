@@ -40,15 +40,14 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init());
 
-    // Aptabase analytics - enabled for release builds only
-    // DISABLED: Aptabase plugin causes build failures when key is missing and runtime panics
-    /*
+    // Aptabase analytics - enabled for release builds only if key is provided
     #[cfg(not(debug_assertions))]
     {
-        builder =
-            builder.plugin(tauri_plugin_aptabase::Builder::new(dotenv!("APTABASE_KEY")).build());
+        if let Some(key) = option_env!("APTABASE_KEY") {
+            builder =
+                builder.plugin(tauri_plugin_aptabase::Builder::new(key).build());
+        }
     }
-    */
 
     builder
         .manage(MetadataState::default())

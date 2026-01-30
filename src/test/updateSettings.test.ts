@@ -19,7 +19,6 @@ import {
   isOnline,
 } from "../utils/updateSettings";
 import { DEFAULT_UPDATE_SETTINGS } from "../types/updateSettings";
-const DEFAULT_UPDATE_SETTINGS_VAL = DEFAULT_UPDATE_SETTINGS;
 
 // Mock localStorage if not available in the test environment
 if (typeof localStorage === 'undefined') {

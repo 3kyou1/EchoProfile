@@ -685,12 +685,22 @@ pub async fn get_project_token_stats(
     let process_time = start.elapsed();
 
     // Filter by date if provided
-    let s_limit = start_date
-        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-        .map(|d| d.with_timezone(&Utc));
-    let e_limit = end_date
-        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-        .map(|d| d.with_timezone(&Utc));
+    let s_limit = None;
+    let e_limit = None;
+
+    if let Some(s_str) = start_date {
+        match DateTime::parse_from_rfc3339(&s_str) {
+            Ok(dt) => s_limit = Some(dt.with_timezone(&Utc)),
+            Err(e) => eprintln!("Warning: invalid RFC3339 start_date '{}': {}", s_str, e),
+        }
+    }
+
+    if let Some(e_str) = end_date {
+        match DateTime::parse_from_rfc3339(&e_str) {
+            Ok(dt) => e_limit = Some(dt.with_timezone(&Utc)),
+            Err(e) => eprintln!("Warning: invalid RFC3339 end_date '{}': {}", e_str, e),
+        }
+    }
 
     if s_limit.is_some() || e_limit.is_some() {
         all_stats.retain(|stat| {
@@ -758,12 +768,22 @@ pub async fn get_project_stats_summary(
         .unwrap_or("Unknown")
         .to_string();
 
-    let s_limit = start_date
-        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-        .map(|d| d.with_timezone(&Utc));
-    let e_limit = end_date
-        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-        .map(|d| d.with_timezone(&Utc));
+    let mut s_limit = None;
+    let mut e_limit = None;
+
+    if let Some(s_str) = start_date {
+        match DateTime::parse_from_rfc3339(&s_str) {
+            Ok(dt) => s_limit = Some(dt.with_timezone(&Utc)),
+            Err(e) => eprintln!("Warning: invalid RFC3339 start_date '{}': {}", s_str, e),
+        }
+    }
+
+    if let Some(e_str) = end_date {
+        match DateTime::parse_from_rfc3339(&e_str) {
+            Ok(dt) => e_limit = Some(dt.with_timezone(&Utc)),
+            Err(e) => eprintln!("Warning: invalid RFC3339 end_date '{}': {}", e_str, e),
+        }
+    }
 
     // Phase 1: Collect all session files
     let session_files: Vec<PathBuf> = WalkDir::new(&project_path)

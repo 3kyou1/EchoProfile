@@ -143,15 +143,25 @@ export const SessionLane = ({
             if (!msg) return 80;
 
             if (zoomLevel === 0) {
-                // Approximate total tokens for group?
-                // For heatmap, we disabled grouping above, so siblings is empty
+                // Pixel/Heatmap view
                 let totalTokens = 0;
-                if (isClaudeAssistantMessage(msg)) { // Updated usage
-                    const assistantMsg = msg; // No cast needed due to type guard
-                    if (assistantMsg.usage) {
-                        totalTokens = (assistantMsg.usage.input_tokens || 0) + (assistantMsg.usage.output_tokens || 0);
+                const allMsgs = [msg, ...item.siblings];
+
+                let hasUsageParams = false;
+                for (const m of allMsgs) {
+                    if (isClaudeAssistantMessage(m) && m.usage) {
+                        totalTokens += (m.usage.input_tokens || 0) + (m.usage.output_tokens || 0);
+                        hasUsageParams = true;
                     }
                 }
+
+                // Fallback heuristic if no usage data found
+                if (!hasUsageParams) {
+                    const totalLen = allMsgs.reduce((acc, m) => acc + (extractClaudeMessageContent(m)?.length || 0), 0);
+                    // Approximate ~4 chars per token
+                    totalTokens = Math.floor(totalLen / 4);
+                }
+
                 return Math.min(Math.max(totalTokens / 50, 4), 20);
             }
 

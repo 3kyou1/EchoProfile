@@ -306,7 +306,14 @@ fn track_tool_usage(message: &ClaudeMessage, tool_usage: &mut HashMap<String, (u
                             if let Some(name) = item.get("name").and_then(|v| v.as_str()) {
                                 let tool_entry = tool_usage.entry(name.to_string()).or_insert((0, 0));
                                 tool_entry.0 += 1;
-                                tool_entry.1 += 1;
+                                // Check for success/error similar to explicit tool_use
+                                let is_error = item
+                                    .get("is_error")
+                                    .and_then(serde_json::Value::as_bool)
+                                    .unwrap_or(false);
+                                if !is_error {
+                                    tool_entry.1 += 1;
+                                }
                             }
                         }
                     }
@@ -473,7 +480,6 @@ pub async fn get_session_token_stats(session_path: String) -> Result<SessionToke
         }
 
         // Track tool usage
-        // Track tool usage
         track_tool_usage(message, &mut tool_usage);
     }
 
@@ -593,7 +599,6 @@ fn extract_session_token_stats_sync(session_path: &PathBuf) -> Option<SessionTok
                     last_time = Some(message.timestamp.clone());
                 }
 
-                // Track tool usage
                 // Track tool usage
                 track_tool_usage(&message, &mut tool_usage);
             }

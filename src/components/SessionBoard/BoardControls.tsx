@@ -70,6 +70,7 @@ export const BoardControls = ({
                             zoomLevel === 0 ? "bg-background shadow-sm text-accent" : "text-muted-foreground hover:text-foreground"
                         )}
                         title={t("board.controls.pixelView")}
+                        aria-label={t("board.controls.pixelView")}
                     >
                         <Layout className="w-3.5 h-3.5" />
                     </button>
@@ -80,6 +81,7 @@ export const BoardControls = ({
                             zoomLevel === 1 ? "bg-background shadow-sm text-accent" : "text-muted-foreground hover:text-foreground"
                         )}
                         title={t("board.controls.skimView")}
+                        aria-label={t("board.controls.skimView")}
                     >
                         <Layers className="w-3.5 h-3.5" />
                     </button>
@@ -90,6 +92,7 @@ export const BoardControls = ({
                             zoomLevel === 2 ? "bg-background shadow-sm text-accent" : "text-muted-foreground hover:text-foreground"
                         )}
                         title={t("board.controls.readView")}
+                        aria-label={t("board.controls.readView")}
                     >
                         <Eye className="w-3.5 h-3.5" />
                     </button>

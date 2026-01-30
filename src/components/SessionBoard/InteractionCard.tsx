@@ -281,6 +281,7 @@ const ExpandedCard = memo(({
                                 disabled={!onPrev}
                                 className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
                                 title={t("board.prevMsg")}
+                                aria-label={t("board.prevMsg")}
                             >
                                 <ChevronUp className="w-3 h-3" />
                             </button>
@@ -289,6 +290,7 @@ const ExpandedCard = memo(({
                                 disabled={!onNext}
                                 className="p-1 rounded hover:bg-background hover:shadow-sm disabled:opacity-30 transition-all"
                                 title={t("board.nextMsg")}
+                                aria-label={t("board.nextMsg")}
                             >
                                 <ChevronDown className="w-3 h-3" />
                             </button>
@@ -303,6 +305,7 @@ const ExpandedCard = memo(({
                                     !isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                 )}
                                 title={t("board.rawText")}
+                                aria-label={t("board.rawText")}
                             >
                                 <AlignLeft className="w-3 h-3" />
                             </button>
@@ -313,6 +316,7 @@ const ExpandedCard = memo(({
                                     isMarkdownPretty ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                 )}
                                 title={t("board.prettyMarkdown")}
+                                aria-label={t("board.prettyMarkdown")}
                             >
                                 <FileCode className="w-3 h-3" />
                             </button>
@@ -323,12 +327,14 @@ const ExpandedCard = memo(({
                             onClick={(e) => { e.stopPropagation(); onNavigate?.(); }}
                             className="p-1 hover:bg-muted rounded text-xs text-muted-foreground hover:text-foreground transition-colors mr-1"
                             title={t("board.openInView")}
+                            aria-label={t("board.openInView")}
                         >
                             <span className="sr-only">{t("board.open")}</span>
                             {t("board.open")}
                         </button>
 
-                        <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100" title={t("common.close")}>
+                        <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors opacity-70 hover:opacity-100" title={t("common.close")}
+                            aria-label={t("common.close")}>
                             <X className="w-4 h-4" />
                         </button>
                     </div>
@@ -381,7 +387,7 @@ export const InteractionCard = memo(({
     onToggleSticky
 }: InteractionCardProps) => {
     const { t } = useTranslation();
-    const cardRef = useRef<HTMLDivElement>(null);
+    const cardRef = useRef<HTMLDivElement | HTMLButtonElement>(null);
     const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null);
     const isMarkdownPretty = useAppStore(state => state.isMarkdownPretty);
 
@@ -556,8 +562,8 @@ export const InteractionCard = memo(({
             : content;
 
         const PixelCard = (
-            <div
-                ref={cardRef}
+            <button
+                ref={cardRef as React.RefObject<HTMLButtonElement>}
                 className={clsx(
                     baseClasses,
                     bgColor,
@@ -567,10 +573,12 @@ export const InteractionCard = memo(({
                     // Dim unmatched items when a brush is active
                     (!!activeBrush && !brushMatch) && "opacity-40",
                     // Ensure matched items are fully visible (no border)
-                    isHighlighted && "!opacity-100 z-50"
+                    isHighlighted && "!opacity-100 z-50",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:z-10"
                 )}
                 style={{ height: `${height}px` }}
                 onClick={onClick}
+                aria-label={`Open message from ${role}`}
             >
                 {/* Content Icon Overlay (Pixel View) */}
                 {!isExpanded && (
@@ -579,7 +587,7 @@ export const InteractionCard = memo(({
                         {isCancelled && <Ban className="w-2.5 h-2.5 text-orange-500" />}
                     </div>
                 )}
-            </div>
+            </button>
         );
 
         if (isExpanded) {
@@ -657,7 +665,7 @@ export const InteractionCard = memo(({
         return (
             <>
                 <div
-                    ref={cardRef}
+                    ref={cardRef as React.RefObject<HTMLDivElement>}
                     // Change to flex-col to accommodate header
                     className={clsx(baseClasses, "mb-0.5 p-1.5 bg-card flex flex-col gap-1")}
                     onClick={onClick}
@@ -759,7 +767,7 @@ export const InteractionCard = memo(({
     return (
         <>
             <div
-                ref={cardRef}
+                ref={cardRef as React.RefObject<HTMLDivElement>}
                 // Reduced vertical spacing to 1 or 0.5
                 className={clsx(baseClasses, "mb-1 p-2 bg-card flex flex-col gap-1.5", !isHighlighted && "ring-1 ring-border/5 shadow-md")}
                 style={{ transformOrigin: 'top center' }}

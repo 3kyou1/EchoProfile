@@ -159,7 +159,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
               : "bg-muted/50 text-muted-foreground"
           )}
         >
-          <span title="Session"><MessageCircle className="w-3 h-3" /></span>
+          <span title={t("sessionItem.session")}><MessageCircle className="w-3 h-3" /></span>
         </div>
 
         {/* Session Name / Edit Mode */}
@@ -279,7 +279,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
             isSelected ? "text-accent/80" : "text-muted-foreground"
           )}
         >
-          <span title="Last Modified"><Clock className="w-3 h-3" /></span>
+          <span title={t("sessionItem.lastModified")}><Clock className="w-3 h-3" /></span>
           {formatTimeAgo(session.last_modified)}
         </span>
         <span
@@ -288,11 +288,11 @@ export const SessionItem: React.FC<SessionItemProps> = ({
             isSelected ? "text-accent/80" : "text-muted-foreground"
           )}
         >
-          <span title="Message Count"><Hash className="w-3 h-3" /></span>
+          <span title={t("sessionItem.messageCount")}><Hash className="w-3 h-3" /></span>
           {session.message_count}
         </span>
         {session.has_tool_use && (
-          <span title="Contains Tool Use">
+          <span title={t("sessionItem.containsToolUse")}>
             <Wrench
               className={cn(
                 "w-3 h-3",
@@ -302,7 +302,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
           </span>
         )}
         {session.has_errors && (
-          <span title="Contains Errors"><AlertTriangle className="w-3 h-3 text-destructive" /></span>
+          <span title={t("sessionItem.containsErrors")}><AlertTriangle className="w-3 h-3 text-destructive" /></span>
         )}
       </div>
     </div>

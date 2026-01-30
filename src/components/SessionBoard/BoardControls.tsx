@@ -16,6 +16,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 
 interface BoardControlsProps {
     zoomLevel: ZoomLevel;
@@ -52,8 +53,7 @@ export const BoardControls = ({
     dateFilter,
     setDateFilter
 }: BoardControlsProps) => {
-
-
+    const { t } = useTranslation();
 
 
     return (
@@ -69,7 +69,7 @@ export const BoardControls = ({
                             "p-1 rounded-md transition-all",
                             zoomLevel === 0 ? "bg-background shadow-sm text-accent" : "text-muted-foreground hover:text-foreground"
                         )}
-                        title="Pixel View (Scroll Down in header)"
+                        title={t("board.controls.pixelView")}
                     >
                         <Layout className="w-3.5 h-3.5" />
                     </button>
@@ -79,7 +79,7 @@ export const BoardControls = ({
                             "p-1 rounded-md transition-all",
                             zoomLevel === 1 ? "bg-background shadow-sm text-accent" : "text-muted-foreground hover:text-foreground"
                         )}
-                        title="Skim View"
+                        title={t("board.controls.skimView")}
                     >
                         <Layers className="w-3.5 h-3.5" />
                     </button>
@@ -89,7 +89,7 @@ export const BoardControls = ({
                             "p-1 rounded-md transition-all",
                             zoomLevel === 2 ? "bg-background shadow-sm text-accent" : "text-muted-foreground hover:text-foreground"
                         )}
-                        title="Read View (Scroll Up in header)"
+                        title={t("board.controls.readView")}
                     >
                         <Eye className="w-3.5 h-3.5" />
                     </button>
@@ -105,10 +105,10 @@ export const BoardControls = ({
                         onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'model', value: v })}
                     >
                         <SelectTrigger className="h-7 w-32 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder="MODEL" />
+                            <SelectValue placeholder={t("board.controls.model")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">ALL</SelectItem>
+                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("board.controls.all")}</SelectItem>
                             {modelOptions.map(r => (
                                 <SelectItem
                                     key={r}
@@ -116,7 +116,7 @@ export const BoardControls = ({
                                     className="text-[10px]"
                                     disabled={availableModels ? !availableModels.includes(r) : false}
                                 >
-                                    {r.toUpperCase()}
+                                    {t(r.toUpperCase())}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -127,10 +127,10 @@ export const BoardControls = ({
                         onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'status', value: v })}
                     >
                         <SelectTrigger className="h-7 w-28 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder="STATUS" />
+                            <SelectValue placeholder={t("board.controls.status")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">ALL</SelectItem>
+                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("board.controls.all")}</SelectItem>
                             {statusOptions.map(s => (
                                 <SelectItem
                                     key={s}
@@ -138,7 +138,7 @@ export const BoardControls = ({
                                     className="text-[10px]"
                                     disabled={availableStatuses ? !availableStatuses.includes(s) : false}
                                 >
-                                    {s.toUpperCase()}
+                                    {t(s.toUpperCase())}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -149,18 +149,18 @@ export const BoardControls = ({
                         onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'tool', value: v })}
                     >
                         <SelectTrigger className="h-7 w-32 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder="TOOL" />
+                            <SelectValue placeholder={t("board.controls.tool")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">ALL</SelectItem>
-                            {toolOptions.map(t => (
+                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("board.controls.all")}</SelectItem>
+                            {toolOptions.map(toolOption => (
                                 <SelectItem
-                                    key={t}
-                                    value={t}
+                                    key={toolOption}
+                                    value={toolOption}
                                     className="text-[10px]"
-                                    disabled={availableTools ? !availableTools.includes(t) : false}
+                                    disabled={availableTools ? !availableTools.includes(toolOption) : false}
                                 >
-                                    {t.toUpperCase()}
+                                    {t(toolOption.toUpperCase())}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -171,10 +171,10 @@ export const BoardControls = ({
                         onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'file', value: v })}
                     >
                         <SelectTrigger className="h-7 w-40 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder="FILE" />
+                            <SelectValue placeholder={t("board.controls.file")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">ALL</SelectItem>
+                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("board.controls.all")}</SelectItem>
                             {fileOptions.map(f => (
                                 <SelectItem
                                     key={f}
@@ -182,7 +182,7 @@ export const BoardControls = ({
                                     className="text-[10px]"
                                     disabled={availableFiles ? !availableFiles.includes(f) : false}
                                 >
-                                    {f.split(/[\\/]/).pop()}
+                                    {t(f.split(/[\\/]/).pop() || "")}
                                 </SelectItem>
                             ))}
                         </SelectContent>

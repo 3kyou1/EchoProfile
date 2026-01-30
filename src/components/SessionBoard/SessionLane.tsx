@@ -16,6 +16,7 @@ import { getCardSemantics } from "@/utils/cardSemantics";
 import { formatDuration, formatNumber } from "@/utils/formatters";
 import type { ActiveBrush } from "@/utils/brushMatchers";
 import type { ClaudeMessage } from "../../types";
+import { useTranslation } from "react-i18next";
 
 
 
@@ -50,6 +51,7 @@ export const SessionLane = ({
     scrollContainerRef,
     onHeightChange
 }: SessionLaneProps) => {
+    const { t } = useTranslation();
     const { session, messages, stats, depth } = data;
     const selectedMessageId = useAppStore(state => state.selectedMessageId);
 
@@ -239,7 +241,7 @@ export const SessionLane = ({
                 {zoomLevel === 0 ? (
                     <div className="flex flex-col items-center gap-1.5 text-center h-full justify-between">
                         <div className="flex gap-1">
-                            {stats?.commitCount > 0 && <span title="Git Commits"><GitCommit className="w-2.5 h-2.5 text-indigo-500" /></span>}
+                            {stats?.commitCount > 0 && <span title={t("board.gitCommits")}><GitCommit className="w-2.5 h-2.5 text-indigo-500" /></span>}
                         </div>
                         <div className="text-[10px] font-bold text-muted-foreground">
                             {new Date(session.last_modified).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
@@ -260,18 +262,18 @@ export const SessionLane = ({
                                 {/* Activity Summary Row 1: Tokens & Git & Edits */}
 
                                 {stats.commitCount > 0 && (
-                                    <div className="flex items-center gap-1 text-indigo-500" title="Git Commits">
+                                    <div className="flex items-center gap-1 text-indigo-500" title={t("board.gitCommits")}>
                                         <GitCommit className="w-3 h-3" />
                                         <span className="text-[10px] font-bold">{stats.commitCount}</span>
                                     </div>
                                 )}
 
-                                <div className="flex items-center gap-1 text-emerald-500" title="Input Tokens">
+                                <div className="flex items-center gap-1 text-emerald-500" title={t("analytics.inputTokens")}>
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-[10px] font-mono">{formatNumber(stats.inputTokens || 0)}</span>
                                 </div>
 
-                                <div className="flex items-center gap-1 text-purple-500" title="Output Tokens">
+                                <div className="flex items-center gap-1 text-purple-500" title={t("analytics.outputTokens")}>
                                     <Zap className="w-3 h-3" />
                                     <span className="text-[10px] font-mono">{formatNumber(stats.outputTokens || 0)}</span>
                                 </div>
@@ -283,7 +285,7 @@ export const SessionLane = ({
                         <div className="flex items-baseline gap-2 pb-1 border-b border-border/20">
                             <div className="text-xl font-bold font-mono text-foreground">
                                 {formatNumber(stats.totalTokens)}
-                                <span className="text-[10px] text-muted-foreground font-normal ml-1">tokens</span>
+                                <span className="text-[10px] text-muted-foreground font-normal ml-1">{t("analytics.tokens")}</span>
                             </div>
                             <div className="ml-auto text-[10px] text-muted-foreground flex items-center gap-3">
                                 {matchStats && (
@@ -299,7 +301,7 @@ export const SessionLane = ({
                                         </div>
                                     </div>
                                 )}
-                                <span>{messages.length} msgs</span>
+                                <span>{messages.length} {t("messageViewer.messagesShort")}</span>
                                 <span>{formatDuration(durationMinutes)}</span>
                             </div>
                         </div>
@@ -312,18 +314,25 @@ export const SessionLane = ({
 
                                 {/* 1. Shell / Terminal */}
                                 {stats.shellCount > 0 && (
-                                    <div
+                                    <button
                                         className={clsx(
-                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                             "text-sky-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'terminal' && "brush-match bg-accent/10"
                                         )}
-                                        title="Shell Commands - Click to Filter"
+                                        title={t("board.clickToFilter.shell")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'terminal'); }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onHover?.('tool', 'terminal');
+                                            }
+                                        }}
                                     >
                                         <Terminal className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.shellCount}</span>
-                                    </div>
+                                    </button>
                                 )}
 
                                 {/* 2. Files Created */}
@@ -334,33 +343,47 @@ export const SessionLane = ({
                                     // If we have creates, prioritize that visual.
                                     if (createdCount > 0) {
                                         return (
-                                            <div
+                                            <button
                                                 className={clsx(
-                                                    "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                                    "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                                     "text-emerald-500",
                                                     activeBrush?.type === 'tool' && activeBrush.value === 'file' && "brush-match bg-accent/10"
                                                 )}
-                                                title={`Files Created (${createdCount}) / File Tools (${stats.fileToolCount})`}
+                                                title={t("board.clickToFilter.filesCreated", { count: createdCount, total: stats.fileToolCount })}
                                                 onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'file'); }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        onHover?.('tool', 'file');
+                                                    }
+                                                }}
                                             >
                                                 <FilePlus className="w-3 h-3" />
                                                 <span className="text-[10px] font-bold font-mono">{createdCount}</span>
-                                            </div>
+                                            </button>
                                         );
                                     } else if (stats.fileToolCount > 0) {
                                         return (
-                                            <div
+                                            <button
                                                 className={clsx(
-                                                    "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                                    "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                                     "text-blue-500",
                                                     activeBrush?.type === 'tool' && activeBrush.value === 'file' && "brush-match bg-accent/10"
                                                 )}
-                                                title="File Operations (ls, glob, etc)"
+                                                title={t("board.clickToFilter.fileOperations")}
                                                 onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'file'); }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        onHover?.('tool', 'file');
+                                                    }
+                                                }}
                                             >
                                                 <FilePlus className="w-3 h-3" />
                                                 <span className="text-[10px] font-bold font-mono">{stats.fileToolCount}</span>
-                                            </div>
+                                            </button>
                                         );
                                     }
                                     return null;
@@ -368,121 +391,170 @@ export const SessionLane = ({
 
                                 {/* 3. File Search (Grep/Glob) */}
                                 {stats.searchCount > 0 && (
-                                    <div
+                                    <button
                                         className={clsx(
-                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                             "text-amber-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'search' && "brush-match bg-accent/10"
                                         )}
-                                        title="Code Search - Click to Filter"
+                                        title={t("board.clickToFilter.search")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'search'); }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onHover?.('tool', 'search');
+                                            }
+                                        }}
                                     >
                                         <Search className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.searchCount}</span>
-                                    </div>
+                                    </button>
                                 )}
 
                                 {/* Web Search/Fetch */}
                                 {stats.webCount > 0 && (
-                                    <div
+                                    <button
                                         className={clsx(
-                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                             "text-sky-400",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'web' && "brush-match bg-accent/10"
                                         )}
-                                        title="Web Search/Fetch - Click to Filter"
+                                        title={t("board.clickToFilter.web")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'web'); }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onHover?.('tool', 'web');
+                                            }
+                                        }}
                                     >
                                         <Globe className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.webCount}</span>
-                                    </div>
+                                    </button>
                                 )}
 
                                 {/* MCP Tools */}
                                 {stats.mcpCount > 0 && (
-                                    <div
+                                    <button
                                         className={clsx(
-                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                             "text-purple-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'mcp' && "brush-match bg-accent/10"
                                         )}
-                                        title="MCP Tools - Click to Filter"
+                                        title={t("board.clickToFilter.mcp")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'mcp'); }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onHover?.('tool', 'mcp');
+                                            }
+                                        }}
                                     >
                                         <Plug className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.mcpCount}</span>
-                                    </div>
+                                    </button>
                                 )}
 
                                 {/* Git Tools (Status/Diff/Etc) */}
                                 {stats.gitToolCount > 0 && (
-                                    <div
+                                    <button
                                         className={clsx(
-                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                             "text-orange-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'git' && "brush-match bg-accent/10"
                                         )}
-                                        title="Git Tools - Click to Filter"
+                                        title={t("board.clickToFilter.git")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'git'); }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onHover?.('tool', 'git');
+                                            }
+                                        }}
                                     >
                                         <GitCommit className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.gitToolCount}</span>
-                                    </div>
+                                    </button>
                                 )}
 
                                 {/* 4. Docs (Markdown) */}
                                 {stats.hasMarkdownEdits && (
-                                    <div
+                                    <button
                                         className={clsx(
-                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                             "text-amber-500",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'document' && "brush-match bg-accent/10"
                                         )}
-                                        title="Documentation Updates - Click to Filter"
+                                        title={t("board.clickToFilter.docs")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'document'); }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onHover?.('tool', 'document');
+                                            }
+                                        }}
                                     >
                                         <Book className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.markdownEditCount}</span>
-                                    </div>
+                                    </button>
                                 )}
 
                                 {/* 5. Code Edits */}
                                 {stats.fileEditCount > 0 && (
-                                    <div
+                                    <button
                                         className={clsx(
-                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                             "text-foreground/70",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'code' && "brush-match bg-accent/10"
                                         )}
-                                        title="Files Touched (Edits) - Click to Filter"
+                                        title={t("board.clickToFilter.edits")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'code'); }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onHover?.('tool', 'code');
+                                            }
+                                        }}
                                     >
                                         <FileText className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.fileEditCount}</span>
-                                    </div>
+                                    </button>
                                 )}
 
                                 {/* 6. Code Reads */}
                                 {stats.codeReadCount > 0 && (
-                                    <div
+                                    <button
                                         className={clsx(
-                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent",
+                                            "flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 -ml-1 transition-colors border border-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring",
                                             "text-sky-500/70",
                                             activeBrush?.type === 'tool' && activeBrush.value === 'code' && "brush-match bg-accent/10"
                                         )}
-                                        title="Files Read - Click to Filter"
+                                        title={t("board.clickToFilter.reads")}
                                         onClick={(e) => { e.stopPropagation(); onHover?.('tool', 'code'); }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onHover?.('tool', 'code');
+                                            }
+                                        }}
                                     >
                                         <Eye className="w-3 h-3" />
                                         <span className="text-[10px] font-bold font-mono">{stats.codeReadCount}</span>
-                                    </div>
+                                    </button>
                                 )}
                             </div>
 
                             {/* Actual Git History (Ground Truth) */}
                             {data.gitCommits && data.gitCommits.length > 0 && (
                                 <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 pt-1 border-t border-border/10">
-                                    <div className="text-[8px] uppercase font-bold text-blue-500/70 tracking-tighter w-full">Git Commits</div>
+                                    <div className="text-[8px] uppercase font-bold text-blue-500/70 tracking-tighter w-full">{t("board.gitCommits")}</div>
                                     {data.gitCommits.slice(0, 2).map(commit => (
                                         <div key={commit.hash} className="flex items-center gap-1.5 text-[9px] text-blue-600/80 font-mono bg-blue-500/5 px-1.5 py-0.5 rounded border border-blue-500/10 max-w-full overflow-hidden" title={commit.message}>
                                             <GitCommit className="w-2.5 h-2.5 shrink-0" />
@@ -491,7 +563,7 @@ export const SessionLane = ({
                                         </div>
                                     ))}
                                     {data.gitCommits.length > 2 && (
-                                        <span className="text-[9px] text-muted-foreground/40 self-center">+{data.gitCommits.length - 2} more</span>
+                                        <span className="text-[9px] text-muted-foreground/40 self-center">{t("board.moreItems", { count: data.gitCommits.length - 2 })}</span>
                                     )}
                                 </div>
                             )}

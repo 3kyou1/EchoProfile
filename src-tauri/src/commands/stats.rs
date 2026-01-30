@@ -483,7 +483,7 @@ pub async fn get_session_token_stats(session_path: String) -> Result<SessionToke
             tool_name: name,
             usage_count: usage,
             success_rate: if usage > 0 {
-                success as f32 / usage as f32
+                (success as f32 / usage as f32) * 100.0
             } else {
                 0.0
             },
@@ -628,7 +628,7 @@ fn extract_session_token_stats_sync(session_path: &PathBuf) -> Option<SessionTok
                 tool_name: name,
                 usage_count: usage,
                 success_rate: if usage > 0 {
-                    success as f32 / usage as f32
+                    (success as f32 / usage as f32) * 100.0
                 } else {
                     0.0
                 },

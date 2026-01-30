@@ -565,7 +565,7 @@ export const InteractionCard = memo(({
                     // Pixel View Brushing: No border, dim unmatched
                     "ring-0 border-0 shadow-none",
                     // Dim unmatched items when a brush is active
-                    (!!activeBrush && !brushMatch) && "opacity-25",
+                    (!!activeBrush && !brushMatch) && "opacity-40",
                     // Ensure matched items are fully visible (no border)
                     isHighlighted && "!opacity-100 z-50"
                 )}

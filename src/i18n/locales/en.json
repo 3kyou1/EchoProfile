@@ -245,6 +245,7 @@
   "session.board.controls.tool": "TOOL",
   "session.board.controls.file": "FILE",
   "session.board.controls.all": "ALL",
+  "session.board.error.loadBoard": "Failed to load board",
   "interaction.edit": "Edit: {{file}}",
   "interaction.docs": "Docs: {{file}}",
   "interaction.exit": "EXIT {{code}}",

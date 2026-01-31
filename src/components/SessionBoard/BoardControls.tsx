@@ -24,12 +24,8 @@ interface BoardControlsProps {
     activeBrush: ActiveBrush | null;
     stickyBrush?: boolean;
     onBrushChange: (brush: ActiveBrush | null) => void;
-    modelOptions?: string[];
-    statusOptions?: string[];
     toolOptions?: string[];
     fileOptions?: string[];
-    availableModels?: string[];
-    availableStatuses?: string[];
     availableTools?: string[];
     availableFiles?: string[];
     dateFilter?: DateFilter;
@@ -46,12 +42,8 @@ export const BoardControls = ({
     statusOptions = [],
     toolOptions = [],
     fileOptions = [],
-    availableModels,
-    availableStatuses,
-    availableTools,
-    availableFiles,
-    dateFilter,
-    setDateFilter
+    toolOptions = [],
+    fileOptions = []
 }: BoardControlsProps) => {
     const { t } = useTranslation();
 
@@ -100,53 +92,10 @@ export const BoardControls = ({
             </div>
 
             <div className="flex items-center gap-4">
-                {/* Brushing Dropdowns (Step 8) */}
+                {/* Brushing Dropdowns */}
                 <div className="hidden lg:flex items-center gap-1.5">
                     <Filter className="w-3 h-3 text-muted-foreground mr-0.5" />
-                    <Select
-                        value={activeBrush?.type === 'model' ? activeBrush.value : ""}
-                        onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'model', value: v })}
-                    >
-                        <SelectTrigger className="h-7 w-32 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder={t("session.board.controls.model")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
-                            {modelOptions.map(r => (
-                                <SelectItem
-                                    key={r}
-                                    value={r}
-                                    className="text-[10px]"
-                                    disabled={availableModels ? !availableModels.includes(r) : false}
-                                >
-                                    {t(r.toUpperCase())}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
-                    <Select
-                        value={activeBrush?.type === 'status' ? activeBrush.value : ""}
-                        onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'status', value: v })}
-                    >
-                        <SelectTrigger className="h-7 w-28 text-[10px] bg-muted/20 border-border/30 px-2">
-                            <SelectValue placeholder={t("session.board.controls.status")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
-                            {statusOptions.map(s => (
-                                <SelectItem
-                                    key={s}
-                                    value={s}
-                                    className="text-[10px]"
-                                    disabled={availableStatuses ? !availableStatuses.includes(s) : false}
-                                >
-                                    {t(s.toUpperCase())}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
+                    
                     <Select
                         value={activeBrush?.type === 'tool' ? activeBrush.value : ""}
                         onValueChange={(v) => onBrushChange(v === '_ALL_' ? null : { type: 'tool', value: v })}

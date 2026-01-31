@@ -36,7 +36,7 @@ fn extract_project_name(file_path: &PathBuf) -> Option<String> {
         .parent()
         .and_then(|p| p.file_name())
         .and_then(|n| n.to_str())
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
 }
 
 /// Search for messages matching the query in a single file
@@ -182,7 +182,8 @@ pub async fn search_messages(
         .flat_map(|path| search_in_file(path, &query))
         .collect();
 
-    // 3. Truncate to limit
+    // 3. Sort by timestamp descending and truncate to limit
+    all_messages.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
     all_messages.truncate(max_results);
 
     #[cfg(debug_assertions)]
@@ -240,6 +241,7 @@ mod tests {
             temp_dir.path().to_string_lossy().to_string(),
             "Rust".to_string(),
             serde_json::json!({}),
+            None,
         )
         .await;
 
@@ -268,6 +270,7 @@ mod tests {
             temp_dir.path().to_string_lossy().to_string(),
             "hello".to_string(), // lowercase
             serde_json::json!({}),
+            None,
         )
         .await;
 
@@ -296,6 +299,7 @@ mod tests {
             temp_dir.path().to_string_lossy().to_string(),
             "nonexistent".to_string(),
             serde_json::json!({}),
+            None,
         )
         .await;
 
@@ -312,6 +316,7 @@ mod tests {
             temp_dir.path().to_string_lossy().to_string(),
             "test".to_string(),
             serde_json::json!({}),
+            None,
         )
         .await;
 

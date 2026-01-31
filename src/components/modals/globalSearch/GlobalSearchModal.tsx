@@ -284,7 +284,7 @@ export const GlobalSearchModal = ({
 
         const regex = new RegExp(
             `(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-            "gi",
+            "i",
         );
         const parts = text.split(regex);
 
@@ -310,6 +310,7 @@ export const GlobalSearchModal = ({
                 className="sm:max-w-2xl p-0 gap-0 overflow-hidden"
                 onKeyDown={handleKeyDown}
                 showCloseButton={false}
+                aria-label={t("globalSearch.title")}
             >
                 {/* Search Header */}
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-border">

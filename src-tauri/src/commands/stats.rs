@@ -1624,6 +1624,7 @@ mod tests {
                     "service_tier": "premium"
                 }
             })),
+            project_name: None,
             tool_use: None,
             tool_use_result: None,
             is_sidechain: None,
@@ -1665,6 +1666,7 @@ mod tests {
             timestamp: "2025-01-01T00:00:00Z".to_string(),
             message_type: "user".to_string(),
             content: None,
+            project_name: None,
             tool_use: None,
             tool_use_result: Some(json!({
                 "usage": {
@@ -1753,6 +1755,7 @@ mod tests {
             timestamp: "2025-01-01T00:00:00Z".to_string(),
             message_type: "user".to_string(),
             content: None,
+            project_name: None,
             tool_use: None,
             tool_use_result: None,
             is_sidechain: None,

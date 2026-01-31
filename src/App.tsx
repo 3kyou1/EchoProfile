@@ -6,6 +6,7 @@ import { TokenStatsViewer } from "./components/TokenStatsViewer";
 import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
 import { RecentEditsViewer } from "./components/RecentEditsViewer";
 import { SimpleUpdateManager } from "./components/SimpleUpdateManager";
+import { SettingsManager } from "./components/SettingsManager";
 import { useAppStore } from "./store/useAppStore";
 import { useAnalytics } from "./hooks/useAnalytics";
 import { useResizablePanel } from "./hooks/useResizablePanel";
@@ -14,8 +15,9 @@ import { track, TrackingEvents } from "./hooks/useEventTracking";
 import { useTranslation } from "react-i18next";
 import { AppErrorType, type ClaudeSession, type ClaudeProject } from "./types";
 import type { GroupingMode } from "./types/metadata.types";
-import { AlertTriangle, MessageSquare, Database, BarChart3, FileEdit, Coins } from "lucide-react";
+import { AlertTriangle, MessageSquare, Database, BarChart3, FileEdit, Coins, Settings } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useLanguageStore } from "./store/useLanguageStore";
 import { type SupportedLanguage } from "./i18n";
 
@@ -73,6 +75,7 @@ function App() {
   const { openModal } = useModal();
 
   const [isViewingGlobalStats, setIsViewingGlobalStats] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Sidebar resize
   const {
@@ -92,6 +95,10 @@ function App() {
     setAnalyticsCurrentView("analytics");
     loadGlobalStats();
   }, [loadGlobalStats, setAnalyticsCurrentView]);
+
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarCollapsed(prev => !prev);
+  }, []);
 
   // Project grouping (worktree or directory-based)
   const groupingMode = getEffectiveGroupingMode();
@@ -243,7 +250,7 @@ function App() {
   }
 
   return (
-    <>
+    <TooltipProvider>
       <div className="h-screen flex flex-col bg-background">
         {/* Header */}
         <Header />
@@ -261,7 +268,7 @@ function App() {
             onGlobalStatsClick={handleGlobalStatsClick}
             isLoading={isLoadingProjects || isLoadingSessions}
             isViewingGlobalStats={isViewingGlobalStats}
-            width={sidebarWidth}
+            width={isSidebarCollapsed ? undefined : sidebarWidth}
             isResizing={isSidebarResizing}
             onResizeStart={handleSidebarResizeStart}
             groupingMode={groupingMode}
@@ -272,6 +279,8 @@ function App() {
             onHideProject={hideProject}
             onUnhideProject={unhideProject}
             isProjectHidden={isProjectHidden}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={handleToggleSidebar}
           />
 
           {/* Main Content Area */}
@@ -280,12 +289,15 @@ function App() {
             {(computed.isTokenStatsView ||
               computed.isAnalyticsView ||
               computed.isRecentEditsView ||
+              computed.isSettingsView ||
               isViewingGlobalStats) && (
               <div className="px-6 py-4 border-b border-border/50 bg-card/50">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
                     {isViewingGlobalStats ? (
                       <Database className="w-5 h-5 text-accent" />
+                    ) : computed.isSettingsView ? (
+                      <Settings className="w-5 h-5 text-accent" />
                     ) : computed.isAnalyticsView ? (
                       <BarChart3 className="w-5 h-5 text-accent" />
                     ) : computed.isRecentEditsView ? (
@@ -298,6 +310,8 @@ function App() {
                     <h2 className="text-sm font-semibold text-foreground">
                       {isViewingGlobalStats
                         ? t("analytics.globalOverview")
+                        : computed.isSettingsView
+                        ? t("settingsManager.title")
                         : computed.isAnalyticsView
                         ? t("analytics.dashboard")
                         : computed.isRecentEditsView
@@ -307,6 +321,8 @@ function App() {
                     <p className="text-xs text-muted-foreground">
                       {isViewingGlobalStats
                         ? t("analytics.globalOverviewDescription")
+                        : computed.isSettingsView
+                        ? t("settingsManager.description")
                         : computed.isRecentEditsView
                         ? t("recentEdits.description")
                         : selectedSession?.summary ||
@@ -319,7 +335,14 @@ function App() {
 
             {/* Content */}
             <div className="flex-1 overflow-hidden">
-              {computed.isRecentEditsView ? (
+              {computed.isSettingsView ? (
+                <div className="h-full flex flex-col p-6">
+                  <SettingsManager
+                    projectPath={selectedProject?.actual_path}
+                    className="flex-1 min-h-0"
+                  />
+                </div>
+              ) : computed.isRecentEditsView ? (
                 <OverlayScrollbarsComponent
                   className="h-full"
                   options={{ scrollbars: { theme: "os-theme-custom", autoHide: "leave" } }}
@@ -425,7 +448,7 @@ function App() {
 
       {/* Modals */}
       <ModalContainer />
-    </>
+    </TooltipProvider>
   );
 }
 

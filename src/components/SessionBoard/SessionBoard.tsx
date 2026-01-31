@@ -284,6 +284,14 @@ export const SessionBoard = () => {
                     onZoomChange={setZoomLevel}
                     activeBrush={activeBrush}
                     onBrushChange={setActiveBrush}
+                    toolOptions={[]}
+                    fileOptions={[]}
+                    mcpServerOptions={[]}
+                    shellCommandOptions={[]}
+                    availableTools={[]}
+                    availableFiles={[]}
+                    availableMcpServers={[]}
+                    availableShellCommands={[]}
                     dateFilter={dateFilter}
                     setDateFilter={setDateFilter}
                 />

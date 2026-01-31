@@ -44,7 +44,7 @@ const FileEditDisplay = ({ toolUseBlock }: { toolUseBlock: any }) => {
         return (
             <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] text-emerald-600 font-medium mb-1">
                 <PencilLine className="w-3 h-3" />
-                <span className="truncate" title={path}>{t('interaction.edit', { file: displayText })}</span>
+                <span className="truncate" title={path}>{t('session.interaction.edit', { file: displayText })}</span>
             </div>
         );
     }
@@ -58,15 +58,17 @@ const ExitCodeDisplay = ({ message }: { message: ClaudeMessage }) => {
 
     const res = result as Record<string, unknown>;
     const code = res.exitCode ?? res.return_code;
-    if (code === undefined) return null;
+    if (code == null) return null; // Handle both null and undefined
 
     const codeNum = Number(code);
+    if (Number.isNaN(codeNum)) return null; // Handle NaN
+
     return (
         <div className={clsx("flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border self-start",
             codeNum === 0 ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/20" : "text-destructive bg-destructive/5 border-destructive/20"
-        )} title={t("interaction.exitCode", { code: codeNum })}>
+        )} title={t("session.interaction.exitCode", { code: codeNum })}>
             {codeNum === 0 ? <CheckCircle2 className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
-            <span className="font-bold">{t("interaction.exit", { code: codeNum })}</span>
+            <span className="font-bold">{t("session.interaction.exit", { code: codeNum })}</span>
         </div>
     );
 };
@@ -451,35 +453,35 @@ export const InteractionCard = memo(({
     const RoleIcon = useMemo(() => {
         if (isCommit) return (
             <div className="relative">
-                <span title={t("interaction.gitCommit")}><GitIcon className="w-3.5 h-3.5 text-indigo-500" /></span>
+                <span title={t("session.interaction.gitCommit")}><GitIcon className="w-3.5 h-3.5 text-indigo-500" /></span>
                 {verifiedCommit && (
                     <div className="absolute -top-1 -right-1">
-                        <span title={t("interaction.verifiedCommit")}><CheckCircle2 className="w-2 h-2 text-blue-500 fill-white" /></span>
+                        <span title={t("session.interaction.verifiedCommit")}><CheckCircle2 className="w-2 h-2 text-blue-500 fill-white" /></span>
                     </div>
                 )}
             </div>
         );
 
         // Error takes precedence
-        if (isRawError) return <span title={t("interaction.errorDetectedIcon")}><AlertTriangle className="w-3.5 h-3.5 text-destructive" /></span>;
+        if (isRawError) return <span title={t("session.interaction.errorDetectedIcon")}><AlertTriangle className="w-3.5 h-3.5 text-destructive" /></span>;
 
         // Generic Git (non-commit)
-        if (isGit) return <span title={t("interaction.gitOperation")}><GitIcon className="w-3.5 h-3.5 text-orange-500" /></span>;
+        if (isGit) return <span title={t("session.interaction.gitOperation")}><GitIcon className="w-3.5 h-3.5 text-orange-500" /></span>;
 
         // MCP Tool
-        if (isMcp) return <span title={t("interaction.mcpInteraction")}><Plug className="w-3.5 h-3.5 text-orange-500" /></span>;
+        if (isMcp) return <span title={t("session.interaction.mcpInteraction")}><Plug className="w-3.5 h-3.5 text-orange-500" /></span>;
 
         // If markdown edit is detected locally for this card
-        if (editedMdFile) return <span title={t("interaction.documentationEdit")}><FileText className="w-3.5 h-3.5 text-amber-500" /></span>;
-        if (isFileEdit) return <span title={t("interaction.fileEdit")}><PencilLine className="w-3.5 h-3.5 text-emerald-500" /></span>;
+        if (editedMdFile) return <span title={t("session.interaction.documentationEdit")}><FileText className="w-3.5 h-3.5 text-amber-500" /></span>;
+        if (isFileEdit) return <span title={t("session.interaction.fileEdit")}><PencilLine className="w-3.5 h-3.5 text-emerald-500" /></span>;
 
         if (toolUseBlock) return <ToolIcon toolName={toolUseBlock.name} className="w-4 h-4 text-accent" />;
 
         // URL/Reference detected
-        if (hasUrls && role === 'assistant') return <span title={t("interaction.containsLinks")}><Link2 className="w-3.5 h-3.5 text-sky-500" /></span>;
+        if (hasUrls && role === 'assistant') return <span title={t("session.interaction.containsLinks")}><Link2 className="w-3.5 h-3.5 text-sky-500" /></span>;
 
-        if (role === 'user') return <span title={t("interaction.userMessage")}><User className="w-3.5 h-3.5 text-primary" /></span>;
-        return <span title={t("interaction.assistantMessage")}><Bot className="w-3.5 h-3.5 text-muted-foreground" /></span>;
+        if (role === 'user') return <span title={t("session.interaction.userMessage")}><User className="w-3.5 h-3.5 text-primary" /></span>;
+        return <span title={t("session.interaction.assistantMessage")}><Bot className="w-3.5 h-3.5 text-muted-foreground" /></span>;
     }, [role, isCommit, isGit, isFileEdit, editedMdFile, verifiedCommit, hasUrls, isMcp, isRawError, toolUseBlock, t]);
 
     // Memoized tool frequency summary for zoom level 2 header
@@ -555,7 +557,7 @@ export const InteractionCard = memo(({
 
         const agentName = toolUseBlock
             ? getAgentName(toolUseBlock.name, toolUseBlock.input)
-            : t("interaction.generalPurpose");
+            : t("session.interaction.generalPurpose");
 
         const tooltipContent = toolUseBlock
             ? getNaturalLanguageSummary(toolUseBlock.name, toolUseBlock.input)
@@ -578,7 +580,7 @@ export const InteractionCard = memo(({
                 )}
                 style={{ height: `${height}px` }}
                 onClick={onClick}
-                aria-label={t('interaction.openMessageFrom', { role })}
+                aria-label={t('session.interaction.openMessageFrom', { role })}
             >
                 {/* Content Icon Overlay (Pixel View) */}
                 {!isExpanded && (
@@ -636,7 +638,7 @@ export const InteractionCard = memo(({
                                 </span>
                                 {totalMessagesCount > 1 && (
                                     <span className="text-[10px] text-muted-foreground">
-                                        {t("interaction.messagesAndTokens", { messages: totalMessagesCount, tokens: totalTokens.toLocaleString() })}
+                                        {t("session.interaction.messagesAndTokens", { messages: totalMessagesCount, tokens: totalTokens.toLocaleString() })}
                                     </span>
                                 )}
                             </div>
@@ -658,7 +660,7 @@ export const InteractionCard = memo(({
 
     // Level 1: Skim/Kanban
     if (zoomLevel === 1) {
-        const generalPurpose = t("interaction.generalPurpose");
+        const generalPurpose = t("session.interaction.generalPurpose");
         const agentName = toolUseBlock
             ? getAgentName(toolUseBlock.name, toolUseBlock.input)
             : generalPurpose;
@@ -694,14 +696,14 @@ export const InteractionCard = memo(({
                             {editedMdFile && (
                                 <div
                                     className="absolute -top-1 -right-1 p-0.5 bg-amber-500 rounded-full shadow-sm text-white border border-background"
-                                    title={t("interaction.markdownModified")}
+                                    title={t("session.interaction.markdownModified")}
                                 >
                                     <FileText className="w-2 h-2" />
                                 </div>
                             )}
 
                             {isCancelled && (
-                                <div className="absolute -bottom-1 -right-1 p-0.5 bg-orange-500 rounded-full shadow-sm text-white border border-background" title={t("interaction.cancelledByUser")}>
+                                <div className="absolute -bottom-1 -right-1 p-0.5 bg-orange-500 rounded-full shadow-sm text-white border border-background" title={t("session.interaction.cancelledByUser")}>
                                     <Ban className="w-2 h-2" />
                                 </div>
                             )}
@@ -777,10 +779,10 @@ export const InteractionCard = memo(({
                 {editedMdFile ? (
                     <div
                         className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-[10px] text-amber-600 font-medium mb-1 cursor-help group/md"
-                        title={t("interaction.markdownFileEdit")}
+                        title={t("session.interaction.markdownFileEdit")}
                     >
                         <FileText className="w-3 h-3" />
-                        <span className="truncate">{t("interaction.docs", { file: editedMdFile })}</span>
+                        <span className="truncate">{t("session.interaction.docs", { file: editedMdFile })}</span>
                     </div>
                 ) : editedMdFile === null && isFileEdit ? (
                     <FileEditDisplay toolUseBlock={toolUseBlock} />
@@ -836,7 +838,7 @@ export const InteractionCard = memo(({
                         )}
 
                         {isCancelled && (
-                            <span className="text-[9px] uppercase font-bold text-orange-500 tracking-wide border border-orange-500/30 px-1 rounded">{t("interaction.cancelled")}</span>
+                            <span className="text-[9px] uppercase font-bold text-orange-500 tracking-wide border border-orange-500/30 px-1 rounded">{t("session.interaction.cancelled")}</span>
                         )}
                     </div>
                     <span className="text-[9px] text-muted-foreground font-mono">
@@ -853,12 +855,12 @@ export const InteractionCard = memo(({
 
                 {(message.type === 'assistant' && message.usage) && (
                     <div className="mt-auto pt-1 flex gap-2 text-[9px] text-muted-foreground opacity-60 font-mono items-center">
-                        <span>{t("interaction.inputTokens")} {message.usage.input_tokens}</span>
-                        <span>{t("interaction.outputTokens")} {message.usage.output_tokens}</span>
+                        <span>{t("session.interaction.inputTokens")} {message.usage.input_tokens}</span>
+                        <span>{t("session.interaction.outputTokens")} {message.usage.output_tokens}</span>
 
                         {/* Cache Hit Indicator */}
                         {message.usage.cache_read_input_tokens && message.usage.cache_read_input_tokens > 0 && (
-                            <div className="flex items-center gap-0.5 text-emerald-500" title={t("interaction.cacheHit", { tokens: message.usage.cache_read_input_tokens })}>
+                            <div className="flex items-center gap-0.5 text-emerald-500" title={t("session.interaction.cacheHit", { tokens: message.usage.cache_read_input_tokens })}>
                                 <Zap className="w-3 h-3 fill-emerald-500/20" />
                                 <span>{(message.usage.cache_read_input_tokens / 1000).toFixed(1)}k</span>
                             </div>
@@ -866,7 +868,7 @@ export const InteractionCard = memo(({
 
                         {/* Duration Indicator */}
                         {message.durationMs && (
-                            <div className="flex items-center gap-0.5 ml-auto" title={t("interaction.duration", { seconds: (message.durationMs / 1000).toFixed(1) })}>
+                            <div className="flex items-center gap-0.5 ml-auto" title={t("session.interaction.duration", { seconds: (message.durationMs / 1000).toFixed(1) })}>
                                 <Timer className="w-3 h-3" />
                                 <span>{(message.durationMs / 1000).toFixed(1)}s</span>
                             </div>
@@ -880,9 +882,9 @@ export const InteractionCard = memo(({
 
                     {/* Cutoff Indicator */}
                     {isClaudeAssistantMessage(message) && message.stop_reason === 'max_tokens' && (
-                        <div className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border self-start text-orange-600 bg-orange-500/5 border-orange-500/20" title={t("interaction.cutoffTitle")}>
+                        <div className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border self-start text-orange-600 bg-orange-500/5 border-orange-500/20" title={t("session.interaction.cutoffTitle")}>
                             <Scissors className="w-2.5 h-2.5" />
-                            <span className="font-bold">{t("interaction.cutoff")}</span>
+                            <span className="font-bold">{t("session.interaction.cutoff")}</span>
                         </div>
                     )}
                 </div>
@@ -890,7 +892,7 @@ export const InteractionCard = memo(({
                 {isError && (
                     <div className="mt-1 p-1 bg-destructive/10 rounded text-[9px] text-destructive border border-destructive/20 font-mono italic flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" />
-                        <span>{t("interaction.errorDetected")}</span>
+                        <span>{t("session.interaction.errorDetected")}</span>
                     </div>
                 )}
             </div>

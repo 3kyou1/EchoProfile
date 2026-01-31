@@ -256,13 +256,6 @@ export const SessionBoard = () => {
         setStickyBrush(!stickyBrush);
     }, [stickyBrush, setStickyBrush]);
 
-    // Force re-measure when zoom level changes or list changes
-    useEffect(() => {
-        if (visibleSessionIds.length > 0) {
-            columnVirtualizer.measure();
-        }
-    }, [zoomLevel, visibleSessionIds]);
-
     const columnVirtualizer = useVirtualizer({
         count: visibleSessionIds.length,
         getScrollElement: () => parentRef.current,
@@ -281,6 +274,13 @@ export const SessionBoard = () => {
         horizontal: true,
         overscan: 5, // Increased overscan for smooth scrolling in dense view
     });
+
+    // Force re-measure when zoom level changes or list changes
+    useEffect(() => {
+        if (visibleSessionIds.length > 0) {
+            columnVirtualizer.measure();
+        }
+    }, [zoomLevel, visibleSessionIds, columnVirtualizer]);
 
     // Scroll active session into view when transitioning from Detail view
     useEffect(() => {
@@ -331,10 +331,10 @@ export const SessionBoard = () => {
                             <MessageSquare className="w-10 h-10 text-muted-foreground/50" />
                         </div>
                         <h3 className="text-lg font-medium text-foreground mb-2">
-                            No sessions found
+                            {t("session.board.empty.title")}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                            Try adjusting your date filters or select more sessions.
+                            {t("session.board.empty.description")}
                         </p>
                     </div>
                 </div>

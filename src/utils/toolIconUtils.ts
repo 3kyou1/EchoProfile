@@ -7,7 +7,7 @@ import { TOOL_VARIANTS, type RendererVariant } from "@/components/renderers/type
  */
 export const getToolVariant = (name: string): RendererVariant => {
     // Canonical exact match (covers all known Claude Code tools)
-    if (name in TOOL_VARIANTS) {
+    if (Object.hasOwn(TOOL_VARIANTS, name)) {
         return TOOL_VARIANTS[name] as RendererVariant;
     }
 

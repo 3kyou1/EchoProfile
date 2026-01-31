@@ -42,7 +42,7 @@ describe("updateSettings", () => {
         getItem: vi.fn((key) => mockStorage[key] || null),
         setItem: vi.fn((key, value) => { mockStorage[key] = value.toString(); }),
         removeItem: vi.fn((key) => { delete mockStorage[key]; }),
-        clear: vi.fn(() => { Object.keys(mockStorage).forEach(key => delete mockStorage[key]); }),
+        clear: vi.fn(() => { Object.keys(mockStorage).forEach(key => { delete mockStorage[key]; }); }),
         length: 0,
         key: vi.fn((i) => Object.keys(mockStorage)[i] || null),
       },

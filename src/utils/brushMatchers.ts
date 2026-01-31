@@ -44,6 +44,10 @@ export function matchesBrush(brush: ActiveBrush | null, card: BrushableCard): bo
             // Match if any shell command equals the brush value (exact match for frecency-filtered commands)
             return card.shellCommands.some(cmd => cmd === brush.value);
         case "mcp":
+            // Special handling for "all" - match any card with at least one MCP server
+            if (brush.value === "all") {
+                return card.mcpServers.length > 0;
+            }
             return card.mcpServers.includes(brush.value);
         default:
             return false;

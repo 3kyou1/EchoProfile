@@ -35,7 +35,7 @@ pub struct AllMCPServers {
     pub project_mcp_file: Option<serde_json::Value>,
     /// User-scoped MCP from ~/.claude.json → mcpServers (official)
     pub user_claude_json: Option<serde_json::Value>,
-    /// Local/Project-scoped MCP from ~/.claude.json → projects.<path>.mcpServers (official)
+    /// Local/Project-scoped MCP from `~/.claude.json` → `projects.<path>.mcpServers` (official)
     pub local_claude_json: Option<serde_json::Value>,
 }
 
@@ -93,7 +93,7 @@ fn validate_project_path(path: &str) -> Result<PathBuf, String> {
     }
 }
 
-/// Get the project MCP settings path (<project>/.mcp.json)
+/// Get the project MCP settings path (`<project>/.mcp.json`)
 fn get_project_mcp_path(project_path: &str) -> Result<PathBuf, String> {
     let validated = validate_project_path(project_path)?;
     Ok(validated.join(".mcp.json"))
@@ -506,7 +506,7 @@ pub struct ClaudeJsonConfig {
     pub raw: serde_json::Value,
     /// User-scoped MCP servers
     pub mcp_servers: Option<serde_json::Value>,
-    /// Project settings from projects.<path>
+    /// Project settings from `projects.<path>`
     pub project_settings: Option<serde_json::Value>,
     /// File path for reference
     pub file_path: String,

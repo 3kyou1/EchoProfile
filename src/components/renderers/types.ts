@@ -112,13 +112,6 @@ export const TOOL_VARIANTS: Record<string, RendererVariant> = {
 } as const;
 
 /**
- * Get the variant for a tool name
- */
-export function getToolVariant(toolName: string): RendererVariant {
-  return (TOOL_VARIANTS as Record<string, RendererVariant>)[toolName] ?? "info";
-}
-
-/**
  * File metadata extracted from tool results
  */
 export interface FileMetadata {

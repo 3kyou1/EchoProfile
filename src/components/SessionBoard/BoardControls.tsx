@@ -38,10 +38,6 @@ export const BoardControls = ({
     activeBrush,
     stickyBrush = false,
     onBrushChange,
-    modelOptions = [],
-    statusOptions = [],
-    toolOptions = [],
-    fileOptions = [],
     toolOptions = [],
     fileOptions = []
 }: BoardControlsProps) => {

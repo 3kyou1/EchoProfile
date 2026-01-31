@@ -22,6 +22,7 @@ export function matchesBrush(brush: ActiveBrush | null, card: BrushableCard): bo
                 // Matches explicit git variant OR generic git commands
                 return card.variant === "git" || card.isGit;
             }
+            // Default: exact variant match for all other tool types (search, web, mcp, file, terminal, task, etc.)
             return card.variant === brush.value;
         case "status":
             switch (brush.value) {

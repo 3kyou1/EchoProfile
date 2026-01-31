@@ -49,7 +49,9 @@ export const BoardControls = ({
     availableTools = [],
     availableFiles = [],
     availableMcpServers = [],
-    availableShellCommands = []
+    availableShellCommands = [],
+    dateFilter,
+    setDateFilter
 }: BoardControlsProps) => {
     const { t } = useTranslation();
 

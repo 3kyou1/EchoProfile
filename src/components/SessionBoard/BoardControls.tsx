@@ -112,7 +112,7 @@ export const BoardControls = ({
                             <SelectValue placeholder={t("session.board.controls.tool")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
+                            <SelectItem value="_ALL_" className="text-[10px] font-extrabold text-foreground uppercase tracking-wide">{t("session.board.controls.all")}</SelectItem>
                             {toolOptions.map(toolOption => (
                                 <SelectItem
                                     key={toolOption}
@@ -136,7 +136,7 @@ export const BoardControls = ({
                                 <SelectValue placeholder={t("session.board.controls.mcp")} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
+                                <SelectItem value="_ALL_" className="text-[10px] font-extrabold text-foreground uppercase tracking-wide">{t("session.board.controls.all")}</SelectItem>
                                 {mcpServerOptions.map(server => (
                                     <SelectItem
                                         key={server}
@@ -161,7 +161,7 @@ export const BoardControls = ({
                                 <SelectValue placeholder={t("session.board.controls.command")} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
+                                <SelectItem value="_ALL_" className="text-[10px] font-extrabold text-foreground uppercase tracking-wide">{t("session.board.controls.all")}</SelectItem>
                                 {shellCommandOptions.map(cmd => (
                                     <SelectItem
                                         key={cmd}
@@ -185,7 +185,7 @@ export const BoardControls = ({
                             <SelectValue placeholder={t("session.board.controls.file")} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="_ALL_" className="text-[10px] font-bold text-muted-foreground">{t("session.board.controls.all")}</SelectItem>
+                            <SelectItem value="_ALL_" className="text-[10px] font-extrabold text-foreground uppercase tracking-wide">{t("session.board.controls.all")}</SelectItem>
                             {fileOptions.map(f => (
                                 <SelectItem
                                     key={f}

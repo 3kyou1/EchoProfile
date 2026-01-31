@@ -119,18 +119,25 @@ export const SessionLane = ({
         if (!activeBrush) return null;
 
         let matched = 0;
-        visibleItems.forEach(item => {
-            const msg = item.head;
-            const content = extractClaudeMessageContent(msg) || "";
-            const toolBlock = getToolUseBlock(msg);
-            const role = getMessageRole(msg);
+        let total = 0;
 
-            // Use shared semantic logic
-            const semantics = getCardSemantics(msg, content, toolBlock, role, activeBrush);
-            if (semantics.brushMatch) matched++;
+        visibleItems.forEach(item => {
+            // Check all messages in this group (head + siblings)
+            const allMessages = [item.head, ...item.siblings];
+            
+            allMessages.forEach(msg => {
+                total++;
+                const content = extractClaudeMessageContent(msg) || "";
+                const toolBlock = getToolUseBlock(msg);
+                const role = getMessageRole(msg);
+
+                // Use shared semantic logic
+                const semantics = getCardSemantics(msg, content, toolBlock, role, activeBrush);
+                if (semantics.brushMatch) matched++;
+            });
         });
 
-        return { matched, total: visibleItems.length };
+        return { matched, total };
     }, [activeBrush, visibleItems]);
 
     const rowVirtualizer = useVirtualizer({

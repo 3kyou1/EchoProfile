@@ -52,6 +52,8 @@ export async function fetchSessionTokenStats(
 export interface FetchProjectTokenStatsOptions {
   offset?: number;
   limit?: number;
+  start_date?: string;
+  end_date?: string;
 }
 
 /**
@@ -61,13 +63,15 @@ export async function fetchProjectTokenStats(
   projectPath: string,
   options: FetchProjectTokenStatsOptions = {}
 ): Promise<PaginatedTokenStats> {
-  const { offset = 0, limit = DEFAULT_PAGE_SIZE } = options;
+  const { offset = 0, limit = DEFAULT_PAGE_SIZE, start_date, end_date } = options;
   const start = performance.now();
 
   const response = await invoke<PaginatedTokenStats>("get_project_token_stats", {
     projectPath,
     offset,
     limit,
+    startDate: start_date,
+    endDate: end_date,
   });
 
   if (import.meta.env.DEV) {
@@ -88,12 +92,16 @@ export async function fetchProjectTokenStats(
  * Fetch comprehensive project statistics summary
  */
 export async function fetchProjectStatsSummary(
-  projectPath: string
+  projectPath: string,
+  options: { start_date?: string; end_date?: string } = {}
 ): Promise<ProjectStatsSummary> {
+  const { start_date, end_date } = options;
   const start = performance.now();
 
   const summary = await invoke<ProjectStatsSummary>("get_project_stats_summary", {
     projectPath,
+    startDate: start_date,
+    endDate: end_date,
   });
 
   if (import.meta.env.DEV) {

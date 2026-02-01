@@ -22,6 +22,7 @@ export interface MessageViewerProps {
   onClearSearch: () => void;
   onNextMatch?: () => void;
   onPrevMatch?: () => void;
+  onBack?: () => void;
 }
 
 export interface MessageNodeProps {

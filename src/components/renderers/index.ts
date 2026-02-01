@@ -28,7 +28,7 @@ export type {
   ProgrammingLanguage,
 } from "./types";
 
-export { TOOL_VARIANTS, getToolVariant } from "./types";
+export { TOOL_VARIANTS } from "./types";
 
 // Styles
 export type { VariantStyles } from "./styles";

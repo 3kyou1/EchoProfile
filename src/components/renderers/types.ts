@@ -97,9 +97,9 @@ export const TOOL_VARIANTS: Record<string, RendererVariant> = {
   TodoWrite: "task",
   TodoRead: "task",
 
-  // System/Shell operations (Orange)
-  Bash: "system",
-  KillShell: "system",
+  // Terminal/Shell operations
+  Bash: "terminal",
+  KillShell: "terminal",
 
   // Git operations (Cyan)
   git: "git",
@@ -110,13 +110,6 @@ export const TOOL_VARIANTS: Record<string, RendererVariant> = {
   // Default
   default: "info",
 } as const;
-
-/**
- * Get the variant for a tool name
- */
-export function getToolVariant(toolName: string): RendererVariant {
-  return (TOOL_VARIANTS as Record<string, RendererVariant>)[toolName] ?? "info";
-}
 
 /**
  * File metadata extracted from tool results

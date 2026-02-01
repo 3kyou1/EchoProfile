@@ -20,6 +20,7 @@ export interface SessionTokenStats {
   first_message_time: string;
   last_message_time: string;
   summary?: string;
+  most_used_tools: ToolUsageStats[];
 }
 
 /**

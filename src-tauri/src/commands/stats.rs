@@ -140,46 +140,8 @@ fn process_session_file_for_global_stats(session_path: &PathBuf) -> Option<Sessi
                     }
                 }
 
-                // Tool usage from assistant content
-                if message.message_type == "assistant" {
-                    if let Some(content) = &message.content {
-                        if let Some(content_array) = content.as_array() {
-                            for item in content_array {
-                                if let Some(item_type) = item.get("type").and_then(|v| v.as_str()) {
-                                    if item_type == "tool_use" {
-                                        if let Some(name) =
-                                            item.get("name").and_then(|v| v.as_str())
-                                        {
-                                            let tool_entry = stats
-                                                .tool_usage
-                                                .entry(name.to_string())
-                                                .or_insert((0, 0));
-                                            tool_entry.0 += 1;
-                                            tool_entry.1 += 1;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Tool usage from explicit tool_use field
-                if let Some(tool_use) = &message.tool_use {
-                    if let Some(name) = tool_use.get("name").and_then(|v| v.as_str()) {
-                        let tool_entry = stats.tool_usage.entry(name.to_string()).or_insert((0, 0));
-                        tool_entry.0 += 1;
-                        if let Some(result) = &message.tool_use_result {
-                            let is_error = result
-                                .get("is_error")
-                                .and_then(serde_json::Value::as_bool)
-                                .unwrap_or(false);
-                            if !is_error {
-                                tool_entry.1 += 1;
-                            }
-                        }
-                    }
-                }
+                // Track tool usage
+                track_tool_usage(&message, &mut stats.tool_usage);
             }
         }
     }
@@ -294,46 +256,8 @@ fn process_session_file_for_project_stats(
                         u64::from(usage.cache_read_input_tokens.unwrap_or(0));
                 }
 
-                // Tool usage from assistant content
-                if message.message_type == "assistant" {
-                    if let Some(content) = &message.content {
-                        if let Some(content_array) = content.as_array() {
-                            for item in content_array {
-                                if let Some(item_type) = item.get("type").and_then(|v| v.as_str()) {
-                                    if item_type == "tool_use" {
-                                        if let Some(name) =
-                                            item.get("name").and_then(|v| v.as_str())
-                                        {
-                                            let tool_entry = stats
-                                                .tool_usage
-                                                .entry(name.to_string())
-                                                .or_insert((0, 0));
-                                            tool_entry.0 += 1;
-                                            tool_entry.1 += 1;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Tool usage from explicit tool_use field
-                if let Some(tool_use) = &message.tool_use {
-                    if let Some(name) = tool_use.get("name").and_then(|v| v.as_str()) {
-                        let tool_entry = stats.tool_usage.entry(name.to_string()).or_insert((0, 0));
-                        tool_entry.0 += 1;
-                        if let Some(result) = &message.tool_use_result {
-                            let is_error = result
-                                .get("is_error")
-                                .and_then(serde_json::Value::as_bool)
-                                .unwrap_or(false);
-                            if !is_error {
-                                tool_entry.1 += 1;
-                            }
-                        }
-                    }
-                }
+                // Track tool usage
+                track_tool_usage(&message, &mut stats.tool_usage);
             }
         }
     }
@@ -369,6 +293,52 @@ fn process_session_file_for_project_stats(
 
     stats.timestamps = session_timestamps;
     Some(stats)
+}
+
+fn track_tool_usage(message: &ClaudeMessage, tool_usage: &mut HashMap<String, (u32, u32)>) {
+    // Tool usage from assistant content
+    if message.message_type == "assistant" {
+        if let Some(content) = &message.content {
+            if let Some(content_array) = content.as_array() {
+                for item in content_array {
+                    if let Some(item_type) = item.get("type").and_then(|v| v.as_str()) {
+                        if item_type == "tool_use" {
+                            if let Some(name) = item.get("name").and_then(|v| v.as_str()) {
+                                let tool_entry =
+                                    tool_usage.entry(name.to_string()).or_insert((0, 0));
+                                tool_entry.0 += 1;
+                                // Check for success/error similar to explicit tool_use
+                                let is_error = item
+                                    .get("is_error")
+                                    .and_then(serde_json::Value::as_bool)
+                                    .unwrap_or(false);
+                                if !is_error {
+                                    tool_entry.1 += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Tool usage from explicit tool_use field
+    if let Some(tool_use) = &message.tool_use {
+        if let Some(name) = tool_use.get("name").and_then(|v| v.as_str()) {
+            let tool_entry = tool_usage.entry(name.to_string()).or_insert((0, 0));
+            tool_entry.0 += 1;
+            if let Some(result) = &message.tool_use_result {
+                let is_error = result
+                    .get("is_error")
+                    .and_then(serde_json::Value::as_bool)
+                    .unwrap_or(false);
+                if !is_error {
+                    tool_entry.1 += 1;
+                }
+            }
+        }
+    }
 }
 
 fn extract_token_usage(message: &ClaudeMessage) -> TokenUsage {
@@ -493,6 +463,7 @@ pub async fn get_session_token_stats(session_path: String) -> Result<SessionToke
 
     let mut first_time: Option<String> = None;
     let mut last_time: Option<String> = None;
+    let mut tool_usage: HashMap<String, (u32, u32)> = HashMap::new();
 
     for message in &messages {
         let usage = extract_token_usage(message);
@@ -508,7 +479,24 @@ pub async fn get_session_token_stats(session_path: String) -> Result<SessionToke
         if last_time.is_none() || message.timestamp > last_time.as_ref().unwrap().clone() {
             last_time = Some(message.timestamp.clone());
         }
+
+        // Track tool usage
+        track_tool_usage(message, &mut tool_usage);
     }
+
+    let most_used_tools = tool_usage
+        .into_iter()
+        .map(|(name, (usage, success))| ToolUsageStats {
+            tool_name: name,
+            usage_count: usage,
+            success_rate: if usage > 0 {
+                (success as f32 / usage as f32) * 100.0
+            } else {
+                0.0
+            },
+            avg_execution_time: None,
+        })
+        .collect();
 
     let total_tokens = total_input_tokens
         + total_output_tokens
@@ -535,6 +523,7 @@ pub async fn get_session_token_stats(session_path: String) -> Result<SessionToke
         first_message_time: first_time.unwrap_or_else(|| "unknown".to_string()),
         last_message_time: last_time.unwrap_or_else(|| "unknown".to_string()),
         summary: None,
+        most_used_tools,
     })
 }
 
@@ -573,6 +562,7 @@ fn extract_session_token_stats_sync(session_path: &PathBuf) -> Option<SessionTok
     let mut first_time: Option<String> = None;
     let mut last_time: Option<String> = None;
     let mut summary: Option<String> = None;
+    let mut tool_usage: HashMap<String, (u32, u32)> = HashMap::new();
 
     // Use SIMD-accelerated line detection
     let line_ranges = find_line_ranges(&mmap);
@@ -609,6 +599,9 @@ fn extract_session_token_stats_sync(session_path: &PathBuf) -> Option<SessionTok
                 if last_time.is_none() || message.timestamp > last_time.as_ref().unwrap().clone() {
                     last_time = Some(message.timestamp.clone());
                 }
+
+                // Track tool usage
+                track_tool_usage(&message, &mut tool_usage);
             }
         }
     }
@@ -635,6 +628,19 @@ fn extract_session_token_stats_sync(session_path: &PathBuf) -> Option<SessionTok
         first_message_time: first_time.unwrap_or_else(|| "unknown".to_string()),
         last_message_time: last_time.unwrap_or_else(|| "unknown".to_string()),
         summary,
+        most_used_tools: tool_usage
+            .into_iter()
+            .map(|(name, (usage, success))| ToolUsageStats {
+                tool_name: name,
+                usage_count: usage,
+                success_rate: if usage > 0 {
+                    (success as f32 / usage as f32) * 100.0
+                } else {
+                    0.0
+                },
+                avg_execution_time: None,
+            })
+            .collect(),
     })
 }
 
@@ -643,7 +649,18 @@ pub async fn get_project_token_stats(
     project_path: String,
     offset: Option<usize>,
     limit: Option<usize>,
+    start_date: Option<String>,
+    end_date: Option<String>,
 ) -> Result<PaginatedTokenStats, String> {
+    if project_path.trim().is_empty() {
+        return Err("project_path is required".to_string());
+    }
+    let project_path_buf = PathBuf::from(&project_path);
+    if !project_path_buf.is_absolute() {
+        return Err("project_path must be absolute".to_string());
+    }
+
+    #[cfg(debug_assertions)]
     let start = std::time::Instant::now();
     let offset = offset.unwrap_or(0);
     let limit = limit.unwrap_or(20);
@@ -656,8 +673,8 @@ pub async fn get_project_token_stats(
         .map(|e| e.path().to_path_buf())
         .collect();
 
+    #[cfg(debug_assertions)]
     let scan_time = start.elapsed();
-    let total_count = session_files.len();
 
     // Process all sessions in parallel using sync function
     let mut all_stats: Vec<SessionTokenStats> = session_files
@@ -665,7 +682,41 @@ pub async fn get_project_token_stats(
         .filter_map(extract_session_token_stats_sync)
         .collect();
 
+    #[cfg(debug_assertions)]
     let process_time = start.elapsed();
+
+    // Filter by date if provided
+    let mut s_limit = None;
+    let mut e_limit = None;
+
+    if let Some(s_str) = start_date {
+        match DateTime::parse_from_rfc3339(&s_str) {
+            Ok(dt) => s_limit = Some(dt.with_timezone(&Utc)),
+            Err(e) => eprintln!("Warning: invalid RFC3339 start_date '{s_str}': {e}"),
+        }
+    }
+
+    if let Some(e_str) = end_date {
+        match DateTime::parse_from_rfc3339(&e_str) {
+            Ok(dt) => e_limit = Some(dt.with_timezone(&Utc)),
+            Err(e) => eprintln!("Warning: invalid RFC3339 end_date '{e_str}': {e}"),
+        }
+    }
+
+    if s_limit.is_some() || e_limit.is_some() {
+        all_stats.retain(|stat| {
+            if let Ok(ts_dt) = DateTime::parse_from_rfc3339(&stat.last_message_time) {
+                let ts_utc = ts_dt.with_timezone(&Utc);
+                let after_start = s_limit.map(|s| ts_utc >= s).unwrap_or(true);
+                let before_end = e_limit.map(|e| ts_utc <= e).unwrap_or(true);
+                after_start && before_end
+            } else {
+                false
+            }
+        });
+    }
+
+    let total_count = all_stats.len();
 
     // Sort by total tokens (descending)
     all_stats.sort_by(|a, b| b.total_tokens.cmp(&a.total_tokens));
@@ -675,11 +726,14 @@ pub async fn get_project_token_stats(
         all_stats.into_iter().skip(offset).take(limit).collect();
 
     let has_more = offset + paginated_items.len() < total_count;
+    #[cfg(debug_assertions)]
     let total_time = start.elapsed();
 
+    #[cfg(debug_assertions)]
     eprintln!(
-        "📊 get_project_token_stats: {} sessions, scan={}ms, process={}ms, total={}ms",
+        "📊 get_project_token_stats: {} sessions ({} after filter), scan={}ms, process={}ms, total={}ms",
         total_count,
+        paginated_items.len(),
         scan_time.as_millis(),
         process_time.as_millis(),
         total_time.as_millis()
@@ -697,13 +751,40 @@ pub async fn get_project_token_stats(
 #[tauri::command]
 pub async fn get_project_stats_summary(
     project_path: String,
+    start_date: Option<String>,
+    end_date: Option<String>,
 ) -> Result<ProjectStatsSummary, String> {
+    if project_path.trim().is_empty() {
+        return Err("project_path is required".to_string());
+    }
+    let project_path_buf = PathBuf::from(&project_path);
+    if !project_path_buf.is_absolute() {
+        return Err("project_path must be absolute".to_string());
+    }
+
     let start = std::time::Instant::now();
     let project_name = PathBuf::from(&project_path)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("Unknown")
         .to_string();
+
+    let mut s_limit = None;
+    let mut e_limit = None;
+
+    if let Some(s_str) = start_date {
+        match DateTime::parse_from_rfc3339(&s_str) {
+            Ok(dt) => s_limit = Some(dt.with_timezone(&Utc)),
+            Err(e) => eprintln!("Warning: invalid RFC3339 start_date '{s_str}': {e}"),
+        }
+    }
+
+    if let Some(e_str) = end_date {
+        match DateTime::parse_from_rfc3339(&e_str) {
+            Ok(dt) => e_limit = Some(dt.with_timezone(&Utc)),
+            Err(e) => eprintln!("Warning: invalid RFC3339 end_date '{e_str}': {e}"),
+        }
+    }
 
     // Phase 1: Collect all session files
     let session_files: Vec<PathBuf> = WalkDir::new(&project_path)
@@ -715,10 +796,25 @@ pub async fn get_project_stats_summary(
     let scan_time = start.elapsed();
 
     // Phase 2: Process all session files in parallel
-    let file_stats: Vec<ProjectSessionFileStats> = session_files
+    let mut file_stats: Vec<ProjectSessionFileStats> = session_files
         .par_iter()
         .filter_map(process_session_file_for_project_stats)
         .collect();
+
+    // Filter by date
+    if s_limit.is_some() || e_limit.is_some() {
+        file_stats.retain(|stats| {
+            if stats.timestamps.is_empty() {
+                return false;
+            }
+            let last_ts = *stats.timestamps.last().unwrap();
+
+            let is_after_start = s_limit.map(|s| last_ts >= s).unwrap_or(true);
+            let is_before_end = e_limit.map(|e| last_ts <= e).unwrap_or(true);
+
+            is_after_start && is_before_end
+        });
+    }
     let process_time = start.elapsed();
 
     // Phase 3: Aggregate results

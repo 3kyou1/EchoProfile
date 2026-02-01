@@ -11,6 +11,7 @@ export interface RecentEditsViewerProps {
   onLoadMore?: () => void;
   isLoading?: boolean;
   error?: string | null;
+  initialSearchQuery?: string;
 }
 
 export interface FileEditItemProps {

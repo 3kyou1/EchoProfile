@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Technical Refactor & Type Safety
+
+- 🛡️ **Comprehensive Type Safety**: Fixed 24+ TypeScript errors by implementing proper type guards for the `ClaudeMessage` union type across the entire project.
+- 🏗️ **Architecture Cleanup**: Extracted `toolIconUtils.ts` and refactored `toolSummaries.ts` to reduce complexity and improve maintainability.
+- ⚡ **Performance Optimization**: Memoized tool frequency calculations and streamlined `InteractionCard` semantics to prevent unnecessary re-renders during interactions.
+- 🐛 **Internal Bug Fixes**:
+  - Resolved a React "Rule of Hooks" violation in `App.tsx`.
+  - Fixed production build failures caused by missing Aptabase environment variables.
+  - Corrected syntax errors and missing return statements in message rendering logic.
+- 📝 **Documentation**: Added `BRUSHING_SPEC.md` documenting the ongoing attribute brushing feature and architectural cleanup plan.
+- 🎨 **Brushing UI Refinement**: Improved visual feedback with single-select brushing, cleaner controls, and translucent pixel view for better data exploration.
+- 🔗 **Deep Linking**: Added ability to navigate from Token Stats view directly to detailed session conversation.
+- ⚡ **Navigation Improvements**: Fixed infinite loading when switching sessions from the Board view by implementing optimistic store updates.
+
+
 ---
 
 ## Version 1.0.0-beta.4 (2025-12-21)

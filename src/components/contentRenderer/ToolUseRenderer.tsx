@@ -25,9 +25,9 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/theme";
 import { FileEditRenderer } from "../toolResultRenderer/FileEditRenderer";
 import { HighlightedText } from "../common";
+import { getToolVariant } from "@/utils/toolIconUtils";
 import {
   type BaseRendererProps,
-  getToolVariant,
   getVariantStyles,
   getLanguageFromPath,
   codeTheme,

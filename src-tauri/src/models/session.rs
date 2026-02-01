@@ -53,6 +53,15 @@ pub struct ClaudeSession {
     pub summary: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GitCommit {
+    pub hash: String,
+    pub author: String,
+    pub date: String,
+    pub message: String,
+    pub timestamp: i64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

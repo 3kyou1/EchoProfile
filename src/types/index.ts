@@ -23,6 +23,9 @@ export type {
   MessagePayload,
   RawClaudeMessage,
   ClaudeMessage,
+  ClaudeAssistantMessage,
+  ClaudeUserMessage,
+  ClaudeSystemMessage,
   MessageNode,
   MessagePage,
   PaginationState,
@@ -97,6 +100,7 @@ export type {
 export type {
   GitWorktreeType,
   GitInfo,
+  GitCommit,
   ClaudeProject,
   ClaudeSession,
   SearchFilters,

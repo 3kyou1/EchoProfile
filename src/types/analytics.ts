@@ -15,7 +15,7 @@ export type RecentEditsPagination = RecentEditsPaginationState;
 /**
  * Analytics 뷰 타입
  */
-export type AnalyticsView = 'messages' | 'tokenStats' | 'analytics' | 'recentEdits' | 'settings';
+export type AnalyticsView = 'messages' | 'tokenStats' | 'analytics' | 'recentEdits' | 'settings' | 'board';
 export type AnalyticsViewType = AnalyticsView;
 
 /**
@@ -32,6 +32,8 @@ export interface AnalyticsState {
   sessionComparison: SessionComparison | null;
   recentEdits: RecentEditsResult | null;
   recentEditsPagination: RecentEditsPagination;
+
+  recentEditsSearchQuery: string;
 
   // 로딩 상태
   isLoadingProjectSummary: boolean;
@@ -56,6 +58,7 @@ export interface AnalyticsActions {
   setProjectSummary: (summary: ProjectStatsSummary | null) => void;
   setSessionComparison: (comparison: SessionComparison | null) => void;
   setRecentEdits: (edits: RecentEditsResult | null) => void;
+  setRecentEditsSearchQuery: (query: string) => void;
 
   // 로딩 상태 관리
   setLoadingProjectSummary: (loading: boolean) => void;
@@ -92,6 +95,7 @@ export const initialAnalyticsState: AnalyticsState = {
   sessionComparison: null,
   recentEdits: null,
   recentEditsPagination: initialRecentEditsPagination,
+  recentEditsSearchQuery: "",
   isLoadingProjectSummary: false,
   isLoadingSessionComparison: false,
   isLoadingRecentEdits: false,
@@ -115,6 +119,7 @@ export interface UseAnalyticsReturn {
     switchToAnalytics: () => Promise<void>;
     switchToRecentEdits: () => Promise<void>;
     switchToSettings: () => void;
+    switchToBoard: () => Promise<void>;
     refreshAnalytics: () => Promise<void>;
     clearAll: () => void;
   };
@@ -126,6 +131,7 @@ export interface UseAnalyticsReturn {
     isMessagesView: boolean;
     isRecentEditsView: boolean;
     isSettingsView: boolean;
+    isBoardView: boolean;
     hasAnyError: boolean;
     isLoadingAnalytics: boolean;
     isLoadingTokenStats: boolean;

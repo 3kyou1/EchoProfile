@@ -16,12 +16,18 @@ import type { MessageHeaderProps } from "../types";
 
 export const MessageHeader: React.FC<MessageHeaderProps> = ({ message }) => {
   const { t } = useTranslation();
-  const isToolResultMessage = !!message.toolUseResult && message.type === "user";
+  const isToolResultMessage =
+    (message.type === "user" || message.type === "assistant") &&
+    !!message.toolUseResult;
   const isSystemContent = hasSystemCommandContent(message);
   const toolName = isToolResultMessage
-    ? getToolName(message.toolUse as Record<string, unknown> | undefined, message.toolUseResult)
+    ? getToolName(
+      (message as any).toolUse as Record<string, unknown> | undefined,
+      (message as any).toolUseResult
+    )
     : null;
-  const isLeftAligned = message.type !== "user" || isToolResultMessage || isSystemContent;
+  const isLeftAligned =
+    message.type !== "user" || isToolResultMessage || isSystemContent;
 
   return (
     <div className={cn(
@@ -33,12 +39,12 @@ export const MessageHeader: React.FC<MessageHeaderProps> = ({ message }) => {
           {isToolResultMessage && toolName
             ? toolName
             : isSystemContent
-            ? t("messageViewer.system")
-            : message.type === "user"
-            ? t("messageViewer.user")
-            : message.type === "assistant"
-            ? t("messageViewer.claude")
-            : t("messageViewer.system")}
+              ? t("messageViewer.system")
+              : message.type === "user"
+                ? t("messageViewer.user")
+                : message.type === "assistant"
+                  ? t("messageViewer.claude")
+                  : t("messageViewer.system")}
         </span>
         <span>·</span>
         <span>{formatTimeShort(message.timestamp)}</span>

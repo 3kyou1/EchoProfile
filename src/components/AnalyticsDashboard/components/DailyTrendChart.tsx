@@ -37,7 +37,8 @@ export const DailyTrendChart: React.FC<DailyTrendChartProps> = ({ dailyData }) =
   return (
     <div className="space-y-3">
       {/* Bar Chart */}
-      <div className="flex gap-2">
+      {/* Bar Chart */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
         {dailyData.map((stat) => {
           const isToday = stat.date === today;
           const ratio = stat.total_tokens / maxTokens;
@@ -47,14 +48,14 @@ export const DailyTrendChart: React.FC<DailyTrendChartProps> = ({ dailyData }) =
           return (
             <Tooltip key={stat.date}>
               <TooltipTrigger asChild>
-                <div className="flex-1 flex flex-col items-center cursor-pointer group">
+                <div className="flex-1 min-w-[12px] flex flex-col items-center cursor-pointer group">
                   {/* Bar container */}
                   <div
                     className="w-full flex items-end justify-center"
                     style={{ height: `${BAR_HEIGHT}px` }}
                   >
                     <div
-                      className="w-full rounded-t-sm transition-all duration-200 group-hover:brightness-110"
+                      className="w-full max-w-[20px] rounded-t-sm transition-all duration-200 group-hover:brightness-110"
                       style={{
                         height: `${barHeight}px`,
                         backgroundColor: isToday
@@ -67,7 +68,7 @@ export const DailyTrendChart: React.FC<DailyTrendChartProps> = ({ dailyData }) =
                   </div>
                   {/* Day label */}
                   <span
-                    className="text-[9px] font-mono tabular-nums mt-1"
+                    className="text-[9px] font-mono tabular-nums mt-1 whitespace-nowrap"
                     style={{
                       fontWeight: isToday ? 600 : 400,
                       color: isToday ? "#22c55e" : "var(--muted-foreground)",
@@ -78,7 +79,7 @@ export const DailyTrendChart: React.FC<DailyTrendChartProps> = ({ dailyData }) =
                   </span>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="font-mono text-xs">
+              <TooltipContent side="top" className="font-mono text-xs z-50">
                 <div className="space-y-1">
                   <div className="font-semibold flex items-center gap-2">
                     <span>{stat.date}</span>
@@ -104,16 +105,16 @@ export const DailyTrendChart: React.FC<DailyTrendChartProps> = ({ dailyData }) =
         <div className="flex items-center gap-4">
           <div>
             <span className="text-muted-foreground">{t("analytics.dailyAvgTokens")}: </span>
-            <span className="font-mono font-semibold text-foreground">{formatNumber(Math.round(totalTokens / 7))}</span>
+            <span className="font-mono font-semibold text-foreground">{formatNumber(Math.round(totalTokens / dailyData.length))}</span>
           </div>
           <div>
             <span className="text-muted-foreground">{t("analytics.dailyAvgMessages")}: </span>
-            <span className="font-mono font-semibold text-foreground">{Math.round(totalMessages / 7)}</span>
+            <span className="font-mono font-semibold text-foreground">{Math.round(totalMessages / dailyData.length)}</span>
           </div>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground/60">
           <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#22c55e" }} />
-          <span>{activeDays}/7 {t("analytics.weeklyActiveDays")}</span>
+          <span>{activeDays}/{dailyData.length} {t("analytics.activeDays")}</span>
         </div>
       </div>
     </div>

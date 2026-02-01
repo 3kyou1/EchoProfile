@@ -136,9 +136,30 @@ export interface AppStoreState {
   // Capture mode state
   isCaptureMode: boolean;
   hiddenMessageIds: string[];
+
+  // Board state
+  boardSessions: Record<string, import("../../types/board.types").BoardSessionData>;
+  visibleSessionIds: string[];
+  allSortedSessionIds: string[];
+  isLoadingBoard: boolean;
+  zoomLevel: import("../../types/board.types").ZoomLevel;
+  activeBrush: import("../../types/board.types").ActiveBrush | null;
+  stickyBrush: boolean;
+  selectedMessageId: string | null;
+  isMarkdownPretty: boolean;
+  boardLoadError: string | null;
+  dateFilter: import("../../types/board.types").DateFilter;
+
+  // Navigation state
+  targetMessageUuid: string | null;
+  shouldHighlightTarget: boolean;
 }
 
 export interface AppStoreActions {
+  // Navigation actions
+  navigateToMessage: (uuid: string) => void;
+  clearTargetMessage: () => void;
+
   // Project actions
   initializeApp: () => Promise<void>;
   scanProjects: () => Promise<void>;
@@ -180,6 +201,7 @@ export interface AppStoreActions {
   setAnalyticsProjectSummaryError: (error: string | null) => void;
   setAnalyticsSessionComparisonError: (error: string | null) => void;
   setAnalyticsRecentEdits: (edits: RecentEditsResult | null) => void;
+  setAnalyticsRecentEditsSearchQuery: (query: string) => void;
   setAnalyticsLoadingRecentEdits: (loading: boolean) => void;
   setAnalyticsRecentEditsError: (error: string | null) => void;
   loadRecentEdits: (projectPath: string) => Promise<import("../../types").PaginatedRecentEdits>;
@@ -234,6 +256,16 @@ export interface AppStoreActions {
   restoreAllMessages: () => void;
   isMessageHidden: (uuid: string) => boolean;
   getHiddenCount: () => number;
+
+  // Board actions
+  loadBoardSessions: (sessions: ClaudeSession[]) => Promise<void>;
+  setZoomLevel: (level: import("../../types/board.types").ZoomLevel) => void;
+  setActiveBrush: (brush: { type: "model" | "status" | "tool" | "file"; value: string } | null) => void;
+  setStickyBrush: (sticky: boolean) => void;
+  clearBoard: () => void;
+  setSelectedMessageId: (id: string | null) => void;
+  setMarkdownPretty: (pretty: boolean) => void;
+  setDateFilter: (filter: import("../../types/board.types").DateFilter) => void;
 }
 
 export type FullAppStore = AppStoreState & AppStoreActions;

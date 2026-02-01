@@ -35,6 +35,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   onClearSearch,
   onNextMatch,
   onPrevMatch,
+  onBack,
 }) => {
   const { t } = useTranslation();
   const scrollContainerRef = useRef<OverlayScrollbarsComponentRef>(null);
@@ -51,6 +52,10 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     hideMessage,
     showMessage,
     restoreMessages,
+    // Navigation state
+    targetMessageUuid,
+    shouldHighlightTarget,
+    clearTargetMessage,
   } = useAppStore();
 
   // Search state management
@@ -82,6 +87,15 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   }, [sessionSearch.currentMatchIndex, sessionSearch.matches]);
 
   const currentMatchUuid = currentMatch?.messageUuid ?? null;
+  // ... (skip down to render loop)
+  // We need to apply the highlight logic in the map function
+
+  // ... inside map ...
+  // const isMessage = item.type === "message";
+  // const isMatch = isMessage && matchedUuids.has(item.message.uuid);
+  // const isTarget = isMessage && shouldHighlightTarget && targetMessageUuid === item.message.uuid;
+  // const isCurrentMatch = (isMessage && currentMatchUuid === item.message.uuid) || isTarget;
+
 
   // 카카오톡 스타일: 항상 전체 메시지 표시 (필터링 없음)
   const displayMessages = messages;
@@ -212,6 +226,31 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     scrollElementReady,
   });
 
+  // Handle Deep Linking / Scrolling to Target
+  useEffect(() => {
+    if (targetMessageUuid && scrollElementReady && flattenedMessages.length > 0) {
+      // Find the index of the target message in the flattened list
+      const index = flattenedMessages.findIndex(
+        (item) => item.type === "message" && item.message.uuid === targetMessageUuid
+      );
+
+      if (index !== -1) {
+        // Scroll with a slight delay to ensure rendering is stable, using 'start' alignment
+        // We use a timeout to let the virtualizer settle if it just loaded
+        setTimeout(() => {
+          virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
+        }, 100);
+
+        // Auto-clear the target after a few seconds so the highlight fades
+        const timer = setTimeout(() => {
+          clearTargetMessage();
+        }, 3000);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [targetMessageUuid, scrollElementReady, flattenedMessages, virtualizer, clearTargetMessage]);
+
   // 검색어 초기화 핸들러
   const handleClearSearch = useCallback(() => {
     handleClearSearchState();
@@ -286,6 +325,22 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           "backdrop-blur-sm border-zinc-700/50"
         )}
       >
+        {/* Back Button */}
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className={cn(
+              "p-2 mr-2 rounded-lg transition-all duration-200",
+              "bg-zinc-800/60 hover:bg-zinc-700/80 text-zinc-400 hover:text-zinc-100",
+              "border border-zinc-700/40 hover:border-zinc-600/50"
+            )}
+            title={t("common.back")}
+          >
+            <ChevronDown className="w-4 h-4 rotate-90" />
+          </button>
+        )}
+
         {/* Filter Toggle - Segmented control style */}
         <div className="flex items-center bg-zinc-800/60 rounded-lg p-0.5 border border-zinc-700/40">
           <button
@@ -504,11 +559,11 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
 
         {/* 스크롤 준비 중 로딩 오버레이 */}
         {flattenedMessages.length > 0 && scrollElementReady &&
-         scrollReadyForSessionId !== selectedSession?.session_id && (
-          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-            <LoadingSpinner size="sm" variant="muted" />
-          </div>
-        )}
+          scrollReadyForSessionId !== selectedSession?.session_id && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+              <LoadingSpinner size="sm" variant="muted" />
+            </div>
+          )}
 
         {/* 가상화된 메시지 렌더링 */}
         {flattenedMessages.length > 0 && scrollElementReady && (
@@ -529,8 +584,11 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               // Hidden placeholders don't have search match info
               const isMessage = item.type === "message";
               const isMatch = isMessage && matchedUuids.has(item.message.uuid);
-              const isCurrentMatch = isMessage && currentMatchUuid === item.message.uuid;
-              const messageMatchIndex = isCurrentMatch ? currentMatch?.matchIndex : undefined;
+
+              const isTarget = isMessage && shouldHighlightTarget && targetMessageUuid === item.message.uuid;
+              const isCurrentMatch = (isMessage && currentMatchUuid === item.message.uuid) || isTarget;
+
+              const messageMatchIndex = (isMessage && currentMatchUuid === item.message.uuid) ? currentMatch?.matchIndex : undefined;
 
               return (
                 <VirtualizedMessageRow

@@ -250,6 +250,7 @@ mod stats_snapshots {
             first_message_time: "2025-01-01T08:00:00Z".to_string(),
             last_message_time: "2025-01-01T17:00:00Z".to_string(),
             summary: None,
+            most_used_tools: Vec::new(),
         };
 
         assert_json_snapshot!("session_token_stats", stats);

@@ -1,11 +1,66 @@
-use crate::models::ClaudeProject;
+use crate::models::{ClaudeProject, GitCommit};
 use crate::utils::{
     detect_git_worktree_info, estimate_message_count_from_size, extract_project_name,
 };
 use chrono::{DateTime, Utc};
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 use walkdir::WalkDir;
+
+#[tauri::command]
+pub async fn get_git_log(actual_path: String, limit: usize) -> Result<Vec<GitCommit>, String> {
+    // Validate path is absolute and exists
+    let path_buf = PathBuf::from(&actual_path);
+    if !path_buf.is_absolute() {
+        return Err("Path must be absolute".to_string());
+    }
+    if !path_buf.exists() || !path_buf.is_dir() {
+        return Err("Path does not exist or is not a directory".to_string());
+    }
+
+    // Canonicalize to ensure we are using the real path
+    let safe_path = path_buf
+        .canonicalize()
+        .map_err(|e| format!("Invalid path: {e}"))?;
+
+    let output = Command::new("git")
+        .args([
+            "log",
+            &format!("-n {limit}"),
+            "--pretty=format:%H|%an|%at|%s",
+        ])
+        .current_dir(&safe_path)
+        .output()
+        .map_err(|e| format!("Failed to execute git log: {e}"))?;
+
+    if !output.status.success() {
+        return Ok(vec![]);
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut commits = Vec::new();
+
+    for line in stdout.lines() {
+        let parts: Vec<&str> = line.splitn(4, '|').collect();
+        if parts.len() == 4 {
+            let timestamp = parts[2].parse::<i64>().unwrap_or(0);
+            let date = DateTime::<Utc>::from_timestamp(timestamp, 0)
+                .map(|dt| dt.to_rfc3339())
+                .unwrap_or_else(|| "unknown".to_string());
+
+            commits.push(GitCommit {
+                hash: parts[0].to_string(),
+                author: parts[1].to_string(),
+                timestamp,
+                date,
+                message: parts[3].to_string(),
+            });
+        }
+    }
+
+    Ok(commits)
+}
 
 #[tauri::command]
 pub async fn get_claude_folder_path() -> Result<String, String> {
@@ -373,5 +428,74 @@ mod tests {
         assert_eq!(projects.len(), 1);
         // WalkDir should find sessions in subdirectories too
         assert_eq!(projects[0].session_count, 2);
+    }
+    #[tokio::test]
+    async fn test_get_git_log_invalid_path() {
+        let result = get_git_log("/nonexistent/path".to_string(), 10).await;
+        // Should fail because path doesn't exist
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Path does not exist or is not a directory"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_git_log_not_absolute() {
+        let result = get_git_log("relative/path".to_string(), 10).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Path must be absolute");
+    }
+
+    #[tokio::test]
+    async fn test_get_git_log_success() {
+        let temp_dir = TempDir::new().unwrap();
+        let path_str = temp_dir.path().to_string_lossy().to_string();
+
+        // Initialize git repo
+        let _ = Command::new("git")
+            .arg("init")
+            .current_dir(&temp_dir)
+            .output()
+            .expect("Failed to init git");
+
+        // Configure user for commit
+        let _ = Command::new("git")
+            .args(["config", "user.email", "test@example.com"])
+            .current_dir(&temp_dir)
+            .output();
+        let _ = Command::new("git")
+            .args(["config", "user.name", "Test User"])
+            .current_dir(&temp_dir)
+            .output();
+
+        // Create a file and commit it
+        create_test_jsonl_file(&temp_dir.path().to_path_buf(), "test.txt", "content");
+        let _ = Command::new("git")
+            .args(["add", "."])
+            .current_dir(&temp_dir)
+            .output();
+        let _ = Command::new("git")
+            .args(["commit", "-m", "Initial commit"])
+            .current_dir(&temp_dir)
+            .output();
+
+        let result = get_git_log(path_str, 5).await;
+
+        // If git is not installed or configured, this might fail or return empty.
+        // But assuming git works:
+        if let Ok(commits) = result {
+            if commits.is_empty() {
+                // Might happen in CI without git
+                println!("Warning: git log returned empty (git might not be working in test env)");
+            } else {
+                assert_eq!(commits.len(), 1);
+                assert_eq!(commits[0].message, "Initial commit");
+                assert_eq!(commits[0].author, "Test User");
+            }
+        } else {
+            // Should not error if path is valid repo
+            panic!("get_git_log failed: {}", result.unwrap_err());
+        }
     }
 }

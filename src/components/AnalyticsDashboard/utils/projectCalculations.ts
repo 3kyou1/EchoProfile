@@ -13,31 +13,19 @@ import { calculateGrowthRate } from "./calculations";
 // ============================================================================
 
 /**
- * Generate 7-day daily data from project stats
- * Maps the last 7 days to daily stats, filling gaps with zeros
+ * Generate full trend data from project stats
+ * Maps the available daily stats to trend data
  */
-export const generateLast7DaysData = (dailyStats: DailyStats[] | undefined): DailyStatData[] => {
+export const generateTrendData = (dailyStats: DailyStats[] | undefined): DailyStatData[] => {
   if (!dailyStats) return [];
 
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    return date.toISOString().split("T")[0];
-  });
-
-  return last7Days
-    .filter((date): date is string => date !== undefined)
-    .map((date) => {
-      const dayStats = dailyStats.find((stat) => stat.date === date);
-
-      return {
-        date,
-        total_tokens: dayStats?.total_tokens || 0,
-        message_count: dayStats?.message_count || 0,
-        session_count: dayStats?.session_count || 0,
-        active_hours: dayStats?.active_hours || 0,
-      };
-    });
+  return dailyStats.map((stat) => ({
+    date: stat.date,
+    total_tokens: stat.total_tokens || 0,
+    message_count: stat.message_count || 0,
+    session_count: stat.session_count || 0,
+    active_hours: stat.active_hours || 0,
+  }));
 };
 
 // ============================================================================

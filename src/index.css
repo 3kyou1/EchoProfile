@@ -448,7 +448,9 @@
   }
 
   /* Editorial Typography: Tight tracking for headlines */
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     letter-spacing: -0.025em;
     font-weight: 600;
   }
@@ -521,7 +523,9 @@
     margin-bottom: 0.375em !important;
   }
 
-  .prose h4, .prose h5, .prose h6 {
+  .prose h4,
+  .prose h5,
+  .prose h6 {
     font-size: 0.75rem !important;
     margin-top: 0.75em !important;
     margin-bottom: 0.375em !important;
@@ -650,16 +654,19 @@
   }
 
   /* Text formatting */
-  .prose strong, .prose b {
+  .prose strong,
+  .prose b {
     font-weight: 600 !important;
     color: var(--foreground) !important;
   }
 
-  .prose em, .prose i {
+  .prose em,
+  .prose i {
     font-style: italic !important;
   }
 
-  .prose del, .prose s {
+  .prose del,
+  .prose s {
     text-decoration: line-through !important;
     color: var(--muted-foreground) !important;
   }
@@ -706,7 +713,7 @@
   }
 
   /* Inline code (not in pre) */
-  .prose :not(pre) > code {
+  .prose :not(pre)>code {
     background-color: var(--muted) !important;
     color: var(--foreground) !important;
     border: 1px solid var(--border) !important;
@@ -725,6 +732,7 @@
    COMPONENT STYLES
    ============================================ */
 @layer components {
+
   /* === Custom Scrollbar === */
   .scrollbar-thin {
     scrollbar-width: thin;
@@ -790,12 +798,18 @@
       0 1px 2px oklch(0 0 0 / 0.05);
   }
 
-  .dark .glass-panel {
-    box-shadow:
-      inset 0 1px 0 oklch(1 0 0 / 0.06),
-      inset 0 0 0 1px oklch(1 0 0 / 0.02),
-      0 4px 24px -4px oklch(0 0 0 / 0.5),
-      0 1px 2px oklch(0 0 0 / 0.3);
+  /* === Brushing System (Step 6) === */
+  .brush-match {
+    @apply border-accent ring-2 ring-accent/30 z-[50] scale-[1.01] opacity-100;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 15px color-mix(in oklch, var(--accent), transparent 80%);
+  }
+
+
+
+  .brush-match:hover {
+    @apply scale-[1.03] ring-accent/50;
+    box-shadow: 0 0 25px color-mix(in oklch, var(--accent), transparent 60%);
   }
 
   /* === Elevated Surface (Card with depth) === */
@@ -910,20 +924,16 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(
-      600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-      oklch(1 0 0 / 0.06),
-      transparent 40%
-    );
+    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        oklch(1 0 0 / 0.06),
+        transparent 40%);
     pointer-events: none;
   }
 
   .dark .spotlight::after {
-    background: radial-gradient(
-      600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-      oklch(1 0 0 / 0.04),
-      transparent 40%
-    );
+    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        oklch(1 0 0 / 0.04),
+        transparent 40%);
   }
 
   /* === Data label style === */
@@ -1055,19 +1065,43 @@
    ANIMATIONS & MICRO-INTERACTIONS
    ============================================ */
 @layer utilities {
+
   /* === Orchestrated Page Load Animation === */
-  .animate-stagger > * {
+  .animate-stagger>* {
     animation: stagger-fade-in 0.5s var(--ease-out-expo) both;
   }
 
-  .animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
-  .animate-stagger > *:nth-child(2) { animation-delay: 60ms; }
-  .animate-stagger > *:nth-child(3) { animation-delay: 120ms; }
-  .animate-stagger > *:nth-child(4) { animation-delay: 180ms; }
-  .animate-stagger > *:nth-child(5) { animation-delay: 240ms; }
-  .animate-stagger > *:nth-child(6) { animation-delay: 300ms; }
-  .animate-stagger > *:nth-child(7) { animation-delay: 360ms; }
-  .animate-stagger > *:nth-child(n+8) { animation-delay: 400ms; }
+  .animate-stagger>*:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  .animate-stagger>*:nth-child(2) {
+    animation-delay: 60ms;
+  }
+
+  .animate-stagger>*:nth-child(3) {
+    animation-delay: 120ms;
+  }
+
+  .animate-stagger>*:nth-child(4) {
+    animation-delay: 180ms;
+  }
+
+  .animate-stagger>*:nth-child(5) {
+    animation-delay: 240ms;
+  }
+
+  .animate-stagger>*:nth-child(6) {
+    animation-delay: 300ms;
+  }
+
+  .animate-stagger>*:nth-child(7) {
+    animation-delay: 360ms;
+  }
+
+  .animate-stagger>*:nth-child(n+8) {
+    animation-delay: 400ms;
+  }
 
   @keyframes stagger-fade-in {
     from {
@@ -1075,6 +1109,7 @@
       transform: translateY(12px) scale(0.98);
       filter: blur(4px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
@@ -1083,15 +1118,29 @@
   }
 
   /* === Fast Stagger (for smaller lists) === */
-  .animate-stagger-fast > * {
+  .animate-stagger-fast>* {
     animation: stagger-fade-in 0.3s var(--ease-out-expo) both;
   }
 
-  .animate-stagger-fast > *:nth-child(1) { animation-delay: 0ms; }
-  .animate-stagger-fast > *:nth-child(2) { animation-delay: 30ms; }
-  .animate-stagger-fast > *:nth-child(3) { animation-delay: 60ms; }
-  .animate-stagger-fast > *:nth-child(4) { animation-delay: 90ms; }
-  .animate-stagger-fast > *:nth-child(n+5) { animation-delay: 120ms; }
+  .animate-stagger-fast>*:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  .animate-stagger-fast>*:nth-child(2) {
+    animation-delay: 30ms;
+  }
+
+  .animate-stagger-fast>*:nth-child(3) {
+    animation-delay: 60ms;
+  }
+
+  .animate-stagger-fast>*:nth-child(4) {
+    animation-delay: 90ms;
+  }
+
+  .animate-stagger-fast>*:nth-child(n+5) {
+    animation-delay: 120ms;
+  }
 
   /* === Breathing Pulse (for active/loading states) === */
   .animate-breathe {
@@ -1099,10 +1148,13 @@
   }
 
   @keyframes breathe {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 1;
       transform: scale(1);
     }
+
     50% {
       opacity: 0.7;
       transform: scale(0.98);
@@ -1115,8 +1167,15 @@
   }
 
   @keyframes subtle-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.65; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.65;
+    }
   }
 
   /* === Slide Animations with Spring === */
@@ -1141,6 +1200,7 @@
       opacity: 0;
       transform: translateY(20px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -1152,6 +1212,7 @@
       opacity: 0;
       transform: translateY(-20px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -1163,6 +1224,7 @@
       opacity: 0;
       transform: translateX(20px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -1174,6 +1236,7 @@
       opacity: 0;
       transform: translateX(-20px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -1194,6 +1257,7 @@
       opacity: 0;
       transform: scale(0.9);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
@@ -1205,6 +1269,7 @@
       opacity: 1;
       transform: scale(1);
     }
+
     to {
       opacity: 0;
       transform: scale(0.9);
@@ -1227,6 +1292,7 @@
       transform: scaleY(0.95);
       transform-origin: top;
     }
+
     to {
       opacity: 1;
       max-height: 1000px;
@@ -1241,6 +1307,7 @@
       transform: scaleY(1);
       transform-origin: top;
     }
+
     to {
       opacity: 0;
       max-height: 0;
@@ -1262,9 +1329,12 @@
   }
 
   @keyframes glow-pulse {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow: 0 0 20px oklch(0.75 0.18 55 / 0.2);
     }
+
     50% {
       box-shadow: 0 0 35px oklch(0.75 0.18 55 / 0.4);
     }
@@ -1278,25 +1348,33 @@
   }
 
   @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   /* === Skeleton Loading === */
   .animate-skeleton {
-    background: linear-gradient(
-      90deg,
-      var(--muted) 0%,
-      oklch(from var(--muted) calc(l + 0.05) c h) 50%,
-      var(--muted) 100%
-    );
+    background: linear-gradient(90deg,
+        var(--muted) 0%,
+        oklch(from var(--muted) calc(l + 0.05) c h) 50%,
+        var(--muted) 100%);
     background-size: 200% 100%;
     animation: skeleton 1.5s ease-in-out infinite;
   }
 
   @keyframes skeleton {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   /* === Typing Cursor Blink === */
@@ -1305,8 +1383,15 @@
   }
 
   @keyframes cursor-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0;
+    }
   }
 
   /* === Bounce Subtle === */
@@ -1315,9 +1400,17 @@
   }
 
   @keyframes bounce-subtle {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+
+    50% {
+      transform: scale(1.05);
+    }
+
+    100% {
+      transform: scale(1);
+    }
   }
 
   /* === Spin (for loading indicators) === */
@@ -1326,8 +1419,13 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* === Fade Animations === */
@@ -1340,13 +1438,23 @@
   }
 
   @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes fade-out {
-    from { opacity: 1; }
-    to { opacity: 0; }
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
   }
 
   /* === Shake (for errors) === */
@@ -1355,11 +1463,27 @@
   }
 
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-6px); }
-    40% { transform: translateX(6px); }
-    60% { transform: translateX(-4px); }
-    80% { transform: translateX(4px); }
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    20% {
+      transform: translateX(-6px);
+    }
+
+    40% {
+      transform: translateX(6px);
+    }
+
+    60% {
+      transform: translateX(-4px);
+    }
+
+    80% {
+      transform: translateX(4px);
+    }
   }
 
   /* === Attention Pulse (for notifications) === */
@@ -1372,10 +1496,12 @@
       transform: scale(1);
       box-shadow: 0 0 0 0 oklch(0.75 0.18 55 / 0.5);
     }
+
     70% {
       transform: scale(1.02);
       box-shadow: 0 0 0 10px oklch(0.75 0.18 55 / 0);
     }
+
     100% {
       transform: scale(1);
       box-shadow: 0 0 0 0 oklch(0.75 0.18 55 / 0);
@@ -1387,6 +1513,7 @@
    TYPOGRAPHY UTILITIES
    ============================================ */
 @layer utilities {
+
   /* === Custom Text Sizes === */
   .text-2xs {
     font-size: 0.6875rem;
@@ -1563,6 +1690,7 @@
    INTERACTIVE STATES & UTILITIES
    ============================================ */
 @layer utilities {
+
   /* === Focus Ring System === */
   .focus-ring {
     @apply outline-none;
@@ -1707,6 +1835,7 @@
    RESPONSIVE UTILITIES
    ============================================ */
 @layer utilities {
+
   /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -1753,6 +1882,7 @@
    ACCESSIBILITY UTILITIES
    ============================================ */
 @layer utilities {
+
   /* === Screen Reader Only === */
   .sr-only {
     position: absolute;
@@ -1899,11 +2029,13 @@
 }
 
 @keyframes pulse-dot {
+
   0%,
   100% {
     r: 1.5;
     opacity: 1;
   }
+
   50% {
     r: 2.5;
     opacity: 0.7;
@@ -1914,6 +2046,7 @@
   0% {
     top: -20%;
   }
+
   100% {
     top: 100%;
   }
@@ -1925,6 +2058,7 @@
     stroke-dasharray: 0 1000;
     opacity: 0;
   }
+
   to {
     stroke-dasharray: 1000 0;
     opacity: 1;

@@ -7,12 +7,13 @@ import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
 import { RecentEditsViewer } from "./components/RecentEditsViewer";
 import { SimpleUpdateManager } from "./components/SimpleUpdateManager";
 import { SettingsManager } from "./components/SettingsManager";
+import { SessionBoard } from "./components/SessionBoard/SessionBoard";
 import { useAppStore } from "./store/useAppStore";
 import { useAnalytics } from "./hooks/useAnalytics";
 import { useResizablePanel } from "./hooks/useResizablePanel";
 
 import { useTranslation } from "react-i18next";
-import { AppErrorType, type ClaudeSession, type ClaudeProject } from "./types";
+import { AppErrorType, type ClaudeSession, type ClaudeProject, type SessionTokenStats } from "./types";
 import type { GroupingMode } from "./types/metadata.types";
 import { AlertTriangle, MessageSquare, Database, BarChart3, FileEdit, Coins, Settings } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -61,6 +62,8 @@ function App() {
     hideProject,
     unhideProject,
     isProjectHidden,
+    dateFilter,
+    setDateFilter,
   } = useAppStore();
 
   const {
@@ -70,7 +73,7 @@ function App() {
   } = useAnalytics();
 
   const { t, i18n: i18nInstance } = useTranslation();
-      const { language, loadLanguage } = useLanguageStore();
+  const { language, loadLanguage } = useLanguageStore();
   const { openModal } = useModal();
 
   const [isViewingGlobalStats, setIsViewingGlobalStats] = useState(false);
@@ -144,6 +147,16 @@ function App() {
     initialize();
   }, [initializeApp, loadLanguage]);
 
+  const handleTokenStatClick = useCallback((stats: SessionTokenStats) => {
+    const session = sessions.find(s => s.session_id === stats.session_id);
+
+    if (session) {
+      handleSessionSelect(session);
+    } else {
+      console.warn("Session not found in loaded list:", stats.session_id);
+    }
+  }, [sessions, handleSessionSelect]);
+
   useEffect(() => {
     const handleLanguageChange = (lng: string) => {
       const currentLang = lng.startsWith("zh")
@@ -193,35 +206,44 @@ function App() {
         return;
       }
 
-      const wasTokenStatsOpen = computed.isTokenStatsView;
+      const activeView = useAppStore.getState().analytics.currentView;
       setIsViewingGlobalStats(false);
 
-      // 이전 프로젝트의 캐시 초기화
+      // Reset cache for previous project
       analyticsActions.clearAll();
 
       await selectProject(project);
 
-      // 이전 뷰 유지하면서 새 프로젝트 데이터 로드
-      if (wasTokenStatsOpen) {
-        try {
+      // Maintain previous view with new project data
+      try {
+        if (activeView === "tokenStats") {
           await analyticsActions.switchToTokenStats();
-        } catch (error) {
-          console.error("Failed to auto-load token stats:", error);
+        } else if (activeView === "board") {
+          await analyticsActions.switchToBoard();
+        } else if (activeView === "recentEdits") {
+          await analyticsActions.switchToRecentEdits();
+        } else {
+          await analyticsActions.switchToBoard();
         }
-      } else {
-        try {
-          await analyticsActions.switchToAnalytics();
-        } catch (error) {
-          console.error("Failed to auto-load analytics:", error);
-        }
+      } catch (error) {
+        console.error(`Failed to auto-load ${activeView} view:`, error);
       }
     },
     [
-      computed.isTokenStatsView,
       selectProject,
       analyticsActions,
     ]
   );
+
+  // Handle session hover for "skim to preview" in board view
+  const handleSessionHover = useCallback((session: ClaudeSession) => {
+    // Only if we are in Board View
+    if (computed.isBoardView) {
+      // Just update the selected session pointer without triggering view changes or full loadings
+      // This assumes SessionBoard reacts to store's selectedSession
+      useAppStore.getState().setSelectedSession(session);
+    }
+  }, [computed.isBoardView]);
 
   // Error State
   if (error && error.type !== AppErrorType.CLAUDE_FOLDER_NOT_FOUND) {
@@ -262,6 +284,7 @@ function App() {
             selectedSession={selectedSession}
             onProjectSelect={handleProjectSelect}
             onSessionSelect={handleSessionSelect}
+            onSessionHover={handleSessionHover}
             onGlobalStatsClick={handleGlobalStatsClick}
             isLoading={isLoadingProjects || isLoadingSessions}
             isViewingGlobalStats={isViewingGlobalStats}
@@ -287,6 +310,7 @@ function App() {
               computed.isAnalyticsView ||
               computed.isRecentEditsView ||
               computed.isSettingsView ||
+              computed.isBoardView ||
               isViewingGlobalStats) && (
               <div className="px-6 py-4 border-b border-border/50 bg-card/50">
                 <div className="flex items-center gap-3">
@@ -299,6 +323,8 @@ function App() {
                       <BarChart3 className="w-5 h-5 text-accent" />
                     ) : computed.isRecentEditsView ? (
                       <FileEdit className="w-5 h-5 text-accent" />
+                    ) : computed.isBoardView ? (
+                      <MessageSquare className="w-5 h-5 text-accent" />
                     ) : (
                       <Coins className="w-5 h-5 text-accent" />
                     )}
@@ -313,6 +339,8 @@ function App() {
                         ? t("analytics.dashboard")
                         : computed.isRecentEditsView
                         ? t("recentEdits.title")
+                        : computed.isBoardView
+                        ? "Session Board"
                         : t('messages.tokenStats.title')}
                     </h2>
                     <p className="text-xs text-muted-foreground">
@@ -322,6 +350,8 @@ function App() {
                         ? t("settingsManager.description")
                         : computed.isRecentEditsView
                         ? t("recentEdits.description")
+                        : computed.isBoardView
+                        ? "Comparative overview of different sessions"
                         : selectedSession?.summary ||
                           t("session.summaryNotFound")}
                     </p>
@@ -339,6 +369,8 @@ function App() {
                     className="flex-1 min-h-0"
                   />
                 </div>
+              ) : computed.isBoardView ? (
+                <SessionBoard />
               ) : computed.isRecentEditsView ? (
                 <OverlayScrollbarsComponent
                   className="h-full"
@@ -350,6 +382,7 @@ function App() {
                     onLoadMore={() => selectedProject && loadMoreRecentEdits(selectedProject.path)}
                     isLoading={analyticsState.isLoadingRecentEdits}
                     error={analyticsState.recentEditsError}
+                    initialSearchQuery={analyticsState.recentEditsSearchQuery}
                   />
                 </OverlayScrollbarsComponent>
               ) : computed.isAnalyticsView || isViewingGlobalStats ? (
@@ -372,6 +405,9 @@ function App() {
                       pagination={projectTokenStatsPagination}
                       onLoadMore={() => selectedProject && loadMoreProjectTokenStats(selectedProject.path)}
                       isLoading={isLoadingTokenStats}
+                      dateFilter={dateFilter}
+                      setDateFilter={setDateFilter}
+                      onSessionClick={handleTokenStatClick}
                     />
                   </div>
                 </OverlayScrollbarsComponent>
@@ -386,6 +422,7 @@ function App() {
                   onClearSearch={clearSessionSearch}
                   onNextMatch={goToNextMatch}
                   onPrevMatch={goToPrevMatch}
+                  onBack={() => analyticsActions.switchToBoard()}
                 />
               ) : (
                 /* Empty State */
@@ -426,17 +463,17 @@ function App() {
             isLoadingSessions ||
             isLoadingMessages ||
             computed.isAnyLoading) && (
-            <div className="flex items-center gap-1.5">
-              <LoadingSpinner size="xs" variant="muted" />
-              <span>
-                {computed.isAnyLoading && t("status.loadingStats")}
-                {isLoadingProjects && t("status.scanning")}
-                {isLoadingSessions && t("status.loadingSessions")}
-                {isLoadingMessages && t("status.loadingMessages")}
-                {isLoading && t("status.initializing")}
-              </span>
-            </div>
-          )}
+              <div className="flex items-center gap-1.5">
+                <LoadingSpinner size="xs" variant="muted" />
+                <span>
+                  {computed.isAnyLoading && t("status.loadingStats")}
+                  {isLoadingProjects && t("status.scanning")}
+                  {isLoadingSessions && t("status.loadingSessions")}
+                  {isLoadingMessages && t("status.loadingMessages")}
+                  {isLoading && t("status.initializing")}
+                </span>
+              </div>
+            )}
         </footer>
 
         {/* Update Manager */}

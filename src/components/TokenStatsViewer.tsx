@@ -57,7 +57,12 @@ interface TokenStatsViewerProps {
   onLoadMore?: () => void;
   title?: string;
   isLoading?: boolean;
+  dateFilter?: { start: Date | null; end: Date | null };
+  setDateFilter?: (filter: { start: Date | null; end: Date | null }) => void;
+  onSessionClick?: (stats: SessionTokenStats) => void;
 }
+
+import { DatePickerHeader } from "./ui/DatePickerHeader";
 
 export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
   sessionStats,
@@ -66,6 +71,9 @@ export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
   onLoadMore,
   title,
   isLoading = false,
+  dateFilter,
+  setDateFilter,
+  onSessionClick,
 }) => {
   const { t } = useTranslation();
 
@@ -215,7 +223,13 @@ export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
                 className="animate-slide-up"
                 style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
               >
-                <SessionStatsCard stats={stats} showSessionId compact summary={stats.summary} />
+                <SessionStatsCard
+                  stats={stats}
+                  showSessionId
+                  compact
+                  summary={stats.summary}
+                  onClick={() => onSessionClick?.(stats)}
+                />
               </div>
             ))}
 
@@ -293,17 +307,29 @@ export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
     >
       <div className="space-y-6">
         {/* Header */}
-        {title && (
-          <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: "color-mix(in oklch, var(--metric-purple) 15%, transparent)" }}
-            >
-              <Sparkles className="w-4 h-4" style={{ color: "var(--metric-purple)" }} />
-            </div>
-            <h2 className="text-lg font-semibold text-foreground tracking-tight">
-              {title}
-            </h2>
+        {(title || (dateFilter && setDateFilter)) && (
+          <div className="flex items-center justify-between gap-4">
+            {title && (
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: "color-mix(in oklch, var(--metric-purple) 15%, transparent)" }}
+                >
+                  <Sparkles className="w-4 h-4" style={{ color: "var(--metric-purple)" }} />
+                </div>
+                <h2 className="text-lg font-semibold text-foreground tracking-tight">
+                  {title}
+                </h2>
+              </div>
+            )}
+
+            {dateFilter && setDateFilter && (
+              <DatePickerHeader
+                dateFilter={dateFilter}
+                setDateFilter={setDateFilter}
+                className="bg-card/50"
+              />
+            )}
           </div>
         )}
 
@@ -314,7 +340,10 @@ export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
               <MessageSquare className="w-4 h-4 text-accent" />
               {t("analytics.currentSession")}
             </h3>
-            <SessionStatsCard stats={sessionStats} />
+            <SessionStatsCard
+              stats={sessionStats}
+              onClick={() => onSessionClick?.(sessionStats)}
+            />
           </div>
         )}
 

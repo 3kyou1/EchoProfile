@@ -21,6 +21,14 @@ export interface GitInfo {
   main_project_path?: string;
 }
 
+export interface GitCommit {
+  hash: string;
+  author: string;
+  date: string;
+  message: string;
+  timestamp: number;
+}
+
 // ============================================================================
 // Project & Session
 // ============================================================================
@@ -50,6 +58,7 @@ export interface ClaudeSession {
   has_tool_use: boolean;
   has_errors: boolean;
   summary?: string;
+  relevance?: number;
 }
 
 // ============================================================================

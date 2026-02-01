@@ -36,6 +36,7 @@ export interface AnalyticsSliceActions {
   setAnalyticsProjectSummaryError: (error: string | null) => void;
   setAnalyticsSessionComparisonError: (error: string | null) => void;
   setAnalyticsRecentEdits: (edits: RecentEditsResult | null) => void;
+  setAnalyticsRecentEditsSearchQuery: (query: string) => void;
   setAnalyticsLoadingRecentEdits: (loading: boolean) => void;
   setAnalyticsRecentEditsError: (error: string | null) => void;
   loadRecentEdits: (projectPath: string) => Promise<PaginatedRecentEdits>;
@@ -134,6 +135,15 @@ export const createAnalyticsSlice: StateCreator<
       analytics: {
         ...state.analytics,
         recentEdits: edits,
+      },
+    }));
+  },
+
+  setAnalyticsRecentEditsSearchQuery: (query: string) => {
+    set((state) => ({
+      analytics: {
+        ...state.analytics,
+        recentEditsSearchQuery: query,
       },
     }));
   },

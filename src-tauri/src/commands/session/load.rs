@@ -833,6 +833,7 @@ fn parse_line_to_message(
                 .unwrap_or_else(|| Utc::now().to_rfc3339()),
             message_type: "summary".to_string(),
             content: Some(serde_json::Value::String(summary_text)),
+            project_name: None,
             tool_use: None,
             tool_use_result: None,
             is_sidechain: None,
@@ -892,6 +893,7 @@ fn parse_line_to_message(
             .unwrap_or_else(|| Utc::now().to_rfc3339()),
         message_type: log_entry.message_type,
         content: log_entry.message.map(|m| m.content).or(log_entry.content),
+        project_name: None,
         tool_use: log_entry.tool_use,
         tool_use_result: log_entry.tool_use_result,
         is_sidechain: log_entry.is_sidechain,
@@ -959,6 +961,7 @@ fn parse_line_simd(
                 .unwrap_or_else(|| Utc::now().to_rfc3339()),
             message_type: "summary".to_string(),
             content: Some(serde_json::Value::String(summary_text)),
+            project_name: None,
             tool_use: None,
             tool_use_result: None,
             is_sidechain: None,
@@ -995,29 +998,30 @@ fn parse_line_simd(
         .uuid
         .unwrap_or_else(|| format!("{}-line-{}", Uuid::new_v4(), line_num + 1));
 
-    let (role, message_id, model, stop_reason, usage, extracted_tool_use) = if let Some(ref msg) = log_entry.message {
-        // Try to extract tool_use from content array if not present at top level
-        let extracted = if log_entry.tool_use.is_none() {
-             msg.content.as_array().and_then(|arr| {
-                arr.iter().find(|item| {
-                    item.get("type").and_then(|v| v.as_str()) == Some("tool_use")
-                }).cloned()
-             })
-        } else {
-            None
-        };
+    let (role, message_id, model, stop_reason, usage, extracted_tool_use) =
+        if let Some(ref msg) = log_entry.message {
+            // Try to extract tool_use from content array if not present at top level
+            let extracted = if log_entry.tool_use.is_none() {
+                msg.content.as_array().and_then(|arr| {
+                    arr.iter()
+                        .find(|item| item.get("type").and_then(|v| v.as_str()) == Some("tool_use"))
+                        .cloned()
+                })
+            } else {
+                None
+            };
 
-        (
-            Some(msg.role.clone()),
-            msg.id.clone(),
-            msg.model.clone(),
-            msg.stop_reason.clone(),
-            msg.usage.clone(),
-            extracted,
-        )
-    } else {
-        (None, None, None, None, None, None)
-    };
+            (
+                Some(msg.role.clone()),
+                msg.id.clone(),
+                msg.model.clone(),
+                msg.stop_reason.clone(),
+                msg.usage.clone(),
+                extracted,
+            )
+        } else {
+            (None, None, None, None, None, None)
+        };
 
     Some(ClaudeMessage {
         uuid,
@@ -1030,6 +1034,7 @@ fn parse_line_simd(
             .unwrap_or_else(|| Utc::now().to_rfc3339()),
         message_type: log_entry.message_type,
         content: log_entry.message.map(|m| m.content).or(log_entry.content),
+        project_name: None,
         tool_use: log_entry.tool_use.or(extracted_tool_use),
         tool_use_result: log_entry.tool_use_result,
         is_sidechain: log_entry.is_sidechain,

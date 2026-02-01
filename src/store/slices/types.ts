@@ -143,10 +143,7 @@ export interface AppStoreState {
   allSortedSessionIds: string[];
   isLoadingBoard: boolean;
   zoomLevel: import("../../types/board.types").ZoomLevel;
-  activeBrush: {
-    type: "model" | "status" | "tool" | "file";
-    value: string;
-  } | null;
+  activeBrush: import("../../types/board.types").ActiveBrush | null;
   stickyBrush: boolean;
   selectedMessageId: string | null;
   isMarkdownPretty: boolean;

@@ -6,6 +6,7 @@ import {
   Activity,
   FileEdit,
   Terminal,
+  SlidersHorizontal,
   Columns,
 } from "lucide-react";
 
@@ -213,6 +214,20 @@ export const Header = () => {
             </TooltipButton>
           </>
         )}
+
+        {/* Settings Manager */}
+        <NavButton
+          icon={SlidersHorizontal}
+          label={t("settingsManager.title")}
+          isActive={computed.isSettingsView}
+          onClick={() => {
+            if (computed.isSettingsView) {
+              analyticsActions.switchToMessages();
+            } else {
+              analyticsActions.switchToSettings();
+            }
+          }}
+        />
 
         {/* Settings Dropdown */}
         <SettingDropdown />

@@ -20,18 +20,19 @@ pub async fn get_git_log(actual_path: String, limit: usize) -> Result<Vec<GitCom
     }
 
     // Canonicalize to ensure we are using the real path
-    let safe_path = path_buf.canonicalize()
-        .map_err(|e| format!("Invalid path: {}", e))?;
+    let safe_path = path_buf
+        .canonicalize()
+        .map_err(|e| format!("Invalid path: {e}"))?;
 
     let output = Command::new("git")
         .args([
             "log",
-            &format!("-n {}", limit),
+            &format!("-n {limit}"),
             "--pretty=format:%H|%an|%at|%s",
         ])
         .current_dir(&safe_path)
         .output()
-        .map_err(|e| format!("Failed to execute git log: {}", e))?;
+        .map_err(|e| format!("Failed to execute git log: {e}"))?;
 
     if !output.status.success() {
         return Ok(vec![]);
@@ -480,21 +481,21 @@ mod tests {
             .output();
 
         let result = get_git_log(path_str, 5).await;
-        
+
         // If git is not installed or configured, this might fail or return empty.
         // But assuming git works:
         if let Ok(commits) = result {
-             if !commits.is_empty() {
-                 assert_eq!(commits.len(), 1);
-                 assert_eq!(commits[0].message, "Initial commit");
-                 assert_eq!(commits[0].author, "Test User");
-             } else {
-                 // Might happen in CI without git
-                 println!("Warning: git log returned empty (git might not be working in test env)");
-             }
+            if commits.is_empty() {
+                // Might happen in CI without git
+                println!("Warning: git log returned empty (git might not be working in test env)");
+            } else {
+                assert_eq!(commits.len(), 1);
+                assert_eq!(commits[0].message, "Initial commit");
+                assert_eq!(commits[0].author, "Test User");
+            }
         } else {
-             // Should not error if path is valid repo
-             panic!("get_git_log failed: {}", result.unwrap_err());
+            // Should not error if path is valid repo
+            panic!("get_git_log failed: {}", result.unwrap_err());
         }
     }
 }

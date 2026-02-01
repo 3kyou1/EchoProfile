@@ -7,6 +7,7 @@ import { LoadingSpinner } from "../ui/loading";
 import { useTranslation } from "react-i18next";
 import { MessageSquare } from "lucide-react";
 import { clsx } from "clsx";
+import type { ActiveBrush } from "../../types/board.types";
 
 import { getToolUseBlock } from "../../utils/messageUtils";
 import { getToolVariant } from "@/utils/toolIconUtils";
@@ -242,7 +243,7 @@ export const SessionBoard = () => {
         return h + 40;
     }, [laneHeights]);
 
-    const handleBoardHover = useCallback((type: "model" | "status" | "tool" | "file", value: string) => {
+    const handleBoardHover = useCallback((type: ActiveBrush["type"], value: string) => {
         setActiveBrush({ type, value });
     }, [setActiveBrush]);
 

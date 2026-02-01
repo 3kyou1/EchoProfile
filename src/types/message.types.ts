@@ -155,6 +155,8 @@ export interface BaseClaudeMessage {
   parentUuid?: string;
   sessionId: string;
   timestamp: string;
+  /** Project name (extracted from file path during search) */
+  projectName?: string;
   isSidechain?: boolean;
   content?: string | ContentItem[] | Record<string, unknown>;
 }

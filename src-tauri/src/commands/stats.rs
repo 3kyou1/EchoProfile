@@ -304,7 +304,8 @@ fn track_tool_usage(message: &ClaudeMessage, tool_usage: &mut HashMap<String, (u
                     if let Some(item_type) = item.get("type").and_then(|v| v.as_str()) {
                         if item_type == "tool_use" {
                             if let Some(name) = item.get("name").and_then(|v| v.as_str()) {
-                                let tool_entry = tool_usage.entry(name.to_string()).or_insert((0, 0));
+                                let tool_entry =
+                                    tool_usage.entry(name.to_string()).or_insert((0, 0));
                                 tool_entry.0 += 1;
                                 // Check for success/error similar to explicit tool_use
                                 let is_error = item
@@ -691,14 +692,14 @@ pub async fn get_project_token_stats(
     if let Some(s_str) = start_date {
         match DateTime::parse_from_rfc3339(&s_str) {
             Ok(dt) => s_limit = Some(dt.with_timezone(&Utc)),
-            Err(e) => eprintln!("Warning: invalid RFC3339 start_date '{}': {}", s_str, e),
+            Err(e) => eprintln!("Warning: invalid RFC3339 start_date '{s_str}': {e}"),
         }
     }
 
     if let Some(e_str) = end_date {
         match DateTime::parse_from_rfc3339(&e_str) {
             Ok(dt) => e_limit = Some(dt.with_timezone(&Utc)),
-            Err(e) => eprintln!("Warning: invalid RFC3339 end_date '{}': {}", e_str, e),
+            Err(e) => eprintln!("Warning: invalid RFC3339 end_date '{e_str}': {e}"),
         }
     }
 
@@ -774,14 +775,14 @@ pub async fn get_project_stats_summary(
     if let Some(s_str) = start_date {
         match DateTime::parse_from_rfc3339(&s_str) {
             Ok(dt) => s_limit = Some(dt.with_timezone(&Utc)),
-            Err(e) => eprintln!("Warning: invalid RFC3339 start_date '{}': {}", s_str, e),
+            Err(e) => eprintln!("Warning: invalid RFC3339 start_date '{s_str}': {e}"),
         }
     }
 
     if let Some(e_str) = end_date {
         match DateTime::parse_from_rfc3339(&e_str) {
             Ok(dt) => e_limit = Some(dt.with_timezone(&Utc)),
-            Err(e) => eprintln!("Warning: invalid RFC3339 end_date '{}': {}", e_str, e),
+            Err(e) => eprintln!("Warning: invalid RFC3339 end_date '{e_str}': {e}"),
         }
     }
 
@@ -803,12 +804,14 @@ pub async fn get_project_stats_summary(
     // Filter by date
     if s_limit.is_some() || e_limit.is_some() {
         file_stats.retain(|stats| {
-            if stats.timestamps.is_empty() { return false; }
+            if stats.timestamps.is_empty() {
+                return false;
+            }
             let last_ts = *stats.timestamps.last().unwrap();
-            
+
             let is_after_start = s_limit.map(|s| last_ts >= s).unwrap_or(true);
             let is_before_end = e_limit.map(|e| last_ts <= e).unwrap_or(true);
-            
+
             is_after_start && is_before_end
         });
     }
@@ -1148,6 +1151,7 @@ impl TryFrom<RawLogEntry> for ClaudeMessage {
                 .unwrap_or_else(|| Utc::now().to_rfc3339()),
             message_type: log_entry.message_type.clone(),
             content: log_entry.message.map(|m| m.content).or(log_entry.content),
+            project_name: None,
             tool_use: log_entry.tool_use,
             tool_use_result: log_entry.tool_use_result,
             is_sidechain: log_entry.is_sidechain,
@@ -1661,6 +1665,7 @@ mod tests {
             timestamp: "2025-01-01T00:00:00Z".to_string(),
             message_type: "assistant".to_string(),
             content: None,
+            project_name: None,
             tool_use: None,
             tool_use_result: None,
             is_sidechain: None,
@@ -1715,6 +1720,7 @@ mod tests {
                     "service_tier": "premium"
                 }
             })),
+            project_name: None,
             tool_use: None,
             tool_use_result: None,
             is_sidechain: None,
@@ -1756,6 +1762,7 @@ mod tests {
             timestamp: "2025-01-01T00:00:00Z".to_string(),
             message_type: "user".to_string(),
             content: None,
+            project_name: None,
             tool_use: None,
             tool_use_result: Some(json!({
                 "usage": {
@@ -1801,6 +1808,7 @@ mod tests {
             timestamp: "2025-01-01T00:00:00Z".to_string(),
             message_type: "assistant".to_string(),
             content: None,
+            project_name: None,
             tool_use: None,
             tool_use_result: Some(json!({
                 "totalTokens": 500
@@ -1843,6 +1851,7 @@ mod tests {
             timestamp: "2025-01-01T00:00:00Z".to_string(),
             message_type: "user".to_string(),
             content: None,
+            project_name: None,
             tool_use: None,
             tool_use_result: None,
             is_sidechain: None,

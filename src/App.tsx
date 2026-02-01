@@ -6,23 +6,25 @@ import { TokenStatsViewer } from "./components/TokenStatsViewer";
 import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
 import { RecentEditsViewer } from "./components/RecentEditsViewer";
 import { SimpleUpdateManager } from "./components/SimpleUpdateManager";
+import { SettingsManager } from "./components/SettingsManager";
 import { SessionBoard } from "./components/SessionBoard/SessionBoard";
 import { useAppStore } from "./store/useAppStore";
 import { useAnalytics } from "./hooks/useAnalytics";
 import { useResizablePanel } from "./hooks/useResizablePanel";
-import { track, TrackingEvents } from "./hooks/useEventTracking";
 
 import { useTranslation } from "react-i18next";
 import { AppErrorType, type ClaudeSession, type ClaudeProject, type SessionTokenStats } from "./types";
 import type { GroupingMode } from "./types/metadata.types";
-import { AlertTriangle, MessageSquare, Database, BarChart3, FileEdit, Coins } from "lucide-react";
+import { AlertTriangle, MessageSquare, Database, BarChart3, FileEdit, Coins, Settings } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useLanguageStore } from "./store/useLanguageStore";
 import { type SupportedLanguage } from "./i18n";
 
 import "./App.css";
 import { Header } from "@/layouts/Header/Header";
 import { ModalContainer } from "./layouts/Header/SettingDropdown/ModalContainer";
+import { useModal } from "@/contexts/modal";
 
 function App() {
   const {
@@ -72,8 +74,10 @@ function App() {
 
   const { t, i18n: i18nInstance } = useTranslation();
   const { language, loadLanguage } = useLanguageStore();
+  const { openModal } = useModal();
 
   const [isViewingGlobalStats, setIsViewingGlobalStats] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Sidebar resize
   const {
@@ -93,6 +97,10 @@ function App() {
     setAnalyticsCurrentView("analytics");
     loadGlobalStats();
   }, [loadGlobalStats, setAnalyticsCurrentView]);
+
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarCollapsed(prev => !prev);
+  }, []);
 
   // Project grouping (worktree or directory-based)
   const groupingMode = getEffectiveGroupingMode();
@@ -134,8 +142,6 @@ function App() {
         console.error("Failed to load language:", error);
       } finally {
         await initializeApp();
-        // Track app launch (anonymous)
-        track(TrackingEvents.APP_LAUNCHED);
       }
     };
     initialize();
@@ -175,6 +181,19 @@ function App() {
       i18nInstance.off("languageChanged", handleLanguageChange);
     };
   }, [language, i18nInstance]);
+
+  // Global search keyboard shortcut (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        openModal("globalSearch");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [openModal]);
 
   const handleProjectSelect = useCallback(
     async (project: ClaudeProject) => {
@@ -250,7 +269,7 @@ function App() {
   }
 
   return (
-    <>
+    <TooltipProvider>
       <div className="h-screen flex flex-col bg-background">
         {/* Header */}
         <Header />
@@ -269,7 +288,7 @@ function App() {
             onGlobalStatsClick={handleGlobalStatsClick}
             isLoading={isLoadingProjects || isLoadingSessions}
             isViewingGlobalStats={isViewingGlobalStats}
-            width={sidebarWidth}
+            width={isSidebarCollapsed ? undefined : sidebarWidth}
             isResizing={isSidebarResizing}
             onResizeStart={handleSidebarResizeStart}
             groupingMode={groupingMode}
@@ -280,6 +299,8 @@ function App() {
             onHideProject={hideProject}
             onUnhideProject={unhideProject}
             isProjectHidden={isProjectHidden}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={handleToggleSidebar}
           />
 
           {/* Main Content Area */}
@@ -288,53 +309,67 @@ function App() {
             {(computed.isTokenStatsView ||
               computed.isAnalyticsView ||
               computed.isRecentEditsView ||
+              computed.isSettingsView ||
               computed.isBoardView ||
               isViewingGlobalStats) && (
-                <div className="px-6 py-4 border-b border-border/50 bg-card/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
-                      {isViewingGlobalStats ? (
-                        <Database className="w-5 h-5 text-accent" />
-                      ) : computed.isAnalyticsView ? (
-                        <BarChart3 className="w-5 h-5 text-accent" />
-                      ) : computed.isRecentEditsView ? (
-                        <FileEdit className="w-5 h-5 text-accent" />
-                      ) : computed.isBoardView ? (
-                        <MessageSquare className="w-5 h-5 text-accent" />
-                      ) : (
-                        <Coins className="w-5 h-5 text-accent" />
-                      )}
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-semibold text-foreground">
-                        {isViewingGlobalStats
-                          ? t("analytics.globalOverview")
-                          : computed.isAnalyticsView
-                            ? t("analytics.dashboard")
-                            : computed.isRecentEditsView
-                              ? t("recentEdits.title")
-                              : computed.isBoardView
-                                ? "Session Board"
-                                : t('messages.tokenStats.title')}
-                      </h2>
-                      <p className="text-xs text-muted-foreground">
-                        {isViewingGlobalStats
-                          ? t("analytics.globalOverviewDescription")
-                          : computed.isRecentEditsView
-                            ? t("recentEdits.description")
-                            : computed.isBoardView
-                              ? "Comparative overview of different sessions"
-                              : selectedSession?.summary ||
-                              t("session.summaryNotFound")}
-                      </p>
-                    </div>
+              <div className="px-6 py-4 border-b border-border/50 bg-card/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
+                    {isViewingGlobalStats ? (
+                      <Database className="w-5 h-5 text-accent" />
+                    ) : computed.isSettingsView ? (
+                      <Settings className="w-5 h-5 text-accent" />
+                    ) : computed.isAnalyticsView ? (
+                      <BarChart3 className="w-5 h-5 text-accent" />
+                    ) : computed.isRecentEditsView ? (
+                      <FileEdit className="w-5 h-5 text-accent" />
+                    ) : computed.isBoardView ? (
+                      <MessageSquare className="w-5 h-5 text-accent" />
+                    ) : (
+                      <Coins className="w-5 h-5 text-accent" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {isViewingGlobalStats
+                        ? t("analytics.globalOverview")
+                        : computed.isSettingsView
+                        ? t("settingsManager.title")
+                        : computed.isAnalyticsView
+                        ? t("analytics.dashboard")
+                        : computed.isRecentEditsView
+                        ? t("recentEdits.title")
+                        : computed.isBoardView
+                        ? "Session Board"
+                        : t('messages.tokenStats.title')}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {isViewingGlobalStats
+                        ? t("analytics.globalOverviewDescription")
+                        : computed.isSettingsView
+                        ? t("settingsManager.description")
+                        : computed.isRecentEditsView
+                        ? t("recentEdits.description")
+                        : computed.isBoardView
+                        ? "Comparative overview of different sessions"
+                        : selectedSession?.summary ||
+                          t("session.summaryNotFound")}
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
             {/* Content */}
             <div className="flex-1 overflow-hidden">
-              {computed.isBoardView ? (
+              {computed.isSettingsView ? (
+                <div className="h-full flex flex-col p-6">
+                  <SettingsManager
+                    projectPath={selectedProject?.actual_path}
+                    className="flex-1 min-h-0"
+                  />
+                </div>
+              ) : computed.isBoardView ? (
                 <SessionBoard />
               ) : computed.isRecentEditsView ? (
                 <OverlayScrollbarsComponent
@@ -447,7 +482,7 @@ function App() {
 
       {/* Modals */}
       <ModalContainer />
-    </>
+    </TooltipProvider>
   );
 }
 

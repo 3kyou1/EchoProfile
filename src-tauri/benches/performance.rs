@@ -375,6 +375,7 @@ fn bench_search_messages(c: &mut Criterion) {
                         black_box(base_path.to_string_lossy().to_string()),
                         black_box(q.to_string()),
                         black_box(serde_json::json!({})),
+                        None,
                     )
                     .await
                 })
@@ -435,6 +436,8 @@ fn bench_get_project_stats_summary(c: &mut Criterion) {
                     rt.block_on(async {
                         claude_code_history_viewer_lib::commands::stats::get_project_stats_summary(
                             black_box(path_str.clone()),
+                            black_box(None),
+                            black_box(None),
                         )
                         .await
                     })
@@ -560,6 +563,8 @@ fn bench_get_project_token_stats(c: &mut Criterion) {
                     rt.block_on(async {
                         claude_code_history_viewer_lib::commands::stats::get_project_token_stats(
                             black_box(path_str.clone()),
+                            black_box(None),
+                            black_box(None),
                             black_box(None),
                             black_box(None),
                         )

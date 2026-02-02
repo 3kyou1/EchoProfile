@@ -39,7 +39,7 @@ export const isEmptyMessage = (message: ClaudeMessage): boolean => {
   }
 
   // Progress messages should be shown
-  if (message.type === "progress" && (message as any).data) return false;
+  if (message.type === "progress" && (message as ClaudeMessage & { data?: unknown }).data) return false;
 
   // Check for array content (tool results, etc.)
   if (message.content && Array.isArray(message.content) && message.content.length > 0) {
@@ -56,6 +56,13 @@ export const isEmptyMessage = (message: ClaudeMessage): boolean => {
 
   // Messages with command-name tags should be shown (rendered by CommandRenderer)
   if (/<command-name>[\s\S]*?<\/command-name>/.test(content)) {
+    return false;
+  }
+
+  // Check for local-command-stdout with non-empty content BEFORE stripping
+  // This is user-visible output (e.g., /cost results) unlike system-only tags
+  const stdoutMatch = content.match(/<local-command-stdout>\s*([\s\S]*?)\s*<\/local-command-stdout>/);
+  if (stdoutMatch && stdoutMatch[1] && stdoutMatch[1].trim().length > 0) {
     return false;
   }
 

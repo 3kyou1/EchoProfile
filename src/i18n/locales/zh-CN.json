@@ -216,6 +216,7 @@
   "commandRenderer.arguments": "参数:",
   "commandRenderer.command": "命令:",
   "commandRenderer.commandExecution": "命令执行",
+  "commandRenderer.commandOutput": "命令输出",
   "commandRenderer.errorOutput": "错误输出",
   "commandRenderer.executionResult": "执行结果",
   "commandRenderer.status": "状态:",

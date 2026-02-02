@@ -216,6 +216,7 @@
   "commandRenderer.arguments": "인수:",
   "commandRenderer.command": "명령:",
   "commandRenderer.commandExecution": "명령 실행",
+  "commandRenderer.commandOutput": "명령 출력",
   "commandRenderer.errorOutput": "에러 출력",
   "commandRenderer.executionResult": "실행 결과",
   "commandRenderer.status": "상태:",

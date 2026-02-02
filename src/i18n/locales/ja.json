@@ -216,6 +216,7 @@
   "commandRenderer.arguments": "引数:",
   "commandRenderer.command": "コマンド:",
   "commandRenderer.commandExecution": "コマンド実行",
+  "commandRenderer.commandOutput": "コマンド出力",
   "commandRenderer.errorOutput": "エラー出力",
   "commandRenderer.executionResult": "実行結果",
   "commandRenderer.status": "ステータス:",

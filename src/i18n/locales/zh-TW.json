@@ -216,6 +216,7 @@
   "commandRenderer.arguments": "參數:",
   "commandRenderer.command": "指令:",
   "commandRenderer.commandExecution": "指令執行",
+  "commandRenderer.commandOutput": "指令輸出",
   "commandRenderer.errorOutput": "錯誤輸出",
   "commandRenderer.executionResult": "執行結果",
   "commandRenderer.status": "狀態:",

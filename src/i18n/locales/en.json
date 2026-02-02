@@ -216,6 +216,7 @@
   "commandRenderer.arguments": "Arguments:",
   "commandRenderer.command": "Command:",
   "commandRenderer.commandExecution": "Command Execution",
+  "commandRenderer.commandOutput": "Command Output",
   "commandRenderer.errorOutput": "Error Output",
   "commandRenderer.executionResult": "Execution Result",
   "commandRenderer.status": "Status:",

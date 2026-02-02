@@ -113,6 +113,17 @@ export const CommandRenderer = ({
     }
   }
 
+  // Extract local-command-stdout tags (user-visible command output, e.g., /cost)
+  const localStdoutRegex = /<local-command-stdout>\s*(.*?)\s*<\/local-command-stdout>/gs;
+  const localStdoutBlocks: string[] = [];
+  let localStdoutMatch;
+  while ((localStdoutMatch = localStdoutRegex.exec(text)) !== null) {
+    const [, content] = localStdoutMatch;
+    if (content && content.trim()) {
+      localStdoutBlocks.push(content.trim());
+    }
+  }
+
   // Remove all tags
   const withoutCommands = text
     .replace(commandNameRegex, "")
@@ -121,6 +132,7 @@ export const CommandRenderer = ({
     .replace(stdoutRegex, "")
     .replace(stderrRegex, "")
     .replace(caveatRegex, "")
+    .replace(localStdoutRegex, "")
     .replace(/^\s*\n/gm, "")
     .trim();
 
@@ -128,8 +140,9 @@ export const CommandRenderer = ({
     commandGroup.name || commandGroup.message || commandGroup.args;
   const hasOutputs = outputTags.length > 0;
   const hasCaveats = caveats.length > 0;
+  const hasLocalStdout = localStdoutBlocks.length > 0;
 
-  if (!hasCommandGroup && !hasOutputs && !hasCaveats && !withoutCommands) {
+  if (!hasCommandGroup && !hasOutputs && !hasCaveats && !hasLocalStdout && !withoutCommands) {
     return null;
   }
 
@@ -248,6 +261,45 @@ export const CommandRenderer = ({
           </div>
         );
       })}
+
+      {/* Local Command Output (e.g., /cost results) */}
+      {localStdoutBlocks.map((output, index) => (
+        <div
+          key={index}
+          className={cn(
+            layout.rounded,
+            layout.containerPadding,
+            "border bg-muted/50 border-border"
+          )}
+        >
+          <div className={cn("flex items-center mb-2", layout.iconSpacing)}>
+            <Terminal className={cn(layout.iconSize, "text-muted-foreground")} />
+            <span className={cn(layout.titleText, "text-muted-foreground")}>
+              {t("commandRenderer.commandOutput")}
+            </span>
+          </div>
+          <div
+            className={cn(
+              layout.containerPadding,
+              layout.rounded,
+              "bg-card text-foreground",
+              layout.bodyText,
+              "whitespace-pre-wrap font-mono text-sm"
+            )}
+          >
+            {searchQuery ? (
+              <HighlightedText
+                text={output}
+                searchQuery={searchQuery}
+                isCurrentMatch={isCurrentMatch}
+                currentMatchIndex={currentMatchIndex}
+              />
+            ) : (
+              output
+            )}
+          </div>
+        </div>
+      ))}
 
       {/* Caveats - collapsible info blocks */}
       {caveats.map((caveat, index) => (

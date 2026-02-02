@@ -153,77 +153,81 @@ export const CommandRenderer = ({
 
   return (
     <div className="space-y-2">
-      {/* Command Group */}
+      {/* Command Group (with optional inline stdout output) */}
       {hasCommandGroup && (
         <div className={cn(layout.rounded, layout.containerPadding, "border bg-accent/10 border-accent/30")}>
-          <div className={cn("flex items-center mb-2", layout.iconSpacing)}>
+          <div className={cn("flex items-center", layout.iconSpacing, hasLocalStdout ? "mb-1.5" : "mb-2")}>
             <Terminal className={cn(layout.iconSize, "text-accent")} />
             <span className={cn(layout.titleText, "text-accent")}>
-              {t("commandRenderer.commandExecution")}
+              {commandGroup.name ? commandGroup.name : t("commandRenderer.commandExecution")}
             </span>
           </div>
 
-          <div className="space-y-2">
-            {commandGroup.name && (
-              <div className={cn("flex items-start", layout.iconSpacing)}>
-                <span className={cn(layout.titleText, "mt-0.5 min-w-[40px] text-accent")}>
-                  {t("commandRenderer.command")}
-                </span>
-                <code className={cn("px-2 py-1", layout.rounded, layout.monoText, "bg-accent/20 text-accent")}>
-                  {searchQuery ? (
-                    <HighlightedText
-                      text={commandGroup.name}
-                      searchQuery={searchQuery}
-                      isCurrentMatch={isCurrentMatch}
-                      currentMatchIndex={currentMatchIndex}
-                    />
-                  ) : (
-                    commandGroup.name
-                  )}
-                </code>
-              </div>
-            )}
+          {/* Command args if present */}
+          {commandGroup.args && (
+            <div className={cn("flex items-start mb-1.5", layout.iconSpacing)}>
+              <span className={cn("text-[11px] font-medium mt-0.5 min-w-[40px] text-accent")}>
+                {t("commandRenderer.arguments")}
+              </span>
+              <code className={cn("px-1.5 py-0.5 text-[11px]", layout.rounded, "font-mono whitespace-pre-wrap bg-tool-search/20 text-tool-search")}>
+                {searchQuery ? (
+                  <HighlightedText
+                    text={commandGroup.args}
+                    searchQuery={searchQuery}
+                    isCurrentMatch={isCurrentMatch}
+                    currentMatchIndex={currentMatchIndex}
+                  />
+                ) : (
+                  commandGroup.args
+                )}
+              </code>
+            </div>
+          )}
 
-            {commandGroup.args && (
-              <div className={cn("flex items-start", layout.iconSpacing)}>
-                <span className={cn(layout.titleText, "mt-0.5 min-w-[40px] text-accent")}>
-                  {t("commandRenderer.arguments")}
-                </span>
-                <code className={cn("px-2 py-1", layout.rounded, layout.monoText, "whitespace-pre-wrap bg-tool-search/20 text-tool-search")}>
-                  {searchQuery ? (
-                    <HighlightedText
-                      text={commandGroup.args}
-                      searchQuery={searchQuery}
-                      isCurrentMatch={isCurrentMatch}
-                      currentMatchIndex={currentMatchIndex}
-                    />
-                  ) : (
-                    commandGroup.args
-                  )}
-                </code>
-              </div>
-            )}
+          {/* Command message/status if present */}
+          {commandGroup.message && (
+            <div className={cn("flex items-start mb-1.5", layout.iconSpacing)}>
+              <span className={cn("text-[11px] font-medium mt-0.5 min-w-[40px] text-accent")}>
+                {t("commandRenderer.status")}
+              </span>
+              <span className={cn("text-[11px] italic text-accent")}>
+                {searchQuery ? (
+                  <HighlightedText
+                    text={commandGroup.message}
+                    searchQuery={searchQuery}
+                    isCurrentMatch={isCurrentMatch}
+                    currentMatchIndex={currentMatchIndex}
+                  />
+                ) : (
+                  commandGroup.message
+                )}
+              </span>
+            </div>
+          )}
 
-            {commandGroup.message && (
-              <div className={cn("flex items-start", layout.iconSpacing)}>
-                <span className={cn(layout.titleText, "mt-0.5 min-w-[40px] text-accent")}>
-                  {t("commandRenderer.status")}
-                </span>
-                <span className={cn(layout.bodyText, "italic text-accent")}>
-                  {searchQuery ? (
-                    <HighlightedText
-                      text={commandGroup.message}
-                      searchQuery={searchQuery}
-                      isCurrentMatch={isCurrentMatch}
-                      currentMatchIndex={currentMatchIndex}
-                    />
-                  ) : (
-                    commandGroup.message
-                  )}
-                </span>
-              </div>
-            )}
-          </div>
+          {/* Inline local stdout output (e.g., /cost results) — rendered inside the command card */}
+          {localStdoutBlocks.map((output, index) => (
+            <div
+              key={index}
+              className={cn(
+                "mt-1.5 px-2.5 py-2",
+                layout.rounded,
+                "bg-background/50 text-foreground/80",
+                "whitespace-pre-wrap font-mono text-xs leading-relaxed"
+              )}
+            >
+              {searchQuery ? (
+                <HighlightedText
+                  text={output}
+                  searchQuery={searchQuery}
+                  isCurrentMatch={isCurrentMatch}
+                  currentMatchIndex={currentMatchIndex}
+                />
+              ) : (
+                output
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -267,8 +271,8 @@ export const CommandRenderer = ({
         );
       })}
 
-      {/* Local Command Output (e.g., /cost results) */}
-      {localStdoutBlocks.map((output, index) => (
+      {/* Standalone Local Command Output (only when no command group to inline into) */}
+      {!hasCommandGroup && localStdoutBlocks.map((output, index) => (
         <div
           key={index}
           className={cn(
@@ -277,19 +281,18 @@ export const CommandRenderer = ({
             "border bg-muted/50 border-border"
           )}
         >
-          <div className={cn("flex items-center mb-2", layout.iconSpacing)}>
+          <div className={cn("flex items-center mb-1.5", layout.iconSpacing)}>
             <Terminal className={cn(layout.iconSize, "text-muted-foreground")} />
-            <span className={cn(layout.titleText, "text-muted-foreground")}>
+            <span className={cn("text-xs font-medium text-muted-foreground")}>
               {t("commandRenderer.commandOutput")}
             </span>
           </div>
           <div
             className={cn(
-              layout.containerPadding,
+              "px-2.5 py-2",
               layout.rounded,
-              "bg-card text-foreground",
-              layout.bodyText,
-              "whitespace-pre-wrap font-mono text-sm"
+              "bg-card text-foreground/80",
+              "whitespace-pre-wrap font-mono text-xs leading-relaxed"
             )}
           >
             {searchQuery ? (

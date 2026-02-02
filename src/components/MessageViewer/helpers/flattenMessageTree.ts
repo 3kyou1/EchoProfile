@@ -16,6 +16,7 @@ import type {
 } from "../types";
 import { getParentUuid } from "./messageHelpers";
 import { getAgentIdFromProgress } from "./agentProgressHelpers";
+import { extractClaudeMessageContent } from "../../../utils/messageUtils";
 
 interface FlattenOptions {
   messages: ClaudeMessage[];
@@ -25,6 +26,89 @@ interface FlattenOptions {
   agentProgressMemberUuids: Set<string>;
   /** Message UUIDs to hide (only used when in capture mode) */
   hiddenMessageIds?: string[];
+}
+
+/**
+ * Merges command output messages into their parent command messages.
+ *
+ * When a user runs a slash command like `/cost`, two messages appear:
+ * 1. A "System" message with <command-name>/cost</command-name>
+ * 2. A "User" message with <local-command-stdout>result</local-command-stdout>
+ *
+ * This function merges the stdout content into the parent command message
+ * so they render as a single card.
+ */
+function mergeCommandOutputMessages(messages: ClaudeMessage[]): ClaudeMessage[] {
+  // Build uuid lookup
+  const uuidMap = new Map<string, ClaudeMessage>();
+  for (const msg of messages) {
+    uuidMap.set(msg.uuid, msg);
+  }
+
+  // Find stdout-only children of command messages
+  const mergedUuids = new Set<string>();
+
+  for (const msg of messages) {
+    const content = extractClaudeMessageContent(msg);
+    if (!content || typeof content !== "string") continue;
+
+    // Check if this message is ONLY local-command-stdout (+ optional caveat/whitespace)
+    const stripped = content
+      .replace(/<local-command-stdout>[\s\S]*?<\/local-command-stdout>/g, "")
+      .replace(/<local-command-caveat>[\s\S]*?<\/local-command-caveat>/g, "")
+      .trim();
+    if (stripped.length > 0) continue; // has other content, skip
+
+    // Must have actual stdout content
+    if (!/<local-command-stdout>\s*\S/.test(content)) continue;
+
+    // Find parent
+    const parentUuid = getParentUuid(msg);
+    if (!parentUuid) continue;
+    const parent = uuidMap.get(parentUuid);
+    if (!parent) continue;
+
+    // Parent must be a command message
+    const parentContent = extractClaudeMessageContent(parent);
+    if (!parentContent || typeof parentContent !== "string") continue;
+    if (!/<command-name>/.test(parentContent)) continue;
+
+    // Merge: append stdout tags to parent content
+    // Create a shallow copy of the parent message with updated content
+    const updatedParent = { ...parent };
+
+    // Handle different content structures
+    if (typeof updatedParent.content === "string") {
+      updatedParent.content = updatedParent.content + "\n" + content;
+    } else if (Array.isArray(updatedParent.content)) {
+      // If content is an array, we need to append to the text block
+      const textBlock = updatedParent.content.find(
+        (block): block is { type: "text"; text: string } => block.type === "text"
+      );
+      if (textBlock) {
+        textBlock.text = textBlock.text + "\n" + content;
+      } else {
+        // No text block exists, add one
+        updatedParent.content = [
+          ...updatedParent.content,
+          { type: "text", text: content },
+        ];
+      }
+    }
+
+    // Update the parent in the map
+    uuidMap.set(parentUuid, updatedParent);
+    mergedUuids.add(msg.uuid);
+  }
+
+  // Filter out merged messages and return updated messages
+  if (mergedUuids.size === 0) {
+    return messages; // No changes
+  }
+
+  return messages
+    .filter(msg => !mergedUuids.has(msg.uuid))
+    .map(msg => uuidMap.get(msg.uuid) || msg);
 }
 
 /**
@@ -51,9 +135,12 @@ export function flattenMessageTree({
     new Map(messages.map((msg) => [msg.uuid, msg])).values()
   );
 
+  // Merge command + stdout pairs
+  const processedMessages = mergeCommandOutputMessages(uniqueMessages);
+
   // Build child map for efficient tree traversal
   const childrenMap = new Map<string | null, ClaudeMessage[]>();
-  uniqueMessages.forEach((msg) => {
+  processedMessages.forEach((msg) => {
     const parentUuid = getParentUuid(msg) ?? null;
     if (!childrenMap.has(parentUuid)) {
       childrenMap.set(parentUuid, []);
@@ -78,7 +165,7 @@ export function flattenMessageTree({
   // If no root messages exist, treat all messages as flat list
   if (rootMessages.length === 0) {
     return flattenWithPlaceholders(
-      uniqueMessages,
+      processedMessages,
       hiddenSet,
       agentTaskGroups,
       agentTaskMemberUuids,
@@ -124,14 +211,14 @@ export function flattenMessageTree({
 
   // Fallback: If tree traversal resulted in significantly fewer messages,
   // add remaining unvisited messages (sorted by timestamp)
-  if (orderedMessages.length < uniqueMessages.length * 0.9) {
+  if (orderedMessages.length < processedMessages.length * 0.9) {
     if (import.meta.env.DEV) {
       console.warn(
-        `[flattenMessageTree] Tree traversal found ${orderedMessages.length}/${uniqueMessages.length} messages. Adding orphaned messages.`
+        `[flattenMessageTree] Tree traversal found ${orderedMessages.length}/${processedMessages.length} messages. Adding orphaned messages.`
       );
     }
     // Collect and sort orphaned messages by timestamp
-    const orphanedMessages = uniqueMessages
+    const orphanedMessages = processedMessages
       .filter((msg) => !visited.has(msg.uuid))
       .sort(sortByTimestamp);
 

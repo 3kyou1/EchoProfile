@@ -59,10 +59,15 @@ export const CommandRenderer = ({
     ?.replace(/<\/?command-args>/g, "")
     .trim();
 
+  // Hide message if it's just the command name without slash (e.g., name="/cost", message="cost")
+  const isRedundantMessage =
+    extractedName && extractedMessage &&
+    extractedName.replace(/^\//, "") === extractedMessage;
+
   const commandGroup: CommandGroup = {
     name: extractedName && extractedName.length > 0 ? extractedName : undefined,
     message:
-      extractedMessage && extractedMessage.length > 0
+      extractedMessage && extractedMessage.length > 0 && !isRedundantMessage
         ? extractedMessage
         : undefined,
     args: extractedArgs && extractedArgs.length > 0 ? extractedArgs : undefined,
@@ -71,8 +76,8 @@ export const CommandRenderer = ({
   // 출력 태그들 (stdout, stderr 등) 추출 - 더 포괄적인 패턴 사용
   const outputTags: OutputTag[] = [];
 
-  // stdout 계열: stdout, output이 포함된 모든 태그
-  const stdoutRegex = /<([^>]*(?:stdout|output)[^>]*)\s*>\s*(.*?)\s*<\/\1>/gs;
+  // stdout 계열: stdout, output이 포함된 모든 태그 (local-command-stdout 제외 - 별도 처리)
+  const stdoutRegex = /<(?!local-command-stdout)([^>]*(?:stdout|output)[^>]*)\s*>\s*(.*?)\s*<\/\1>/gs;
   // stderr 계열: stderr, error가 포함된 모든 태그
   const stderrRegex = /<([^>]*(?:stderr|error)[^>]*)\s*>\s*(.*?)\s*<\/\1>/gs;
 

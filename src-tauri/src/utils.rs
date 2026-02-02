@@ -80,11 +80,24 @@ pub fn estimate_message_count_from_size(file_size: u64) -> usize {
 /// This function uses filesystem existence checks to correctly decode paths
 /// where the project name itself contains hyphens.
 pub fn decode_project_path(session_storage_path: &str) -> String {
+    // 1. Try reading originalPath from sessions-index.json (most reliable)
+    let index_path = Path::new(session_storage_path).join("sessions-index.json");
+    if let Ok(content) = std::fs::read_to_string(&index_path) {
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Some(original) = parsed.get("originalPath").and_then(|v| v.as_str()) {
+                if !original.is_empty() && Path::new(original).is_absolute() {
+                    return original.to_string();
+                }
+            }
+        }
+    }
+
+    // 2. Fallback: decode from encoded directory name
     const MARKER: &str = ".claude/projects/";
     if let Some(marker_pos) = session_storage_path.find(MARKER) {
         let encoded = &session_storage_path[marker_pos + MARKER.len()..];
         if encoded.starts_with('-') {
-            // Try filesystem-based decoding first (most accurate)
+            // Try filesystem-based decoding (recursive)
             if let Some(path) = decode_with_filesystem_check(encoded) {
                 return path;
             }
@@ -111,53 +124,82 @@ pub fn decode_project_path(session_storage_path: &str) -> String {
 /// 3. Check `/Users/jack/client` (exists? continue)
 /// 4. Check `/Users/jack/client/claude-code-history-viewer` (exists? ✓ return this)
 fn decode_with_filesystem_check(encoded: &str) -> Option<String> {
-    // Find all hyphen positions
+    decode_recursive(encoded, "")
+}
+
+/// Recursively decode hyphen-separated path segments by checking filesystem existence.
+///
+/// For each hyphen in `encoded`, tries treating it as a `/` separator.
+/// When a valid directory is found, recurses on the remaining string.
+/// This handles nested directories like "claude-code-history-viewer-src-tauri"
+/// → "claude-code-history-viewer/src-tauri".
+fn decode_recursive(encoded: &str, base_path: &str) -> Option<String> {
+    decode_recursive_inner(encoded, base_path, 0)
+}
+
+fn decode_recursive_inner(encoded: &str, base_path: &str, depth: usize) -> Option<String> {
+    if depth > 20 {
+        return None;
+    }
+    if encoded.is_empty() {
+        if !base_path.is_empty() && Path::new(base_path).exists() {
+            return Some(base_path.to_string());
+        }
+        return None;
+    }
+
     let hyphen_positions: Vec<usize> = encoded
         .char_indices()
         .filter(|(_, c)| *c == '-')
         .map(|(i, _)| i)
         .collect();
 
-    if hyphen_positions.is_empty() {
-        return None;
-    }
-
-    // Build path by extending one segment at a time
-    let mut current_path = String::new();
-    let mut last_pos = 0;
-
-    for (i, &pos) in hyphen_positions.iter().enumerate() {
-        // Get the segment between last_pos and current hyphen
-        let segment = &encoded[last_pos..pos];
-        if !segment.is_empty() {
-            current_path.push('/');
-            current_path.push_str(segment);
+    // Try each hyphen as a potential path separator
+    for &pos in &hyphen_positions {
+        let segment = &encoded[..pos];
+        if segment.is_empty() {
+            continue;
         }
-        last_pos = pos + 1;
 
-        // Check if current path exists as a directory
-        if !current_path.is_empty() && Path::new(&current_path).is_dir() {
-            // Check if remaining part (after this hyphen) completes a valid path
+        let candidate = if base_path.is_empty() {
+            format!("/{segment}")
+        } else {
+            format!("{base_path}/{segment}")
+        };
+
+        // Use symlink_metadata to avoid following symlinks
+        let is_real_dir = std::fs::symlink_metadata(&candidate)
+            .map(|m| m.file_type().is_dir())
+            .unwrap_or(false);
+
+        if is_real_dir {
             let remaining = &encoded[pos + 1..];
-            if !remaining.is_empty() {
-                let full_path = format!("{current_path}/{remaining}");
-                if Path::new(&full_path).exists() {
-                    return Some(full_path);
-                }
+            if remaining.is_empty() {
+                return Some(candidate);
+            }
+
+            // First try: remaining as a single leaf (no more splitting needed)
+            let full_path = format!("{candidate}/{remaining}");
+            let full_path_is_real = std::fs::symlink_metadata(&full_path)
+                .map(|m| !m.file_type().is_symlink())
+                .unwrap_or(false);
+            if full_path_is_real {
+                return Some(full_path);
+            }
+
+            // Recurse: remaining may itself contain hyphens that are path separators
+            if let result @ Some(_) = decode_recursive_inner(remaining, &candidate, depth + 1) {
+                return result;
             }
         }
-
-        // If this is the last hyphen, we need to add the remaining part
-        if i == hyphen_positions.len() - 1 && last_pos < encoded.len() {
-            let remaining = &encoded[last_pos..];
-            current_path.push('/');
-            current_path.push_str(remaining);
-        }
     }
 
-    // Check if the fully decoded path exists
-    if !current_path.is_empty() && Path::new(&current_path).exists() {
-        return Some(current_path);
+    // No hyphen worked as separator — treat entire encoded as a single segment
+    if !base_path.is_empty() {
+        let full_path = format!("{base_path}/{encoded}");
+        if Path::new(&full_path).exists() {
+            return Some(full_path);
+        }
     }
 
     None

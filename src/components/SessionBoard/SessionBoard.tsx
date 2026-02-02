@@ -431,9 +431,10 @@ export const SessionBoard = () => {
                                     isSelected={selectedSession?.session_id === sessionId}
                                     onInteractionClick={handleInteractionClick}
                                     onNavigate={(messageId) => {
-                                        // 1. Ensure this session is selected
-                                        if (selectedSession?.session_id !== sessionId) {
-                                            // Optimistic update using cached board data to prevent loading state
+                                        // Set session and messages from board cache when session
+                                        // differs or messages are empty (e.g., after board view switch)
+                                        const currentMessages = useAppStore.getState().messages;
+                                        if (selectedSession?.session_id !== sessionId || currentMessages.length === 0) {
                                             useAppStore.setState({
                                                 selectedSession: data.session,
                                                 messages: data.messages,
@@ -447,11 +448,10 @@ export const SessionBoard = () => {
                                                 }
                                             });
 
-                                            // Rebuild search index for the new session
                                             clearSearchIndex();
                                             buildSearchIndex(data.messages);
                                         }
-                                        // 2. Navigate
+                                        // Navigate to message and switch view
                                         useAppStore.getState().navigateToMessage(messageId);
                                         useAppStore.getState().setAnalyticsCurrentView("messages");
                                     }}

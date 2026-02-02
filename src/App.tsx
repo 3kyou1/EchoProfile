@@ -147,6 +147,21 @@ function App() {
     initialize();
   }, [initializeApp, loadLanguage]);
 
+  // Restore messages when switching back to messages view with empty messages
+  useEffect(() => {
+    if (!computed.isMessagesView) return;
+    const { selectedSession: session, messages: msgs } = useAppStore.getState();
+    if (session != null && msgs.length === 0) {
+      void (async () => {
+        try {
+          await selectSession(session);
+        } catch (error) {
+          console.error("Failed to restore session messages:", error);
+        }
+      })();
+    }
+  }, [computed.isMessagesView, selectSession]);
+
   const handleTokenStatClick = useCallback((stats: SessionTokenStats) => {
     const session = sessions.find(s => s.session_id === stats.session_id);
 

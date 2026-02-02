@@ -57,7 +57,7 @@ function mergeCommandOutputMessages(messages: ClaudeMessage[]): ClaudeMessage[] 
       .replace(/<local-command-stdout>[\s\S]*?<\/local-command-stdout>/g, "")
       .replace(/<local-command-caveat>[\s\S]*?<\/local-command-caveat>/g, "")
       .trim();
-    if (stripped.length > 0) continue; // has other content, skip
+    if (stripped.length > 0) continue;
 
     // Must have actual stdout content
     if (!/<local-command-stdout>\s*\S/.test(content)) continue;
@@ -73,37 +73,17 @@ function mergeCommandOutputMessages(messages: ClaudeMessage[]): ClaudeMessage[] 
     if (!parentContent || typeof parentContent !== "string") continue;
     if (!/<command-name>/.test(parentContent)) continue;
 
-    // Merge: append stdout tags to parent content
-    // Create a shallow copy of the parent message with updated content
-    const updatedParent = { ...parent };
+    // Merge: always set content as combined string via extractClaudeMessageContent results
+    // This avoids type ambiguity with the underlying content field
+    const mergedContent = parentContent + "\n" + content;
+    const updatedParent: ClaudeMessage = { ...parent, content: mergedContent };
 
-    // Handle different content structures
-    if (typeof updatedParent.content === "string") {
-      updatedParent.content = updatedParent.content + "\n" + content;
-    } else if (Array.isArray(updatedParent.content)) {
-      // If content is an array, we need to append to the text block
-      const textBlock = updatedParent.content.find(
-        (block): block is { type: "text"; text: string } => block.type === "text"
-      );
-      if (textBlock) {
-        textBlock.text = textBlock.text + "\n" + content;
-      } else {
-        // No text block exists, add one
-        updatedParent.content = [
-          ...updatedParent.content,
-          { type: "text", text: content },
-        ];
-      }
-    }
-
-    // Update the parent in the map
     uuidMap.set(parentUuid, updatedParent);
     mergedUuids.add(msg.uuid);
   }
 
-  // Filter out merged messages and return updated messages
   if (mergedUuids.size === 0) {
-    return messages; // No changes
+    return messages;
   }
 
   return messages

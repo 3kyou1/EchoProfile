@@ -1,8 +1,12 @@
 /**
+ * @deprecated This file is deprecated. Import from '@/types' or '@/types/core/message' instead.
+ *
  * Message Types
  *
  * Core message structures for Claude conversation data.
  * Handles raw JSONL parsing and processed UI messages.
+ *
+ * @see src/types/core/message.ts for the canonical implementation
  */
 
 import type { ContentItem } from "./tool.types";

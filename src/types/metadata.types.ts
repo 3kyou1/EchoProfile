@@ -1,9 +1,13 @@
 /**
+ * @deprecated This file is deprecated. Import from '@/types' or '@/types/core/project' instead.
+ *
  * User metadata types for storing custom data
  *
  * This module contains data structures for user-specific metadata
  * that is stored separately from Claude Code's original data.
  * Location: ~/.claude-history-viewer/user-data.json
+ *
+ * @see src/types/core/project.ts for the canonical implementation
  */
 
 import { matchGlobPattern } from "../utils/globUtils";

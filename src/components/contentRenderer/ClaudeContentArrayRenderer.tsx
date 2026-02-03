@@ -12,15 +12,40 @@
 
 import { memo } from "react";
 import { ThinkingRenderer } from "./ThinkingRenderer";
+import { RedactedThinkingRenderer } from "./RedactedThinkingRenderer";
 import { ToolUseRenderer } from "./ToolUseRenderer";
 import { ImageRenderer } from "./ImageRenderer";
 import { CommandRenderer } from "./CommandRenderer";
+import { ServerToolUseRenderer } from "./ServerToolUseRenderer";
+import { WebSearchResultRenderer } from "./WebSearchResultRenderer";
+import { DocumentRenderer } from "./DocumentRenderer";
+import { SearchResultRenderer } from "./SearchResultRenderer";
+import { MCPToolUseRenderer } from "./MCPToolUseRenderer";
+import { MCPToolResultRenderer } from "./MCPToolResultRenderer";
+import { WebFetchToolResultRenderer } from "./WebFetchToolResultRenderer";
+import { CodeExecutionToolResultRenderer } from "./CodeExecutionToolResultRenderer";
+import { BashCodeExecutionToolResultRenderer } from "./BashCodeExecutionToolResultRenderer";
+import { TextEditorCodeExecutionToolResultRenderer } from "./TextEditorCodeExecutionToolResultRenderer";
+import { ToolSearchToolResultRenderer } from "./ToolSearchToolResultRenderer";
 import { ClaudeToolResultItem } from "../toolResultRenderer";
 import { HighlightedText } from "../common/HighlightedText";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getVariantStyles, layout } from "../renderers";
 import type { SearchFilterType } from "../../store/useAppStore";
+import {
+  isServerToolUseContent,
+  isWebSearchToolResultContent,
+  isDocumentContent,
+  isSearchResultContent,
+  isMCPToolUseContent,
+  isMCPToolResultContent,
+  isWebFetchToolResultContent,
+  isCodeExecutionToolResultContent,
+  isBashCodeExecutionToolResultContent,
+  isTextEditorCodeExecutionToolResultContent,
+  isToolSearchToolResultContent,
+} from "@/utils/contentTypeGuards";
 
 type Props = {
   content: unknown[];
@@ -29,6 +54,7 @@ type Props = {
   isCurrentMatch?: boolean;
   currentMatchIndex?: number;
   skipToolResults?: boolean;
+  skipText?: boolean;
 };
 
 // Type guard for content items
@@ -43,6 +69,7 @@ export const ClaudeContentArrayRenderer = memo(({
   isCurrentMatch = false,
   currentMatchIndex = 0,
   skipToolResults = false,
+  skipText = false,
 }: Props) => {
   const { t } = useTranslation();
   if (!Array.isArray(content) || content.length === 0) {
@@ -64,6 +91,7 @@ export const ClaudeContentArrayRenderer = memo(({
 
         switch (itemType) {
           case "text":
+            if (skipText) return null;
             if (typeof item.text === "string") {
               return (
                 <div
@@ -182,6 +210,159 @@ export const ClaudeContentArrayRenderer = memo(({
                   )}
                 </div>
               </div>
+            );
+          }
+
+          case "redacted_thinking":
+            return (
+              <RedactedThinkingRenderer
+                key={index}
+                data={typeof item.data === "string" ? item.data : ""}
+              />
+            );
+
+          case "server_tool_use": {
+            if (!isServerToolUseContent(item)) {
+              return null;
+            }
+            return (
+              <ServerToolUseRenderer
+                key={index}
+                id={item.id}
+                name={item.name}
+                input={item.input}
+              />
+            );
+          }
+
+          case "web_search_tool_result": {
+            if (!isWebSearchToolResultContent(item)) {
+              return null;
+            }
+            return (
+              <WebSearchResultRenderer
+                key={index}
+                toolUseId={item.tool_use_id}
+                content={item.content}
+              />
+            );
+          }
+
+          case "document": {
+            if (!isDocumentContent(item)) {
+              return null;
+            }
+            return (
+              <DocumentRenderer
+                key={index}
+                document={item}
+              />
+            );
+          }
+
+          case "search_result": {
+            if (!isSearchResultContent(item)) {
+              return null;
+            }
+            return (
+              <SearchResultRenderer
+                key={index}
+                searchResult={item}
+              />
+            );
+          }
+
+          case "mcp_tool_use": {
+            if (!isMCPToolUseContent(item)) {
+              return null;
+            }
+            return (
+              <MCPToolUseRenderer
+                key={index}
+                id={item.id}
+                serverName={item.server_name}
+                toolName={item.tool_name}
+                input={item.input}
+              />
+            );
+          }
+
+          case "mcp_tool_result": {
+            if (!isMCPToolResultContent(item)) {
+              return null;
+            }
+            return (
+              <MCPToolResultRenderer
+                key={index}
+                toolUseId={item.tool_use_id}
+                content={item.content}
+                isError={item.is_error === true}
+              />
+            );
+          }
+
+          case "web_fetch_tool_result": {
+            if (!isWebFetchToolResultContent(item)) {
+              return null;
+            }
+            return (
+              <WebFetchToolResultRenderer
+                key={index}
+                toolUseId={item.tool_use_id}
+                content={item.content}
+              />
+            );
+          }
+
+          case "code_execution_tool_result": {
+            if (!isCodeExecutionToolResultContent(item)) {
+              return null;
+            }
+            return (
+              <CodeExecutionToolResultRenderer
+                key={index}
+                toolUseId={item.tool_use_id}
+                content={item.content}
+              />
+            );
+          }
+
+          case "bash_code_execution_tool_result": {
+            if (!isBashCodeExecutionToolResultContent(item)) {
+              return null;
+            }
+            return (
+              <BashCodeExecutionToolResultRenderer
+                key={index}
+                toolUseId={item.tool_use_id}
+                content={item.content}
+              />
+            );
+          }
+
+          case "text_editor_code_execution_tool_result": {
+            if (!isTextEditorCodeExecutionToolResultContent(item)) {
+              return null;
+            }
+            return (
+              <TextEditorCodeExecutionToolResultRenderer
+                key={index}
+                toolUseId={item.tool_use_id}
+                content={item.content}
+              />
+            );
+          }
+
+          case "tool_search_tool_result": {
+            if (!isToolSearchToolResultContent(item)) {
+              return null;
+            }
+            return (
+              <ToolSearchToolResultRenderer
+                key={index}
+                toolUseId={item.tool_use_id}
+                content={item.content}
+              />
             );
           }
 

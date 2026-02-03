@@ -1,8 +1,12 @@
 /**
+ * @deprecated This file is deprecated. Import from '@/types' or '@/types/core/tool' instead.
+ *
  * Tool Types
  *
  * Tool use and tool result content types for Claude's tool interactions.
  * Includes server-side tools, web search, web fetch, and code execution.
+ *
+ * @see src/types/core/tool.ts for the canonical implementation
  */
 
 import type { TextContent } from "./content.types";

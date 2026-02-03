@@ -1,8 +1,12 @@
 /**
+ * @deprecated This file is deprecated. Import from '@/types' or '@/types/core/settings' instead.
+ *
  * Claude Code Settings Types
  *
  * Type definitions for Claude Code's settings system.
  * Settings can exist at multiple scopes: user, project, local, and managed.
+ *
+ * @see src/types/core/settings.ts for the canonical implementation
  */
 
 // ============================================================================

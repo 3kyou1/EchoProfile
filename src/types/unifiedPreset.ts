@@ -1,4 +1,6 @@
 /**
+ * @deprecated This file is deprecated. Import from '@/types' or '@/types/derived/preset' instead.
+ *
  * Unified Configuration Preset Types
  *
  * Single preset type that captures complete config state:
@@ -6,6 +8,8 @@
  * - MCP servers from claude.json
  *
  * When applied, intelligently routes data to correct files.
+ *
+ * @see src/types/derived/preset.ts for the canonical implementation
  */
 
 import type {

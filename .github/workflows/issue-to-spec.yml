@@ -2,34 +2,22 @@ name: Issue Analysis Request
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [labeled]
 
 jobs:
   request-analysis:
-    # 새 이슈이거나 'needs-spec' 라벨이 붙은 경우
-    if: github.event.action == 'opened' || github.event.label.name == 'needs-spec'
+    # 'needs-spec' 라벨이 붙었을 때만 트리거
+    if: github.event.label.name == 'needs-spec'
     runs-on: ubuntu-latest
     
     steps:
-      - name: Add pending label
+      - name: Add pending comment
         uses: actions/github-script@v7
         with:
           script: |
-            // 'needs-spec' 라벨 추가 (아직 없으면)
-            const labels = context.payload.issue.labels.map(l => l.name);
-            if (!labels.includes('needs-spec')) {
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                labels: ['needs-spec']
-              });
-            }
-            
-            // 분석 대기 중 코멘트
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `🤖 **Analysis Queued**\n\nThis issue has been queued for automated analysis. A detailed implementation spec will be generated shortly.\n\n---\n_Powered by JJ (OpenClaw AI Assistant)_`
+              body: `🤖 **Analysis Queued**\n\nThis issue has been queued for automated analysis. A detailed implementation spec will be generated shortly (within 15 minutes).\n\n---\n_Powered by JJ (OpenClaw AI Assistant)_`
             });

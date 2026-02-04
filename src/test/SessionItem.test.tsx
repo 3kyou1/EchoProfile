@@ -45,8 +45,8 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="dropdown-trigger">{children}</div>
   ),
-  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dropdown-content">{children}</div>
+  DropdownMenuContent: () => (
+    <div data-testid="dropdown-content" />
   ),
   DropdownMenuItem: ({
     children,
@@ -59,6 +59,12 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
       {children}
     </button>
   ),
+  DropdownMenuSeparator: () => <hr data-testid="dropdown-separator" />,
+}));
+
+// Mock NativeRenameDialog
+vi.mock("@/components/NativeRenameDialog", () => ({
+  NativeRenameDialog: () => <div data-testid="native-rename-dialog" />,
 }));
 
 // Helper to create mock session

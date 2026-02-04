@@ -10,8 +10,11 @@ import {
   X,
   Check,
   RotateCcw,
+  Link2,
+  Terminal,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import type { ClaudeSession } from "../types";
 import { cn } from "@/lib/utils";
 import {
@@ -22,8 +25,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { NativeRenameDialog } from "@/components/NativeRenameDialog";
 
 interface SessionItemProps {
   session: ClaudeSession;
@@ -44,13 +54,30 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+  const [isNativeRenameOpen, setIsNativeRenameOpen] = useState(false);
+  // Local state for summary that can be updated after native rename
+  const [localSummary, setLocalSummary] = useState(session.summary);
   const inputRef = useRef<HTMLInputElement>(null);
   const ignoreBlurRef = useRef<boolean>(false);
 
+  // Sync localSummary when session.summary prop changes (e.g., session list refresh)
+  useEffect(() => {
+    setLocalSummary(session.summary);
+  }, [session.summary]);
+
   // Use the hooks for display name and metadata actions
-  const displayName = useSessionDisplayName(session.session_id, session.summary);
-  const { customName, setCustomName } = useSessionMetadata(session.session_id);
+  const displayName = useSessionDisplayName(session.session_id, localSummary);
+  const {
+    customName,
+    setCustomName,
+    hasClaudeCodeName: hasClaudeCodeNameMeta,
+    setHasClaudeCodeName,
+  } = useSessionMetadata(session.session_id);
   const hasCustomName = !!customName;
+  // Detect Claude Code native rename: metadata OR regex fallback for existing renames
+  // Regex pattern: [Title] followed by space - matches our rename format
+  const hasClaudeCodeNamePattern = /^\[.+?\]\s/.test(localSummary ?? "");
+  const hasClaudeCodeName = hasClaudeCodeNameMeta || hasClaudeCodeNamePattern;
 
   // Start editing mode
   const startEditing = useCallback(() => {
@@ -60,15 +87,21 @@ export const SessionItem: React.FC<SessionItemProps> = ({
 
   // Save the custom name
   const saveCustomName = useCallback(async () => {
-    const trimmedValue = editValue.trim();
-    // If empty or same as original summary, clear custom name
-    if (!trimmedValue || trimmedValue === session.summary) {
-      await setCustomName(undefined);
-    } else {
-      await setCustomName(trimmedValue);
+    try {
+      const trimmedValue = editValue.trim();
+      // If empty or same as original summary, clear custom name
+      if (!trimmedValue || trimmedValue === localSummary) {
+        await setCustomName(undefined);
+      } else {
+        await setCustomName(trimmedValue);
+      }
+    } catch (error) {
+      console.error('Failed to save custom name:', error);
+      toast.error(t('session.saveError', 'Failed to save name'));
+    } finally {
+      setIsEditing(false);
     }
-    setIsEditing(false);
-  }, [editValue, session.summary, setCustomName]);
+  }, [editValue, localSummary, setCustomName, t]);
 
   // Cancel editing
   const cancelEditing = useCallback(() => {
@@ -78,9 +111,15 @@ export const SessionItem: React.FC<SessionItemProps> = ({
 
   // Reset custom name to original summary
   const resetCustomName = useCallback(async () => {
-    await setCustomName(undefined);
-    setIsContextMenuOpen(false);
-  }, [setCustomName]);
+    try {
+      await setCustomName(undefined);
+    } catch (error) {
+      console.error('Failed to reset custom name:', error);
+      toast.error(t('session.resetError', 'Failed to reset name'));
+    } finally {
+      setIsContextMenuOpen(false);
+    }
+  }, [setCustomName, t]);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -128,6 +167,34 @@ export const SessionItem: React.FC<SessionItemProps> = ({
       startEditing();
     },
     [startEditing]
+  );
+
+  // Handle native rename action
+  const handleNativeRenameClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIsContextMenuOpen(false);
+      setIsNativeRenameOpen(true);
+    },
+    []
+  );
+
+  // Handle native rename success
+  const handleNativeRenameSuccess = useCallback(
+    async (newTitle: string) => {
+      if (newTitle) {
+        setLocalSummary(newTitle);
+        // Check if the new title has a Claude Code prefix [Title] format
+        const hasPrefix = /^\[.+?\]\s/.test(newTitle);
+        try {
+          await setHasClaudeCodeName(hasPrefix);
+        } catch (error) {
+          console.error('Failed to update Claude Code name metadata:', error);
+          toast.error(t('session.syncError', 'Failed to sync metadata'));
+        }
+      }
+    },
+    [setHasClaudeCodeName, t]
   );
 
   return (
@@ -223,7 +290,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
             <>
               <span
                 className={cn(
-                  "text-xs leading-relaxed line-clamp-2 transition-colors duration-300 flex-1 cursor-pointer",
+                  "text-xs leading-relaxed line-clamp-2 transition-colors duration-300 flex-1 cursor-pointer flex items-start gap-1",
                   isSelected
                     ? "text-accent font-medium"
                     : "text-sidebar-foreground/70"
@@ -231,7 +298,31 @@ export const SessionItem: React.FC<SessionItemProps> = ({
                 onDoubleClick={handleDoubleClick}
                 title={t("session.rename", "Double-click to rename")}
               >
-                {displayName || t("session.summaryNotFound", "No summary")}
+                {hasClaudeCodeName && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-colors cursor-help shrink-0"
+                        aria-label={t("session.cliSync.title", "Synced with Claude Code CLI")}
+                      >
+                        <Link2 className="w-2.5 h-2.5 text-blue-400" aria-hidden="true" />
+                        <span className="text-[9px] font-medium text-blue-400 uppercase tracking-wide">
+                          CLI
+                        </span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="font-medium">{t("session.cliSync.title", "Synced with Claude Code CLI")}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t("session.cliSync.description", "This session is synchronized with your terminal")}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                <span className="flex-1">
+                  {displayName || t("session.summaryNotFound", "No summary")}
+                </span>
               </span>
 
               {/* Context Menu for Rename */}
@@ -253,7 +344,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
                     <Pencil className="w-3 h-3" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onClick={handleRenameClick}>
                     <Pencil className="w-3 h-3 mr-2" />
                     {t("session.rename", "Rename")}
@@ -264,6 +355,11 @@ export const SessionItem: React.FC<SessionItemProps> = ({
                       {t("session.resetName", "Reset name")}
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleNativeRenameClick}>
+                    <Terminal className="w-3 h-3 mr-2" />
+                    {t("session.nativeRename.menuItem", "Rename in Claude Code")}
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
@@ -305,6 +401,15 @@ export const SessionItem: React.FC<SessionItemProps> = ({
           <span title={t("session.item.containsErrors")}><AlertTriangle className="w-3 h-3 text-destructive" /></span>
         )}
       </div>
+
+      {/* Native Rename Dialog */}
+      <NativeRenameDialog
+        open={isNativeRenameOpen}
+        onOpenChange={setIsNativeRenameOpen}
+        filePath={session.file_path}
+        currentName={localSummary || ""}
+        onSuccess={handleNativeRenameSuccess}
+      />
     </div>
   );
 };

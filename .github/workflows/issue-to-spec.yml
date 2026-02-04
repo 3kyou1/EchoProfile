@@ -4,6 +4,9 @@ on:
   issues:
     types: [labeled]
 
+permissions:
+  issues: write
+
 jobs:
   request-analysis:
     # 'needs-spec' 라벨이 붙었을 때만 트리거

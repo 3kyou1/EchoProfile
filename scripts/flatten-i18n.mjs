@@ -9,11 +9,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { LANGUAGES } from './i18n-config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = path.join(__dirname, '../src/i18n/locales');
-
-const LANGUAGES = ['en', 'ko', 'ja', 'zh-CN', 'zh-TW'];
 
 // 네임스페이스별 접두사 매핑
 const NAMESPACE_PREFIX = {

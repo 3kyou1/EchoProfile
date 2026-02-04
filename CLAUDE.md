@@ -157,52 +157,75 @@ GitHub Actions가 자동으로:
 
 ## i18n Structure (Internationalization)
 
-### File Structure
+### File Structure (Namespace 기반)
+
+LLM이 파악하기 좋은 namespace 기반 구조로 분리됨 (각 파일 2-40KB):
 
 ```
 src/i18n/
-├── index.ts                # i18n configuration
-├── useAppTranslation.ts    # Type-safe custom hook
-├── types.generated.ts      # Auto-generated types (DO NOT EDIT)
+├── index.ts                  # i18n configuration (namespace 병합)
+├── useAppTranslation.ts      # Type-safe custom hook
+├── types.generated.ts        # Auto-generated types (DO NOT EDIT)
 └── locales/
-    ├── en.json             # English (726 keys)
-    ├── ko.json             # Korean (726 keys)
-    ├── ja.json             # Japanese (726 keys)
-    ├── zh-CN.json          # Simplified Chinese (726 keys)
-    └── zh-TW.json          # Traditional Chinese (726 keys)
+    ├── en/                   # English (1392 keys total)
+    │   ├── common.json       # 공통 UI (~99 keys)
+    │   ├── analytics.json    # 분석 대시보드 (~132 keys)
+    │   ├── session.json      # 세션/프로젝트 (~116 keys)
+    │   ├── settings.json     # 설정 관리자 (~501 keys)
+    │   ├── tools.json        # 도구 관련 (~69 keys)
+    │   ├── error.json        # 에러 메시지 (~37 keys)
+    │   ├── message.json      # 메시지 뷰어 (~66 keys)
+    │   ├── renderers.json    # 렌더러 컴포넌트 (~255 keys)
+    │   ├── update.json       # 업데이트 관련 (~65 keys)
+    │   ├── feedback.json     # 피드백 (~32 keys)
+    │   └── recentEdits.json  # 최근 편집 (~20 keys)
+    ├── ko/                   # Korean (동일 구조)
+    ├── ja/                   # Japanese (동일 구조)
+    ├── zh-CN/                # Simplified Chinese (동일 구조)
+    └── zh-TW/                # Traditional Chinese (동일 구조)
 ```
+
+### Namespace 구조의 장점
+
+1. **LLM 친화적**: 각 namespace 파일이 단일 컨텍스트에서 처리 가능한 크기
+2. **관심사 분리**: 특정 기능 수정 시 해당 namespace 파일만 변경
+3. **병렬 번역 가능**: 여러 기능을 독립적으로 번역 작업 가능
+4. **기존 호환성**: `t('prefix.key')` 형식 그대로 동작
 
 ### Key Structure (Flat with Dot Notation)
 
-All keys use dot notation with prefixes for categorization:
+각 namespace 파일 내에서 dot notation 사용:
 
 ```json
+// locales/en/common.json
 {
   "common.appName": "Claude Code History Viewer",
   "common.loading": "Loading...",
+  "common.cancel": "Cancel"
+}
+
+// locales/en/analytics.json
+{
   "analytics.dashboard": "Analytics Dashboard",
-  "session.title": "Session:",
-  "message.user": "User",
-  "tools.terminal": "Terminal",
-  "error.unexpected": "An unexpected error occurred"
+  "analytics.tokenUsage": "Token Usage"
 }
 ```
 
-### Key Prefixes
+### Namespace → Prefix 매핑
 
-| Prefix | Usage | Example |
-|--------|-------|---------|
-| `common.` | Common UI (buttons, actions, states) | `common.loading`, `common.cancel` |
-| `analytics.` | Analytics/statistics | `analytics.dashboard`, `analytics.tokenUsage` |
-| `session.` | Session related | `session.title`, `session.loading` |
-| `project.` | Project related | `project.count`, `project.notFound` |
-| `message.` | Message viewer | `message.user`, `message.claude` |
-| `tools.` | Tool names | `tools.terminal`, `tools.readFile` |
-| `toolResult.` | Tool results | `toolResult.output`, `toolResult.error` |
-| `error.` | Error messages | `error.unexpected`, `error.sorry` |
-| `settings.` | Settings screen | `settings.title`, `settings.theme.light` |
-| `update.` | Update related | `update.available`, `update.downloading` |
-| `feedback.` | Feedback | `feedback.title`, `feedback.send` |
+| Namespace | 포함 Prefix | Keys |
+|-----------|-------------|------|
+| `common` | common, status, time, copyButton | ~99 |
+| `analytics` | analytics | ~132 |
+| `session` | session, project | ~116 |
+| `settings` | settingsManager, settings, folderPicker | ~501 |
+| `tools` | tools, toolResult, toolUseRenderer, collapsibleToolResult | ~69 |
+| `error` | error | ~37 |
+| `message` | message, messages, messageViewer, messageContentDisplay | ~66 |
+| `renderers` | advancedTextDiff, agentProgressGroup, agentTaskGroup, assistantMessageDetails, bashCodeExecutionToolResultRenderer, captureMode, citationRenderer, claudeContentArrayRenderer, claudeSessionHistoryRenderer, claudeToolUseDisplay, codeExecutionToolResultRenderer, codebaseContextRenderer, commandOutputDisplay, commandRenderer, contentArray, diffViewer, fileContent, fileEditRenderer, fileHistorySnapshotRenderer, fileListRenderer, gitWorkflowRenderer, globalSearch, imageRenderer, mcpRenderer, progressRenderer, queueOperationRenderer, structuredPatch, summaryMessageRenderer, systemMessageRenderer, taskNotification, taskOperation, terminalStreamRenderer, textEditorCodeExecutionToolResultRenderer, thinkingRenderer, toolSearchToolResultRenderer, webFetchToolResultRenderer, webSearchRenderer | ~255 |
+| `update` | updateModal, updateSettingsModal, simpleUpdateModal 등 | ~65 |
+| `feedback` | feedback | ~32 |
+| `recentEdits` | recentEdits | ~20 |
 
 ### Usage in Components
 
@@ -226,56 +249,43 @@ const MyComponent = () => {
 
 ```bash
 pnpm run generate:i18n-types  # Regenerate types after adding keys
-pnpm run i18n:flatten         # Merge and flatten JSON files
+pnpm run i18n:validate        # Validate keys across all languages
 pnpm run i18n:sync            # Sync keys across all languages
 ```
 
 ### Adding New Messages
 
-1. **Add key to all 5 language files** with the appropriate prefix:
+1. **해당 namespace의 모든 언어 파일에 키 추가**:
    ```json
-   // en.json
-   { "feature.newKey": "New feature text" }
+   // locales/en/common.json
+   { "common.newKey": "New feature text" }
 
-   // ko.json
-   { "feature.newKey": "새 기능 텍스트" }
-   // ... repeat for ja.json, zh-CN.json, zh-TW.json
+   // locales/ko/common.json
+   { "common.newKey": "새 기능 텍스트" }
+   // ... repeat for ja, zh-CN, zh-TW
    ```
 
-2. **Regenerate types**:
+2. **타입 재생성**:
    ```bash
    pnpm run generate:i18n-types
    ```
 
-3. **Verify key count** (all languages must have same count):
+3. **검증**:
    ```bash
-   for f in src/i18n/locales/*.json; do echo "$f: $(jq 'keys | length' $f)"; done
+   pnpm run i18n:validate
    ```
 
 ### Adding New Language
 
-1. Copy `en.json` to new language file (e.g., `es.json`)
-2. Translate all values
-3. Add language to `src/i18n/index.ts`:
-   ```typescript
-   import es from './locales/es.json';
-
-   export const supportedLanguages = {
-     // ... existing
-     es: 'Español',
-   };
-
-   const resources = {
-     // ... existing
-     es: { translation: es },
-   };
-   ```
+1. 새 언어 디렉토리 생성 및 en 디렉토리 복사: `cp -r locales/en locales/es`
+2. 각 namespace 파일 번역
+3. `src/i18n/index.ts`에 언어 추가 (모든 namespace import)
 
 ### Key Sync Verification
 
 ```bash
-# Check for missing keys (comparing to English)
-diff <(jq -r 'keys[]' en.json | sort) <(jq -r 'keys[]' ko.json | sort)
+# 검증 스크립트 실행
+node scripts/validate-i18n.mjs
 ```
 
 ## Raw Message Structure

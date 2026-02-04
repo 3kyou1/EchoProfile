@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   request-analysis:
-    # 'needs-spec' 라벨이 붙었을 때만 트리거
+    # Trigger only when 'needs-spec' label is added
     if: github.event.label.name == 'needs-spec'
     runs-on: ubuntu-latest
     
@@ -22,5 +22,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `🤖 **Analysis Queued**\n\nThis issue has been queued for automated analysis. A detailed implementation spec will be generated shortly (within 15 minutes).\n\n---\n_Powered by JJ (OpenClaw AI Assistant)_`
+              body: `🤖 **Analysis Queued**\n\nThis issue has been queued for automated analysis. A detailed implementation specification will be generated shortly (within 15 minutes).\n\n**What happens next:**\n1. Issue content and any attached images will be analyzed\n2. Codebase will be reviewed for context\n3. A draft PR with implementation spec will be created\n4. You'll be notified when ready\n\n---\n_Powered by JJ (OpenClaw AI Assistant)_`
             });

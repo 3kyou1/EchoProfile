@@ -4,7 +4,7 @@
 
 🌐 [웹사이트](https://jhlee0409.github.io/claude-code-history-viewer/) | 📦 [다운로드](https://github.com/jhlee0409/claude-code-history-viewer/releases)
 
-![Version](https://img.shields.io/badge/Version-1.1.0-blue.svg)
+![Version](https://img.shields.io/badge/Version-1.2.5-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
@@ -24,12 +24,17 @@
 
 ## 기능
 
-- **대화 탐색**: 프로젝트/세션별 대화 기록 탐색
-- **검색**: 전체 대화에서 메시지 검색
+- **대화 탐색**: 프로젝트/세션별 대화 기록 탐색 (워크트리 그룹핑 지원)
+- **검색**: 전체 대화에서 글로벌 메시지 검색
 - **통계**: 토큰 사용량 분석 및 API 비용 계산
-- **다국어**: 영어, 한국어, 일본어, 중국어
+- **세션 보드**: 멀티 세션 시각 분석 (픽셀 뷰, 속성 브러싱)
+- **설정 관리자**: 스코프 기반 Claude Code 설정 편집기 (MCP 서버 관리 포함)
+- **메시지 네비게이터**: 우측 접이식 TOC로 긴 대화 빠르게 탐색
+- **실시간 모니터링**: 세션 파일 변경 실시간 감지
+- **세션 이름 변경**: 네이티브 세션 이름 변경 및 검색 연동
+- **다국어**: 영어, 한국어, 일본어, 중국어 (간체/번체)
 - **최근 편집**: 파일 수정 내역 확인 및 복원
-- **기타**: 자동 업데이트, 폴더 변경, 피드백
+- **기타**: 자동 업데이트, GitHub 이슈 연동 피드백
 
 ## 설치
 
@@ -52,13 +57,11 @@ pnpm tauri:build
 2. `~/.claude` 폴더에서 대화 데이터 자동 스캔
 3. 좌측 사이드바에서 프로젝트 탐색
 4. 세션 클릭하여 메시지 확인
-5. 탭으로 메시지, 통계, 토큰 분석, 최근 편집 전환
+5. 탭으로 메시지, 통계, 토큰 분석, 최근 편집, 세션 보드 전환
 
 ## 데이터 프라이버시
 
-로컬에서만 실행. 대화 데이터는 서버로 전송되지 않습니다.
-
-익명 사용 통계(앱 실행, 기능 사용)는 앱 개선을 위해 [Aptabase](https://aptabase.com/)를 통해 수집됩니다. 대화 내용이나 개인정보는 추적되지 않습니다.
+로컬에서만 실행. 대화 데이터는 서버로 전송되지 않습니다. 어떠한 분석이나 추적도 하지 않습니다.
 
 ## 문제 해결
 

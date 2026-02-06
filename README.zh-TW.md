@@ -4,7 +4,7 @@
 
 🌐 [網站](https://jhlee0409.github.io/claude-code-history-viewer/) | 📦 [下載](https://github.com/jhlee0409/claude-code-history-viewer/releases)
 
-![Version](https://img.shields.io/badge/Version-1.1.0-blue.svg)
+![Version](https://img.shields.io/badge/Version-1.2.5-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
@@ -24,12 +24,17 @@
 
 ## 功能
 
-- **瀏覽對話**: 按專案/工作階段瀏覽對話記錄
-- **搜尋**: 在所有對話中搜尋訊息
+- **瀏覽對話**: 按專案/工作階段瀏覽對話記錄（支援工作樹分組）
+- **搜尋**: 全域跨對話訊息搜尋
 - **統計**: Token使用量分析和API費用計算
-- **多語言**: 英語、韓語、日語、中文
+- **工作階段看板**: 多工作階段視覺化分析（像素視圖、屬性刷選）
+- **設定管理器**: 作用域感知的Claude Code設定編輯器（含MCP伺服器管理）
+- **訊息導航器**: 右側可摺疊目錄，快速定位長對話
+- **即時監控**: 工作階段檔案變更即時偵測
+- **工作階段重新命名**: 原生重新命名及搜尋聯動
+- **多語言**: 英語、韓語、日語、中文（簡體/繁體）
 - **最近編輯**: 查看檔案修改記錄和還原
-- **其他**: 自動更新、資料夾變更、回饋
+- **其他**: 自動更新、GitHub Issue聯動回饋
 
 ## 安裝
 
@@ -52,13 +57,11 @@ pnpm tauri:build
 2. 自動掃描`~/.claude`資料夾中的對話資料
 3. 在左側邊欄瀏覽專案
 4. 點擊工作階段查看訊息
-5. 使用分頁切換訊息、統計、Token分析、最近編輯
+5. 使用分頁切換訊息、統計、Token分析、最近編輯、工作階段看板
 
 ## 資料隱私
 
-僅本機執行。對話資料不會傳送到伺服器。
-
-匿名使用統計（應用啟動、功能使用）透過[Aptabase](https://aptabase.com/)收集以改進應用。不會追蹤對話內容或個人資訊。
+僅本機執行。對話資料不會傳送到伺服器。不進行任何分析或追蹤。
 
 ## 疑難排解
 

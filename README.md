@@ -4,7 +4,7 @@ Desktop app to browse Claude Code conversation history stored in `~/.claude`.
 
 🌐 [Website](https://jhlee0409.github.io/claude-code-history-viewer/) | 📦 [Download](https://github.com/jhlee0409/claude-code-history-viewer/releases)
 
-![Version](https://img.shields.io/badge/Version-1.1.0-blue.svg)
+![Version](https://img.shields.io/badge/Version-1.2.5-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
@@ -22,12 +22,17 @@ Desktop app to browse Claude Code conversation history stored in `~/.claude`.
 
 ## Features
 
-- **Browse**: Navigate conversations by project/session
-- **Search**: Search messages across all conversations
+- **Browse**: Navigate conversations by project/session with worktree grouping
+- **Search**: Global search across all conversations
 - **Analytics**: Token usage stats and API cost calculation
-- **Multi-language**: English, Korean, Japanese, Chinese
+- **Session Board**: Multi-session visual analysis with pixel view and attribute brushing
+- **Settings Manager**: Scope-aware Claude Code settings editor with MCP server management
+- **Message Navigator**: Right-side collapsible TOC for quick conversation navigation
+- **Real-time monitoring**: Live session file watching for instant updates
+- **Session rename**: Native session renaming with search integration
+- **Multi-language**: English, Korean, Japanese, Chinese (Simplified & Traditional)
 - **Recent edits**: View file modification history and restore
-- **Others**: Auto-update, folder selection, feedback
+- **Others**: Auto-update, feedback with GitHub issue prefill
 
 ## Installation
 
@@ -59,13 +64,11 @@ pnpm tauri:build     # Production build
 2. It automatically scans `~/.claude` for conversation data
 3. Browse projects in the left sidebar
 4. Click a session to view messages
-5. Use tabs to switch between Messages, Analytics, Token Stats, and Recent Edits
+5. Use tabs to switch between Messages, Analytics, Token Stats, Recent Edits, and Session Board
 
 ## Data privacy
 
-Runs locally only. No conversation data sent to servers.
-
-Anonymous usage analytics (app launches, feature usage) are collected via [Aptabase](https://aptabase.com/) to improve the app. No conversation content or personal information is tracked.
+Runs locally only. No conversation data sent to servers. No analytics or tracking of any kind.
 
 ## Troubleshooting
 

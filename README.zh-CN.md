@@ -4,7 +4,7 @@
 
 🌐 [网站](https://jhlee0409.github.io/claude-code-history-viewer/) | 📦 [下载](https://github.com/jhlee0409/claude-code-history-viewer/releases)
 
-![Version](https://img.shields.io/badge/Version-1.1.0-blue.svg)
+![Version](https://img.shields.io/badge/Version-1.2.5-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
@@ -24,12 +24,17 @@
 
 ## 功能
 
-- **浏览对话**: 按项目/会话浏览对话记录
-- **搜索**: 在所有对话中搜索消息
+- **浏览对话**: 按项目/会话浏览对话记录（支持工作树分组）
+- **搜索**: 全局跨对话消息搜索
 - **统计**: 令牌使用量分析和API费用计算
-- **多语言**: 英语、韩语、日语、中文
+- **会话看板**: 多会话可视化分析（像素视图、属性刷选）
+- **设置管理器**: 作用域感知的Claude Code设置编辑器（含MCP服务器管理）
+- **消息导航器**: 右侧可折叠目录，快速定位长对话
+- **实时监控**: 会话文件变更实时检测
+- **会话重命名**: 原生会话重命名及搜索联动
+- **多语言**: 英语、韩语、日语、中文（简体/繁体）
 - **最近编辑**: 查看文件修改历史和恢复
-- **其他**: 自动更新、文件夹更改、反馈
+- **其他**: 自动更新、GitHub Issue联动反馈
 
 ## 安装
 
@@ -52,13 +57,11 @@ pnpm tauri:build
 2. 自动扫描`~/.claude`文件夹中的对话数据
 3. 在左侧边栏浏览项目
 4. 点击会话查看消息
-5. 使用标签页切换消息、统计、令牌分析、最近编辑
+5. 使用标签页切换消息、统计、令牌分析、最近编辑、会话看板
 
 ## 数据隐私
 
-仅本地运行。对话数据不会发送到服务器。
-
-匿名使用统计（应用启动、功能使用）通过[Aptabase](https://aptabase.com/)收集以改进应用。不会追踪对话内容或个人信息。
+仅本地运行。对话数据不会发送到服务器。不进行任何分析或追踪。
 
 ## 故障排除
 

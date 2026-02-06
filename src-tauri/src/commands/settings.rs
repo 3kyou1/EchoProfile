@@ -260,23 +260,20 @@ pub async fn delete_preset(id: String) -> Result<(), String> {
 mod tests {
     use super::*;
     use std::env;
-    use std::sync::{LazyLock, Mutex, MutexGuard};
     use tempfile::TempDir;
 
-    /// Static mutex to serialize tests that modify the HOME environment variable
-    static TEST_ENV_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
-
-    /// Sets up a test environment with a temporary HOME directory
-    fn setup_test_env() -> (MutexGuard<'static, ()>, TempDir) {
-        let guard = TEST_ENV_MUTEX.lock().unwrap();
+    /// Sets up a test environment with a temporary HOME directory.
+    /// NOTE: Tests using this MUST run with --test-threads=1 because
+    /// `env::set_var("HOME")` is process-global and not thread-safe.
+    fn setup_test_env() -> TempDir {
         let temp_dir = TempDir::new().unwrap();
         env::set_var("HOME", temp_dir.path());
-        (guard, temp_dir)
+        temp_dir
     }
 
     #[test]
     fn test_get_presets_folder() {
-        let (_guard, _temp) = setup_test_env();
+        let _temp = setup_test_env();
         let folder = get_presets_folder().unwrap();
         assert!(folder
             .to_string_lossy()
@@ -285,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_ensure_presets_folder() {
-        let (_guard, _temp) = setup_test_env();
+        let _temp = setup_test_env();
         let folder = ensure_presets_folder().unwrap();
         assert!(folder.exists());
     }
@@ -301,12 +298,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_save_and_load_preset() {
-        let (guard, temp) = setup_test_env();
-        // Use a unique subdirectory to avoid race conditions with other tests
-        let unique_home = temp.path().join("test_save_and_load_preset");
-        fs::create_dir_all(&unique_home).unwrap();
-        env::set_var("HOME", &unique_home);
-        drop(guard); // Drop the guard before any await calls
+        let _temp = setup_test_env();
 
         let input = PresetInput {
             id: Some("test-preset".to_string()),
@@ -330,8 +322,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_all_presets() {
-        let (guard, _temp) = setup_test_env();
-        drop(guard); // Drop the guard before any await calls
+        let _temp = setup_test_env();
 
         // Create multiple presets
         for i in 1..=3 {
@@ -351,8 +342,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_preset() {
-        let (guard, _temp) = setup_test_env();
-        drop(guard); // Drop the guard before any await calls
+        let _temp = setup_test_env();
 
         let input = PresetInput {
             id: Some("to-delete".to_string()),
@@ -377,8 +367,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_auto_generate_id() {
-        let (guard, _temp) = setup_test_env();
-        drop(guard); // Drop the guard before any await calls
+        let _temp = setup_test_env();
 
         let input = PresetInput {
             id: None, // No ID provided
@@ -394,8 +383,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_preset_preserves_created_at() {
-        let (guard, _temp) = setup_test_env();
-        drop(guard); // Drop the guard before any await calls
+        let _temp = setup_test_env();
 
         // Create initial preset
         let input1 = PresetInput {

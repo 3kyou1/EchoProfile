@@ -655,30 +655,23 @@ pub async fn read_text_file(path: String) -> Result<String, String> {
 }
 
 #[cfg(test)]
-#[allow(clippy::await_holding_lock)]
 mod tests {
     use super::*;
     use std::env;
-    use std::sync::{LazyLock, Mutex, MutexGuard};
     use tempfile::TempDir;
 
-    /// Static mutex to serialize tests that modify the HOME environment variable
-    static TEST_ENV_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
-
-    /// Sets up a test environment with a temporary HOME directory
-    fn setup_test_env() -> (MutexGuard<'static, ()>, TempDir) {
-        // Recover from poisoned mutex (happens when previous test panicked)
-        let guard = TEST_ENV_MUTEX
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
+    /// Sets up a test environment with a temporary HOME directory.
+    /// NOTE: Tests using this MUST run with --test-threads=1 because
+    /// `env::set_var("HOME")` is process-global and not thread-safe.
+    fn setup_test_env() -> TempDir {
         let temp_dir = TempDir::new().unwrap();
         env::set_var("HOME", temp_dir.path());
-        (guard, temp_dir)
+        temp_dir
     }
 
     #[test]
     fn test_get_user_settings_path() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let path = get_user_settings_path().unwrap();
         assert!(path.to_string_lossy().contains(".claude"));
         assert!(path.to_string_lossy().ends_with("settings.json"));
@@ -687,7 +680,7 @@ mod tests {
 
     #[test]
     fn test_read_nonexistent_settings() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let path = temp.path().join("nonexistent.json");
         let result = read_settings_file(&path).unwrap();
         assert_eq!(result, "{}");
@@ -696,7 +689,7 @@ mod tests {
 
     #[test]
     fn test_write_and_read_settings() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let claude_dir = temp.path().join(".claude");
         fs::create_dir_all(&claude_dir).unwrap();
 
@@ -716,7 +709,7 @@ mod tests {
 
     #[test]
     fn test_write_invalid_json() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let path = temp.path().join("invalid.json");
         let result = write_settings_file(&path, "not valid json");
         assert!(result.is_err());
@@ -726,7 +719,7 @@ mod tests {
 
     #[test]
     fn test_atomic_write_creates_dirs() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let nested_path = temp
             .path()
             .join("deep")
@@ -756,7 +749,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_settings_by_scope_user() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let claude_dir = temp.path().join(".claude");
         fs::create_dir_all(&claude_dir).unwrap();
 
@@ -780,7 +773,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_all_settings_empty() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let result = get_all_settings(None).await;
         assert!(result.is_ok());
 
@@ -795,7 +788,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_mcp_servers_empty() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let result = get_mcp_servers().await;
         assert!(result.is_ok());
 
@@ -808,7 +801,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_mcp_servers_merges_sources() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let claude_dir = temp.path().join(".claude");
         fs::create_dir_all(&claude_dir).unwrap();
 
@@ -838,7 +831,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mcp_json_overrides_settings_json() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let claude_dir = temp.path().join(".claude");
         fs::create_dir_all(&claude_dir).unwrap();
 
@@ -866,7 +859,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_save_and_retrieve_user_settings() {
-        let (_guard, temp) = setup_test_env();
+        let temp = setup_test_env();
         let content = r#"{"theme":"dark","fontSize":14}"#;
 
         // Save

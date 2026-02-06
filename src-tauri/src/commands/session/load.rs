@@ -217,6 +217,8 @@ fn extract_session_metadata_internal(
         mut has_tool_use,
         mut has_errors,
         mut first_user_content,
+        mut last_user_content,
+        mut first_assistant_text,
     ) = if let Some(ref state) = incremental_state {
         (
             state.start_offset,
@@ -229,10 +231,12 @@ fn extract_session_metadata_internal(
             state.has_tool_use,
             state.has_errors,
             state.first_user_content.clone(),
+            None,
+            None,
         )
     } else {
         (
-            0u64, 0usize, 0usize, None, None, None, None, false, false, None,
+            0u64, 0usize, 0usize, None, None, None, None, false, false, None, None, None,
         )
     };
 
@@ -345,10 +349,25 @@ fn extract_session_metadata_internal(
                 }
 
                 // Extract first user message for summary fallback
-                if first_user_content.is_none() && entry.message_type == "user" {
+                if entry.message_type == "user" {
                     if let Some(ref msg) = entry.message {
                         if let Some(ref content) = msg.content {
-                            first_user_content = extract_user_text(content);
+                            let user_text = extract_user_text(content);
+                            if first_user_content.is_none() {
+                                first_user_content.clone_from(&user_text);
+                            }
+                            if let Some(text) = user_text {
+                                last_user_content = Some(text);
+                            }
+                        }
+                    }
+                }
+
+                // Extract first assistant text for fallback (resume summaries, etc.)
+                if first_assistant_text.is_none() && entry.message_type == "assistant" {
+                    if let Some(ref msg) = entry.message {
+                        if let Some(ref content) = msg.content {
+                            first_assistant_text = extract_assistant_text(content);
                         }
                     }
                 }
@@ -432,7 +451,10 @@ fn extract_session_metadata_internal(
         .to_string();
 
     let project_name = extract_project_name(&raw_project_name);
-    let final_summary = session_summary.or(first_user_content);
+    let final_summary = session_summary
+        .or(first_user_content)
+        .or(first_assistant_text)
+        .or(last_user_content);
 
     Some(SessionExtractionResult {
         session: ClaudeSession {
@@ -538,13 +560,15 @@ fn truncate_text(text: &str, max_chars: usize) -> String {
 }
 
 // Extract text from message content, filtering out system messages
+// Falls back to extracting command name + args for command messages
 fn extract_user_text(content: &serde_json::Value) -> Option<String> {
     match content {
         serde_json::Value::String(text) => {
             if is_genuine_user_text(text) {
                 Some(truncate_text(text, 100))
             } else {
-                None
+                // Fallback: extract command display (e.g., "/clear", "/research args")
+                extract_command_display(text)
             }
         }
         serde_json::Value::Array(arr) => {
@@ -563,6 +587,60 @@ fn extract_user_text(content: &serde_json::Value) -> Option<String> {
         }
         _ => None,
     }
+}
+
+/// Extract command name + args from command message XML tags
+/// e.g., "<command-name>/research</command-name><command-args>query</command-args>"
+///   → "/research query"
+fn extract_command_display(text: &str) -> Option<String> {
+    let mut parts = Vec::new();
+
+    // Extract command name
+    if let Some(start) = text.find("<command-name>") {
+        let after = &text[start + 14..];
+        if let Some(end) = after.find("</command-name>") {
+            let cmd = after[..end].trim();
+            if !cmd.is_empty() {
+                parts.push(cmd.to_string());
+            }
+        }
+    }
+
+    // Extract command args
+    if let Some(start) = text.find("<command-args>") {
+        let after = &text[start + 14..];
+        if let Some(end) = after.find("</command-args>") {
+            let args = after[..end].trim();
+            if !args.is_empty() {
+                parts.push(args.to_string());
+            }
+        }
+    }
+
+    if parts.is_empty() {
+        None
+    } else {
+        Some(truncate_text(&parts.join(" "), 100))
+    }
+}
+
+/// Extract text from assistant message content for summary fallback
+fn extract_assistant_text(content: &serde_json::Value) -> Option<String> {
+    if let Some(arr) = content.as_array() {
+        for item in arr {
+            if let Some(item_type) = item.get("type").and_then(|v| v.as_str()) {
+                if item_type == "text" {
+                    if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
+                        let trimmed = text.trim();
+                        if !trimmed.is_empty() && trimmed.len() > 10 {
+                            return Some(truncate_text(trimmed, 100));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Categorization of how to handle a file

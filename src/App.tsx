@@ -259,7 +259,7 @@ function App() {
         } else if (activeView === "recentEdits") {
           await analyticsActions.switchToRecentEdits();
         } else {
-          await analyticsActions.switchToBoard();
+          analyticsActions.switchToMessages();
         }
       } catch (error) {
         console.error(`Failed to auto-load ${activeView} view:`, error);

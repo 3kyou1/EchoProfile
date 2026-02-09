@@ -146,7 +146,7 @@ export const GlobalStatsView: React.FC<GlobalStatsViewProps> = ({ globalSummary 
                         {medal ?? index + 1}
                       </div>
                       <div>
-                        <p className="text-[12px] font-medium text-foreground truncate max-w-[150px]">
+                        <p className="text-[12px] font-medium text-foreground truncate max-w-[60%]" title={project.project_name}>
                           {project.project_name}
                         </p>
                         <p className="text-[12px] text-muted-foreground">

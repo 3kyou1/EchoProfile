@@ -320,10 +320,10 @@ export const ToolUseRenderer = ({
       />
 
       <Renderer.Content>
+        <div className={cn("px-3 py-1", layout.smallText, "bg-card text-muted-foreground border-b border-border")}>
+          {t("toolUseRenderer.toolInputParameters")}
+        </div>
         <div className={cn(layout.rounded, "overflow-auto", layout.contentMaxHeight)}>
-          <div className={cn("px-3 py-1", layout.smallText, "bg-card text-muted-foreground border-b border-border")}>
-            {t("toolUseRenderer.toolInputParameters")}
-          </div>
           <Highlight
             theme={isDarkMode ? themes.vsDark : themes.vsLight}
             code={JSON.stringify(toolInput, null, 2)}

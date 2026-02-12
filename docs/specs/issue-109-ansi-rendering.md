@@ -21,8 +21,8 @@ Add an ANSI-to-HTML conversion utility using the [`ansi-to-html`](https://www.np
 ### 1.1 New Package
 
 ```bash
-npm install ansi-to-html
-npm install -D @types/ansi-to-html  # if types exist, otherwise declare module
+pnpm add ansi-to-html
+pnpm add -D @types/ansi-to-html  # if available; otherwise add to src/vite-env.d.ts: declare module "ansi-to-html";
 ```
 
 **Why `ansi-to-html`?**
@@ -74,7 +74,7 @@ export function ansiToHtml(text: string): string {
 
 ```tsx
 import React, { useMemo } from "react";
-import { ansiToHtml, hasAnsiCodes } from "@/utils/ansiToHtml";
+import { ansiToHtml } from "@/utils/ansiToHtml";
 
 interface AnsiTextProps {
   text: string;
@@ -84,15 +84,13 @@ interface AnsiTextProps {
 /**
  * Renders text with ANSI codes as styled HTML.
  * Falls back to plain text if no ANSI codes detected.
+ * Note: ansiToHtml() already checks for ANSI codes internally.
  */
 export const AnsiText: React.FC<AnsiTextProps> = ({ text, className }) => {
   const html = useMemo(() => ansiToHtml(text), [text]);
-  const containsAnsi = useMemo(() => hasAnsiCodes(text), [text]);
 
-  if (!containsAnsi) {
-    return <span className={className}>{text}</span>;
-  }
-
+  // ansiToHtml returns original text if no ANSI codes, so we can safely use dangerouslySetInnerHTML
+  // for plain text too (it's already escaped by the library when escapeXML: true)
   return (
     <span
       className={className}

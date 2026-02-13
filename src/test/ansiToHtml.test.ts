@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hasAnsiCodes, ansiToHtml } from "@/utils/ansiToHtml";
+import { hasAnsiCodes, ansiToHtml, stripAnsiCodes } from "@/utils/ansiToHtml";
 
 describe("hasAnsiCodes", () => {
   it("detects ANSI color codes", () => {
@@ -12,6 +12,28 @@ describe("hasAnsiCodes", () => {
 
   it("detects RGB truecolor codes", () => {
     expect(hasAnsiCodes("\x1b[38;2;136;136;136mgray\x1b[0m")).toBe(true);
+  });
+});
+
+describe("stripAnsiCodes", () => {
+  it("strips ANSI color codes from text", () => {
+    expect(stripAnsiCodes("\x1b[31mred text\x1b[0m")).toBe("red text");
+  });
+
+  it("handles RGB truecolor codes", () => {
+    expect(stripAnsiCodes("\x1b[38;2;136;136;136mgray\x1b[0m")).toBe("gray");
+  });
+
+  it("returns plain text unchanged", () => {
+    expect(stripAnsiCodes("plain text")).toBe("plain text");
+  });
+
+  it("strips multiple color sequences", () => {
+    expect(stripAnsiCodes("\x1b[31mred\x1b[0m \x1b[32mgreen\x1b[0m")).toBe("red green");
+  });
+
+  it("preserves text content and special characters", () => {
+    expect(stripAnsiCodes("\x1b[31m<script>alert('test')</script>\x1b[0m")).toBe("<script>alert('test')</script>");
   });
 });
 

@@ -7,6 +7,7 @@ import { layout } from "@/components/renderers";
 import { cn } from "@/lib/utils";
 import { HighlightedText } from "../common/HighlightedText";
 import { AnsiText } from "@/components/common/AnsiText";
+import { stripAnsiCodes } from "@/utils/ansiToHtml";
 
 type Props = {
   command: string;
@@ -86,7 +87,7 @@ export const TerminalStreamRenderer = ({
           <pre className={cn(layout.monoText, "text-foreground whitespace-pre-wrap bg-muted p-2 rounded overflow-auto max-h-80")}>
             {searchQuery ? (
               <HighlightedText
-                text={String(output)}
+                text={stripAnsiCodes(String(output))}
                 searchQuery={searchQuery}
                 isCurrentMatch={isCurrentMatch}
                 currentMatchIndex={currentMatchIndex}

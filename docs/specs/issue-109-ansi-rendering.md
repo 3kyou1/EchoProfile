@@ -2,7 +2,7 @@
 
 > **Issue:** [#109](https://github.com/jhlee0409/claude-code-history-viewer/issues/109)
 > **Type:** MAJOR — New utility + component changes across multiple renderers
-> **Status:** Draft
+> **Status:** ✅ Implemented (see PR #111)
 
 ---
 
@@ -22,14 +22,38 @@ Add an ANSI-to-HTML conversion utility using the [`ansi-to-html`](https://www.np
 
 ```bash
 pnpm add ansi-to-html
-pnpm add -D @types/ansi-to-html  # if available; otherwise add to src/vite-env.d.ts: declare module "ansi-to-html";
+pnpm add -D @types/ansi-to-html  # Not available; see type declaration below
 ```
 
 **Why `ansi-to-html`?**
-- Lightweight (~4KB), zero dependencies
+- Lightweight (~4KB)
+- Single dependency (`entities` for HTML entity encoding)
 - Handles SGR codes: bold, italic, underline, 8/16/256/truecolor (RGB)
 - XSS-safe with `escapeXML: true` (default)
 - Well-maintained, widely used (3M+ weekly downloads)
+
+**Type Declaration:**
+
+Since `@types/ansi-to-html` is not available, add a type declaration file:
+
+**`src/types/ansi-to-html.d.ts`:**
+```typescript
+declare module "ansi-to-html" {
+  export interface AnsiToHtmlOptions {
+    fg?: string;
+    bg?: string;
+    newline?: boolean;
+    escapeXML?: boolean;
+    stream?: boolean;
+    colors?: string[] | Record<number, string>;
+  }
+
+  export default class Convert {
+    constructor(options?: AnsiToHtmlOptions);
+    toHtml(input: string): string;
+  }
+}
+```
 
 **Alternatives considered:**
 - `anser` — similar but less actively maintained
@@ -73,7 +97,7 @@ export function ansiToHtml(text: string): string {
 ### 2.2 New Component: `src/components/common/AnsiText.tsx`
 
 ```tsx
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { ansiToHtml } from "@/utils/ansiToHtml";
 
 interface AnsiTextProps {
@@ -84,13 +108,14 @@ interface AnsiTextProps {
 /**
  * Renders text with ANSI codes as styled HTML.
  * Falls back to plain text if no ANSI codes detected.
- * Note: ansiToHtml() already checks for ANSI codes internally.
+ * 
+ * Note: ansiToHtml() already checks for ANSI codes internally and returns
+ * the original text if none are present, so it's safe to always use
+ * dangerouslySetInnerHTML (the library escapes HTML when escapeXML: true).
  */
-export const AnsiText: React.FC<AnsiTextProps> = ({ text, className }) => {
+export const AnsiText = ({ text, className }: AnsiTextProps) => {
   const html = useMemo(() => ansiToHtml(text), [text]);
 
-  // ansiToHtml returns original text if no ANSI codes, so we can safely use dangerouslySetInnerHTML
-  // for plain text too (it's already escaped by the library when escapeXML: true)
   return (
     <span
       className={className}

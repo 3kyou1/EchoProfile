@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ansiToHtml, hasAnsiCodes } from "@/utils/ansiToHtml";
+import { ansiToHtml } from "@/utils/ansiToHtml";
 
 interface AnsiTextProps {
   text: string;
@@ -9,14 +9,13 @@ interface AnsiTextProps {
 /**
  * Renders text with ANSI codes as styled HTML.
  * Falls back to plain text if no ANSI codes detected.
+ * 
+ * Note: ansiToHtml() already checks for ANSI codes internally and returns
+ * the original text if none are present, so it's safe to always use
+ * dangerouslySetInnerHTML (the library escapes HTML when escapeXML: true).
  */
 export const AnsiText = ({ text, className }: AnsiTextProps) => {
-  const containsAnsi = useMemo(() => hasAnsiCodes(text), [text]);
-  const html = useMemo(() => (containsAnsi ? ansiToHtml(text) : ""), [text, containsAnsi]);
-
-  if (!containsAnsi) {
-    return <span className={className}>{text}</span>;
-  }
+  const html = useMemo(() => ansiToHtml(text), [text]);
 
   return (
     <span

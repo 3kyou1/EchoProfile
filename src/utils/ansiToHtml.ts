@@ -18,6 +18,14 @@ export function hasAnsiCodes(text: string): boolean {
 }
 
 /**
+ * Strip ANSI escape codes from a string, returning plain text.
+ */
+export function stripAnsiCodes(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b\[[\d;]*m/g, "");
+}
+
+/**
  * Convert ANSI escape codes to HTML spans with inline styles.
  * Returns the original string if no ANSI codes are present.
  */

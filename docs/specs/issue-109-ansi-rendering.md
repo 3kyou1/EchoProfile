@@ -39,17 +39,17 @@ Since `@types/ansi-to-html` is not available, add a type declaration file:
 **`src/types/ansi-to-html.d.ts`:**
 ```typescript
 declare module "ansi-to-html" {
-  export interface AnsiToHtmlOptions {
+  interface ConstructorOptions {
     fg?: string;
     bg?: string;
     newline?: boolean;
     escapeXML?: boolean;
     stream?: boolean;
-    colors?: string[] | Record<number, string>;
+    colors?: string[] | Record<string, string>;
   }
 
   export default class Convert {
-    constructor(options?: AnsiToHtmlOptions);
+    constructor(options?: ConstructorOptions);
     toHtml(input: string): string;
   }
 }

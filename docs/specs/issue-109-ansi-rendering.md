@@ -77,19 +77,34 @@ const converter = new Convert({
 });
 
 /**
- * Returns true if the string contains ANSI escape sequences.
+ * Regex pattern for detecting ANSI SGR (Select Graphic Rendition) sequences.
+ * 
+ * Note: This pattern only matches SGR sequences ending with 'm' (color/style codes).
+ * It does not match other ANSI escape sequences like cursor movement, screen clearing,
+ * or other CSI sequences. This is sufficient for Claude Code's terminal output.
+ */
+const ANSI_REGEX = /\x1b\[[\d;]*m/;
+
+/**
+ * Returns true if the string contains ANSI SGR escape sequences.
  */
 export function hasAnsiCodes(text: string): boolean {
-  // eslint-disable-next-line no-control-regex
-  return /\x1b\[[\d;]*m/.test(text);
+  return ANSI_REGEX.test(text);
+}
+
+/**
+ * Strip ANSI SGR escape codes from a string, returning plain text.
+ * Uses global flag for replacement to remove all occurrences.
+ */
+export function stripAnsiCodes(text: string): string {
+  return text.replace(/\x1b\[[\d;]*m/g, "");
 }
 
 /**
  * Convert ANSI escape codes to HTML spans with inline styles.
- * Returns the original string if no ANSI codes are present.
+ * Always returns HTML-safe output (non-ANSI text is HTML-escaped via escapeXML: true).
  */
 export function ansiToHtml(text: string): string {
-  if (!hasAnsiCodes(text)) return text;
   return converter.toHtml(text);
 }
 ```
@@ -107,11 +122,12 @@ interface AnsiTextProps {
 
 /**
  * Renders text with ANSI codes as styled HTML.
- * Falls back to plain text if no ANSI codes detected.
+ * Always escapes HTML entities for XSS safety.
  * 
- * Note: ansiToHtml() already checks for ANSI codes internally and returns
- * the original text if none are present, so it's safe to always use
- * dangerouslySetInnerHTML (the library escapes HTML when escapeXML: true).
+ * Note: ansiToHtml() always returns HTML-safe output via the converter's
+ * escapeXML: true setting. This escaping happens even for plain text without
+ * ANSI codes, which is why dangerouslySetInnerHTML is safe to use here
+ * unconditionally.
  */
 export const AnsiText = ({ text, className }: AnsiTextProps) => {
   const html = useMemo(() => ansiToHtml(text), [text]);
@@ -151,16 +167,41 @@ import { AnsiText } from "@/components/common/AnsiText";
 
 ### 3.2 `TerminalStreamRenderer.tsx`
 
-Replace the output `<pre>` rendering with `<AnsiText>`:
+Replace the output `<pre>` rendering with conditional ANSI handling:
 
 ```tsx
 import { AnsiText } from "@/components/common/AnsiText";
+import { stripAnsiCodes } from "@/utils/ansiToHtml";
+import { HighlightedText } from "@/components/common/HighlightedText";
 
-// Replace raw output text with:
-<pre className={...}>
-  <AnsiText text={output} />
-</pre>
+type TerminalStreamRendererProps = {
+  output: string;
+  searchQuery?: string;
+};
+
+export function TerminalStreamRenderer({
+  output,
+  searchQuery,
+}: TerminalStreamRendererProps) {
+  return (
+    <pre className={cn(layout.monoText, "text-foreground whitespace-pre-wrap bg-muted p-2 rounded")}>
+      {searchQuery ? (
+        // Strip ANSI codes before highlighting to prevent escape sequences
+        // from interfering with search highlighting
+        <HighlightedText
+          text={stripAnsiCodes(output)}
+          searchQuery={searchQuery}
+        />
+      ) : (
+        // Render with ANSI colors/styles when not searching
+        <AnsiText text={output} />
+      )}
+    </pre>
+  );
+}
 ```
+
+**Key Pattern:** When `searchQuery` is present, use `stripAnsiCodes()` before `HighlightedText` to prevent raw ANSI escape sequences from appearing in search results. When not searching, use `AnsiText` to preserve terminal colors and styles.
 
 ### 3.3 `toolResultRenderer/StringRenderer.tsx`
 
@@ -189,14 +230,43 @@ No additional theme work is needed for the initial implementation.
 ### 5.1 Unit Tests: `src/test/ansiToHtml.test.ts`
 
 ```typescript
-import { hasAnsiCodes, ansiToHtml } from "@/utils/ansiToHtml";
+import { hasAnsiCodes, stripAnsiCodes, ansiToHtml } from "@/utils/ansiToHtml";
 
-describe("ansiToHtml", () => {
+describe("hasAnsiCodes", () => {
   it("detects ANSI codes", () => {
     expect(hasAnsiCodes("\x1b[31mred\x1b[0m")).toBe(true);
     expect(hasAnsiCodes("plain text")).toBe(false);
   });
 
+  it("detects RGB truecolor codes", () => {
+    expect(hasAnsiCodes("\x1b[38;2;136;136;136mgray\x1b[0m")).toBe(true);
+  });
+});
+
+describe("stripAnsiCodes", () => {
+  it("strips ANSI color codes from text", () => {
+    expect(stripAnsiCodes("\x1b[31mred text\x1b[0m")).toBe("red text");
+  });
+
+  it("handles RGB truecolor codes", () => {
+    expect(stripAnsiCodes("\x1b[38;2;136;136;136mgray\x1b[0m")).toBe("gray");
+  });
+
+  it("returns plain text unchanged", () => {
+    expect(stripAnsiCodes("plain text")).toBe("plain text");
+  });
+
+  it("strips multiple color sequences", () => {
+    expect(stripAnsiCodes("\x1b[31mred\x1b[0m \x1b[32mgreen\x1b[0m")).toBe("red green");
+  });
+
+  it("preserves text content including special characters", () => {
+    expect(stripAnsiCodes("\x1b[31m<script>alert('test')</script>\x1b[0m"))
+      .toBe("<script>alert('test')</script>");
+  });
+});
+
+describe("ansiToHtml", () => {
   it("converts basic colors", () => {
     const html = ansiToHtml("\x1b[31mred text\x1b[0m");
     expect(html).toContain("color:");
@@ -213,9 +283,22 @@ describe("ansiToHtml", () => {
     expect(ansiToHtml("hello world")).toBe("hello world");
   });
 
-  it("escapes HTML entities", () => {
+  it("escapes HTML entities for XSS prevention", () => {
     const html = ansiToHtml("\x1b[31m<script>alert('xss')</script>\x1b[0m");
     expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("escapes HTML entities without ANSI codes", () => {
+    const html = ansiToHtml("<script>alert('xss')</script>");
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("handles multiple color sequences", () => {
+    const html = ansiToHtml("\x1b[31mred\x1b[0m \x1b[32mgreen\x1b[0m");
+    expect(html).toContain("red");
+    expect(html).toContain("green");
   });
 });
 ```
@@ -228,10 +311,11 @@ Add snapshot tests for `AnsiText` and verify `CommandOutputDisplay` renders colo
 
 ## 6. Performance Considerations
 
-- `hasAnsiCodes()` check is O(n) but short-circuits — avoids unnecessary conversion for plain text
-- `ansiToHtml()` result is memoized via `useMemo` in the component
-- Single `Convert` instance is reused (module-level singleton)
-- No measurable impact on render time for typical command outputs (<10KB)
+- The `ansiToHtml()` function always processes text through the converter to ensure HTML escaping (via `escapeXML: true`), even for plain text without ANSI codes. This is intentional for XSS safety.
+- The conversion overhead is negligible for typical command outputs (<10KB). The `ansi-to-html` library is optimized for performance.
+- `ansiToHtml()` result is memoized via `useMemo` in the `AnsiText` component to avoid redundant conversions on re-renders.
+- Single `Convert` instance is reused (module-level singleton) to avoid repeated initialization.
+- `stripAnsiCodes()` uses a simple regex replacement with no conversion overhead — optimal for search functionality where ANSI styling is not needed.
 
 ---
 

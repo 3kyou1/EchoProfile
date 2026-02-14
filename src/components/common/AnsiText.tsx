@@ -11,7 +11,9 @@ interface AnsiTextProps {
  * Always escapes HTML entities for XSS safety.
  * 
  * Note: ansiToHtml() always returns HTML-safe output via the converter's
- * escapeXML: true setting, making dangerouslySetInnerHTML safe to use.
+ * escapeXML: true setting. This escaping happens even for plain text without
+ * ANSI codes, which is why dangerouslySetInnerHTML is safe to use here
+ * unconditionally.
  */
 export const AnsiText = ({ text, className }: AnsiTextProps) => {
   const html = useMemo(() => ansiToHtml(text), [text]);

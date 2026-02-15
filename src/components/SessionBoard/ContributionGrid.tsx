@@ -45,7 +45,12 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
     for (let i = step; i < count - 1; i += step) {
       indices.push(i);
     }
-    indices.push(count - 1);
+    // Only add last index if it's far enough from the previous label
+    const lastIdx = count - 1;
+    const prevIdx = indices[indices.length - 1] ?? 0;
+    if (lastIdx - prevIdx >= Math.floor(step * 0.6)) {
+      indices.push(lastIdx);
+    }
     return indices;
   }, [dailyBars]);
 
@@ -124,12 +129,12 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
                     onKeyDown={(e) => handleBarKeyDown(e, bar.date)}
                   />
                 </TooltipTrigger>
-                <TooltipContent side="top" className="font-mono text-xs">
+                <TooltipContent side="top" className="font-mono text-xs px-3 py-2">
                   <div className="space-y-0.5">
-                    <div className="font-semibold text-[11px]">
+                    <div className="font-semibold text-[12px] text-foreground">
                       {formatDateLabel(bar.date)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
+                    <div className="text-[11px] text-emerald-400">
                       {bar.sessionCount > 0
                         ? t("analytics.timeline.sessions", { count: bar.sessionCount })
                         : t("analytics.timeline.noActivity")}

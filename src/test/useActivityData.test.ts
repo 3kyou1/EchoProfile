@@ -87,10 +87,12 @@ describe("useActivityData", () => {
 
   describe("daily aggregation", () => {
     it("should aggregate multiple sessions on same day", () => {
+      // Use local-time strings (no Z suffix) so toDateString() always
+      // resolves to the same local date regardless of the runner's timezone.
       const sessions: Record<string, BoardSessionData> = {
-        "1": createMockSession("1", "2024-01-15T10:00:00Z", 100),
-        "2": createMockSession("2", "2024-01-15T14:00:00Z", 150),
-        "3": createMockSession("3", "2024-01-15T18:00:00Z", 200),
+        "1": createMockSession("1", "2024-01-15T10:00:00", 100),
+        "2": createMockSession("2", "2024-01-15T14:00:00", 150),
+        "3": createMockSession("3", "2024-01-15T18:00:00", 200),
       };
 
       const { result } = renderHook(() =>

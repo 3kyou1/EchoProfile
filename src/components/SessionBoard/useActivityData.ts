@@ -17,9 +17,16 @@ export interface MonthLabel {
   weekIndex: number;
 }
 
+export interface DailyBar {
+  date: string;
+  sessionCount: number;
+  totalTokens: number;
+}
+
 export interface ActivityData {
   weeklyGrid: WeeklyGridCell[][];
   monthLabels: MonthLabel[];
+  dailyBars: DailyBar[];
   totalActiveDays: number;
   currentStreak: number;
   longestStreak: number;
@@ -123,6 +130,7 @@ export function useActivityData(
       return {
         weeklyGrid: [],
         monthLabels: [],
+        dailyBars: [],
         totalActiveDays: 0,
         currentStreak: 0,
         longestStreak: 0,
@@ -153,7 +161,7 @@ export function useActivityData(
     const firstDate = allDates[0];
     const lastDate = allDates[allDates.length - 1];
     if (!firstDate || !lastDate) {
-      return { weeklyGrid: [], monthLabels: [], totalActiveDays: 0, currentStreak: 0, longestStreak: 0, totalSessions: 0, maxSessionsPerDay: 0 };
+      return { weeklyGrid: [], monthLabels: [], dailyBars: [], totalActiveDays: 0, currentStreak: 0, longestStreak: 0, totalSessions: 0, maxSessionsPerDay: 0 };
     }
     const minDate = parseDate(firstDate);
     const maxDate = parseDate(lastDate);
@@ -226,13 +234,24 @@ export function useActivityData(
       weekIndex++;
     }
 
-    // Step 4: Compute stats
+    // Step 4: Build daily bars (sorted by date for bar chart)
+    const dailyBars: DailyBar[] = allDates.map(date => {
+      const bucket = dailyMap.get(date);
+      return {
+        date,
+        sessionCount: bucket?.sessionCount ?? 0,
+        totalTokens: bucket?.totalTokens ?? 0,
+      };
+    });
+
+    // Step 5: Compute stats
     const { current: currentStreak, longest: longestStreak } = computeStreaks(dailyMap);
     const totalActiveDays = Array.from(dailyMap.values()).filter(b => b.sessionCount > 0).length;
 
     return {
       weeklyGrid,
       monthLabels,
+      dailyBars,
       totalActiveDays,
       currentStreak,
       longestStreak,

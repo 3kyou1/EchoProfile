@@ -117,10 +117,9 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
             )}
           </div>
 
-          {/* Contribution Grid */}
+          {/* Activity Bar Chart */}
           <ContributionGrid
-            weeklyGrid={activityData.weeklyGrid}
-            monthLabels={activityData.monthLabels}
+            dailyBars={activityData.dailyBars}
             onDateClick={handleDateClick}
             onDateClear={handleDateClear}
             selectedDate={selectedDate}

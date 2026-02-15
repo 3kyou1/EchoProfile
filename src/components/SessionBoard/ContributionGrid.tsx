@@ -6,45 +6,50 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { getHeatColor } from "../AnalyticsDashboard/utils/calculations";
-import type { WeeklyGridCell, MonthLabel } from "./useActivityData";
+import type { DailyBar } from "./useActivityData";
 
 interface ContributionGridProps {
-  weeklyGrid: WeeklyGridCell[][];
-  monthLabels: MonthLabel[];
+  dailyBars: DailyBar[];
   onDateClick: (date: string) => void;
   onDateClear: () => void;
   selectedDate: string | null;
 }
 
-const CELL_SIZE = 13;
-const CELL_GAP = 2;
-const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
+const BAR_HEIGHT = 56;
+const BAR_MIN_WIDTH = 6;
+const BAR_GAP = 2;
 
 export const ContributionGrid: React.FC<ContributionGridProps> = ({
-  weeklyGrid,
-  monthLabels,
+  dailyBars,
   onDateClick,
   onDateClear,
   selectedDate,
 }) => {
   const { t } = useTranslation();
 
-  const dayLabelWidth = 28;
-
-  const cellStyles = useMemo(() => {
-    const styles: Record<string, React.CSSProperties> = {};
-    for (const week of weeklyGrid) {
-      for (const cell of week) {
-        const key = `${cell.weekIndex}-${cell.dayOfWeek}`;
-        styles[key] = {
-          backgroundColor: getHeatColor(cell.intensity),
-        };
-      }
+  const maxCount = useMemo(() => {
+    let max = 0;
+    for (const bar of dailyBars) {
+      if (bar.sessionCount > max) max = bar.sessionCount;
     }
-    return styles;
-  }, [weeklyGrid]);
+    return max;
+  }, [dailyBars]);
 
-  if (weeklyGrid.length === 0) {
+  // Determine which date labels to show (avoid overcrowding)
+  const labelIndices = useMemo(() => {
+    const count = dailyBars.length;
+    if (count <= 7) return dailyBars.map((_, i) => i);
+    // Show ~5-8 evenly spaced labels
+    const step = Math.max(1, Math.floor(count / 6));
+    const indices: number[] = [0];
+    for (let i = step; i < count - 1; i += step) {
+      indices.push(i);
+    }
+    indices.push(count - 1);
+    return indices;
+  }, [dailyBars]);
+
+  if (dailyBars.length === 0) {
     return (
       <div className="text-xs text-muted-foreground py-2 text-center">
         {t("analytics.timeline.noActivity")}
@@ -52,7 +57,7 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
     );
   }
 
-  const handleCellClick = (date: string) => {
+  const handleBarClick = (date: string) => {
     if (selectedDate === date) {
       onDateClear();
     } else {
@@ -60,10 +65,10 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
     }
   };
 
-  const handleCellKeyDown = (e: React.KeyboardEvent, date: string) => {
+  const handleBarKeyDown = (e: React.KeyboardEvent, date: string) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      handleCellClick(date);
+      handleBarClick(date);
     }
   };
 
@@ -71,124 +76,101 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
     const d = new Date(dateStr + "T00:00:00");
     return d.toLocaleDateString(undefined, {
       weekday: "short",
-      year: "numeric",
       month: "short",
       day: "numeric",
     });
   };
 
   return (
-    <div className="flex flex-col gap-1">
-      {/* Grid */}
+    <div className="flex flex-col gap-0.5">
+      {/* Bar chart */}
       <div className="overflow-x-auto scrollbar-thin">
-        <div className="inline-flex flex-col" style={{ minWidth: "fit-content" }}>
-          {/* Month labels row */}
-          <div className="flex" style={{ paddingLeft: `${dayLabelWidth}px` }}>
-            {weeklyGrid.map((_, weekIdx) => {
-              const label = monthLabels.find((m) => m.weekIndex === weekIdx);
-              return (
-                <div
-                  key={weekIdx}
-                  className="text-[9px] text-muted-foreground font-medium"
-                  style={{
-                    width: `${CELL_SIZE + CELL_GAP}px`,
-                    textAlign: "left",
-                  }}
-                >
-                  {label?.label ?? ""}
-                </div>
-              );
-            })}
-          </div>
+        <div
+          className="flex items-end"
+          style={{
+            height: `${BAR_HEIGHT}px`,
+            gap: `${BAR_GAP}px`,
+            minWidth: "fit-content",
+          }}
+        >
+          {dailyBars.map((bar) => {
+            const intensity = maxCount > 0 ? bar.sessionCount / maxCount : 0;
+            const barPixelHeight = Math.max(
+              bar.sessionCount > 0 ? 3 : 0,
+              Math.round(intensity * (BAR_HEIGHT - 4))
+            );
+            const isSelected = selectedDate === bar.date;
 
-          {/* Day rows */}
-          {[0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => (
-            <div key={dayOfWeek} className="flex items-center">
-              {/* Day label */}
+            return (
+              <Tooltip key={bar.date}>
+                <TooltipTrigger asChild>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${formatDateLabel(bar.date)}: ${t("analytics.timeline.sessions", { count: bar.sessionCount })}`}
+                    className={`
+                      shrink-0 rounded-t-sm cursor-pointer transition-all duration-100
+                      hover:opacity-80
+                      ${isSelected ? "ring-1 ring-primary ring-offset-1 ring-offset-background" : ""}
+                    `}
+                    style={{
+                      width: `${BAR_MIN_WIDTH}px`,
+                      height: `${barPixelHeight}px`,
+                      backgroundColor: bar.sessionCount > 0
+                        ? getHeatColor(Math.max(0.25, intensity))
+                        : "transparent",
+                    }}
+                    onClick={() => handleBarClick(bar.date)}
+                    onKeyDown={(e) => handleBarKeyDown(e, bar.date)}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="font-mono text-xs">
+                  <div className="space-y-0.5">
+                    <div className="font-semibold text-[11px]">
+                      {formatDateLabel(bar.date)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {bar.sessionCount > 0
+                        ? t("analytics.timeline.sessions", { count: bar.sessionCount })
+                        : t("analytics.timeline.noActivity")}
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+
+        {/* Date labels */}
+        <div
+          className="flex relative"
+          style={{
+            gap: `${BAR_GAP}px`,
+            minWidth: "fit-content",
+          }}
+        >
+          {dailyBars.map((bar, i) => {
+            const showLabel = labelIndices.includes(i);
+            return (
               <div
-                className="text-[9px] text-muted-foreground font-medium shrink-0"
-                style={{ width: `${dayLabelWidth}px` }}
+                key={bar.date}
+                className="shrink-0 text-[8px] text-muted-foreground/70"
+                style={{
+                  width: `${BAR_MIN_WIDTH}px`,
+                  textAlign: "center",
+                  overflow: "visible",
+                  whiteSpace: "nowrap",
+                }}
               >
-                {DAY_LABELS[dayOfWeek] ?? ""}
+                {showLabel ? (
+                  <span className="relative" style={{ left: "-50%", display: "inline-block", transform: "translateX(50%)" }}>
+                    {formatDateLabel(bar.date)}
+                  </span>
+                ) : null}
               </div>
-
-              {/* Week cells */}
-              <div className="flex" style={{ gap: `${CELL_GAP}px` }}>
-                {weeklyGrid.map((week) => {
-                  const cell = week[dayOfWeek];
-                  if (!cell) return null;
-                  const key = `${cell.weekIndex}-${cell.dayOfWeek}`;
-                  const isSelected = selectedDate === cell.date;
-                  const isFiltered = cell.isInCurrentFilter;
-
-                  return (
-                    <Tooltip key={key}>
-                      <TooltipTrigger asChild>
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`${formatDateLabel(cell.date)}: ${cell.sessionCount} ${cell.sessionCount === 1 ? t("analytics.timeline.session", { count: cell.sessionCount }) : t("analytics.timeline.sessions", { count: cell.sessionCount })}`}
-                          className={`
-                            rounded-sm cursor-pointer transition-all duration-100
-                            hover:scale-125 hover:z-10
-                            ${isSelected ? "ring-2 ring-primary" : ""}
-                            ${isFiltered && !isSelected ? "ring-1 ring-primary/40" : ""}
-                            ${cell.intensity > 0 ? "hover:ring-1 hover:ring-white/30" : ""}
-                          `}
-                          style={{
-                            width: `${CELL_SIZE}px`,
-                            height: `${CELL_SIZE}px`,
-                            ...cellStyles[key],
-                          }}
-                          onClick={() => handleCellClick(cell.date)}
-                          onKeyDown={(e) => handleCellKeyDown(e, cell.date)}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="top"
-                        className="font-mono text-xs"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="font-semibold text-[11px]">
-                            {formatDateLabel(cell.date)}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {cell.sessionCount > 0
-                              ? t("analytics.timeline.sessions", { count: cell.sessionCount })
-                              : t("analytics.timeline.noActivity")}
-                          </div>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center justify-end gap-1.5 pt-1">
-        <span className="text-[9px] font-medium text-muted-foreground">
-          {t("analytics.timeline.less")}
-        </span>
-        <div className="flex gap-0.5">
-          {[0, 0.25, 0.5, 0.75, 1].map((intensity) => (
-            <div
-              key={intensity}
-              className="rounded-sm"
-              style={{
-                width: `${CELL_SIZE - 2}px`,
-                height: `${CELL_SIZE - 2}px`,
-                backgroundColor: getHeatColor(intensity),
-              }}
-            />
-          ))}
-        </div>
-        <span className="text-[9px] font-medium text-muted-foreground">
-          {t("analytics.timeline.more")}
-        </span>
       </div>
     </div>
   );

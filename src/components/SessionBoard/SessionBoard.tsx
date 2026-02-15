@@ -14,9 +14,11 @@ import { getToolUseBlock } from "../../utils/messageUtils";
 import { getToolVariant } from "@/utils/toolIconUtils";
 import { buildSearchIndex, clearSearchIndex } from "../../utils/searchIndex";
 
+const selectBoardSessions = (s: ReturnType<typeof useAppStore.getState>) => s.boardSessions;
+
 export const SessionBoard = () => {
+    const boardSessions = useAppStore(selectBoardSessions);
     const {
-        boardSessions,
         allSortedSessionIds,
         isLoadingBoard,
         zoomLevel,

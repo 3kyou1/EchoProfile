@@ -2,7 +2,7 @@ import React from "react";
 import { TooltipContent } from "./tooltip";
 import { cn } from "@/lib/utils";
 
-interface ChartTooltipRow {
+export interface ChartTooltipRow {
   label: string;
   value: string | number;
   color?: string;
@@ -41,8 +41,8 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({
         </div>
         {rows && rows.length > 0 && (
           <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[11px]">
-            {rows.map((row) => (
-              <React.Fragment key={row.label}>
+            {rows.map((row, idx) => (
+              <React.Fragment key={`${row.label}-${idx}`}>
                 <span className="text-primary-foreground/60">{row.label}</span>
                 <span
                   className="text-right font-medium"

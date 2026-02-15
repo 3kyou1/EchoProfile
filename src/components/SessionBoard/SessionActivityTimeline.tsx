@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Flame, Calendar, X } from "lucide-react";
 import { ContributionGrid } from "./ContributionGrid";
 import { useActivityData, toDateString } from "./useActivityData";
-import type { BoardSessionData } from "../../types/board.types";
-import type { DateFilter } from "../../types/board.types";
+import type { BoardSessionData, DateFilter } from "../../types/board.types";
 
 interface SessionActivityTimelineProps {
   boardSessions: Record<string, BoardSessionData>;
@@ -81,12 +80,12 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
 
         <div className="flex items-center gap-3 ml-auto text-[10px] text-muted-foreground shrink-0">
           <span className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
+            <Calendar className="w-3 h-3" aria-hidden="true" />
             {t("analytics.timeline.activeDays")}: {t(totalActiveDays === 1 ? "analytics.timeline.day" : "analytics.timeline.days", { count: totalActiveDays })}
           </span>
           {currentStreak > 0 && (
             <span className="flex items-center gap-1 text-orange-500/80">
-              <Flame className="w-3 h-3" />
+              <Flame className="w-3 h-3" aria-hidden="true" />
               {t("analytics.timeline.currentStreak")}: {t(currentStreak === 1 ? "analytics.timeline.day" : "analytics.timeline.days", { count: currentStreak })}
             </span>
           )}
@@ -112,7 +111,7 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
                 }}
                 className="flex items-center gap-0.5 text-primary/70 hover:text-primary transition-colors"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3 h-3" aria-hidden="true" />
                 {t("analytics.timeline.clearFilter")}
               </button>
             )}

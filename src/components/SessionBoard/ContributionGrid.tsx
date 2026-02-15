@@ -5,6 +5,7 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { ChartTooltip } from "../ui/chart-tooltip";
+import { cn } from "@/lib/utils";
 import { getHeatColor } from "../AnalyticsDashboard/utils/calculations";
 import type { DailyBar } from "./useActivityData";
 
@@ -111,13 +112,14 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
                 <TooltipTrigger asChild>
                   <div
                     role="button"
-                    tabIndex={0}
+                    tabIndex={bar.sessionCount > 0 ? 0 : -1}
+                    aria-hidden={bar.sessionCount === 0 ? true : undefined}
                     aria-label={`${formatDateLabel(bar.date)}: ${t(bar.sessionCount === 1 ? "analytics.timeline.session" : "analytics.timeline.sessions", { count: bar.sessionCount })}`}
-                    className={`
-                      shrink-0 rounded-t-sm cursor-pointer transition-all duration-100
-                      hover:opacity-80
-                      ${isSelected ? "ring-1 ring-primary ring-offset-1 ring-offset-background" : ""}
-                    `}
+                    className={cn(
+                      "shrink-0 rounded-t-sm transition-all duration-100",
+                      bar.sessionCount > 0 && "cursor-pointer hover:opacity-80",
+                      isSelected && "ring-1 ring-primary ring-offset-1 ring-offset-background"
+                    )}
                     style={{
                       width: `${BAR_WIDTH}px`,
                       height: `${barPixelHeight}px`,
@@ -125,8 +127,8 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
                         ? getHeatColor(Math.max(0.25, intensity))
                         : "transparent",
                     }}
-                    onClick={() => handleBarClick(bar.date)}
-                    onKeyDown={(e) => handleBarKeyDown(e, bar.date)}
+                    onClick={bar.sessionCount > 0 ? () => handleBarClick(bar.date) : undefined}
+                    onKeyDown={bar.sessionCount > 0 ? (e) => handleBarKeyDown(e, bar.date) : undefined}
                   />
                 </TooltipTrigger>
                 <ChartTooltip

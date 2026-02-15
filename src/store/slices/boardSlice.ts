@@ -285,7 +285,11 @@ export const createBoardSlice: StateCreator<
 
     toggleTimeline: () => set((state) => {
         const next = !state.isTimelineExpanded;
-        try { localStorage.setItem(TIMELINE_STORAGE_KEY, String(next)); } catch { /* ignore */ }
+        try {
+            localStorage.setItem(TIMELINE_STORAGE_KEY, String(next));
+        } catch {
+            // localStorage write failure is non-critical
+        }
         return { isTimelineExpanded: next };
     }),
 

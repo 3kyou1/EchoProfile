@@ -48,7 +48,7 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
     // Only add last index if it's far enough from the previous label
     const lastIdx = count - 1;
     const prevIdx = indices[indices.length - 1] ?? 0;
-    if (lastIdx - prevIdx >= Math.floor(step * 0.6)) {
+    if (lastIdx - prevIdx >= step) {
       indices.push(lastIdx);
     }
     return indices;
@@ -129,12 +129,12 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
                     onKeyDown={(e) => handleBarKeyDown(e, bar.date)}
                   />
                 </TooltipTrigger>
-                <TooltipContent side="top" className="font-mono text-xs px-3 py-2">
+                <TooltipContent side="top" className="font-mono text-xs px-3 py-2 bg-popover border border-border">
                   <div className="space-y-0.5">
-                    <div className="font-semibold text-[12px] text-foreground">
+                    <div className="font-semibold text-[12px] text-popover-foreground">
                       {formatDateLabel(bar.date)}
                     </div>
-                    <div className="text-[11px] text-emerald-400">
+                    <div className="text-[11px] text-emerald-500">
                       {bar.sessionCount > 0
                         ? t("analytics.timeline.sessions", { count: bar.sessionCount })
                         : t("analytics.timeline.noActivity")}

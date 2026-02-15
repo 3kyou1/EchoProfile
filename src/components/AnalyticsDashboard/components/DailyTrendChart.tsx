@@ -85,9 +85,9 @@ export const DailyTrendChart: React.FC<DailyTrendChartProps> = ({ dailyData }) =
                 subtitle={`(${getDayName(stat.date)})`}
                 className="z-50"
                 rows={[
-                  { label: "Tokens", value: formatNumber(stat.total_tokens), color: "#22c55e" },
-                  { label: "Messages", value: stat.message_count },
-                  { label: "Sessions", value: stat.session_count },
+                  { label: t("analytics.tooltip.tokens"), value: formatNumber(stat.total_tokens), color: "#22c55e" },
+                  { label: t("analytics.tooltip.messages"), value: stat.message_count },
+                  { label: t("analytics.tooltip.sessions"), value: stat.session_count },
                 ]}
               />
             </Tooltip>

@@ -132,7 +132,7 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
                 <ChartTooltip
                   title={formatDateLabel(bar.date)}
                   rows={bar.sessionCount > 0 ? [
-                    { label: "Sessions", value: bar.sessionCount },
+                    { label: t("analytics.tooltip.sessions"), value: bar.sessionCount },
                   ] : undefined}
                   subtitle={bar.sessionCount === 0 ? t("analytics.timeline.noActivity") : undefined}
                 />

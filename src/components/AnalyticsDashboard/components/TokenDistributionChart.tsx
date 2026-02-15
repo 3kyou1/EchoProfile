@@ -99,8 +99,8 @@ export const TokenDistributionChart: React.FC<TokenDistributionChartProps> = ({
                 title={arc.label}
                 side="right"
                 rows={[
-                  { label: "Tokens", value: `${formatNumber(arc.value)}`, color: arc.color },
-                  { label: "Share", value: `${(arc.percentage * 100).toFixed(1)}%` },
+                  { label: t("analytics.tooltip.tokens"), value: `${formatNumber(arc.value)}`, color: arc.color },
+                  { label: t("analytics.tooltip.share"), value: `${(arc.percentage * 100).toFixed(1)}%` },
                 ]}
               />
             </Tooltip>

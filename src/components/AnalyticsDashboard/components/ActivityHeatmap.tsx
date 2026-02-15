@@ -114,8 +114,8 @@ export const ActivityHeatmapComponent: React.FC<ActivityHeatmapProps> = ({ data 
                       <ChartTooltip
                         title={`${day} • ${hour.toString().padStart(2, "0")}:00`}
                         rows={[
-                          { label: "Activities", value: activity?.activity_count || 0, color: intensity > 0.3 ? "var(--metric-green)" : undefined },
-                          { label: "Tokens", value: formatNumber(tokens) },
+                          { label: t("analytics.tooltip.activities"), value: activity?.activity_count || 0, color: intensity > 0.3 ? "var(--metric-green)" : undefined },
+                          { label: t("analytics.tooltip.tokens"), value: formatNumber(tokens) },
                         ]}
                       />
                     </Tooltip>

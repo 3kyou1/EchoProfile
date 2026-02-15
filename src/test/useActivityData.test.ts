@@ -417,14 +417,10 @@ describe("useActivityData", () => {
       // 1. It's a Sunday (dayOfWeek === 0)
       // 2. It's a new month
       // 3. The date is <= 7 (first week of month)
-      // With this date range, we should get at least one label
       const monthLabels = result.current.monthLabels;
-      
-      // Since month label logic is specific, we just verify the structure is correct
-      if (monthLabels.length > 0) {
-        expect(monthLabels[0]).toHaveProperty("label");
-        expect(monthLabels[0]).toHaveProperty("weekIndex");
-      }
+      expect(monthLabels.length).toBeGreaterThan(0);
+      expect(monthLabels[0]).toHaveProperty("label");
+      expect(monthLabels[0]).toHaveProperty("weekIndex");
     });
 
     it("should not duplicate month labels", () => {

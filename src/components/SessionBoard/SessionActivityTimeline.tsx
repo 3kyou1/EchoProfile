@@ -97,9 +97,9 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
 
       {/* Expanded view */}
       {isExpanded && (
-        <div className="px-3 pb-2 space-y-1.5">
+        <div className="px-4 pb-3 space-y-2">
           {/* Stats row */}
-          <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
             <span>
               {t("analytics.timeline.longestStreak")}: {t("analytics.timeline.days", { count: longestStreak })}
             </span>

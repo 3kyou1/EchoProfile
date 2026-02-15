@@ -15,9 +15,9 @@ interface ContributionGridProps {
   selectedDate: string | null;
 }
 
-const BAR_HEIGHT = 56;
-const BAR_MIN_WIDTH = 6;
-const BAR_GAP = 2;
+const BAR_HEIGHT = 96;
+const BAR_MIN_WIDTH = 10;
+const BAR_GAP = 3;
 
 export const ContributionGrid: React.FC<ContributionGridProps> = ({
   dailyBars,
@@ -154,7 +154,7 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
             return (
               <div
                 key={bar.date}
-                className="shrink-0 text-[8px] text-muted-foreground/70"
+                className="shrink-0 text-[10px] text-muted-foreground/70"
                 style={{
                   width: `${BAR_MIN_WIDTH}px`,
                   textAlign: "center",

@@ -46,7 +46,7 @@ function getLocalizedMonthNames(): string[] {
   );
 }
 
-function toDateString(date: Date): string {
+export function toDateString(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
@@ -154,7 +154,10 @@ export function useActivityData(
       const timeStr = data.session.last_message_time || data.session.last_modified;
       if (!timeStr) continue;
 
-      const date = toDateString(new Date(timeStr));
+      const dateObj = new Date(timeStr);
+      if (isNaN(dateObj.getTime())) continue;
+
+      const date = toDateString(dateObj);
       const existing = dailyMap.get(date) || { sessionCount: 0, totalTokens: 0 };
       existing.sessionCount += 1;
       existing.totalTokens += data.stats.totalTokens;

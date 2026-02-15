@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Flame, Calendar, X } from "lucide-react";
 import { ContributionGrid } from "./ContributionGrid";
-import { useActivityData } from "./useActivityData";
+import { useActivityData, toDateString } from "./useActivityData";
 import type { BoardSessionData } from "../../types/board.types";
 import type { DateFilter } from "../../types/board.types";
 
@@ -33,15 +33,8 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
   // Determine if a single date is selected (heatmap-originated filter)
   const selectedDate = useMemo(() => {
     if (!dateFilter?.start || !dateFilter?.end) return null;
-    // Use local date string to avoid UTC timezone shifts
-    const toLocalDateString = (d: Date) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
-    };
-    const startStr = toLocalDateString(dateFilter.start);
-    const endStr = toLocalDateString(dateFilter.end);
+    const startStr = toDateString(dateFilter.start);
+    const endStr = toDateString(dateFilter.end);
     if (startStr === endStr) return startStr;
     return null;
   }, [dateFilter]);

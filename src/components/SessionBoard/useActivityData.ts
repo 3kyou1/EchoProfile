@@ -39,7 +39,12 @@ interface DailyBucket {
   totalTokens: number;
 }
 
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+// Generate localized month names using Intl.DateTimeFormat
+function getLocalizedMonthNames(): string[] {
+  return Array.from({ length: 12 }, (_, i) =>
+    new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(2000, i, 1))
+  );
+}
 
 function toDateString(date: Date): string {
   const y = date.getFullYear();
@@ -174,6 +179,7 @@ export function useActivityData(
     // Step 3: Build weekly grid
     const weeklyGrid: WeeklyGridCell[][] = [];
     const monthLabels: MonthLabel[] = [];
+    const MONTH_NAMES = getLocalizedMonthNames();
 
     let maxCount = 0;
     for (const bucket of dailyMap.values()) {
@@ -183,7 +189,20 @@ export function useActivityData(
     // DateFilter range for highlight
     const filterStartMs = dateFilter?.start ? dateFilter.start.getTime() : 0;
     const filterEndMs = dateFilter?.end
-      ? dateFilter.end.getTime() + 24 * 60 * 60 * 1000
+      ? (() => {
+          const end = dateFilter.end;
+          // If end is at local midnight, treat it as a date-only value and include the full day
+          if (
+            end.getHours() === 0 &&
+            end.getMinutes() === 0 &&
+            end.getSeconds() === 0 &&
+            end.getMilliseconds() === 0
+          ) {
+            return end.getTime() + 24 * 60 * 60 * 1000;
+          }
+          // Otherwise, treat end as an inclusive timestamp and add 1 ms
+          return end.getTime() + 1;
+        })()
       : Infinity;
     const hasFilter = dateFilter?.start != null || dateFilter?.end != null;
 

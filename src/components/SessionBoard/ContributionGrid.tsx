@@ -112,7 +112,7 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
                   <div
                     role="button"
                     tabIndex={0}
-                    aria-label={`${formatDateLabel(bar.date)}: ${t("analytics.timeline.sessions", { count: bar.sessionCount })}`}
+                    aria-label={`${formatDateLabel(bar.date)}: ${t(bar.sessionCount === 1 ? "analytics.timeline.session" : "analytics.timeline.sessions", { count: bar.sessionCount })}`}
                     className={`
                       shrink-0 rounded-t-sm cursor-pointer transition-all duration-100
                       hover:opacity-80

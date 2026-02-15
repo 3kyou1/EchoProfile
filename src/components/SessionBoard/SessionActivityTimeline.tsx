@@ -33,9 +33,16 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
   // Determine if a single date is selected (heatmap-originated filter)
   const selectedDate = useMemo(() => {
     if (!dateFilter?.start || !dateFilter?.end) return null;
-    const startStr = dateFilter.start.toISOString().split("T")[0];
-    const endStr = dateFilter.end.toISOString().split("T")[0];
-    if (startStr === endStr) return startStr ?? null;
+    // Use local date string to avoid UTC timezone shifts
+    const toLocalDateString = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
+    const startStr = toLocalDateString(dateFilter.start);
+    const endStr = toLocalDateString(dateFilter.end);
+    if (startStr === endStr) return startStr;
     return null;
   }, [dateFilter]);
 
@@ -45,7 +52,8 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
       const start = new Date(d);
       start.setHours(0, 0, 0, 0);
       const end = new Date(d);
-      end.setHours(23, 59, 59, 999);
+      // Set end to 00:00:00 of the same day (filtering logic will handle inclusive end)
+      end.setHours(0, 0, 0, 0);
       setDateFilter({ start, end });
     },
     [setDateFilter]
@@ -81,16 +89,16 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
         <div className="flex items-center gap-3 ml-auto text-[10px] text-muted-foreground shrink-0">
           <span className="flex items-center gap-1">
             <Calendar className="w-3 h-3" />
-            {t("analytics.timeline.activeDays")} {t("analytics.timeline.days", { count: totalActiveDays })}
+            {t("analytics.timeline.activeDays")}: {t(totalActiveDays === 1 ? "analytics.timeline.day" : "analytics.timeline.days", { count: totalActiveDays })}
           </span>
           {currentStreak > 0 && (
             <span className="flex items-center gap-1 text-orange-500/80">
               <Flame className="w-3 h-3" />
-              {t("analytics.timeline.currentStreak")} {t("analytics.timeline.days", { count: currentStreak })}
+              {t("analytics.timeline.currentStreak")}: {t(currentStreak === 1 ? "analytics.timeline.day" : "analytics.timeline.days", { count: currentStreak })}
             </span>
           )}
           <span>
-            {t("analytics.timeline.sessions", { count: totalSessions })}
+            {t(totalSessions === 1 ? "analytics.timeline.session" : "analytics.timeline.sessions", { count: totalSessions })}
           </span>
         </div>
       </button>
@@ -101,7 +109,7 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
           {/* Stats row */}
           <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
             <span>
-              {t("analytics.timeline.longestStreak")}: {t("analytics.timeline.days", { count: longestStreak })}
+              {t("analytics.timeline.longestStreak")}: {t(longestStreak === 1 ? "analytics.timeline.day" : "analytics.timeline.days", { count: longestStreak })}
             </span>
             {selectedDate && (
               <button

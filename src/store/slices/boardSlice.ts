@@ -289,5 +289,8 @@ export const createBoardSlice: StateCreator<
         return { isTimelineExpanded: next };
     }),
 
-    clearBoard: () => set(initialBoardState),
+    clearBoard: () => set((state) => ({
+        ...initialBoardState,
+        isTimelineExpanded: state.isTimelineExpanded,
+    })),
 });

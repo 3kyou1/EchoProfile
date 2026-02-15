@@ -129,12 +129,12 @@ export const ContributionGrid: React.FC<ContributionGridProps> = ({
                     onKeyDown={(e) => handleBarKeyDown(e, bar.date)}
                   />
                 </TooltipTrigger>
-                <TooltipContent side="top" className="font-mono text-xs px-3 py-2 bg-popover border border-border">
+                <TooltipContent side="top" className="font-mono text-xs px-3 py-2">
                   <div className="space-y-0.5">
-                    <div className="font-semibold text-[12px] text-popover-foreground">
+                    <div className="font-semibold text-[12px]">
                       {formatDateLabel(bar.date)}
                     </div>
-                    <div className="text-[11px] text-emerald-500">
+                    <div className="text-[11px] text-primary-foreground/70">
                       {bar.sessionCount > 0
                         ? t("analytics.timeline.sessions", { count: bar.sessionCount })
                         : t("analytics.timeline.noActivity")}

@@ -230,8 +230,8 @@ jobs:
 
       - name: Trigger Homebrew tap update
         env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        if: env.HOMEBREW_TAP_TOKEN != ''
+          HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        if: env.HAS_TAP_TOKEN == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}

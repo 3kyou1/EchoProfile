@@ -16,6 +16,16 @@ GitHub Release (tag push)
                 └── Commit & push
 ```
 
+### In-app Updater Compatibility
+
+The app has a built-in Tauri auto-updater that checks `latest.json` from GitHub Releases. The Cask includes `auto_updates true` to handle this:
+
+- The in-app "Update" button works regardless of installation method (Homebrew or manual)
+- The Tauri updater replaces the `.app` bundle in `/Applications/` directly — no conflicts with Homebrew
+- `brew upgrade` skips this app by default (defers to the built-in updater)
+- `brew upgrade --greedy` forces Homebrew to check and update the Cask version
+- Homebrew's version tracking may become stale after an in-app update (cosmetic only, no functional impact)
+
 ### Components
 
 | Component | Location | Purpose |

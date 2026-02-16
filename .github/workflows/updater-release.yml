@@ -229,7 +229,9 @@ jobs:
             console.log('🎉 Release published!');
 
       - name: Trigger Homebrew tap update
-        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        if: env.HOMEBREW_TAP_TOKEN != ''
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}

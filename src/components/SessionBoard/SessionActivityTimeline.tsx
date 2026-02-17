@@ -98,9 +98,13 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
       {isExpanded && (
         <div className="px-4 pb-3 space-y-2">
           {/* Stats row */}
-          <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-            <span>
-              {t("analytics.timeline.longestStreak")}: {t(longestStreak === 1 ? "analytics.timeline.day" : "analytics.timeline.days", { count: longestStreak })}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 bg-muted/40 rounded-full px-2.5 py-0.5 text-[10px]">
+              <Flame className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
+              <span className="text-muted-foreground">{t("analytics.timeline.longestStreak")}</span>
+              <span className="font-medium text-foreground">
+                {t(longestStreak === 1 ? "analytics.timeline.day" : "analytics.timeline.days", { count: longestStreak })}
+              </span>
             </span>
             {selectedDate && (
               <button
@@ -108,7 +112,7 @@ export const SessionActivityTimeline: React.FC<SessionActivityTimelineProps> = (
                   e.stopPropagation();
                   handleDateClear();
                 }}
-                className="flex items-center gap-0.5 text-primary/70 hover:text-primary transition-colors"
+                className="inline-flex items-center gap-0.5 bg-primary/10 rounded-full px-2.5 py-0.5 text-[10px] text-primary/80 hover:text-primary hover:bg-primary/15 transition-colors"
               >
                 <X className="w-3 h-3" aria-hidden="true" />
                 {t("analytics.timeline.clearFilter")}

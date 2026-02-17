@@ -261,15 +261,25 @@ export function useActivityData(
       weekIndex++;
     }
 
-    // Step 4: Build daily bars (sorted by date for bar chart)
-    const dailyBars: DailyBar[] = allDates.map(date => {
-      const bucket = dailyMap.get(date);
-      return {
-        date,
-        sessionCount: bucket?.sessionCount ?? 0,
-        totalTokens: bucket?.totalTokens ?? 0,
-      };
-    });
+    // Step 4: Build daily bars — fill every calendar day between first and last
+    // active date so the time axis is proportional (gap days get sessionCount=0)
+    const dailyBars: DailyBar[] = [];
+    {
+      let cursor = new Date(minDate);
+      cursor.setHours(0, 0, 0, 0);
+      const end = new Date(maxDate);
+      end.setHours(0, 0, 0, 0);
+      while (cursor <= end) {
+        const date = toDateString(cursor);
+        const bucket = dailyMap.get(date);
+        dailyBars.push({
+          date,
+          sessionCount: bucket?.sessionCount ?? 0,
+          totalTokens: bucket?.totalTokens ?? 0,
+        });
+        cursor = addDays(cursor, 1);
+      }
+    }
 
     // Step 5: Compute stats
     const { current: currentStreak, longest: longestStreak } = computeStreaks(dailyMap);

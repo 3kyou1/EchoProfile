@@ -1,9 +1,20 @@
 use super::ProviderInfo;
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession, TokenUsage};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+/// Convert epoch milliseconds to RFC 3339 string
+fn epoch_ms_to_rfc3339(ms: u64) -> String {
+    #[allow(clippy::cast_possible_wrap)]
+    let secs = (ms / 1000) as i64;
+    let nsecs = ((ms % 1000) * 1_000_000) as u32;
+    match DateTime::from_timestamp(secs, nsecs) {
+        Some(dt) => dt.to_rfc3339(),
+        None => String::new(),
+    }
+}
 
 /// Detect `OpenCode` installation
 pub fn detect() -> Option<ProviderInfo> {
@@ -81,22 +92,20 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
+
+        // Real field is "worktree", not "path"
         let project_path = val
-            .get("path")
+            .get("worktree")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
-        let project_name = val
-            .get("name")
-            .and_then(|v| v.as_str())
-            .map(String::from)
-            .unwrap_or_else(|| {
-                Path::new(&project_path)
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown")
-                    .to_string()
-            });
+
+        // No "name" field — derive from last segment of "worktree"
+        let project_name = Path::new(&project_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string();
 
         if project_id.is_empty() {
             continue;
@@ -182,16 +191,19 @@ pub fn load_sessions(
             .unwrap_or("")
             .to_string();
         let title = val.get("title").and_then(|v| v.as_str()).map(String::from);
-        let created_at = val
-            .get("created_at")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        let updated_at = val
-            .get("updated_at")
-            .and_then(|v| v.as_str())
-            .unwrap_or(&created_at)
-            .to_string();
+
+        // Timestamps are epoch milliseconds under val["time"]["created"] / val["time"]["updated"]
+        let time_obj = val.get("time");
+        let created_at = time_obj
+            .and_then(|t| t.get("created"))
+            .and_then(Value::as_u64)
+            .map(epoch_ms_to_rfc3339)
+            .unwrap_or_default();
+        let updated_at = time_obj
+            .and_then(|t| t.get("updated"))
+            .and_then(Value::as_u64)
+            .map(epoch_ms_to_rfc3339)
+            .unwrap_or_else(|| created_at.clone());
 
         if session_id.is_empty() {
             continue;
@@ -286,12 +298,38 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
             .unwrap_or("")
             .to_string();
         let role = val.get("role").and_then(|v| v.as_str()).unwrap_or("user");
+
+        // Timestamp is epoch ms under val["time"]["created"]
         let created_at = val
-            .get("created_at")
+            .get("time")
+            .and_then(|t| t.get("created"))
+            .and_then(Value::as_u64)
+            .map(epoch_ms_to_rfc3339)
+            .unwrap_or_default();
+
+        // Real field is "modelID", not "model"
+        let model = val
+            .get("modelID")
             .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        let model = val.get("model").and_then(|v| v.as_str()).map(String::from);
+            .map(String::from);
+
+        // parentID maps to parent_uuid
+        let parent_uuid = val
+            .get("parentID")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
+        // Extract usage from val["tokens"] with fields "input" and "output"
+        let usage = val.get("tokens").map(|t| TokenUsage {
+            input_tokens: t.get("input").and_then(Value::as_u64).map(|v| v as u32),
+            output_tokens: t.get("output").and_then(Value::as_u64).map(|v| v as u32),
+            cache_creation_input_tokens: None,
+            cache_read_input_tokens: None,
+            service_tier: None,
+        });
+
+        // Extract cost from val["cost"]
+        let cost_usd = val.get("cost").and_then(Value::as_f64);
 
         if msg_id.is_empty() {
             continue;
@@ -305,7 +343,11 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
             Vec::new()
         };
 
-        let (content_value, usage, cost_usd) = process_parts(&part_values);
+        let (content_value, parts_usage, parts_cost) = process_parts(&part_values);
+
+        // Use message-level usage/cost if present, otherwise fall back to parts-derived
+        let final_usage = usage.or(parts_usage);
+        let final_cost = cost_usd.or(parts_cost);
 
         let message_type = match role {
             "assistant" => "assistant",
@@ -315,7 +357,7 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
 
         messages.push(ClaudeMessage {
             uuid: msg_id,
-            parent_uuid: None,
+            parent_uuid,
             session_id: session_id.to_string(),
             timestamp: created_at,
             message_type: message_type.to_string(),
@@ -324,11 +366,11 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
             tool_use: None,
             tool_use_result: None,
             is_sidechain: None,
-            usage,
+            usage: final_usage,
             role: Some(role.to_string()),
             model,
             stop_reason: None,
-            cost_usd,
+            cost_usd: final_cost,
             duration_ms: None,
             message_id: None,
             snapshot: None,
@@ -427,11 +469,12 @@ fn get_latest_session_time(sessions_dir: &Path) -> Option<String> {
 
         if let Ok(content) = fs::read_to_string(&path) {
             if let Ok(val) = serde_json::from_str::<Value>(&content) {
-                let updated = val
-                    .get("updated_at")
-                    .or_else(|| val.get("created_at"))
-                    .and_then(|v| v.as_str())
-                    .map(String::from);
+                // Timestamps are epoch ms under val["time"]["updated"] or val["time"]["created"]
+                let time_obj = val.get("time");
+                let updated = time_obj
+                    .and_then(|t| t.get("updated").or_else(|| t.get("created")))
+                    .and_then(Value::as_u64)
+                    .map(epoch_ms_to_rfc3339);
 
                 if let Some(t) = updated {
                     if latest.is_none() || t > *latest.as_ref().unwrap() {
@@ -504,20 +547,20 @@ fn process_parts(parts: &[Value]) -> (Option<Value>, Option<TokenUsage>, Option<
                 }
             }
             "tool" => {
+                // Real field names: "tool" (not "toolName"), "callID" (not "toolCallId")
                 let tool_name = part
-                    .get("toolName")
-                    .or_else(|| part.get("name"))
+                    .get("tool")
                     .and_then(|v| v.as_str())
                     .unwrap_or("unknown");
                 let tool_id = part
-                    .get("toolCallId")
-                    .or_else(|| part.get("id"))
+                    .get("callID")
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
+                // Input is nested: state.input
                 let input = part
-                    .get("input")
-                    .or_else(|| part.get("args"))
+                    .get("state")
+                    .and_then(|s| s.get("input"))
                     .cloned()
                     .unwrap_or(Value::Object(serde_json::Map::default()));
 
@@ -528,10 +571,20 @@ fn process_parts(parts: &[Value]) -> (Option<Value>, Option<TokenUsage>, Option<
                     "input": input
                 }));
 
-                // If completed, also add the result
-                let state = part.get("state").and_then(|v| v.as_str()).unwrap_or("");
-                if state == "completed" || part.get("result").is_some() {
-                    let result = part.get("result").and_then(|v| v.as_str()).unwrap_or("");
+                // Check status at state.status (not top-level state string)
+                let status = part
+                    .get("state")
+                    .and_then(|s| s.get("status"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                if status == "completed" {
+                    // Output can be a string or an object — handle both
+                    let output_val = part.get("state").and_then(|s| s.get("output"));
+                    let result = match output_val {
+                        Some(Value::String(s)) => s.clone(),
+                        Some(other) => other.to_string(),
+                        None => String::new(),
+                    };
                     content_items.push(serde_json::json!({
                         "type": "tool_result",
                         "tool_use_id": tool_id,

@@ -524,6 +524,15 @@ fn read_message_parts(parts_dir: &Path) -> Result<Vec<Value>, String> {
     Ok(parts.into_iter().map(|(_, v)| v).collect())
 }
 
+/// Sum two Option<u32> values, treating None as absent (not zero)
+fn sum_opt(a: Option<u32>, b: Option<u32>) -> Option<u32> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(x + y),
+        (Some(x), None) | (None, Some(x)) => Some(x),
+        (None, None) => None,
+    }
+}
+
 fn process_parts(parts: &[Value]) -> (Option<Value>, Option<TokenUsage>, Option<f64>) {
     let mut content_items: Vec<Value> = Vec::new();
     let mut usage: Option<TokenUsage> = None;
@@ -606,27 +615,46 @@ fn process_parts(parts: &[Value]) -> (Option<Value>, Option<TokenUsage>, Option<
                 }
             }
             "step-finish" => {
-                if let Some(u) = part.get("usage") {
-                    usage = Some(TokenUsage {
-                        input_tokens: u
-                            .get("promptTokens")
-                            .or_else(|| u.get("input_tokens"))
+                // Real field is "tokens" with "input", "output", "reasoning",
+                // and "cache" object containing "read" and "write"
+                if let Some(t) = part.get("tokens") {
+                    let cache_obj = t.get("cache");
+                    let new_usage = TokenUsage {
+                        input_tokens: t.get("input").and_then(Value::as_u64).map(|v| v as u32),
+                        output_tokens: t.get("output").and_then(Value::as_u64).map(|v| v as u32),
+                        cache_creation_input_tokens: cache_obj
+                            .and_then(|c| c.get("write"))
                             .and_then(Value::as_u64)
                             .map(|v| v as u32),
-                        output_tokens: u
-                            .get("completionTokens")
-                            .or_else(|| u.get("output_tokens"))
+                        cache_read_input_tokens: cache_obj
+                            .and_then(|c| c.get("read"))
                             .and_then(Value::as_u64)
                             .map(|v| v as u32),
-                        cache_creation_input_tokens: None,
-                        cache_read_input_tokens: None,
                         service_tier: None,
-                    });
+                    };
+                    // Accumulate tokens across multiple step-finish parts
+                    usage = match usage {
+                        Some(prev) => Some(TokenUsage {
+                            input_tokens: sum_opt(prev.input_tokens, new_usage.input_tokens),
+                            output_tokens: sum_opt(prev.output_tokens, new_usage.output_tokens),
+                            cache_creation_input_tokens: sum_opt(
+                                prev.cache_creation_input_tokens,
+                                new_usage.cache_creation_input_tokens,
+                            ),
+                            cache_read_input_tokens: sum_opt(
+                                prev.cache_read_input_tokens,
+                                new_usage.cache_read_input_tokens,
+                            ),
+                            service_tier: None,
+                        }),
+                        None => Some(new_usage),
+                    };
                 }
-                cost_usd = part
-                    .get("cost")
-                    .or_else(|| part.get("costUSD"))
-                    .and_then(Value::as_f64);
+                // "cost" is at the top level of step-finish parts
+                let part_cost = part.get("cost").and_then(Value::as_f64);
+                if let Some(c) = part_cost {
+                    cost_usd = Some(cost_usd.unwrap_or(0.0) + c);
+                }
             }
             "compaction" => {
                 let text = part
@@ -638,7 +666,40 @@ fn process_parts(parts: &[Value]) -> (Option<Value>, Option<TokenUsage>, Option<
                     "text": format!("[Summary] {text}")
                 }));
             }
-            // Skip: file, snapshot, agent, subtask, retry, step-start, patch
+            "patch" => {
+                // Show modified file list from patch parts
+                if let Some(files) = part.get("files").and_then(|v| v.as_array()) {
+                    let file_list: Vec<&str> = files.iter().filter_map(|f| f.as_str()).collect();
+                    if !file_list.is_empty() {
+                        let display = file_list
+                            .iter()
+                            .map(|f| {
+                                Path::new(f)
+                                    .file_name()
+                                    .and_then(|n| n.to_str())
+                                    .unwrap_or(f)
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        content_items.push(serde_json::json!({
+                            "type": "text",
+                            "text": format!("[Patch] {display}")
+                        }));
+                    }
+                }
+            }
+            "file" => {
+                // Show file reference
+                let filename = part.get("filename").and_then(|v| v.as_str()).unwrap_or("");
+                let url = part.get("url").and_then(|v| v.as_str()).unwrap_or("");
+                if !filename.is_empty() {
+                    content_items.push(serde_json::json!({
+                        "type": "text",
+                        "text": format!("[File] {filename} ({url})")
+                    }));
+                }
+            }
+            // Skip: snapshot, agent, subtask, retry, step-start
             _ => {}
         }
     }

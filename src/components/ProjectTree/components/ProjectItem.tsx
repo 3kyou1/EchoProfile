@@ -134,6 +134,18 @@ export const ProjectItem: React.FC<ProjectItemProps> = ({
         {displayName}
       </span>
 
+      {/* Provider Badge */}
+      {project.provider && project.provider !== "claude" && (
+        <span
+          className={cn(
+            "w-2 h-2 rounded-full flex-shrink-0",
+            project.provider === "codex" && "bg-green-500",
+            project.provider === "opencode" && "bg-blue-500"
+          )}
+          title={project.provider === "codex" ? "Codex CLI" : "OpenCode"}
+        />
+      )}
+
       {/* Session Count */}
       {(!isGrouped && project.session_count > 0) || isGrouped ? (
         <span

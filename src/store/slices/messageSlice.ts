@@ -122,10 +122,15 @@ export const createMessageSlice: StateCreator<
       const sessionPath = session.file_path;
       const start = performance.now();
 
-      const allMessages = await invoke<ClaudeMessage[]>(
-        "load_session_messages",
-        { sessionPath }
-      );
+      const provider = session.provider ?? "claude";
+      const allMessages = provider !== "claude"
+        ? await invoke<ClaudeMessage[]>("load_provider_messages", {
+            provider,
+            sessionPath,
+          })
+        : await invoke<ClaudeMessage[]>("load_session_messages", {
+            sessionPath,
+          });
 
       // Apply sidechain filter
       let filteredMessages = get().excludeSidechain

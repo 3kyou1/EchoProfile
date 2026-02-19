@@ -496,6 +496,7 @@ fn extract_session_metadata_internal(
             has_tool_use,
             has_errors,
             summary: final_summary,
+            provider: None,
         },
         sidechain_count,
         final_byte_offset: file_size,
@@ -991,6 +992,7 @@ fn parse_line_to_message(
             prevented_continuation: None,
             compact_metadata: None,
             microcompact_metadata: None,
+            provider: None,
         });
     }
 
@@ -1051,6 +1053,7 @@ fn parse_line_to_message(
         prevented_continuation: log_entry.prevented_continuation,
         compact_metadata: log_entry.compact_metadata,
         microcompact_metadata: log_entry.microcompact_metadata,
+        provider: None,
     })
 }
 
@@ -1119,6 +1122,7 @@ fn parse_line_simd(
             prevented_continuation: None,
             compact_metadata: None,
             microcompact_metadata: None,
+            provider: None,
         });
     }
 
@@ -1192,6 +1196,7 @@ fn parse_line_simd(
         prevented_continuation: log_entry.prevented_continuation,
         compact_metadata: log_entry.compact_metadata,
         microcompact_metadata: log_entry.microcompact_metadata,
+        provider: None,
     })
 }
 

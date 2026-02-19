@@ -138,6 +138,7 @@ fn search_in_file(file_path: &PathBuf, query: &str) -> Vec<ClaudeMessage> {
             prevented_continuation: None,
             compact_metadata: None,
             microcompact_metadata: None,
+            provider: None,
         };
         results.push(claude_message);
     }

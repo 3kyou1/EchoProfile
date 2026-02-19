@@ -1180,6 +1180,7 @@ impl TryFrom<RawLogEntry> for ClaudeMessage {
             prevented_continuation: log_entry.prevented_continuation,
             compact_metadata: log_entry.compact_metadata,
             microcompact_metadata: log_entry.microcompact_metadata,
+            provider: None,
         })
     }
 }
@@ -1696,6 +1697,7 @@ mod tests {
             prevented_continuation: None,
             compact_metadata: None,
             microcompact_metadata: None,
+            provider: None,
         };
 
         let usage = extract_token_usage(&msg);
@@ -1745,6 +1747,7 @@ mod tests {
             prevented_continuation: None,
             compact_metadata: None,
             microcompact_metadata: None,
+            provider: None,
         };
 
         let usage = extract_token_usage(&msg);
@@ -1792,6 +1795,7 @@ mod tests {
             prevented_continuation: None,
             compact_metadata: None,
             microcompact_metadata: None,
+            provider: None,
         };
 
         let usage = extract_token_usage(&msg);
@@ -1835,6 +1839,7 @@ mod tests {
             prevented_continuation: None,
             compact_metadata: None,
             microcompact_metadata: None,
+            provider: None,
         };
 
         let usage = extract_token_usage(&msg);
@@ -1876,6 +1881,7 @@ mod tests {
             prevented_continuation: None,
             compact_metadata: None,
             microcompact_metadata: None,
+            provider: None,
         };
 
         let usage = extract_token_usage(&msg);

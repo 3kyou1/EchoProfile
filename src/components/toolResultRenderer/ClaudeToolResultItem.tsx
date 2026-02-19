@@ -59,15 +59,16 @@ export const ClaudeToolResultItem = ({
   // Tool ID with search highlighting
   const renderToolUseId = (id: string) => {
     if (!id) return null;
+    const label = `${t("common.toolId")}: ${id}`;
     return searchQuery ? (
       <HighlightedText
-        text={`Tool ID: ${id}`}
+        text={label}
         searchQuery={searchQuery}
         isCurrentMatch={isCurrentMatch}
         currentMatchIndex={currentMatchIndex}
       />
     ) : (
-      <>Tool ID: {id}</>
+      <>{label}</>
     );
   };
 

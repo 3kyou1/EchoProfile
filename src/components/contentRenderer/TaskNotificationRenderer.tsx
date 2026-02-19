@@ -310,7 +310,7 @@ export const TaskNotificationRenderer = ({ text }: Props) => {
             )}>
               <Zap className="w-3.5 h-3.5 text-tool-task" />
               <span className="text-xs font-medium text-tool-task">
-                {t("taskNotification.agentTasks", { defaultValue: "Parallel Tasks" })}
+                {t("taskNotification.agentTasks")}
               </span>
             </div>
 
@@ -425,7 +425,7 @@ export const TaskNotificationRenderer = ({ text }: Props) => {
                 )} />
                 <Terminal className="w-3 h-3 text-muted-foreground" />
                 <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {t("taskNotification.details", { defaultValue: "Details" })}
+                  {t("taskNotification.details")}
                 </span>
               </div>
               <span className="text-3xs text-muted-foreground/60">
@@ -461,7 +461,7 @@ export const TaskNotificationRenderer = ({ text }: Props) => {
                     </ReactMarkdown>
                   </div>
                   <span className="text-3xs text-info mt-1 inline-block">
-                    {t("taskNotification.showMore", { defaultValue: "Show more..." })}
+                    {t("taskNotification.showMore")}
                   </span>
                 </div>
               )}

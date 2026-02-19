@@ -210,6 +210,11 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
             Ok(v) => v,
             Err(_) => continue,
         };
+        let line_timestamp = val
+            .get("timestamp")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
 
         let line_type = val.get("type").and_then(|t| t.as_str()).unwrap_or("");
 
@@ -236,8 +241,12 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
                         payload,
                         &session_id,
                         current_model.as_ref(),
+                        &line_timestamp,
                         &mut msg_counter,
                     ) {
+                        if try_merge_tool_result_into_previous(&mut messages, &msg) {
+                            continue;
+                        }
                         messages.push(msg);
                     }
                 }
@@ -247,17 +256,21 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
                 if let Some(payload) = val.get("payload") {
                     let event_type = payload.get("type").and_then(|t| t.as_str()).unwrap_or("");
                     if event_type == "token_count" {
-                        let input = payload
-                            .get("input_tokens")
-                            .and_then(Value::as_u64)
-                            .unwrap_or(0) as u32;
-                        let output = payload
-                            .get("output_tokens")
-                            .and_then(Value::as_u64)
-                            .unwrap_or(0) as u32;
+                        let usage_totals = extract_token_totals(payload)
+                            .or_else(|| extract_last_token_usage(payload));
+                        let Some((input, output)) = usage_totals else {
+                            continue;
+                        };
 
-                        let delta_input = input.saturating_sub(prev_input_tokens);
-                        let delta_output = output.saturating_sub(prev_output_tokens);
+                        let (delta_input, delta_output) =
+                            if prev_input_tokens == 0 && prev_output_tokens == 0 {
+                                (input, output)
+                            } else {
+                                (
+                                    input.saturating_sub(prev_input_tokens),
+                                    output.saturating_sub(prev_output_tokens),
+                                )
+                            };
                         prev_input_tokens = input;
                         prev_output_tokens = output;
 
@@ -273,6 +286,22 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
                                 });
                             }
                         }
+                    } else if let Some(msg) =
+                        convert_codex_event(payload, &session_id, &line_timestamp, &mut msg_counter)
+                    {
+                        messages.push(msg);
+                    }
+                }
+            }
+            "compacted" => {
+                if let Some(payload) = val.get("payload") {
+                    if let Some(msg) = convert_codex_compacted(
+                        payload,
+                        &session_id,
+                        &line_timestamp,
+                        &mut msg_counter,
+                    ) {
+                        messages.push(msg);
                     }
                 }
             }
@@ -408,10 +437,16 @@ fn extract_session_info(rollout_path: &Path) -> Result<SessionInfo, String> {
                                 }
                             }
                         }
-                    } else if item_type == "local_shell_call" || item_type == "function_call" {
+                    } else if item_type == "local_shell_call"
+                        || item_type == "function_call"
+                        || item_type == "custom_tool_call"
+                        || item_type == "web_search_call"
+                    {
                         has_tool_use = true;
                         message_count += 1;
-                    } else if item_type == "function_call_output" {
+                    } else if item_type == "function_call_output"
+                        || item_type == "custom_tool_call_output"
+                    {
                         message_count += 1;
                     }
                 }
@@ -469,6 +504,7 @@ fn convert_codex_item(
     item: &Value,
     session_id: &str,
     model: Option<&String>,
+    line_timestamp: &str,
     counter: &mut u64,
 ) -> Option<ClaudeMessage> {
     let item_type = item.get("type").and_then(|t| t.as_str())?;
@@ -483,7 +519,8 @@ fn convert_codex_item(
     let timestamp = item
         .get("created_at")
         .and_then(|v| v.as_str())
-        .unwrap_or("")
+        .filter(|s| !s.is_empty())
+        .unwrap_or(line_timestamp)
         .to_string();
 
     match item_type {
@@ -545,22 +582,19 @@ fn convert_codex_item(
             ))
         }
         "function_call" => {
-            let name = item
+            let raw_name = item
                 .get("name")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
+            let name = map_codex_tool_name(raw_name);
             let call_id = item
                 .get("call_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let arguments = item
-                .get("arguments")
-                .and_then(|v| v.as_str())
-                .unwrap_or("{}");
-
-            let input: Value = serde_json::from_str(arguments)
-                .unwrap_or(Value::Object(serde_json::Map::default()));
+            let arguments = item.get("arguments");
+            let mut input = parse_tool_arguments(arguments);
+            normalize_tool_input(name, &mut input);
 
             let content = serde_json::json!([{
                 "type": "tool_use",
@@ -580,7 +614,8 @@ fn convert_codex_item(
             ))
         }
         "function_call_output" => {
-            let output = item.get("output").and_then(|v| v.as_str()).unwrap_or("");
+            let output = item.get("output").cloned().unwrap_or(Value::Null);
+            let output = normalize_tool_output(output);
             let call_id = item
                 .get("call_id")
                 .and_then(|v| v.as_str())
@@ -601,6 +636,91 @@ fn convert_codex_item(
                 Some("user"),
                 Some(content),
                 None,
+            ))
+        }
+        "custom_tool_call" => {
+            let name = item
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("custom_tool");
+            let call_id = item
+                .get("call_id")
+                .and_then(|v| v.as_str())
+                .map(str::to_string)
+                .unwrap_or_else(|| uuid.clone());
+            let mut input = item.get("input").cloned().unwrap_or(Value::Null);
+            normalize_custom_tool_input(name, &mut input);
+
+            let content = serde_json::json!([{
+                "type": "tool_use",
+                "id": call_id,
+                "name": name,
+                "input": input
+            }]);
+
+            Some(build_codex_message(
+                uuid,
+                session_id,
+                timestamp,
+                "assistant",
+                Some("assistant"),
+                Some(content),
+                model.cloned(),
+            ))
+        }
+        "custom_tool_call_output" => {
+            let output = item.get("output").cloned().unwrap_or(Value::Null);
+            let output = normalize_tool_output(output);
+            let call_id = item
+                .get("call_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let content = serde_json::json!([{
+                "type": "tool_result",
+                "tool_use_id": call_id,
+                "content": output
+            }]);
+
+            Some(build_codex_message(
+                uuid,
+                session_id,
+                timestamp,
+                "user",
+                Some("user"),
+                Some(content),
+                None,
+            ))
+        }
+        "web_search_call" => {
+            let search_id = item
+                .get("call_id")
+                .or_else(|| item.get("id"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string)
+                .unwrap_or_else(|| uuid.clone());
+            let action = item
+                .get("action")
+                .cloned()
+                .unwrap_or_else(|| Value::Object(serde_json::Map::default()));
+            let input = normalize_web_search_input(action);
+
+            let content = serde_json::json!([{
+                "type": "tool_use",
+                "id": search_id,
+                "name": "WebSearch",
+                "input": input
+            }]);
+
+            Some(build_codex_message(
+                uuid,
+                session_id,
+                timestamp,
+                "assistant",
+                Some("assistant"),
+                Some(content),
+                model.cloned(),
             ))
         }
         "reasoning" => {
@@ -638,6 +758,301 @@ fn convert_codex_item(
     }
 }
 
+fn convert_codex_event(
+    payload: &Value,
+    session_id: &str,
+    line_timestamp: &str,
+    counter: &mut u64,
+) -> Option<ClaudeMessage> {
+    let event_type = payload.get("type").and_then(|t| t.as_str())?;
+
+    match event_type {
+        // Skip as they are already captured in response_item items and can duplicate content.
+        "token_count" | "agent_reasoning" | "agent_message" | "user_message" => None,
+        "task_started" => {
+            *counter += 1;
+            let mut msg = build_codex_message(
+                format!("codex-event-{counter}"),
+                session_id,
+                line_timestamp.to_string(),
+                "progress",
+                None,
+                None,
+                None,
+            );
+            msg.data = Some(serde_json::json!({
+                "type": "waiting_for_task",
+                "status": "started",
+                "taskId": payload.get("turn_id").and_then(Value::as_str).unwrap_or_default(),
+                "message": "Task started"
+            }));
+            msg.tool_use_id = payload
+                .get("turn_id")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            Some(msg)
+        }
+        "task_complete" => {
+            *counter += 1;
+            let mut msg = build_codex_message(
+                format!("codex-event-{counter}"),
+                session_id,
+                line_timestamp.to_string(),
+                "progress",
+                None,
+                None,
+                None,
+            );
+            msg.data = Some(serde_json::json!({
+                "type": "waiting_for_task",
+                "status": "completed",
+                "taskId": payload.get("turn_id").and_then(Value::as_str).unwrap_or_default(),
+                "message": "Task completed"
+            }));
+            msg.tool_use_id = payload
+                .get("turn_id")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            Some(msg)
+        }
+        "context_compacted" => {
+            *counter += 1;
+            let mut msg = build_codex_message(
+                format!("codex-event-{counter}"),
+                session_id,
+                line_timestamp.to_string(),
+                "system",
+                None,
+                Some(serde_json::json!("Context compacted")),
+                None,
+            );
+            msg.subtype = Some("microcompact_boundary".to_string());
+            msg.level = Some("info".to_string());
+            msg.microcompact_metadata = Some(serde_json::json!({
+                "trigger": "context_compacted"
+            }));
+            Some(msg)
+        }
+        _ => None,
+    }
+}
+
+fn convert_codex_compacted(
+    payload: &Value,
+    session_id: &str,
+    line_timestamp: &str,
+    counter: &mut u64,
+) -> Option<ClaudeMessage> {
+    *counter += 1;
+    let replacement_history_count = payload
+        .get("replacement_history")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len);
+
+    let mut msg = build_codex_message(
+        format!("codex-compacted-{counter}"),
+        session_id,
+        line_timestamp.to_string(),
+        "system",
+        None,
+        Some(serde_json::json!("Conversation compacted")),
+        None,
+    );
+    msg.subtype = Some("compact_boundary".to_string());
+    msg.level = Some("info".to_string());
+    msg.compact_metadata = Some(serde_json::json!({
+        "trigger": "compacted",
+        "replacementHistoryCount": replacement_history_count
+    }));
+    Some(msg)
+}
+
+fn extract_token_totals(payload: &Value) -> Option<(u32, u32)> {
+    // Recent Codex logs store usage in payload.info.total_token_usage.
+    let total = payload.get("info")?.get("total_token_usage")?;
+    let input = total.get("input_tokens")?.as_u64()? as u32;
+    let output = total.get("output_tokens")?.as_u64()? as u32;
+    Some((input, output))
+}
+
+fn extract_last_token_usage(payload: &Value) -> Option<(u32, u32)> {
+    // Fallback for older/newer variants that only include last token usage.
+    let last = payload.get("info")?.get("last_token_usage")?;
+    let input = last.get("input_tokens")?.as_u64()? as u32;
+    let output = last.get("output_tokens")?.as_u64()? as u32;
+    Some((input, output))
+}
+
+fn map_codex_tool_name(name: &str) -> &str {
+    match name {
+        "exec_command" => "Bash",
+        _ => name,
+    }
+}
+
+fn parse_tool_arguments(arguments: Option<&Value>) -> Value {
+    match arguments {
+        Some(Value::String(s)) => {
+            serde_json::from_str(s).unwrap_or_else(|_| Value::Object(serde_json::Map::default()))
+        }
+        Some(v @ Value::Object(_)) => v.clone(),
+        Some(v @ Value::Array(_)) => v.clone(),
+        _ => Value::Object(serde_json::Map::default()),
+    }
+}
+
+fn normalize_tool_input(tool_name: &str, input: &mut Value) {
+    if tool_name != "Bash" {
+        return;
+    }
+
+    let Some(obj) = input.as_object_mut() else {
+        return;
+    };
+
+    // Codex exec_command uses "cmd"; UI Bash renderer expects "command".
+    if !obj.contains_key("command") {
+        if let Some(cmd) = obj.get("cmd").cloned() {
+            match cmd {
+                Value::String(_) => {
+                    obj.insert("command".to_string(), cmd);
+                }
+                Value::Array(arr) => {
+                    let joined = arr
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    obj.insert("command".to_string(), Value::String(joined));
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+fn normalize_custom_tool_input(tool_name: &str, input: &mut Value) {
+    if input.is_object() {
+        return;
+    }
+
+    if tool_name == "apply_patch" {
+        let patch = input.as_str().unwrap_or("").to_string();
+        *input = serde_json::json!({ "patch": patch });
+        return;
+    }
+
+    *input = serde_json::json!({ "input": input.clone() });
+}
+
+fn normalize_web_search_input(action: Value) -> Value {
+    let Some(action_obj) = action.as_object() else {
+        return Value::Object(serde_json::Map::default());
+    };
+
+    let mut input = serde_json::Map::default();
+    if let Some(query) = action_obj.get("query").and_then(Value::as_str) {
+        input.insert("query".to_string(), Value::String(query.to_string()));
+    } else if let Some(url) = action_obj.get("url").and_then(Value::as_str) {
+        input.insert("query".to_string(), Value::String(url.to_string()));
+    } else if let Some(pattern) = action_obj.get("pattern").and_then(Value::as_str) {
+        input.insert("query".to_string(), Value::String(pattern.to_string()));
+    }
+    if let Some(queries) = action_obj.get("queries").cloned() {
+        input.insert("queries".to_string(), queries);
+    }
+    if let Some(action_type) = action_obj.get("type").and_then(Value::as_str) {
+        input.insert(
+            "action_type".to_string(),
+            Value::String(action_type.to_string()),
+        );
+    }
+
+    Value::Object(input)
+}
+
+fn normalize_tool_output(output: Value) -> Value {
+    let Value::String(raw) = output else {
+        return output;
+    };
+
+    // exec_command tool output can be a JSON string: {"output":"...", ...}
+    if let Ok(parsed) = serde_json::from_str::<Value>(&raw) {
+        if let Some(inner_output) = parsed.get("output") {
+            return inner_output.clone();
+        }
+    }
+
+    // Codex function wrapper output usually embeds "Output:\n{actual stdout}".
+    if let Some((_, out)) = raw.split_once("\nOutput:\n") {
+        return Value::String(out.to_string());
+    }
+
+    Value::String(raw)
+}
+
+fn try_merge_tool_result_into_previous(
+    messages: &mut [ClaudeMessage],
+    msg: &ClaudeMessage,
+) -> bool {
+    if msg.message_type != "user" {
+        return false;
+    }
+
+    let Some((tool_use_id, tool_result_block)) = extract_tool_result_block(msg) else {
+        return false;
+    };
+
+    for prev in messages.iter_mut().rev() {
+        if prev.message_type != "assistant" {
+            continue;
+        }
+        if has_matching_tool_use(prev, &tool_use_id) {
+            append_content_block(prev, tool_result_block);
+            return true;
+        }
+    }
+
+    false
+}
+
+fn extract_tool_result_block(msg: &ClaudeMessage) -> Option<(String, Value)> {
+    let arr = msg.content.as_ref()?.as_array()?;
+    let first = arr.first()?;
+    if first.get("type").and_then(Value::as_str) != Some("tool_result") {
+        return None;
+    }
+    let tool_use_id = first
+        .get("tool_use_id")
+        .and_then(Value::as_str)?
+        .to_string();
+    Some((tool_use_id, first.clone()))
+}
+
+fn has_matching_tool_use(msg: &ClaudeMessage, tool_use_id: &str) -> bool {
+    let Some(arr) = msg.content.as_ref().and_then(Value::as_array) else {
+        return false;
+    };
+    arr.iter().any(|item| {
+        item.get("type").and_then(Value::as_str) == Some("tool_use")
+            && item.get("id").and_then(Value::as_str) == Some(tool_use_id)
+    })
+}
+
+fn append_content_block(msg: &mut ClaudeMessage, block: Value) {
+    match &mut msg.content {
+        Some(Value::Array(arr)) => arr.push(block),
+        _ => msg.content = Some(Value::Array(vec![block])),
+    }
+}
+
+fn extract_first_tool_use(content: Option<&Value>) -> Option<Value> {
+    let arr = content?.as_array()?;
+    arr.iter()
+        .find(|item| item.get("type").and_then(Value::as_str) == Some("tool_use"))
+        .cloned()
+}
+
 fn convert_codex_content_array(content: Option<&Value>) -> Option<Value> {
     let arr = content?.as_array()?;
 
@@ -651,6 +1066,19 @@ fn convert_codex_content_array(content: Option<&Value>) -> Option<Value> {
                     Some(serde_json::json!({
                         "type": "text",
                         "text": text
+                    }))
+                }
+                "input_image" => {
+                    let image_url = item.get("image_url").and_then(Value::as_str).unwrap_or("");
+                    if image_url.is_empty() {
+                        return None;
+                    }
+                    Some(serde_json::json!({
+                        "type": "image",
+                        "source": {
+                            "type": "url",
+                            "url": image_url
+                        }
                     }))
                 }
                 "refusal" => {
@@ -675,6 +1103,551 @@ fn convert_codex_content_array(content: Option<&Value>) -> Option<Value> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn map_exec_command_to_bash() {
+        assert_eq!(map_codex_tool_name("exec_command"), "Bash");
+        assert_eq!(map_codex_tool_name("batch_execute"), "batch_execute");
+    }
+
+    #[test]
+    fn normalize_bash_input_maps_cmd_to_command() {
+        let mut input = json!({ "cmd": "pwd && ls -la" });
+        normalize_tool_input("Bash", &mut input);
+        assert_eq!(
+            input.get("command").and_then(Value::as_str),
+            Some("pwd && ls -la")
+        );
+    }
+
+    #[test]
+    fn normalize_tool_output_extracts_wrapped_output() {
+        let wrapped = "Chunk ID: abc\nWall time: 0.01 seconds\nOutput:\nhello\nworld";
+        let out = normalize_tool_output(Value::String(wrapped.to_string()));
+        assert_eq!(out.as_str(), Some("hello\nworld"));
+    }
+
+    #[test]
+    fn normalize_tool_output_extracts_json_output_field() {
+        let out = normalize_tool_output(Value::String(
+            r#"{"output":"done","metadata":{"exit_code":0}}"#.to_string(),
+        ));
+        assert_eq!(out.as_str(), Some("done"));
+    }
+
+    #[test]
+    fn parse_nested_token_count_totals() {
+        let payload = json!({
+            "type": "token_count",
+            "info": {
+                "total_token_usage": {
+                    "input_tokens": 120,
+                    "output_tokens": 30
+                }
+            }
+        });
+        assert_eq!(extract_token_totals(&payload), Some((120, 30)));
+    }
+
+    #[test]
+    fn normalize_custom_tool_input_wraps_apply_patch_text() {
+        let mut input = Value::String("*** Begin Patch".to_string());
+        normalize_custom_tool_input("apply_patch", &mut input);
+        assert_eq!(
+            input.get("patch").and_then(Value::as_str),
+            Some("*** Begin Patch")
+        );
+    }
+
+    #[test]
+    fn normalize_web_search_input_extracts_query_and_type() {
+        let input = normalize_web_search_input(json!({
+            "type": "search",
+            "query": "codex parser",
+            "queries": ["codex parser", "codex rollout"]
+        }));
+        assert_eq!(
+            input.get("query").and_then(Value::as_str),
+            Some("codex parser")
+        );
+        assert_eq!(
+            input.get("action_type").and_then(Value::as_str),
+            Some("search")
+        );
+        assert!(input.get("queries").is_some());
+    }
+
+    #[test]
+    fn convert_content_array_maps_input_image_to_image() {
+        let converted = convert_codex_content_array(Some(&json!([
+            {
+                "type": "input_image",
+                "image_url": "data:image/png;base64,abc"
+            }
+        ])))
+        .expect("content should be converted");
+
+        let arr = converted
+            .as_array()
+            .expect("converted content should be an array");
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0].get("type").and_then(Value::as_str), Some("image"));
+        assert_eq!(
+            arr[0]
+                .get("source")
+                .and_then(|v| v.get("url"))
+                .and_then(Value::as_str),
+            Some("data:image/png;base64,abc")
+        );
+    }
+
+    #[test]
+    fn convert_custom_tool_call_to_tool_use() {
+        let mut counter = 0u64;
+        let msg = convert_codex_item(
+            &json!({
+                "type": "custom_tool_call",
+                "name": "apply_patch",
+                "call_id": "call_patch_1",
+                "input": "*** Begin Patch"
+            }),
+            "session-1",
+            None,
+            "2026-02-19T12:00:00Z",
+            &mut counter,
+        )
+        .expect("custom_tool_call should be converted");
+
+        assert_eq!(msg.message_type, "assistant");
+        let arr = msg
+            .content
+            .as_ref()
+            .and_then(Value::as_array)
+            .expect("content should be an array");
+        assert_eq!(arr[0].get("type").and_then(Value::as_str), Some("tool_use"));
+        assert_eq!(
+            arr[0].get("name").and_then(Value::as_str),
+            Some("apply_patch")
+        );
+        assert_eq!(
+            arr[0]
+                .get("input")
+                .and_then(|v| v.get("patch"))
+                .and_then(Value::as_str),
+            Some("*** Begin Patch")
+        );
+    }
+
+    #[test]
+    fn convert_custom_tool_call_output_to_tool_result() {
+        let mut counter = 0u64;
+        let msg = convert_codex_item(
+            &json!({
+                "type": "custom_tool_call_output",
+                "call_id": "call_patch_1",
+                "output": "{\"output\":\"Success. Updated files\",\"metadata\":{\"exit_code\":0}}"
+            }),
+            "session-1",
+            None,
+            "2026-02-19T12:00:01Z",
+            &mut counter,
+        )
+        .expect("custom_tool_call_output should be converted");
+
+        assert_eq!(msg.message_type, "user");
+        let arr = msg
+            .content
+            .as_ref()
+            .and_then(Value::as_array)
+            .expect("content should be an array");
+        assert_eq!(
+            arr[0].get("type").and_then(Value::as_str),
+            Some("tool_result")
+        );
+        assert_eq!(
+            arr[0].get("tool_use_id").and_then(Value::as_str),
+            Some("call_patch_1")
+        );
+        assert_eq!(
+            arr[0].get("content").and_then(Value::as_str),
+            Some("Success. Updated files")
+        );
+    }
+
+    #[test]
+    fn convert_web_search_call_to_web_search_tool_use() {
+        let mut counter = 0u64;
+        let msg = convert_codex_item(
+            &json!({
+                "type": "web_search_call",
+                "action": {
+                    "type": "open_page",
+                    "url": "https://example.com"
+                }
+            }),
+            "session-1",
+            None,
+            "2026-02-19T12:00:02Z",
+            &mut counter,
+        )
+        .expect("web_search_call should be converted");
+
+        assert_eq!(msg.message_type, "assistant");
+        let arr = msg
+            .content
+            .as_ref()
+            .and_then(Value::as_array)
+            .expect("content should be an array");
+        assert_eq!(arr[0].get("type").and_then(Value::as_str), Some("tool_use"));
+        assert_eq!(
+            arr[0].get("name").and_then(Value::as_str),
+            Some("WebSearch")
+        );
+        assert_eq!(
+            arr[0]
+                .get("input")
+                .and_then(|v| v.get("query"))
+                .and_then(Value::as_str),
+            Some("https://example.com")
+        );
+    }
+
+    #[test]
+    fn merge_tool_result_into_previous_tool_use_message() {
+        let mut messages = vec![build_codex_message(
+            "assistant-1".to_string(),
+            "session-1",
+            "2026-02-19T12:00:00Z".to_string(),
+            "assistant",
+            Some("assistant"),
+            Some(json!([{
+                "type": "tool_use",
+                "id": "call_abc",
+                "name": "Bash",
+                "input": { "command": "pwd" }
+            }])),
+            None,
+        )];
+
+        let result_msg = build_codex_message(
+            "user-1".to_string(),
+            "session-1",
+            "2026-02-19T12:00:01Z".to_string(),
+            "user",
+            Some("user"),
+            Some(json!([{
+                "type": "tool_result",
+                "tool_use_id": "call_abc",
+                "content": "ok"
+            }])),
+            None,
+        );
+
+        assert!(try_merge_tool_result_into_previous(
+            &mut messages,
+            &result_msg
+        ));
+        let merged_arr = messages[0]
+            .content
+            .as_ref()
+            .and_then(Value::as_array)
+            .expect("assistant message content should be an array");
+        assert_eq!(merged_arr.len(), 2);
+        assert_eq!(
+            merged_arr[1].get("type").and_then(Value::as_str),
+            Some("tool_result")
+        );
+    }
+
+    #[test]
+    fn build_codex_message_sets_tool_use_from_content() {
+        let msg = build_codex_message(
+            "assistant-1".to_string(),
+            "session-1",
+            "2026-02-19T12:00:00Z".to_string(),
+            "assistant",
+            Some("assistant"),
+            Some(json!([{
+                "type": "tool_use",
+                "id": "call_1",
+                "name": "Bash",
+                "input": {"command": "pwd"}
+            }])),
+            None,
+        );
+
+        assert!(msg.tool_use.is_some());
+        assert_eq!(
+            msg.tool_use
+                .as_ref()
+                .and_then(|v| v.get("name"))
+                .and_then(Value::as_str),
+            Some("Bash")
+        );
+    }
+
+    #[test]
+    fn convert_task_started_event_to_progress_message() {
+        let mut counter = 0u64;
+        let msg = convert_codex_event(
+            &json!({
+                "type": "task_started",
+                "turn_id": "turn_1"
+            }),
+            "session-1",
+            "2026-02-19T12:00:00Z",
+            &mut counter,
+        )
+        .expect("task_started should be converted");
+
+        assert_eq!(msg.message_type, "progress");
+        assert_eq!(
+            msg.data
+                .as_ref()
+                .and_then(|v| v.get("status"))
+                .and_then(Value::as_str),
+            Some("started")
+        );
+    }
+
+    #[test]
+    fn convert_context_compacted_event_to_system_message() {
+        let mut counter = 0u64;
+        let msg = convert_codex_event(
+            &json!({
+                "type": "context_compacted"
+            }),
+            "session-1",
+            "2026-02-19T12:00:00Z",
+            &mut counter,
+        )
+        .expect("context_compacted should be converted");
+
+        assert_eq!(msg.message_type, "system");
+        assert_eq!(msg.subtype.as_deref(), Some("microcompact_boundary"));
+    }
+
+    #[test]
+    fn convert_compacted_line_to_system_message() {
+        let mut counter = 0u64;
+        let msg = convert_codex_compacted(
+            &json!({
+                "message": "",
+                "replacement_history": [{"type":"message"}]
+            }),
+            "session-1",
+            "2026-02-19T12:00:00Z",
+            &mut counter,
+        )
+        .expect("compacted should be converted");
+
+        assert_eq!(msg.message_type, "system");
+        assert_eq!(msg.subtype.as_deref(), Some("compact_boundary"));
+        assert_eq!(
+            msg.compact_metadata
+                .as_ref()
+                .and_then(|v| v.get("replacementHistoryCount"))
+                .and_then(Value::as_u64),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn load_messages_parses_codex_rollout_end_to_end() {
+        let tmp = TempDir::new().expect("temp dir should be created");
+        let rollout_path = tmp.path().join("rollout-2026-02-19.jsonl");
+
+        let lines = vec![
+            json!({
+                "timestamp": "2026-02-19T12:00:00Z",
+                "type": "session_meta",
+                "payload": { "id": "sess-1" }
+            }),
+            json!({
+                "timestamp": "2026-02-19T12:00:01Z",
+                "type": "turn_context",
+                "payload": { "model": "gpt-5-codex" }
+            }),
+            json!({
+                "timestamp": "2026-02-19T12:00:02Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "item-1",
+                    "type": "function_call",
+                    "name": "exec_command",
+                    "call_id": "call_1",
+                    "arguments": "{\"cmd\":\"pwd\"}"
+                }
+            }),
+            json!({
+                "timestamp": "2026-02-19T12:00:03Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "item-2",
+                    "type": "function_call_output",
+                    "call_id": "call_1",
+                    "output": "{\"output\":\"/tmp\",\"metadata\":{\"exit_code\":0}}"
+                }
+            }),
+            json!({
+                "timestamp": "2026-02-19T12:00:04Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "item-3",
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{ "type": "output_text", "text": "done" }]
+                }
+            }),
+            json!({
+                "timestamp": "2026-02-19T12:00:05Z",
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "info": {
+                        "total_token_usage": {
+                            "input_tokens": 100,
+                            "output_tokens": 20
+                        }
+                    }
+                }
+            }),
+            json!({
+                "timestamp": "2026-02-19T12:00:06Z",
+                "type": "event_msg",
+                "payload": {
+                    "type": "task_started",
+                    "turn_id": "turn_1"
+                }
+            }),
+            json!({
+                "timestamp": "2026-02-19T12:00:07Z",
+                "type": "event_msg",
+                "payload": {
+                    "type": "task_complete",
+                    "turn_id": "turn_1"
+                }
+            }),
+            json!({
+                "timestamp": "2026-02-19T12:00:08Z",
+                "type": "event_msg",
+                "payload": {
+                    "type": "context_compacted"
+                }
+            }),
+            json!({
+                "timestamp": "2026-02-19T12:00:09Z",
+                "type": "compacted",
+                "payload": {
+                    "replacement_history": [{ "type": "message" }, { "type": "summary" }]
+                }
+            }),
+        ];
+
+        let content = lines
+            .iter()
+            .map(Value::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&rollout_path, format!("{content}\n")).expect("fixture should be written");
+
+        let messages = load_messages(
+            rollout_path
+                .to_str()
+                .expect("rollout path should be valid UTF-8"),
+        )
+        .expect("rollout should be parsed");
+
+        assert_eq!(messages.len(), 6);
+        assert_eq!(messages[0].message_type, "assistant");
+        assert_eq!(messages[1].message_type, "assistant");
+        assert_eq!(messages[2].message_type, "progress");
+        assert_eq!(messages[3].message_type, "progress");
+        assert_eq!(messages[4].message_type, "system");
+        assert_eq!(messages[5].message_type, "system");
+
+        let first_blocks = messages[0]
+            .content
+            .as_ref()
+            .and_then(Value::as_array)
+            .expect("first message content should be an array");
+        assert_eq!(first_blocks.len(), 2);
+        assert_eq!(
+            first_blocks[0].get("type").and_then(Value::as_str),
+            Some("tool_use")
+        );
+        assert_eq!(
+            first_blocks[1].get("type").and_then(Value::as_str),
+            Some("tool_result")
+        );
+        assert_eq!(
+            first_blocks[1].get("content").and_then(Value::as_str),
+            Some("/tmp")
+        );
+
+        assert_eq!(
+            messages[0]
+                .tool_use
+                .as_ref()
+                .and_then(|v| v.get("name"))
+                .and_then(Value::as_str),
+            Some("Bash")
+        );
+        assert_eq!(messages[0].model.as_deref(), Some("gpt-5-codex"));
+        assert_eq!(messages[1].model.as_deref(), Some("gpt-5-codex"));
+
+        assert_eq!(
+            messages[1].usage.as_ref().and_then(|u| u.input_tokens),
+            Some(100)
+        );
+        assert_eq!(
+            messages[1].usage.as_ref().and_then(|u| u.output_tokens),
+            Some(20)
+        );
+
+        assert_eq!(
+            messages[2]
+                .data
+                .as_ref()
+                .and_then(|v| v.get("status"))
+                .and_then(Value::as_str),
+            Some("started")
+        );
+        assert_eq!(
+            messages[3]
+                .data
+                .as_ref()
+                .and_then(|v| v.get("status"))
+                .and_then(Value::as_str),
+            Some("completed")
+        );
+        assert_eq!(
+            messages[4].subtype.as_deref(),
+            Some("microcompact_boundary")
+        );
+        assert_eq!(messages[5].subtype.as_deref(), Some("compact_boundary"));
+        assert_eq!(
+            messages[5]
+                .compact_metadata
+                .as_ref()
+                .and_then(|v| v.get("replacementHistoryCount"))
+                .and_then(Value::as_u64),
+            Some(2)
+        );
+
+        assert!(messages
+            .iter()
+            .all(|m| m.provider.as_deref() == Some("codex")));
+        assert!(messages.iter().all(|m| m.session_id == "sess-1"));
+    }
+}
+
 fn build_codex_message(
     uuid: String,
     session_id: &str,
@@ -684,6 +1657,12 @@ fn build_codex_message(
     content: Option<Value>,
     model: Option<String>,
 ) -> ClaudeMessage {
+    let tool_use = if message_type == "assistant" {
+        extract_first_tool_use(content.as_ref())
+    } else {
+        None
+    };
+
     ClaudeMessage {
         uuid,
         parent_uuid: None,
@@ -692,7 +1671,7 @@ fn build_codex_message(
         message_type: message_type.to_string(),
         content,
         project_name: None,
-        tool_use: None,
+        tool_use,
         tool_use_result: None,
         is_sidechain: None,
         usage: None,

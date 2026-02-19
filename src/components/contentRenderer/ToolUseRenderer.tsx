@@ -73,15 +73,16 @@ export const ToolUseRenderer = ({
   // Tool ID with search highlighting
   const renderToolId = (id: string) => {
     if (!id) return null;
+    const label = `${t("common.id")}: ${id}`;
     return searchQuery ? (
       <HighlightedText
-        text={`ID: ${id}`}
+        text={label}
         searchQuery={searchQuery}
         isCurrentMatch={isCurrentMatch}
         currentMatchIndex={currentMatchIndex}
       />
     ) : (
-      <>ID: {id}</>
+      <>{label}</>
     );
   };
 

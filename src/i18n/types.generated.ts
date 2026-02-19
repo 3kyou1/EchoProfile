@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-02-14T15:27:23.350Z
- * 총 키 개수: 1446
+ * 생성 시간: 2026-02-19T23:32:43.038Z
+ * 총 키 개수: 1517
  * Namespace 수: 11
  */
 
@@ -40,7 +40,7 @@ export type I18nNamespace =
   | 'recentEdits';
 
 /**
- * common namespace의 번역 키 (107개)
+ * common namespace의 번역 키 (117개)
  * 파일: locales/{lang}/common.json
  */
 export type CommonKeys =
@@ -51,11 +51,13 @@ export type CommonKeys =
   | 'common.cancel'
   | 'common.close'
   | 'common.commandPalette'
+  | 'common.completed'
   | 'common.copied'
   | 'common.copy'
   | 'common.delete'
   | 'common.duplicate'
   | 'common.edit'
+  | 'common.error'
   | 'common.error.copyError'
   | 'common.error.info'
   | 'common.error.report'
@@ -79,9 +81,15 @@ export type CommonKeys =
   | 'common.hooks.timeoutError'
   | 'common.hooks.updateCheckFailed'
   | 'common.hooks.updateInstallFailed'
+  | 'common.id'
+  | 'common.input'
   | 'common.loading'
   | 'common.noDataAvailable'
   | 'common.ok'
+  | 'common.pending'
+  | 'common.provider.claude'
+  | 'common.provider.codex'
+  | 'common.provider.opencode'
   | 'common.refresh'
   | 'common.remove'
   | 'common.restartApp'
@@ -112,7 +120,9 @@ export type CommonKeys =
   | 'common.time.sessionTime'
   | 'common.time.start'
   | 'common.time.startTime'
+  | 'common.toolId'
   | 'common.undo'
+  | 'common.unknown'
   | 'common.update.available'
   | 'common.update.changes'
   | 'common.update.current'
@@ -153,7 +163,7 @@ export type CommonKeys =
   | 'time.start';
 
 /**
- * analytics namespace의 번역 키 (146개)
+ * analytics namespace의 번역 키 (151개)
  * 파일: locales/{lang}/analytics.json
  */
 export type AnalyticsKeys =
@@ -280,6 +290,11 @@ export type AnalyticsKeys =
   | 'analytics.toolUsageStats'
   | 'analytics.toolUsageTime'
   | 'analytics.toolsUsed'
+  | 'analytics.tooltip.activities'
+  | 'analytics.tooltip.messages'
+  | 'analytics.tooltip.sessions'
+  | 'analytics.tooltip.share'
+  | 'analytics.tooltip.tokens'
   | 'analytics.tooltipMessages'
   | 'analytics.tooltipSessions'
   | 'analytics.tooltipTokens'
@@ -1073,7 +1088,7 @@ export type ErrorKeys =
   | 'error.viewDetails';
 
 /**
- * message namespace의 번역 키 (72개)
+ * message namespace의 번역 키 (74개)
  * 파일: locales/{lang}/message.json
  */
 export type MessageKeys =
@@ -1104,6 +1119,7 @@ export type MessageKeys =
   | 'messageViewer.branch'
   | 'messageViewer.checkConsole'
   | 'messageViewer.claude'
+  | 'messageViewer.codex'
   | 'messageViewer.debugInfo.file'
   | 'messageViewer.debugInfo.firstMessage'
   | 'messageViewer.debugInfo.hasMore'
@@ -1123,6 +1139,7 @@ export type MessageKeys =
   | 'messageViewer.noMessages'
   | 'messageViewer.noMessagesDescription'
   | 'messageViewer.noSearchResults'
+  | 'messageViewer.opencode'
   | 'messageViewer.priorContext'
   | 'messageViewer.refresh'
   | 'messageViewer.renderError'
@@ -1151,7 +1168,7 @@ export type MessageKeys =
   | 'navigator.toggle';
 
 /**
- * renderers namespace의 번역 키 (257개)
+ * renderers namespace의 번역 키 (311개)
  * 파일: locales/{lang}/renderers.json
  */
 export type RenderersKeys =
@@ -1270,6 +1287,12 @@ export type RenderersKeys =
   | 'diffViewer.switchToUnified'
   | 'diffViewer.unified'
   | 'diffViewer.visualView'
+  | 'documentRenderer.base64Preview'
+  | 'documentRenderer.citationsEnabled'
+  | 'documentRenderer.pdf'
+  | 'documentRenderer.plainText'
+  | 'documentRenderer.unknown'
+  | 'documentRenderer.urlPdf'
   | 'fileContent.collapse'
   | 'fileContent.content'
   | 'fileContent.copyFileContent'
@@ -1323,6 +1346,12 @@ export type RenderersKeys =
   | 'mcpRenderer.executionResult'
   | 'mcpRenderer.mcpToolCall'
   | 'mcpRenderer.parameters'
+  | 'mcpToolResultRenderer.error'
+  | 'mcpToolResultRenderer.imageAlt'
+  | 'mcpToolResultRenderer.resource'
+  | 'mcpToolResultRenderer.title'
+  | 'mcpToolUseRenderer.showInput'
+  | 'mcpToolUseRenderer.title'
   | 'progressRenderer.status.completed'
   | 'progressRenderer.status.error'
   | 'progressRenderer.status.running'
@@ -1343,6 +1372,28 @@ export type RenderersKeys =
   | 'queueOperationRenderer.operations.popAll'
   | 'queueOperationRenderer.operations.remove'
   | 'queueOperationRenderer.title'
+  | 'redactedThinkingRenderer.description'
+  | 'redactedThinkingRenderer.title'
+  | 'rendererLabels.blockedBy'
+  | 'rendererLabels.blocks'
+  | 'rendererLabels.cell'
+  | 'rendererLabels.flags'
+  | 'rendererLabels.glob'
+  | 'rendererLabels.id'
+  | 'rendererLabels.limit'
+  | 'rendererLabels.owner'
+  | 'rendererLabels.path'
+  | 'rendererLabels.pattern'
+  | 'rendererLabels.secondsShort'
+  | 'rendererLabels.status'
+  | 'rendererLabels.subject'
+  | 'rendererLabels.task'
+  | 'rendererLabels.type'
+  | 'searchResultRenderer.title'
+  | 'serverToolUseRenderer.query'
+  | 'serverToolUseRenderer.serverTool'
+  | 'serverToolUseRenderer.showInput'
+  | 'serverToolUseRenderer.webSearch'
   | 'structuredPatch.areasChanged'
   | 'structuredPatch.changeStats'
   | 'structuredPatch.fileChanges'
@@ -1389,6 +1440,8 @@ export type RenderersKeys =
   | 'taskOperation.taskCount_plural'
   | 'taskOperation.taskOperations'
   | 'taskOperation.taskOutput'
+  | 'terminalExecutionResultRenderer.stderr'
+  | 'terminalExecutionResultRenderer.stdout'
   | 'terminalStreamRenderer.exitCode'
   | 'terminalStreamRenderer.title'
   | 'textEditorCodeExecutionToolResultRenderer.create'
@@ -1398,11 +1451,25 @@ export type RenderersKeys =
   | 'textEditorCodeExecutionToolResultRenderer.showContent'
   | 'textEditorCodeExecutionToolResultRenderer.view'
   | 'thinkingRenderer.title'
+  | 'toolError.executionTimeExceeded'
+  | 'toolError.fileNotFound'
+  | 'toolError.invalidToolInput'
+  | 'toolError.invalidUrlFormat'
+  | 'toolError.maxUsesExceeded'
+  | 'toolError.noMatchingToolsFound'
+  | 'toolError.permissionDenied'
+  | 'toolError.tooManyRequests'
+  | 'toolError.unavailable'
+  | 'toolError.unsupportedContentType'
+  | 'toolError.urlNotAccessible'
+  | 'toolError.urlNotAllowed'
+  | 'toolError.urlTooLong'
   | 'toolSearchToolResultRenderer.error'
   | 'toolSearchToolResultRenderer.found'
   | 'toolSearchToolResultRenderer.noResults'
   | 'toolSearchToolResultRenderer.title'
   | 'webFetchToolResultRenderer.error'
+  | 'webFetchToolResultRenderer.pdfDocument'
   | 'webFetchToolResultRenderer.retrievedAt'
   | 'webFetchToolResultRenderer.showContent'
   | 'webFetchToolResultRenderer.title'
@@ -1411,7 +1478,11 @@ export type RenderersKeys =
   | 'webSearchRenderer.results'
   | 'webSearchRenderer.seconds'
   | 'webSearchRenderer.title'
-  | 'webSearchRenderer.unknownResultFormat';
+  | 'webSearchRenderer.unknownResultFormat'
+  | 'webSearchResultRenderer.error'
+  | 'webSearchResultRenderer.noResults'
+  | 'webSearchResultRenderer.results'
+  | 'webSearchResultRenderer.title';
 
 /**
  * update namespace의 번역 키 (68개)
@@ -1704,6 +1775,11 @@ export type TranslationKey =
   | 'analytics.toolUsageStats'
   | 'analytics.toolUsageTime'
   | 'analytics.toolsUsed'
+  | 'analytics.tooltip.activities'
+  | 'analytics.tooltip.messages'
+  | 'analytics.tooltip.sessions'
+  | 'analytics.tooltip.share'
+  | 'analytics.tooltip.tokens'
   | 'analytics.tooltipMessages'
   | 'analytics.tooltipSessions'
   | 'analytics.tooltipTokens'
@@ -1801,11 +1877,13 @@ export type TranslationKey =
   | 'common.cancel'
   | 'common.close'
   | 'common.commandPalette'
+  | 'common.completed'
   | 'common.copied'
   | 'common.copy'
   | 'common.delete'
   | 'common.duplicate'
   | 'common.edit'
+  | 'common.error'
   | 'common.error.copyError'
   | 'common.error.info'
   | 'common.error.report'
@@ -1829,9 +1907,15 @@ export type TranslationKey =
   | 'common.hooks.timeoutError'
   | 'common.hooks.updateCheckFailed'
   | 'common.hooks.updateInstallFailed'
+  | 'common.id'
+  | 'common.input'
   | 'common.loading'
   | 'common.noDataAvailable'
   | 'common.ok'
+  | 'common.pending'
+  | 'common.provider.claude'
+  | 'common.provider.codex'
+  | 'common.provider.opencode'
   | 'common.refresh'
   | 'common.remove'
   | 'common.restartApp'
@@ -1862,7 +1946,9 @@ export type TranslationKey =
   | 'common.time.sessionTime'
   | 'common.time.start'
   | 'common.time.startTime'
+  | 'common.toolId'
   | 'common.undo'
+  | 'common.unknown'
   | 'common.update.available'
   | 'common.update.changes'
   | 'common.update.current'
@@ -1913,6 +1999,12 @@ export type TranslationKey =
   | 'diffViewer.switchToUnified'
   | 'diffViewer.unified'
   | 'diffViewer.visualView'
+  | 'documentRenderer.base64Preview'
+  | 'documentRenderer.citationsEnabled'
+  | 'documentRenderer.pdf'
+  | 'documentRenderer.plainText'
+  | 'documentRenderer.unknown'
+  | 'documentRenderer.urlPdf'
   | 'error.apologize'
   | 'error.applyPresetFailed'
   | 'error.copied'
@@ -2051,6 +2143,12 @@ export type TranslationKey =
   | 'mcpRenderer.executionResult'
   | 'mcpRenderer.mcpToolCall'
   | 'mcpRenderer.parameters'
+  | 'mcpToolResultRenderer.error'
+  | 'mcpToolResultRenderer.imageAlt'
+  | 'mcpToolResultRenderer.resource'
+  | 'mcpToolResultRenderer.title'
+  | 'mcpToolUseRenderer.showInput'
+  | 'mcpToolUseRenderer.title'
   | 'message.allLoaded'
   | 'message.branch'
   | 'message.checkConsole'
@@ -2078,6 +2176,7 @@ export type TranslationKey =
   | 'messageViewer.branch'
   | 'messageViewer.checkConsole'
   | 'messageViewer.claude'
+  | 'messageViewer.codex'
   | 'messageViewer.debugInfo.file'
   | 'messageViewer.debugInfo.firstMessage'
   | 'messageViewer.debugInfo.hasMore'
@@ -2097,6 +2196,7 @@ export type TranslationKey =
   | 'messageViewer.noMessages'
   | 'messageViewer.noMessagesDescription'
   | 'messageViewer.noSearchResults'
+  | 'messageViewer.opencode'
   | 'messageViewer.priorContext'
   | 'messageViewer.refresh'
   | 'messageViewer.renderError'
@@ -2183,6 +2283,28 @@ export type TranslationKey =
   | 'recentEdits.showMore'
   | 'recentEdits.stats'
   | 'recentEdits.title'
+  | 'redactedThinkingRenderer.description'
+  | 'redactedThinkingRenderer.title'
+  | 'rendererLabels.blockedBy'
+  | 'rendererLabels.blocks'
+  | 'rendererLabels.cell'
+  | 'rendererLabels.flags'
+  | 'rendererLabels.glob'
+  | 'rendererLabels.id'
+  | 'rendererLabels.limit'
+  | 'rendererLabels.owner'
+  | 'rendererLabels.path'
+  | 'rendererLabels.pattern'
+  | 'rendererLabels.secondsShort'
+  | 'rendererLabels.status'
+  | 'rendererLabels.subject'
+  | 'rendererLabels.task'
+  | 'rendererLabels.type'
+  | 'searchResultRenderer.title'
+  | 'serverToolUseRenderer.query'
+  | 'serverToolUseRenderer.serverTool'
+  | 'serverToolUseRenderer.showInput'
+  | 'serverToolUseRenderer.webSearch'
   | 'session.actualId'
   | 'session.board.blockContaining'
   | 'session.board.clickToFilter'
@@ -2858,6 +2980,8 @@ export type TranslationKey =
   | 'taskOperation.taskCount_plural'
   | 'taskOperation.taskOperations'
   | 'taskOperation.taskOutput'
+  | 'terminalExecutionResultRenderer.stderr'
+  | 'terminalExecutionResultRenderer.stdout'
   | 'terminalStreamRenderer.exitCode'
   | 'terminalStreamRenderer.title'
   | 'textEditorCodeExecutionToolResultRenderer.create'
@@ -2876,6 +3000,19 @@ export type TranslationKey =
   | 'time.minute'
   | 'time.minutes'
   | 'time.start'
+  | 'toolError.executionTimeExceeded'
+  | 'toolError.fileNotFound'
+  | 'toolError.invalidToolInput'
+  | 'toolError.invalidUrlFormat'
+  | 'toolError.maxUsesExceeded'
+  | 'toolError.noMatchingToolsFound'
+  | 'toolError.permissionDenied'
+  | 'toolError.tooManyRequests'
+  | 'toolError.unavailable'
+  | 'toolError.unsupportedContentType'
+  | 'toolError.urlNotAccessible'
+  | 'toolError.urlNotAllowed'
+  | 'toolError.urlTooLong'
   | 'toolResult.collapse'
   | 'toolResult.completed'
   | 'toolResult.copyCode'
@@ -2992,6 +3129,7 @@ export type TranslationKey =
   | 'updateSettingsModal.skippedVersions'
   | 'updateSettingsModal.title'
   | 'webFetchToolResultRenderer.error'
+  | 'webFetchToolResultRenderer.pdfDocument'
   | 'webFetchToolResultRenderer.retrievedAt'
   | 'webFetchToolResultRenderer.showContent'
   | 'webFetchToolResultRenderer.title'
@@ -3000,7 +3138,11 @@ export type TranslationKey =
   | 'webSearchRenderer.results'
   | 'webSearchRenderer.seconds'
   | 'webSearchRenderer.title'
-  | 'webSearchRenderer.unknownResultFormat';
+  | 'webSearchRenderer.unknownResultFormat'
+  | 'webSearchResultRenderer.error'
+  | 'webSearchResultRenderer.noResults'
+  | 'webSearchResultRenderer.results'
+  | 'webSearchResultRenderer.title';
 
 /**
  * 사용 가능한 접두사 목록 (기존 호환성)
@@ -3026,6 +3168,7 @@ export type TranslationPrefix =
   | 'contentArray'
   | 'copyButton'
   | 'diffViewer'
+  | 'documentRenderer'
   | 'error'
   | 'feedback'
   | 'fileContent'
@@ -3037,6 +3180,8 @@ export type TranslationPrefix =
   | 'globalSearch'
   | 'imageRenderer'
   | 'mcpRenderer'
+  | 'mcpToolResultRenderer'
+  | 'mcpToolUseRenderer'
   | 'message'
   | 'messageContentDisplay'
   | 'messageViewer'
@@ -3046,6 +3191,10 @@ export type TranslationPrefix =
   | 'project'
   | 'queueOperationRenderer'
   | 'recentEdits'
+  | 'redactedThinkingRenderer'
+  | 'rendererLabels'
+  | 'searchResultRenderer'
+  | 'serverToolUseRenderer'
   | 'session'
   | 'settings'
   | 'settingsManager'
@@ -3056,10 +3205,12 @@ export type TranslationPrefix =
   | 'systemMessageRenderer'
   | 'taskNotification'
   | 'taskOperation'
+  | 'terminalExecutionResultRenderer'
   | 'terminalStreamRenderer'
   | 'textEditorCodeExecutionToolResultRenderer'
   | 'thinkingRenderer'
   | 'time'
+  | 'toolError'
   | 'toolResult'
   | 'toolSearchToolResultRenderer'
   | 'toolUseRenderer'
@@ -3069,4 +3220,5 @@ export type TranslationPrefix =
   | 'updateModal'
   | 'updateSettingsModal'
   | 'webFetchToolResultRenderer'
-  | 'webSearchRenderer';
+  | 'webSearchRenderer'
+  | 'webSearchResultRenderer';

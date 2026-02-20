@@ -35,7 +35,7 @@ export const GlobalSearchModal = ({
         null,
     );
 
-    const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName } =
+    const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName, activeProviders } =
         useAppStore();
 
     // Group results by project name
@@ -86,14 +86,12 @@ export const GlobalSearchModal = ({
 
             setIsSearching(true);
             try {
+                const hasNonClaudeProviders = activeProviders.some((p) => p !== "claude");
                 const searchResults = await invoke<GlobalSearchResult[]>(
-                    "search_messages",
-                    {
-                        claudePath,
-                        query: trimmedQuery,
-                        filters: {},
-                        limit: MAX_RESULTS,
-                    },
+                    hasNonClaudeProviders ? "search_all_providers" : "search_messages",
+                    hasNonClaudeProviders
+                        ? { claudePath, query: trimmedQuery, activeProviders, filters: {}, limit: MAX_RESULTS }
+                        : { claudePath, query: trimmedQuery, filters: {}, limit: MAX_RESULTS },
                 );
                 setResults(searchResults);
                 setSelectedIndex(0);
@@ -104,7 +102,7 @@ export const GlobalSearchModal = ({
                 setIsSearching(false);
             }
         },
-        [claudePath],
+        [claudePath, activeProviders],
     );
 
     // Handle input change with debounce
@@ -144,10 +142,14 @@ export const GlobalSearchModal = ({
             // Session not in current project - search through all projects
             for (const project of projects) {
                 try {
-                    // Load sessions for this project directly via invoke
+                    // Load sessions for this project via provider-aware invoke
+                    const projectProvider = project.provider ?? "claude";
+                    const { excludeSidechain } = useAppStore.getState();
                     const projectSessions = await invoke<ClaudeSession[]>(
-                        "load_project_sessions",
-                        { projectPath: project.path },
+                        projectProvider !== "claude" ? "load_provider_sessions" : "load_project_sessions",
+                        projectProvider !== "claude"
+                            ? { provider: projectProvider, projectPath: project.path, excludeSidechain }
+                            : { projectPath: project.path, excludeSidechain },
                     );
 
                     // Check if any session matches

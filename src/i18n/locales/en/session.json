@@ -145,6 +145,7 @@
   "session.copiedSessionId": "Session ID copied",
   "session.copiedResumeCommand": "Resume command copied",
   "session.copiedFilePath": "File path copied",
+  "session.boardNotSupported": "Session Board is only available for Claude sessions",
   "session.filter.searchPlaceholder": "Search sessions...",
   "session.filter.clearSearch": "Clear search",
   "session.filter.sortNewestFirst": "Sort by newest first",

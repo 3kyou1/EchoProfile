@@ -8,6 +8,7 @@
 
 import { useCallback, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { useAppStore } from "../store/useAppStore";
 import type { UseAnalyticsReturn } from "../types/analytics";
 
@@ -314,6 +315,7 @@ export const useAnalytics = (): UseAnalyticsReturn => {
     if (provider !== "claude") {
       setAnalyticsCurrentView("messages");
       clearAnalyticsErrors();
+      toast.warning(t('session.boardNotSupported'));
       return;
     }
 

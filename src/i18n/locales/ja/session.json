@@ -145,6 +145,7 @@
   "session.copiedSessionId": "セッションIDをコピーしました",
   "session.copiedResumeCommand": "再開コマンドをコピーしました",
   "session.copiedFilePath": "ファイルパスをコピーしました",
+  "session.boardNotSupported": "Session Boardは現在Claudeセッションでのみ使用できます",
   "session.filter.searchPlaceholder": "セッションを検索...",
   "session.filter.clearSearch": "検索をクリア",
   "session.filter.sortNewestFirst": "新しい順に並べ替え",

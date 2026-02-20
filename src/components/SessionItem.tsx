@@ -422,10 +422,12 @@ export const SessionItem: React.FC<SessionItemProps> = ({
                     <Copy className="w-3 h-3 mr-2" />
                     {t("session.copySessionId", "Copy Session ID")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleCopyResumeCommand}>
-                    <Play className="w-3 h-3 mr-2" />
-                    {t("session.copyResumeCommand", "Copy Resume Command")}
-                  </DropdownMenuItem>
+                  {providerId === "claude" && (
+                    <DropdownMenuItem onClick={handleCopyResumeCommand}>
+                      <Play className="w-3 h-3 mr-2" />
+                      {t("session.copyResumeCommand", "Copy Resume Command")}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={handleCopyFilePath}>
                     <FileText className="w-3 h-3 mr-2" />
                     {t("session.copyFilePath", "Copy File Path")}

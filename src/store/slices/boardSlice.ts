@@ -143,9 +143,10 @@ export const createBoardSlice: StateCreator<
                         set({ boardLoadError: "Invalid session path" });
                         return null;
                     }
+                    const provider = session.provider ?? "claude";
                     const messages = await invoke<ClaudeMessage[]>(
-                        "load_session_messages",
-                        { sessionPath: session.file_path }
+                        "load_provider_messages",
+                        { provider, sessionPath: session.file_path }
                     );
 
                     // 1. Run Derived Analytics

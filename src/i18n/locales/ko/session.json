@@ -145,6 +145,7 @@
   "session.copiedSessionId": "세션 ID가 복사되었습니다",
   "session.copiedResumeCommand": "재개 명령어가 복사되었습니다",
   "session.copiedFilePath": "파일 경로가 복사되었습니다",
+  "session.boardNotSupported": "Session Board는 현재 Claude 세션에서만 사용할 수 있습니다",
   "session.filter.searchPlaceholder": "세션 검색...",
   "session.filter.clearSearch": "검색 지우기",
   "session.filter.sortNewestFirst": "최신순 정렬",

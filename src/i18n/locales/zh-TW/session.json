@@ -145,6 +145,7 @@
   "session.copiedSessionId": "會話ID已複製",
   "session.copiedResumeCommand": "恢復命令已複製",
   "session.copiedFilePath": "檔案路徑已複製",
+  "session.boardNotSupported": "Session Board 目前僅支援 Claude 工作階段",
   "session.filter.searchPlaceholder": "搜尋工作階段...",
   "session.filter.clearSearch": "清除搜尋",
   "session.filter.sortNewestFirst": "依最新排序",

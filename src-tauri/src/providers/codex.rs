@@ -1,6 +1,6 @@
 use super::ProviderInfo;
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession, TokenUsage};
-use crate::utils::find_line_ranges;
+use crate::utils::{find_line_ranges, search_json_value_case_insensitive};
 use chrono::{DateTime, Utc};
 use memmap2::Mmap;
 use serde_json::Value;
@@ -363,8 +363,7 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
                 }
 
                 if let Some(content) = &msg.content {
-                    let content_str = content.to_string().to_lowercase();
-                    if content_str.contains(&query_lower) {
+                    if search_json_value_case_insensitive(content, &query_lower) {
                         results.push(msg);
                     }
                 }
@@ -1184,6 +1183,7 @@ fn build_codex_message(
 mod tests {
     use super::*;
     use serde_json::json;
+    use serial_test::serial;
     use std::ffi::OsString;
     use std::fs;
     use tempfile::TempDir;
@@ -1570,6 +1570,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn load_messages_parses_codex_rollout_end_to_end() {
         let tmp = TempDir::new().expect("temp dir should be created");
         let codex_home = tmp.path().join("codex-home");

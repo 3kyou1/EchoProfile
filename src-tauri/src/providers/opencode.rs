@@ -1,5 +1,6 @@
 use super::ProviderInfo;
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession, TokenUsage};
+use crate::utils::search_json_value_case_insensitive;
 use chrono::{DateTime, Utc};
 use serde_json::Value;
 use std::fs;
@@ -110,7 +111,7 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
             .unwrap_or("unknown")
             .to_string();
 
-        if project_id.is_empty() {
+        if project_id.is_empty() || !is_safe_storage_id(&project_id) {
             continue;
         }
 
@@ -217,7 +218,7 @@ pub fn load_sessions(
             .map(epoch_ms_to_rfc3339)
             .unwrap_or_else(|| created_at.clone());
 
-        if session_id.is_empty() {
+        if session_id.is_empty() || !is_safe_storage_id(&session_id) {
             continue;
         }
 
@@ -473,8 +474,7 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
                     }
 
                     if let Some(content) = &msg.content {
-                        let content_str = content.to_string().to_lowercase();
-                        if content_str.contains(&query_lower) {
+                        if search_json_value_case_insensitive(content, &query_lower) {
                             results.push(msg);
                         }
                     }

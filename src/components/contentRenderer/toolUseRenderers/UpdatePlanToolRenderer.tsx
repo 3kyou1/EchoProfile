@@ -53,14 +53,14 @@ export const UpdatePlanToolRenderer = memo(function UpdatePlanToolRenderer({
     >
       <div className="space-y-1.5">
         {input.explanation && (
-          <div className={cn("p-2 border border-border bg-card", layout.rounded, layout.bodyText, "text-foreground")}>
+          <div className={cn("p-2 border border-border bg-card", layout.rounded, layout.bodyText, "text-foreground whitespace-pre-wrap")}>
             {input.explanation}
           </div>
         )}
         {steps.map((planStep, index) => {
           const status = planStep.status ?? "pending";
           const statusConfig = TASK_STATUS_CONFIG[status] ?? TASK_STATUS_CONFIG.pending;
-          const StatusIcon = statusConfig?.icon ?? Circle;
+          const StatusIcon = statusConfig.icon ?? Circle;
 
           return (
             <div
@@ -68,8 +68,8 @@ export const UpdatePlanToolRenderer = memo(function UpdatePlanToolRenderer({
               className={cn("p-2 border border-border bg-card", layout.rounded, "space-y-1")}
             >
               <div className={cn("flex items-center gap-1.5", layout.smallText)}>
-                <StatusIcon className={cn(layout.iconSizeSmall, statusConfig?.color ?? "text-muted-foreground")} />
-                <span className={cn("font-medium", statusConfig?.color ?? "text-muted-foreground")}>
+                <StatusIcon className={cn(layout.iconSizeSmall, statusConfig.color ?? "text-muted-foreground")} />
+                <span className={cn("font-medium", statusConfig.color ?? "text-muted-foreground")}>
                   {t(getStatusLabelKey(status))}
                 </span>
               </div>

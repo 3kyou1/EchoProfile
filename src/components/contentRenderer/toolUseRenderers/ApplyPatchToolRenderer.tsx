@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { FileCode2, Edit3 } from "lucide-react";
+import { FileCode2, PencilLine } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Highlight, themes } from "prism-react-renderer";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ export const ApplyPatchToolRenderer = memo(function ApplyPatchToolRenderer({
     >
       <div className={cn(layout.rounded, "overflow-hidden border border-border")}>
         <div className={cn("px-3 py-1 flex items-center gap-1.5 bg-secondary", layout.smallText, "text-muted-foreground")}>
-          <Edit3 className="w-3 h-3" />
+          <PencilLine className={layout.iconSizeSmall} />
           <span>{t("tools.inputParameters")}</span>
         </div>
         <Highlight

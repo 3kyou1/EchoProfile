@@ -257,6 +257,7 @@
   "taskOperation.itemCount_plural": "{{count}} items",
   "taskOperation.pending": "Pending",
   "taskOperation.prompt": "Prompt",
+  "taskOperation.subagent": "Subagent",
   "taskOperation.subject": "Subject",
   "taskOperation.taskCount": "{{count}} task",
   "taskOperation.taskCount_plural": "{{count}} tasks",

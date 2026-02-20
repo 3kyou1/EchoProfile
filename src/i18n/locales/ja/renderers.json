@@ -257,6 +257,7 @@
   "taskOperation.itemCount_plural": "{{count}}件",
   "taskOperation.pending": "保留中",
   "taskOperation.prompt": "プロンプト",
+  "taskOperation.subagent": "サブエージェント",
   "taskOperation.subject": "件名",
   "taskOperation.taskCount": "{{count}}件のタスク",
   "taskOperation.taskCount_plural": "{{count}}件のタスク",

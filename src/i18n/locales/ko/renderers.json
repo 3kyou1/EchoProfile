@@ -257,6 +257,7 @@
   "taskOperation.itemCount_plural": "{{count}}개 항목",
   "taskOperation.pending": "대기 중",
   "taskOperation.prompt": "프롬프트",
+  "taskOperation.subagent": "서브에이전트",
   "taskOperation.subject": "제목",
   "taskOperation.taskCount": "{{count}}개 태스크",
   "taskOperation.taskCount_plural": "{{count}}개 태스크",

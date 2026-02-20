@@ -257,6 +257,7 @@
   "taskOperation.itemCount_plural": "{{count}}个项目",
   "taskOperation.pending": "待处理",
   "taskOperation.prompt": "提示",
+  "taskOperation.subagent": "子代理",
   "taskOperation.subject": "主题",
   "taskOperation.taskCount": "{{count}}个任务",
   "taskOperation.taskCount_plural": "{{count}}个任务",

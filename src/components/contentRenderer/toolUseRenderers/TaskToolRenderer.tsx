@@ -35,12 +35,12 @@ export const TaskToolRenderer = memo(function TaskToolRenderer({ toolId, input }
       {hasMeta && (
         <div className="mb-2 space-y-1">
           {input.subagent_type && (
-            <ToolUsePropertyRow label="subagent">
+            <ToolUsePropertyRow label={t("taskOperation.subagent")}>
               <span className={cn(layout.bodyText, "text-foreground")}>{input.subagent_type}</span>
             </ToolUsePropertyRow>
           )}
           {typeof input.run_in_background === "boolean" && (
-            <ToolUsePropertyRow label="background">
+            <ToolUsePropertyRow label={t("taskOperation.background")}>
               <code className={cn(layout.bodyText, "text-foreground")}>
                 {String(input.run_in_background)}
               </code>

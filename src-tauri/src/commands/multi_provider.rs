@@ -1,6 +1,8 @@
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession};
 use crate::providers;
+use crate::utils::parse_rfc3339_utc;
 use serde_json::Value;
+use std::cmp::Ordering;
 
 /// Detect all available providers
 #[tauri::command]
@@ -199,8 +201,18 @@ pub async fn search_all_providers(
 
     all_results = crate::commands::session::apply_search_filters(all_results, &search_filters);
 
-    // Sort by timestamp descending
-    all_results.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    // Sort by parsed timestamp descending (robust to `Z` vs `+00:00` formats)
+    all_results.sort_by(|a, b| {
+        match (
+            parse_rfc3339_utc(&a.timestamp),
+            parse_rfc3339_utc(&b.timestamp),
+        ) {
+            (Some(a_ts), Some(b_ts)) => b_ts.cmp(&a_ts),
+            (Some(_), None) => Ordering::Less,
+            (None, Some(_)) => Ordering::Greater,
+            (None, None) => b.timestamp.cmp(&a.timestamp),
+        }
+    });
     all_results.truncate(max_results);
 
     Ok(all_results)

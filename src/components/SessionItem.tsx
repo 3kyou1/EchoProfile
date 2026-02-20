@@ -60,6 +60,8 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   const [localSummary, setLocalSummary] = useState(session.summary);
   const inputRef = useRef<HTMLInputElement>(null);
   const ignoreBlurRef = useRef<boolean>(false);
+  const providerId = session.provider ?? "claude";
+  const supportsNativeRename = providerId === "claude" || providerId === "opencode";
 
   // Sync localSummary when session.summary prop changes (e.g., session list refresh)
   useEffect(() => {
@@ -78,7 +80,8 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   // Detect Claude Code native rename: metadata OR regex fallback for existing renames
   // Regex pattern: [Title] followed by space - matches our rename format
   const hasClaudeCodeNamePattern = /^\[.+?\]\s/.test(localSummary ?? "");
-  const hasClaudeCodeName = hasClaudeCodeNameMeta || hasClaudeCodeNamePattern;
+  const hasClaudeCodeName =
+    providerId === "claude" && (hasClaudeCodeNameMeta || hasClaudeCodeNamePattern);
 
   // Start editing mode
   const startEditing = useCallback(() => {
@@ -188,7 +191,9 @@ export const SessionItem: React.FC<SessionItemProps> = ({
         // Check if the new title has a Claude Code prefix [Title] format
         const hasPrefix = /^\[.+?\]\s/.test(newTitle);
         try {
-          await setHasClaudeCodeName(hasPrefix);
+          if (providerId === "claude") {
+            await setHasClaudeCodeName(hasPrefix);
+          }
         } catch (error) {
           console.error('Failed to update Claude Code name metadata:', error);
           toast.error(t('session.syncError', 'Failed to sync metadata'));
@@ -205,7 +210,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
         setSessions(updatedSessions);
       }
     },
-    [setHasClaudeCodeName, t, session.session_id]
+    [providerId, setHasClaudeCodeName, t, session.session_id]
   );
 
   return (
@@ -367,10 +372,22 @@ export const SessionItem: React.FC<SessionItemProps> = ({
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleNativeRenameClick}>
-                    <Terminal className="w-3 h-3 mr-2" />
-                    {t("session.nativeRename.menuItem", "Rename in Claude Code")}
-                  </DropdownMenuItem>
+                  {supportsNativeRename ? (
+                    <DropdownMenuItem onClick={handleNativeRenameClick}>
+                      <Terminal className="w-3 h-3 mr-2" />
+                      {providerId === "opencode"
+                        ? "Rename in OpenCode"
+                        : t("session.nativeRename.menuItem", "Rename in Claude Code")}
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem disabled>
+                      <Terminal className="w-3 h-3 mr-2" />
+                      {t(
+                        "session.nativeRename.unsupported",
+                        "Native rename not supported for this provider"
+                      )}
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
@@ -419,6 +436,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
         onOpenChange={setIsNativeRenameOpen}
         filePath={session.file_path}
         currentName={localSummary || ""}
+        provider={providerId}
         onSuccess={handleNativeRenameSuccess}
       />
     </div>

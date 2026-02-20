@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-02-14T15:27:23.350Z
- * 총 키 개수: 1446
+ * 생성 시간: 2026-02-17T01:26:34.141Z
+ * 총 키 개수: 1457
  * Namespace 수: 11
  */
 
@@ -153,7 +153,7 @@ export type CommonKeys =
   | 'time.start';
 
 /**
- * analytics namespace의 번역 키 (146개)
+ * analytics namespace의 번역 키 (151개)
  * 파일: locales/{lang}/analytics.json
  */
 export type AnalyticsKeys =
@@ -280,6 +280,11 @@ export type AnalyticsKeys =
   | 'analytics.toolUsageStats'
   | 'analytics.toolUsageTime'
   | 'analytics.toolsUsed'
+  | 'analytics.tooltip.activities'
+  | 'analytics.tooltip.messages'
+  | 'analytics.tooltip.sessions'
+  | 'analytics.tooltip.share'
+  | 'analytics.tooltip.tokens'
   | 'analytics.tooltipMessages'
   | 'analytics.tooltipSessions'
   | 'analytics.tooltipTokens'
@@ -305,7 +310,7 @@ export type AnalyticsKeys =
   | 'analytics.weeklyActivity';
 
 /**
- * session namespace의 번역 키 (139개)
+ * session namespace의 번역 키 (145개)
  * 파일: locales/{lang}/session.json
  */
 export type SessionKeys =
@@ -382,6 +387,12 @@ export type SessionKeys =
   | 'session.claudeCodeSynced'
   | 'session.cliSync.description'
   | 'session.cliSync.title'
+  | 'session.copiedFilePath'
+  | 'session.copiedResumeCommand'
+  | 'session.copiedSessionId'
+  | 'session.copyFilePath'
+  | 'session.copyResumeCommand'
+  | 'session.copySessionId'
   | 'session.count'
   | 'session.filter.clearSearch'
   | 'session.filter.noResults'
@@ -1704,6 +1715,11 @@ export type TranslationKey =
   | 'analytics.toolUsageStats'
   | 'analytics.toolUsageTime'
   | 'analytics.toolsUsed'
+  | 'analytics.tooltip.activities'
+  | 'analytics.tooltip.messages'
+  | 'analytics.tooltip.sessions'
+  | 'analytics.tooltip.share'
+  | 'analytics.tooltip.tokens'
   | 'analytics.tooltipMessages'
   | 'analytics.tooltipSessions'
   | 'analytics.tooltipTokens'
@@ -2236,6 +2252,12 @@ export type TranslationKey =
   | 'session.claudeCodeSynced'
   | 'session.cliSync.description'
   | 'session.cliSync.title'
+  | 'session.copiedFilePath'
+  | 'session.copiedResumeCommand'
+  | 'session.copiedSessionId'
+  | 'session.copyFilePath'
+  | 'session.copyResumeCommand'
+  | 'session.copySessionId'
   | 'session.count'
   | 'session.filter.clearSearch'
   | 'session.filter.noResults'

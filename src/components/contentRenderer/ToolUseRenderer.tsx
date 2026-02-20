@@ -47,6 +47,8 @@ import {
   TaskCreateToolRenderer,
   TaskUpdateToolRenderer,
   TaskOutputToolRenderer,
+  ApplyPatchToolRenderer,
+  UpdatePlanToolRenderer,
 } from "./toolUseRenderers";
 
 interface ToolUseRendererProps extends BaseRendererProps {
@@ -112,6 +114,10 @@ export const ToolUseRenderer = ({
       return <TaskUpdateToolRenderer toolId={toolId} input={toolInput} />;
     case "TaskOutput":
       return <TaskOutputToolRenderer toolId={toolId} input={toolInput} />;
+    case "apply_patch":
+      return <ApplyPatchToolRenderer toolId={toolId} input={toolInput} />;
+    case "update_plan":
+      return <UpdatePlanToolRenderer toolId={toolId} input={toolInput} />;
   }
 
   // Helper to check if toolInput is a non-null object

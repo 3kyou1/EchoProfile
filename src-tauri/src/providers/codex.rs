@@ -882,7 +882,7 @@ fn extract_last_token_usage(payload: &Value) -> Option<(u32, u32)> {
 
 fn map_codex_tool_name(name: &str) -> &str {
     match name {
-        "exec_command" => "Bash",
+        "exec_command" | "shell" => "Bash",
         _ => name,
     }
 }
@@ -924,6 +924,15 @@ fn normalize_tool_input(tool_name: &str, input: &mut Value) {
                 _ => {}
             }
         }
+    }
+
+    if let Some(Value::Array(arr)) = obj.get("command").cloned() {
+        let joined = arr
+            .iter()
+            .filter_map(Value::as_str)
+            .collect::<Vec<_>>()
+            .join(" ");
+        obj.insert("command".to_string(), Value::String(joined));
     }
 }
 
@@ -1160,6 +1169,7 @@ mod tests {
     #[test]
     fn map_exec_command_to_bash() {
         assert_eq!(map_codex_tool_name("exec_command"), "Bash");
+        assert_eq!(map_codex_tool_name("shell"), "Bash");
         assert_eq!(map_codex_tool_name("batch_execute"), "batch_execute");
     }
 
@@ -1170,6 +1180,16 @@ mod tests {
         assert_eq!(
             input.get("command").and_then(Value::as_str),
             Some("pwd && ls -la")
+        );
+    }
+
+    #[test]
+    fn normalize_bash_input_maps_command_array_to_string() {
+        let mut input = json!({ "command": ["bash", "-lc", "pwd"] });
+        normalize_tool_input("Bash", &mut input);
+        assert_eq!(
+            input.get("command").and_then(Value::as_str),
+            Some("bash -lc pwd")
         );
     }
 

@@ -92,6 +92,8 @@ const SPECIALIZED_TOOL_RENDERERS = new Set([
   "TaskOutput",
   "Write",
   "Edit",
+  "apply_patch",
+  "update_plan",
 ]);
 
 const normalizeToolExecutionEntries = (content: unknown[]): NormalizedContentEntry[] => {

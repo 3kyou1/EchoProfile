@@ -310,5 +310,15 @@
   "webSearchRenderer.results": "搜索结果 ({{count}}条):",
   "webSearchRenderer.seconds": "秒",
   "webSearchRenderer.title": "网页搜索结果",
-  "webSearchRenderer.unknownResultFormat": "未知结果格式"
+  "webSearchRenderer.unknownResultFormat": "未知结果格式",
+  "renderers.readToolRenderer.offset": "偏移量",
+  "renderers.readToolRenderer.limit": "限制",
+  "renderers.taskOutputToolRenderer.task": "任务",
+  "renderers.taskOutputToolRenderer.block": "阻塞",
+  "renderers.taskOutputToolRenderer.timeout": "超时",
+  "renderers.globToolRenderer.pattern": "模式",
+  "renderers.globToolRenderer.path": "路径",
+  "renderers.webSearchToolRenderer.query": "搜索词",
+  "renderers.webSearchToolRenderer.allow": "允许",
+  "renderers.webSearchToolRenderer.block": "屏蔽"
 }

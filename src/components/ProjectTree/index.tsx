@@ -295,7 +295,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
               "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
               isViewingGlobalStats ? "bg-accent/20 text-accent" : "text-muted-foreground hover:bg-accent/10 hover:text-accent"
             )}
-            title={t("components:project.globalStats", "Global Statistics")}
+            title={t("project.globalStats")}
           >
             <Database className="w-4 h-4" />
           </button>
@@ -341,7 +341,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
               )}
               <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
               <span className="text-xs font-semibold uppercase tracking-widest text-accent">
-                {t("components:project.explorer", "Explorer")}
+                {t("project.explorer")}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -463,7 +463,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
               <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/30 flex items-center justify-center">
                 <Folder className="w-8 h-8 text-muted-foreground/40" />
               </div>
-              <p className="text-sm text-muted-foreground">{t("components:project.notFound", "No projects found")}</p>
+              <p className="text-sm text-muted-foreground">{t("project.notFound")}</p>
             </div>
           ) : (
             <div className="space-y-0.5 animate-stagger">
@@ -491,10 +491,10 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-sidebar-foreground">
-                    {t("components:project.globalStats", "Global Statistics")}
+                    {t("project.globalStats")}
                   </div>
                   <div className="text-2xs text-muted-foreground">
-                    {t("components:project.globalStatsDescription", "All projects overview")}
+                    {t("project.globalStatsDescription")}
                   </div>
                 </div>
               </button>

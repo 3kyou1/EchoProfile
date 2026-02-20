@@ -49,6 +49,7 @@
   "common.restartApp": "앱 다시 시작",
   "common.retry": "다시 시도",
   "common.save": "저장",
+  "common.saving": "저장 중...",
   "common.selectFolder": "폴더 선택",
   "common.settings.changeFolder": "폴더 변경",
   "common.settings.checkUpdate": "업데이트 확인",
@@ -118,5 +119,6 @@
   "time.lessThanMinute": "< 1분",
   "time.minute": "분",
   "time.minutes": "분",
-  "time.start": "시작:"
+  "time.start": "시작:",
+  "time.secondShort": "초"
 }

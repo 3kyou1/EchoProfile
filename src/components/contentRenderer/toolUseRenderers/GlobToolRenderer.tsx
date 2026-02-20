@@ -27,11 +27,11 @@ export const GlobToolRenderer = memo(function GlobToolRenderer({ toolId, input }
       toolId={toolId}
     >
         <div className={cn("p-2 border bg-card border-border", layout.rounded, "space-y-1.5")}>
-          <ToolUsePropertyRow label="pattern" className="items-center">
+          <ToolUsePropertyRow label={t("renderers.globToolRenderer.pattern")} className="items-center">
             <code className={cn(layout.bodyText, "font-mono text-foreground")}>{input.pattern ?? ""}</code>
           </ToolUsePropertyRow>
           {input.path && (
-            <ToolUsePropertyRow label="path" className="items-center">
+            <ToolUsePropertyRow label={t("renderers.globToolRenderer.path")} className="items-center">
               <code className={cn(layout.bodyText, "font-mono text-info break-all")}>{input.path}</code>
             </ToolUsePropertyRow>
           )}

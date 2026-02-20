@@ -49,6 +49,7 @@
   "common.restartApp": "重启应用",
   "common.retry": "重试",
   "common.save": "保存",
+  "common.saving": "保存中...",
   "common.selectFolder": "选择文件夹",
   "common.settings.changeFolder": "更改文件夹",
   "common.settings.checkUpdate": "检查更新",
@@ -118,5 +119,6 @@
   "time.lessThanMinute": "< 1分钟",
   "time.minute": "分钟",
   "time.minutes": "分钟",
-  "time.start": "开始："
+  "time.start": "开始：",
+  "time.secondShort": "秒"
 }

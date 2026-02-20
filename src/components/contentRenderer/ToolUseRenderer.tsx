@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 /**
  * ToolUseRenderer - Renders Claude tool use content
  *
@@ -57,12 +59,12 @@ interface ToolUseRendererProps extends BaseRendererProps {
   toolUse: Record<string, unknown>;
 }
 
-export const ToolUseRenderer = ({
+export const ToolUseRenderer = memo(function ToolUseRenderer({
   toolUse,
   searchQuery = "",
   isCurrentMatch = false,
   currentMatchIndex = 0,
-}: ToolUseRendererProps) => {
+}: ToolUseRendererProps) {
   const { t } = useTranslation();
   const { isDarkMode } = useTheme();
 
@@ -399,4 +401,4 @@ export const ToolUseRenderer = ({
       </Renderer.Content>
     </Renderer>
   );
-};
+});

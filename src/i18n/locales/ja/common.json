@@ -49,6 +49,7 @@
   "common.restartApp": "アプリを再起動",
   "common.retry": "再試行",
   "common.save": "保存",
+  "common.saving": "保存中...",
   "common.selectFolder": "フォルダを選択",
   "common.settings.changeFolder": "フォルダを変更",
   "common.settings.checkUpdate": "アップデートを確認",
@@ -118,5 +119,6 @@
   "time.lessThanMinute": "< 1分",
   "time.minute": "分",
   "time.minutes": "分",
-  "time.start": "開始:"
+  "time.start": "開始:",
+  "time.secondShort": "秒"
 }

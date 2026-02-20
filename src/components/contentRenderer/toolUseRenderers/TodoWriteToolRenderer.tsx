@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ListTodo, CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,7 @@ const StatusIcon = ({ status }: { status?: string }) => {
   }
 };
 
-export const TodoWriteToolRenderer = ({ toolId, input }: Props) => {
+export const TodoWriteToolRenderer = memo(function TodoWriteToolRenderer({ toolId, input }: Props) {
   const { t } = useTranslation();
   const styles = getVariantStyles("task");
   const todos = input.todos ?? [];
@@ -73,4 +74,4 @@ export const TodoWriteToolRenderer = ({ toolId, input }: Props) => {
       </div>
     </ToolUseCard>
   );
-};
+});

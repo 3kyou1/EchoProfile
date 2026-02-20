@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-02-20T14:01:07.745Z
- * 총 키 개수: 1526
+ * 생성 시간: 2026-02-20T17:36:57.319Z
+ * 총 키 개수: 1537
  * Namespace 수: 11
  */
 
@@ -40,7 +40,7 @@ export type I18nNamespace =
   | 'recentEdits';
 
 /**
- * common namespace의 번역 키 (120개)
+ * common namespace의 번역 키 (121개)
  * 파일: locales/{lang}/common.json
  */
 export type CommonKeys =
@@ -163,6 +163,7 @@ export type CommonKeys =
   | 'time.lessThanMinute'
   | 'time.minute'
   | 'time.minutes'
+  | 'time.secondShort'
   | 'time.start';
 
 /**
@@ -1176,7 +1177,7 @@ export type MessageKeys =
   | 'navigator.toggle';
 
 /**
- * renderers namespace의 번역 키 (312개)
+ * renderers namespace의 번역 키 (322개)
  * 파일: locales/{lang}/renderers.json
  */
 export type RenderersKeys =
@@ -1397,6 +1398,16 @@ export type RenderersKeys =
   | 'rendererLabels.subject'
   | 'rendererLabels.task'
   | 'rendererLabels.type'
+  | 'renderers.globToolRenderer.path'
+  | 'renderers.globToolRenderer.pattern'
+  | 'renderers.readToolRenderer.limit'
+  | 'renderers.readToolRenderer.offset'
+  | 'renderers.taskOutputToolRenderer.block'
+  | 'renderers.taskOutputToolRenderer.task'
+  | 'renderers.taskOutputToolRenderer.timeout'
+  | 'renderers.webSearchToolRenderer.allow'
+  | 'renderers.webSearchToolRenderer.block'
+  | 'renderers.webSearchToolRenderer.query'
   | 'searchResultRenderer.title'
   | 'serverToolUseRenderer.query'
   | 'serverToolUseRenderer.serverTool'
@@ -2312,6 +2323,16 @@ export type TranslationKey =
   | 'rendererLabels.subject'
   | 'rendererLabels.task'
   | 'rendererLabels.type'
+  | 'renderers.globToolRenderer.path'
+  | 'renderers.globToolRenderer.pattern'
+  | 'renderers.readToolRenderer.limit'
+  | 'renderers.readToolRenderer.offset'
+  | 'renderers.taskOutputToolRenderer.block'
+  | 'renderers.taskOutputToolRenderer.task'
+  | 'renderers.taskOutputToolRenderer.timeout'
+  | 'renderers.webSearchToolRenderer.allow'
+  | 'renderers.webSearchToolRenderer.block'
+  | 'renderers.webSearchToolRenderer.query'
   | 'searchResultRenderer.title'
   | 'serverToolUseRenderer.query'
   | 'serverToolUseRenderer.serverTool'
@@ -3017,6 +3038,7 @@ export type TranslationKey =
   | 'time.lessThanMinute'
   | 'time.minute'
   | 'time.minutes'
+  | 'time.secondShort'
   | 'time.start'
   | 'toolError.executionTimeExceeded'
   | 'toolError.fileNotFound'
@@ -3211,6 +3233,7 @@ export type TranslationPrefix =
   | 'recentEdits'
   | 'redactedThinkingRenderer'
   | 'rendererLabels'
+  | 'renderers'
   | 'searchResultRenderer'
   | 'serverToolUseRenderer'
   | 'session'

@@ -29,17 +29,17 @@ export const TaskOutputToolRenderer = memo(function TaskOutputToolRenderer({ too
       rightContent={
         input.task_id ? (
           <span className={cn("px-1.5 py-0.5 font-mono", layout.rounded, styles.badge, styles.badgeText)}>
-            Task {input.task_id}
+            {t("renderers.taskOutputToolRenderer.task")} {input.task_id}
           </span>
         ) : undefined
       }
     >
         <div className={cn("flex items-center gap-3", layout.smallText, "text-muted-foreground")}>
           {input.block != null && (
-            <span>block: <code className="text-foreground">{String(input.block)}</code></span>
+            <span>{t("renderers.taskOutputToolRenderer.block")}: <code className="text-foreground">{String(input.block)}</code></span>
           )}
           {input.timeout != null && (
-            <span>timeout: <code className="text-foreground">{(input.timeout / 1000).toFixed(0)}s</code></span>
+            <span>{t("renderers.taskOutputToolRenderer.timeout")}: <code className="text-foreground">{(input.timeout / 1000).toFixed(0)}{t("time.secondShort")}</code></span>
           )}
         </div>
     </ToolUseCard>

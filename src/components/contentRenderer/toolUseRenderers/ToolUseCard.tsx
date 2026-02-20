@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Renderer } from "@/shared/RendererHeader";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ interface ToolUseCardProps {
   children: ReactNode;
 }
 
-export function ToolUseCard({
+export const ToolUseCard = memo(function ToolUseCard({
   title,
   icon,
   variant,
@@ -52,7 +52,7 @@ export function ToolUseCard({
       <Renderer.Content>{children}</Renderer.Content>
     </Renderer>
   );
-}
+});
 
 interface ToolUsePropertyRowProps {
   label: string;

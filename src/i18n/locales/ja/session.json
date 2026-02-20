@@ -13,6 +13,8 @@
   "project.main": "メイン",
   "project.notFound": "プロジェクトが見つかりません",
   "project.removePattern": "パターンを削除",
+  "project.explorer": "エクスプローラー",
+  "project.resetProviderFilters": "リセット",
   "project.selectToView": "分析を表示するにはプロジェクトを選択してください",
   "project.title": "プロジェクト：",
   "project.unhide": "プロジェクトを表示",

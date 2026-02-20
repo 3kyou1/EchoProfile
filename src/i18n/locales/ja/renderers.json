@@ -310,5 +310,15 @@
   "webSearchRenderer.results": "検索結果 ({{count}}件):",
   "webSearchRenderer.seconds": "秒",
   "webSearchRenderer.title": "ウェブ検索結果",
-  "webSearchRenderer.unknownResultFormat": "不明な結果フォーマット"
+  "webSearchRenderer.unknownResultFormat": "不明な結果フォーマット",
+  "renderers.readToolRenderer.offset": "オフセット",
+  "renderers.readToolRenderer.limit": "制限",
+  "renderers.taskOutputToolRenderer.task": "タスク",
+  "renderers.taskOutputToolRenderer.block": "ブロック",
+  "renderers.taskOutputToolRenderer.timeout": "タイムアウト",
+  "renderers.globToolRenderer.pattern": "パターン",
+  "renderers.globToolRenderer.path": "パス",
+  "renderers.webSearchToolRenderer.query": "検索クエリ",
+  "renderers.webSearchToolRenderer.allow": "許可",
+  "renderers.webSearchToolRenderer.block": "ブロック"
 }

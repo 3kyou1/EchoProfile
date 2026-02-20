@@ -197,13 +197,17 @@ export const createMessageSlice: StateCreator<
     try {
       // Refresh project sessions list
       if (selectedProject) {
-        const sessions = await invoke<ClaudeSession[]>(
-          "load_project_sessions",
-          {
-            projectPath: selectedProject.path,
-            excludeSidechain: get().excludeSidechain,
-          }
-        );
+        const provider = selectedProject.provider ?? "claude";
+        const sessions = provider !== "claude"
+          ? await invoke<ClaudeSession[]>("load_provider_sessions", {
+              provider,
+              projectPath: selectedProject.path,
+              excludeSidechain: get().excludeSidechain,
+            })
+          : await invoke<ClaudeSession[]>("load_project_sessions", {
+              projectPath: selectedProject.path,
+              excludeSidechain: get().excludeSidechain,
+            });
         get().setSessions(sessions);
       }
 

@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { Renderer } from "@/shared/RendererHeader";
 import { cn } from "@/lib/utils";
 import { getVariantStyles, layout, type RendererVariant } from "@/components/renderers";
@@ -12,7 +12,7 @@ interface ToolResultCardProps {
   children: ReactNode;
 }
 
-export function ToolResultCard({
+export const ToolResultCard = memo(function ToolResultCard({
   title,
   icon,
   variant,
@@ -40,4 +40,4 @@ export function ToolResultCard({
       <Renderer.Content>{children}</Renderer.Content>
     </Renderer>
   );
-}
+});

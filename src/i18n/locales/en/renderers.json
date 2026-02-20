@@ -310,5 +310,15 @@
   "webSearchRenderer.results": "Search Results",
   "webSearchRenderer.seconds": "seconds",
   "webSearchRenderer.title": "Web Search",
-  "webSearchRenderer.unknownResultFormat": "Unknown result format"
+  "webSearchRenderer.unknownResultFormat": "Unknown result format",
+  "renderers.readToolRenderer.offset": "offset",
+  "renderers.readToolRenderer.limit": "limit",
+  "renderers.taskOutputToolRenderer.task": "Task",
+  "renderers.taskOutputToolRenderer.block": "block",
+  "renderers.taskOutputToolRenderer.timeout": "timeout",
+  "renderers.globToolRenderer.pattern": "pattern",
+  "renderers.globToolRenderer.path": "path",
+  "renderers.webSearchToolRenderer.query": "query",
+  "renderers.webSearchToolRenderer.allow": "allow",
+  "renderers.webSearchToolRenderer.block": "block"
 }

@@ -2,7 +2,7 @@ use crate::models::{GitInfo, GitWorktreeType};
 use chrono::{DateTime, Utc};
 use memchr::memchr_iter;
 use std::fs;
-use std::path::Path;
+use std::path::{Component, Path};
 
 /// Estimated average bytes per JSONL line (used for capacity pre-allocation)
 /// Based on typical Claude message sizes (800-1200 bytes average)
@@ -75,6 +75,19 @@ pub fn parse_rfc3339_utc(timestamp: &str) -> Option<DateTime<Utc>> {
     DateTime::parse_from_rfc3339(timestamp)
         .ok()
         .map(|dt| dt.with_timezone(&Utc))
+}
+
+/// Validates that `id` is a single, safe path component (no traversal).
+///
+/// Returns `true` only if `id` is a single normal component (e.g. `"abc-123"`).
+/// Rejects empty strings, path separators, `..`, `.`, and multi-component paths.
+pub fn is_safe_storage_id(id: &str) -> bool {
+    if id.is_empty() {
+        return false;
+    }
+
+    let mut components = Path::new(id).components();
+    matches!(components.next(), Some(Component::Normal(_))) && components.next().is_none()
 }
 
 /// Recursively searches JSON string values for a lowercase query.

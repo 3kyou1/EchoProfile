@@ -63,9 +63,14 @@ export const calculateModelPrice = (
   cacheCreationTokens: number,
   cacheReadTokens: number
 ): number => {
-  let modelPricing = MODEL_PRICING['claude-sonnet-4-5'] || DEFAULT_PRICING;
+  let modelPricing = DEFAULT_PRICING;
 
-  for (const [key, value] of Object.entries(MODEL_PRICING)) {
+  // Sort by key length descending so more specific keys match first
+  // (e.g., "gpt-4.1-mini" matches before "gpt-4.1")
+  const entries = Object.entries(MODEL_PRICING).sort(
+    (a, b) => b[0].length - a[0].length
+  );
+  for (const [key, value] of entries) {
     if (modelName.toLowerCase().includes(key)) {
       modelPricing = value;
       break;

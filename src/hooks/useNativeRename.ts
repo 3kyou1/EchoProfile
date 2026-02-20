@@ -54,6 +54,12 @@ export const useNativeRename = (): UseNativeRenameReturn => {
       const normalizedTitle = newTitle.trim();
 
       if (provider === "opencode") {
+        if (!filePath) {
+          const errorMessage = "Invalid file path: path is required";
+          setError(errorMessage);
+          throw new Error(errorMessage);
+        }
+
         setIsRenaming(true);
         setError(null);
 

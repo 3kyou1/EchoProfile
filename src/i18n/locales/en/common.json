@@ -49,6 +49,7 @@
   "common.restartApp": "Restart App",
   "common.retry": "Retry",
   "common.save": "Save",
+  "common.saving": "Saving...",
   "common.selectFolder": "Select Folder",
   "common.settings.changeFolder": "Change Folder",
   "common.settings.checkUpdate": "Check for Updates",
@@ -118,5 +119,6 @@
   "time.lessThanMinute": "< 1 min",
   "time.minute": "minute",
   "time.minutes": "minutes",
-  "time.start": "Start:"
+  "time.start": "Start:",
+  "time.secondShort": "s"
 }

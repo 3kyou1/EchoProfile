@@ -134,7 +134,7 @@ function App() {
     });
   }, [updateUserSettings]);
 
-  const handleSessionSelect = async (session: ClaudeSession) => {
+  const handleSessionSelect = useCallback(async (session: ClaudeSession) => {
     setIsViewingGlobalStats(false);
     setAnalyticsCurrentView("messages");
 
@@ -148,7 +148,7 @@ function App() {
     }
 
     await selectSession(session);
-  };
+  }, [projects, selectProject, selectSession, setAnalyticsCurrentView]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -194,7 +194,7 @@ function App() {
         ? lng.includes("TW") || lng.includes("HK")
           ? "zh-TW"
           : "zh-CN"
-        : lng.split('common.-')[0];
+        : lng.split('-')[0];
 
       if (
         currentLang &&

@@ -310,5 +310,15 @@
   "webSearchRenderer.results": "搜尋結果 ({{count}}則):",
   "webSearchRenderer.seconds": "秒",
   "webSearchRenderer.title": "網頁搜尋結果",
-  "webSearchRenderer.unknownResultFormat": "未知結果格式"
+  "webSearchRenderer.unknownResultFormat": "未知結果格式",
+  "renderers.readToolRenderer.offset": "偏移量",
+  "renderers.readToolRenderer.limit": "限制",
+  "renderers.taskOutputToolRenderer.task": "任務",
+  "renderers.taskOutputToolRenderer.block": "阻塞",
+  "renderers.taskOutputToolRenderer.timeout": "逾時",
+  "renderers.globToolRenderer.pattern": "模式",
+  "renderers.globToolRenderer.path": "路徑",
+  "renderers.webSearchToolRenderer.query": "搜尋詞",
+  "renderers.webSearchToolRenderer.allow": "允許",
+  "renderers.webSearchToolRenderer.block": "封鎖"
 }

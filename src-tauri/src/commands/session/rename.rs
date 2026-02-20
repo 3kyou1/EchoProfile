@@ -8,8 +8,11 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
-use std::path::{Component, Path};
+use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::command;
+
+use crate::utils::is_safe_storage_id;
 
 lazy_static! {
     /// Regex for validating JSONL filename pattern (alphanumeric, underscore, hyphen only)
@@ -57,15 +60,6 @@ impl std::fmt::Display for RenameError {
             RenameError::InvalidTitle(msg) => write!(f, "Invalid title: {msg}"),
         }
     }
-}
-
-fn is_safe_storage_id(id: &str) -> bool {
-    if id.is_empty() {
-        return false;
-    }
-
-    let mut components = Path::new(id).components();
-    matches!(components.next(), Some(Component::Normal(_))) && components.next().is_none()
 }
 
 fn parse_opencode_session_path(session_path: &str) -> Result<(String, String), String> {
@@ -161,8 +155,12 @@ pub async fn rename_session_native(
     lines[user_message_index] = serde_json::to_string(&user_message)
         .map_err(|e| RenameError::InvalidJsonFormat(e.to_string()).to_string())?;
 
-    // 12. Write atomically (write to temp, then rename)
-    let temp_path = format!("{file_path}.tmp");
+    // 12. Write atomically (write to temp with unique nonce, then rename)
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let temp_path = format!("{file_path}.{nonce}.tmp");
     {
         let mut temp_file = File::create(&temp_path)
             .map_err(|e| RenameError::IoError(e.to_string()).to_string())?;
@@ -504,7 +502,11 @@ pub async fn rename_opencode_session_title(
 
     let serialized = serde_json::to_string(&session_json)
         .map_err(|e| RenameError::InvalidJsonFormat(e.to_string()).to_string())?;
-    let temp_path = canonical_file.with_extension("json.tmp");
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let temp_path = canonical_file.with_extension(format!("json.{nonce}.tmp"));
     fs::write(&temp_path, serialized)
         .map_err(|e| RenameError::IoError(e.to_string()).to_string())?;
 

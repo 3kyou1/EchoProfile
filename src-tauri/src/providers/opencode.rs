@@ -1,10 +1,10 @@
 use super::ProviderInfo;
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession, TokenUsage};
-use crate::utils::search_json_value_case_insensitive;
+use crate::utils::{is_safe_storage_id, search_json_value_case_insensitive};
 use chrono::{DateTime, Utc};
 use serde_json::Value;
 use std::fs;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 /// Convert epoch milliseconds to RFC 3339 string
 fn epoch_ms_to_rfc3339(ms: u64) -> String {
@@ -578,14 +578,7 @@ fn sum_opt(a: Option<u32>, b: Option<u32>) -> Option<u32> {
     }
 }
 
-fn is_safe_storage_id(id: &str) -> bool {
-    if id.is_empty() {
-        return false;
-    }
-
-    let mut components = Path::new(id).components();
-    matches!(components.next(), Some(Component::Normal(_))) && components.next().is_none()
-}
+// is_safe_storage_id is imported from crate::utils
 
 fn process_parts(parts: &[Value]) -> (Option<Value>, Option<TokenUsage>, Option<f64>) {
     let mut content_items: Vec<Value> = Vec::new();

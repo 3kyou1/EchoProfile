@@ -7,7 +7,7 @@ use memmap2::Mmap;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
-use std::io::{BufRead, BufReader, Seek, SeekFrom, Write};
+use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::PathBuf;
 use std::time::SystemTime;
 use uuid::Uuid;
@@ -70,11 +70,18 @@ fn load_cache(project_path: &str) -> SessionMetadataCache {
     SessionMetadataCache::default()
 }
 
-/// Save cache to disk (best effort, errors are ignored)
+/// Save cache to disk atomically (best effort, errors are ignored)
 fn save_cache(project_path: &str, cache: &SessionMetadataCache) {
     let cache_path = get_cache_path(project_path);
     if let Ok(content) = serde_json::to_string(cache) {
-        let _ = fs::File::create(&cache_path).and_then(|mut f| f.write_all(content.as_bytes()));
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let tmp_path = cache_path.with_extension(format!("json.{nonce}.tmp"));
+        if fs::write(&tmp_path, content.as_bytes()).is_ok() {
+            let _ = fs::rename(&tmp_path, &cache_path);
+        }
     }
 }
 

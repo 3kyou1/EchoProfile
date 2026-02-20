@@ -13,6 +13,8 @@
   "project.main": "main",
   "project.notFound": "Project not found",
   "project.removePattern": "Remove pattern",
+  "project.explorer": "Explorer",
+  "project.resetProviderFilters": "Reset",
   "project.selectToView": "Select a project to view analytics",
   "project.title": "Project:",
   "project.unhide": "Show project",

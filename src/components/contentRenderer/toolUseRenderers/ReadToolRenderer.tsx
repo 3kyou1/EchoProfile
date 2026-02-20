@@ -40,13 +40,13 @@ export const ReadToolRenderer = memo(function ReadToolRenderer({ toolId, input }
             {input.offset != null && (
               <span className="flex items-center gap-1">
                 <Hash className={layout.iconSizeSmall} />
-                offset: {input.offset}
+                {t("renderers.readToolRenderer.offset")}: {input.offset}
               </span>
             )}
             {input.limit != null && (
               <span className="flex items-center gap-1">
                 <Hash className={layout.iconSizeSmall} />
-                limit: {input.limit}
+                {t("renderers.readToolRenderer.limit")}: {input.limit}
               </span>
             )}
           </div>

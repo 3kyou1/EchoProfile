@@ -28,11 +28,11 @@ export const WebSearchToolRenderer = memo(function WebSearchToolRenderer({ toolI
       toolId={toolId}
     >
         <div className={cn("p-2 border bg-card border-border", layout.rounded, "space-y-1.5")}>
-          <ToolUsePropertyRow label="query">
+          <ToolUsePropertyRow label={t("renderers.webSearchToolRenderer.query")}>
             <span className={cn(layout.bodyText, "text-foreground font-medium")}>{input.query ?? ""}</span>
           </ToolUsePropertyRow>
           {input.allowed_domains && input.allowed_domains.length > 0 && (
-            <ToolUsePropertyRow label="allow">
+            <ToolUsePropertyRow label={t("renderers.webSearchToolRenderer.allow")}>
               <div className="flex gap-1 flex-wrap">
                 {input.allowed_domains.map((d) => (
                   <span key={d} className={cn("px-1.5 py-0.5 font-mono", layout.smallText, layout.rounded, "bg-success/20 text-success")}>
@@ -43,7 +43,7 @@ export const WebSearchToolRenderer = memo(function WebSearchToolRenderer({ toolI
             </ToolUsePropertyRow>
           )}
           {input.blocked_domains && input.blocked_domains.length > 0 && (
-            <ToolUsePropertyRow label="block">
+            <ToolUsePropertyRow label={t("renderers.webSearchToolRenderer.block")}>
               <div className="flex gap-1 flex-wrap">
                 {input.blocked_domains.map((d) => (
                   <span key={d} className={cn("px-1.5 py-0.5 font-mono", layout.smallText, layout.rounded, "bg-destructive/20 text-destructive")}>

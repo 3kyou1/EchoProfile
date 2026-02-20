@@ -247,6 +247,7 @@ function App() {
 
       // Reset cache for previous project
       analyticsActions.clearAll();
+      setDateFilter({ start: null, end: null });
 
       await selectProject(project);
 
@@ -272,6 +273,7 @@ function App() {
     [
       selectProject,
       analyticsActions,
+      setDateFilter,
     ]
   );
 
@@ -312,7 +314,10 @@ function App() {
     <TooltipProvider>
       <div className="h-screen flex flex-col bg-background">
         {/* Header */}
-        <Header />
+        <Header
+          analyticsActions={analyticsActions}
+          analyticsComputed={computed}
+        />
 
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">

@@ -371,22 +371,16 @@ export const SessionItem: React.FC<SessionItemProps> = ({
                       {t("session.resetName", "Reset name")}
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuSeparator />
-                  {supportsNativeRename ? (
-                    <DropdownMenuItem onClick={handleNativeRenameClick}>
-                      <Terminal className="w-3 h-3 mr-2" />
-                      {providerId === "opencode"
-                        ? "Rename in OpenCode"
-                        : t("session.nativeRename.menuItem", "Rename in Claude Code")}
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem disabled>
-                      <Terminal className="w-3 h-3 mr-2" />
-                      {t(
-                        "session.nativeRename.unsupported",
-                        "Native rename not supported for this provider"
-                      )}
-                    </DropdownMenuItem>
+                  {supportsNativeRename && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleNativeRenameClick}>
+                        <Terminal className="w-3 h-3 mr-2" />
+                        {providerId === "opencode"
+                          ? t("session.nativeRename.menuItemOpenCode", "Rename in OpenCode")
+                          : t("session.nativeRename.menuItem", "Rename in Claude Code")}
+                      </DropdownMenuItem>
+                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>

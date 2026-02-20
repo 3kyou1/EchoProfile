@@ -70,13 +70,16 @@ export const NativeRenameDialog: React.FC<NativeRenameDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Terminal className="w-5 h-5" />
-            {provider === "opencode"
-              ? "Rename in OpenCode"
+            {isOpenCode
+              ? t("session.nativeRename.titleOpenCode", "Rename in OpenCode")
               : t("session.nativeRename.title")}
           </DialogTitle>
           <DialogDescription>
             {isOpenCode
-              ? "This updates the OpenCode session title in storage."
+              ? t(
+                  "session.nativeRename.descriptionOpenCode",
+                  "This updates the OpenCode session title in storage."
+                )
               : t("session.nativeRename.description")}
           </DialogDescription>
         </DialogHeader>
@@ -87,7 +90,10 @@ export const NativeRenameDialog: React.FC<NativeRenameDialogProps> = ({
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 {isOpenCode
-                  ? "This operation modifies the OpenCode session metadata file. The change is reversible."
+                  ? t(
+                      "session.nativeRename.warningOpenCode",
+                      "This operation modifies the OpenCode session metadata file. The change is reversible."
+                    )
                   : t("session.nativeRename.warning")}
               </AlertDescription>
             </Alert>
@@ -111,16 +117,16 @@ export const NativeRenameDialog: React.FC<NativeRenameDialogProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={
-                  isOpenCode
-                    ? "Enter a title (leave empty to reset)"
-                    : t("session.nativeRename.placeholder")
+                  t("session.nativeRename.placeholder")
                 }
                 disabled={isRenaming}
                 autoFocus
               />
               <p className="text-xs text-muted-foreground">
                 {isOpenCode
-                  ? `Preview: ${previewText}`
+                  ? t("session.nativeRename.previewOpenCode", {
+                      title: previewText,
+                    })
                   : t("session.nativeRename.preview", {
                       title: title || t("session.nativeRename.titlePlaceholder"),
                       original: baseMessage.slice(0, 30),

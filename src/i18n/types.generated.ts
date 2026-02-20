@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-02-19T23:32:43.038Z
- * 총 키 개수: 1517
+ * 생성 시간: 2026-02-20T14:01:07.745Z
+ * 총 키 개수: 1526
  * Namespace 수: 11
  */
 
@@ -40,7 +40,7 @@ export type I18nNamespace =
   | 'recentEdits';
 
 /**
- * common namespace의 번역 키 (117개)
+ * common namespace의 번역 키 (120개)
  * 파일: locales/{lang}/common.json
  */
 export type CommonKeys =
@@ -50,6 +50,7 @@ export type CommonKeys =
   | 'common.back'
   | 'common.cancel'
   | 'common.close'
+  | 'common.collapse'
   | 'common.commandPalette'
   | 'common.completed'
   | 'common.copied'
@@ -68,6 +69,7 @@ export type CommonKeys =
   | 'common.error.updateCheckFailed'
   | 'common.error.updateInstallFailed'
   | 'common.errorOccurred'
+  | 'common.expand'
   | 'common.help'
   | 'common.hide'
   | 'common.hooks.githubApiError'
@@ -89,6 +91,7 @@ export type CommonKeys =
   | 'common.pending'
   | 'common.provider.claude'
   | 'common.provider.codex'
+  | 'common.provider.detectError'
   | 'common.provider.opencode'
   | 'common.refresh'
   | 'common.remove'
@@ -320,7 +323,7 @@ export type AnalyticsKeys =
   | 'analytics.weeklyActivity';
 
 /**
- * session namespace의 번역 키 (139개)
+ * session namespace의 번역 키 (144개)
  * 파일: locales/{lang}/session.json
  */
 export type SessionKeys =
@@ -442,15 +445,20 @@ export type SessionKeys =
   | 'session.loading'
   | 'session.nativeRename.currentName'
   | 'session.nativeRename.description'
+  | 'session.nativeRename.descriptionOpenCode'
   | 'session.nativeRename.label'
   | 'session.nativeRename.menuItem'
+  | 'session.nativeRename.menuItemOpenCode'
   | 'session.nativeRename.placeholder'
   | 'session.nativeRename.preview'
+  | 'session.nativeRename.previewOpenCode'
   | 'session.nativeRename.resetMenuItem'
   | 'session.nativeRename.success'
   | 'session.nativeRename.title'
+  | 'session.nativeRename.titleOpenCode'
   | 'session.nativeRename.titlePlaceholder'
   | 'session.nativeRename.warning'
+  | 'session.nativeRename.warningOpenCode'
   | 'session.refresh'
   | 'session.rename'
   | 'session.renamePlaceholder'
@@ -1168,7 +1176,7 @@ export type MessageKeys =
   | 'navigator.toggle';
 
 /**
- * renderers namespace의 번역 키 (311개)
+ * renderers namespace의 번역 키 (312개)
  * 파일: locales/{lang}/renderers.json
  */
 export type RenderersKeys =
@@ -1435,6 +1443,7 @@ export type RenderersKeys =
   | 'taskOperation.itemCount_plural'
   | 'taskOperation.pending'
   | 'taskOperation.prompt'
+  | 'taskOperation.subagent'
   | 'taskOperation.subject'
   | 'taskOperation.taskCount'
   | 'taskOperation.taskCount_plural'
@@ -1876,6 +1885,7 @@ export type TranslationKey =
   | 'common.back'
   | 'common.cancel'
   | 'common.close'
+  | 'common.collapse'
   | 'common.commandPalette'
   | 'common.completed'
   | 'common.copied'
@@ -1894,6 +1904,7 @@ export type TranslationKey =
   | 'common.error.updateCheckFailed'
   | 'common.error.updateInstallFailed'
   | 'common.errorOccurred'
+  | 'common.expand'
   | 'common.help'
   | 'common.hide'
   | 'common.hooks.githubApiError'
@@ -1915,6 +1926,7 @@ export type TranslationKey =
   | 'common.pending'
   | 'common.provider.claude'
   | 'common.provider.codex'
+  | 'common.provider.detectError'
   | 'common.provider.opencode'
   | 'common.refresh'
   | 'common.remove'
@@ -2403,15 +2415,20 @@ export type TranslationKey =
   | 'session.loading'
   | 'session.nativeRename.currentName'
   | 'session.nativeRename.description'
+  | 'session.nativeRename.descriptionOpenCode'
   | 'session.nativeRename.label'
   | 'session.nativeRename.menuItem'
+  | 'session.nativeRename.menuItemOpenCode'
   | 'session.nativeRename.placeholder'
   | 'session.nativeRename.preview'
+  | 'session.nativeRename.previewOpenCode'
   | 'session.nativeRename.resetMenuItem'
   | 'session.nativeRename.success'
   | 'session.nativeRename.title'
+  | 'session.nativeRename.titleOpenCode'
   | 'session.nativeRename.titlePlaceholder'
   | 'session.nativeRename.warning'
+  | 'session.nativeRename.warningOpenCode'
   | 'session.refresh'
   | 'session.rename'
   | 'session.renamePlaceholder'
@@ -2975,6 +2992,7 @@ export type TranslationKey =
   | 'taskOperation.itemCount_plural'
   | 'taskOperation.pending'
   | 'taskOperation.prompt'
+  | 'taskOperation.subagent'
   | 'taskOperation.subject'
   | 'taskOperation.taskCount'
   | 'taskOperation.taskCount_plural'

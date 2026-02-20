@@ -290,7 +290,7 @@
   "toolError.maxUsesExceeded": "網頁擷取已超過最大使用次數",
   "toolError.noMatchingToolsFound": "找不到符合的工具",
   "toolError.permissionDenied": "權限不足",
-  "toolError.tooManyRequests": "請求過於頻繁",
+  "toolError.tooManyRequests": "請求頻率超出限制",
   "toolError.unavailable": "服務暫時無法使用",
   "toolError.unsupportedContentType": "不支援此內容類型",
   "toolError.urlNotAccessible": "擷取內容失敗（HTTP 錯誤）",

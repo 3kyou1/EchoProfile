@@ -190,7 +190,7 @@
   "progressRenderer.types.query": "查询",
   "progressRenderer.types.search": "搜索",
   "progressRenderer.types.waiting": "等待中",
-  "redactedThinkingRenderer.description": "该思考内容已由安全系统加密。",
+  "redactedThinkingRenderer.description": "该思考内容已由安全系统脱敏处理。",
   "redactedThinkingRenderer.title": "已脱敏思考",
   "rendererLabels.blockedBy": "被阻塞于",
   "rendererLabels.blocks": "阻塞",

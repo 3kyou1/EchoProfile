@@ -69,7 +69,17 @@ pub async fn scan_all_projects(
         }
     }
 
-    all_projects.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
+    all_projects.sort_by(|a, b| {
+        match (
+            parse_rfc3339_utc(&a.last_modified),
+            parse_rfc3339_utc(&b.last_modified),
+        ) {
+            (Some(a_ts), Some(b_ts)) => b_ts.cmp(&a_ts),
+            (Some(_), None) => Ordering::Less,
+            (None, Some(_)) => Ordering::Greater,
+            (None, None) => b.last_modified.cmp(&a.last_modified),
+        }
+    });
     Ok(all_projects)
 }
 

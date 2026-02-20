@@ -362,6 +362,9 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
         if msg_id.is_empty() {
             continue;
         }
+        if !is_safe_storage_id(&msg_id) {
+            continue;
+        }
 
         // Read parts for this message
         let parts_dir = storage_path.join("part").join(&msg_id);

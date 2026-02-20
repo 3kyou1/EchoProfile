@@ -43,6 +43,29 @@ pub fn get_base_path() -> Option<String> {
     }
 }
 
+fn get_sessions_dir() -> Result<PathBuf, String> {
+    let base_path = get_base_path().ok_or_else(|| "Codex not found".to_string())?;
+    Ok(Path::new(&base_path).join("sessions"))
+}
+
+fn validate_session_path(session_path: &Path, raw_session_path: &str) -> Result<PathBuf, String> {
+    let sessions_dir = get_sessions_dir()?;
+    let canonical_sessions = sessions_dir
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve Codex sessions directory: {e}"))?;
+    let canonical_session = session_path
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve session path: {e}"))?;
+
+    if !canonical_session.starts_with(&canonical_sessions) {
+        return Err(format!(
+            "Session path is outside Codex sessions directory: {raw_session_path}"
+        ));
+    }
+
+    Ok(canonical_session)
+}
+
 /// Session metadata extracted from rollout files
 struct SessionInfo {
     session_id: String,
@@ -60,8 +83,7 @@ struct SessionInfo {
 
 /// Scan Codex projects (grouped by cwd from session metadata)
 pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
-    let base_path = get_base_path().ok_or_else(|| "Codex not found".to_string())?;
-    let sessions_dir = Path::new(&base_path).join("sessions");
+    let sessions_dir = get_sessions_dir()?;
 
     if !sessions_dir.exists() {
         return Ok(vec![]);
@@ -127,8 +149,7 @@ pub fn load_sessions(
     project_path: &str,
     _exclude_sidechain: bool,
 ) -> Result<Vec<ClaudeSession>, String> {
-    let base_path = get_base_path().ok_or_else(|| "Codex not found".to_string())?;
-    let sessions_dir = Path::new(&base_path).join("sessions");
+    let sessions_dir = get_sessions_dir()?;
 
     if !sessions_dir.exists() {
         return Ok(vec![]);
@@ -190,8 +211,9 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
     if !path.exists() {
         return Err(format!("Session file not found: {session_path}"));
     }
+    let canonical_path = validate_session_path(path, session_path)?;
 
-    let file = File::open(path).map_err(|e| e.to_string())?;
+    let file = File::open(&canonical_path).map_err(|e| e.to_string())?;
     // SAFETY: File is read-only and we only read from the mapping
     let mmap = unsafe { Mmap::map(&file) }.map_err(|e| e.to_string())?;
     let ranges = find_line_ranges(&mmap);
@@ -313,8 +335,7 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
 
 /// Search Codex sessions for a query string
 pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
-    let base_path = get_base_path().ok_or_else(|| "Codex not found".to_string())?;
-    let sessions_dir = Path::new(&base_path).join("sessions");
+    let sessions_dir = get_sessions_dir()?;
 
     if !sessions_dir.exists() {
         return Ok(vec![]);
@@ -1163,8 +1184,32 @@ fn build_codex_message(
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::ffi::OsString;
     use std::fs;
     use tempfile::TempDir;
+
+    struct EnvVarGuard {
+        key: &'static str,
+        original: Option<OsString>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: &std::path::Path) -> Self {
+            let original = std::env::var_os(key);
+            std::env::set_var(key, value);
+            Self { key, original }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            if let Some(value) = self.original.as_ref() {
+                std::env::set_var(self.key, value);
+            } else {
+                std::env::remove_var(self.key);
+            }
+        }
+    }
 
     #[test]
     fn map_exec_command_to_bash() {
@@ -1527,7 +1572,11 @@ mod tests {
     #[test]
     fn load_messages_parses_codex_rollout_end_to_end() {
         let tmp = TempDir::new().expect("temp dir should be created");
-        let rollout_path = tmp.path().join("rollout-2026-02-19.jsonl");
+        let codex_home = tmp.path().join("codex-home");
+        let sessions_dir = codex_home.join("sessions");
+        fs::create_dir_all(&sessions_dir).expect("sessions dir should be created");
+        let _guard = EnvVarGuard::set("CODEX_HOME", &codex_home);
+        let rollout_path = sessions_dir.join("rollout-2026-02-19.jsonl");
 
         let lines = vec![
             json!({

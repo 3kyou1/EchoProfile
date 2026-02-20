@@ -169,11 +169,15 @@ fn has_tool_calls(message: &ClaudeMessage) -> bool {
 fn has_errors(message: &ClaudeMessage) -> bool {
     message.message_type == "error"
         || message.level.as_deref() == Some("error")
-        || message.stop_reason_system.is_some()
+        || message
+            .stop_reason_system
+            .as_deref()
+            .map(|s| s.to_lowercase().contains("error"))
+            .unwrap_or(false)
         || message
             .content
             .as_ref()
-            .map(|v| v.to_string().to_lowercase().contains("error"))
+            .map(|v| search_in_value(v, "error"))
             .unwrap_or(false)
 }
 
@@ -204,6 +208,52 @@ fn parse_filter_date(value: &serde_json::Value) -> Option<DateTime<Utc>> {
             .ok()
             .map(|dt| dt.with_timezone(&Utc))
     })
+}
+
+fn filter_value_to_string(value: &serde_json::Value) -> String {
+    value
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| value.to_string())
+}
+
+pub(crate) fn validate_search_filters(filters: &serde_json::Value) -> Result<(), String> {
+    let Some(obj) = filters.as_object() else {
+        return Ok(());
+    };
+
+    let Some(date_range) = obj.get("dateRange").and_then(serde_json::Value::as_array) else {
+        return Ok(());
+    };
+
+    if date_range.len() != 2 {
+        return Err(format!(
+            "Invalid dateRange filter: expected [start, end], got {} item(s)",
+            date_range.len()
+        ));
+    }
+
+    let start_raw = filter_value_to_string(&date_range[0]);
+    let end_raw = filter_value_to_string(&date_range[1]);
+
+    let Some(start_at) = parse_filter_date(&date_range[0]) else {
+        return Err(format!(
+            "Invalid dateRange start: {start_raw} (expected RFC3339 datetime)"
+        ));
+    };
+    let Some(end_at) = parse_filter_date(&date_range[1]) else {
+        return Err(format!(
+            "Invalid dateRange end: {end_raw} (expected RFC3339 datetime)"
+        ));
+    };
+
+    if start_at > end_at {
+        return Err(format!(
+            "Invalid dateRange filter: start ({start_raw}) is after end ({end_raw})"
+        ));
+    }
+
+    Ok(())
 }
 
 fn matches_filters(message: &ClaudeMessage, filters: &serde_json::Value) -> bool {
@@ -262,14 +312,17 @@ fn matches_filters(message: &ClaudeMessage, filters: &serde_json::Value) -> bool
         if date_range.len() == 2 {
             let start = parse_filter_date(&date_range[0]);
             let end = parse_filter_date(&date_range[1]);
-            if let (Some(start_at), Some(end_at)) = (start, end) {
-                let message_ts = DateTime::parse_from_rfc3339(&message.timestamp)
-                    .ok()
-                    .map(|dt| dt.with_timezone(&Utc));
-                match message_ts {
-                    Some(ts) if ts >= start_at && ts <= end_at => {}
-                    _ => return false,
+            match (start, end) {
+                (Some(start_at), Some(end_at)) => {
+                    let message_ts = DateTime::parse_from_rfc3339(&message.timestamp)
+                        .ok()
+                        .map(|dt| dt.with_timezone(&Utc));
+                    match message_ts {
+                        Some(ts) if ts >= start_at && ts <= end_at => {}
+                        _ => return false,
+                    }
                 }
+                (None, _) | (_, None) => return false,
             }
         }
     }
@@ -298,6 +351,7 @@ pub async fn search_messages(
     let start_time = std::time::Instant::now();
 
     let max_results = limit.unwrap_or(DEFAULT_SEARCH_LIMIT);
+    validate_search_filters(&filters)?;
     let projects_path = PathBuf::from(&claude_path).join("projects");
 
     if !projects_path.exists() {
@@ -463,5 +517,26 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_search_messages_invalid_date_filter_returns_error() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let result = search_messages(
+            temp_dir.path().to_string_lossy().to_string(),
+            "test".to_string(),
+            serde_json::json!({
+                "dateRange": ["invalid-date", "2026-02-20T00:00:00Z"]
+            }),
+            None,
+        )
+        .await;
+
+        assert!(result.is_err());
+        assert!(result
+            .err()
+            .unwrap_or_default()
+            .contains("Invalid dateRange start"));
     }
 }

@@ -35,30 +35,46 @@ export const GlobalSearchModal = ({
         null,
     );
 
+    const getProviderLabel = useCallback((provider?: string) => {
+        switch (provider) {
+            case "codex":
+                return t("common.provider.codex", "Codex CLI");
+            case "opencode":
+                return t("common.provider.opencode", "OpenCode");
+            case "claude":
+            default:
+                return t("common.provider.claude", "Claude Code");
+        }
+    }, [t]);
+
     const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName, activeProviders } =
         useAppStore();
 
     // Group results by project name
     const groupedResults = useMemo(() => {
-        const groups = new Map<string, GlobalSearchResult[]>();
+        const groups = new Map<string, { label: string; items: GlobalSearchResult[] }>();
 
         for (const result of results) {
             const projectName =
                 result.projectName || t("globalSearch.unknownProject");
-            if (!groups.has(projectName)) {
-                groups.set(projectName, []);
+            const providerLabel = getProviderLabel(result.provider);
+            const groupKey = `${result.provider ?? "claude"}::${projectName}`;
+            const groupLabel = `${projectName} (${providerLabel})`;
+
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, { label: groupLabel, items: [] });
             }
-            groups.get(projectName)!.push(result);
+            groups.get(groupKey)!.items.push(result);
         }
 
         return groups;
-    }, [results, t]);
+    }, [getProviderLabel, results, t]);
 
     // Flatten grouped results for keyboard navigation
     const flattenedResults = useMemo(() => {
         const flat: GlobalSearchResult[] = [];
-        for (const items of groupedResults.values()) {
-            flat.push(...items);
+        for (const group of groupedResults.values()) {
+            flat.push(...group.items);
         }
         return flat;
     }, [groupedResults]);
@@ -378,15 +394,15 @@ export const GlobalSearchModal = ({
                     {results.length > 0 && (
                         <div className="py-2">
                             {Array.from(groupedResults.entries()).map(
-                                ([projectName, items]) => (
-                                    <div key={projectName}>
+                                ([groupKey, group]) => (
+                                    <div key={groupKey}>
                                         {/* Project Header */}
                                         <div className="px-4 py-1.5 text-xs font-medium text-muted-foreground bg-muted sticky top-0 truncate">
-                                            {projectName}
+                                            {group.label}
                                         </div>
 
                                         {/* Results in this project */}
-                                        {items.map((result) => {
+                                        {group.items.map((result) => {
                                             const index = currentResultIndex++;
                                             const isSelected =
                                                 index === selectedIndex;

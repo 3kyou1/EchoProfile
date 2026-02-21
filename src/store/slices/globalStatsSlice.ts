@@ -35,6 +35,8 @@ const initialGlobalStatsState: GlobalStatsSliceState = {
   isLoadingGlobalStats: false,
 };
 
+let latestGlobalStatsRequestId = 0;
+
 // ============================================================================
 // Slice Creator
 // ============================================================================
@@ -48,21 +50,30 @@ export const createGlobalStatsSlice: StateCreator<
   ...initialGlobalStatsState,
 
   loadGlobalStats: async () => {
-    const { claudePath } = get();
+    const requestId = ++latestGlobalStatsRequestId;
+    const { claudePath, activeProviders } = get();
     if (!claudePath) return;
 
     set({ isLoadingGlobalStats: true });
     get().setError(null);
 
     try {
-      const summary = await fetchGlobalStatsSummary(claudePath);
+      const summary = await fetchGlobalStatsSummary(claudePath, activeProviders);
+      if (requestId !== latestGlobalStatsRequestId) {
+        return;
+      }
       set({ globalSummary: summary });
     } catch (error) {
+      if (requestId !== latestGlobalStatsRequestId) {
+        return;
+      }
       console.error("Failed to load global stats:", error);
       get().setError({ type: AppErrorType.UNKNOWN, message: String(error) });
       set({ globalSummary: null });
     } finally {
-      set({ isLoadingGlobalStats: false });
+      if (requestId === latestGlobalStatsRequestId) {
+        set({ isLoadingGlobalStats: false });
+      }
     }
   },
 

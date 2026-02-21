@@ -38,6 +38,7 @@ export interface ProjectSliceActions {
   initializeApp: () => Promise<void>;
   scanProjects: () => Promise<void>;
   selectProject: (project: ClaudeProject) => Promise<void>;
+  clearProjectSelection: () => void;
   setClaudePath: (path: string) => Promise<void>;
   setError: (error: AppError | null) => void;
   setSelectedSession: (session: ClaudeSession | null) => void;
@@ -76,6 +77,8 @@ const isTauriAvailable = () => {
     return false;
   }
 };
+
+let latestScanProjectsRequestId = 0;
 
 // ============================================================================
 // Slice Creator
@@ -153,17 +156,22 @@ export const createProjectSlice: StateCreator<
   },
 
   scanProjects: async () => {
-    const { claudePath, activeProviders } = get();
+    const requestId = ++latestScanProjectsRequestId;
+    const { claudePath, providers } = get();
     if (!claudePath) return;
 
     set({ isLoadingProjects: true, error: null });
     try {
       const start = performance.now();
-      const hasNonClaudeProviders = activeProviders.some((p) => p !== "claude");
+      const availableProviders = providers
+        .filter((provider) => provider.is_available)
+        .map((provider) => provider.id);
+      const scanProviders = availableProviders.length > 0 ? availableProviders : ["claude"];
+      const hasNonClaudeProviders = scanProviders.some((provider) => provider !== "claude");
       const projects = hasNonClaudeProviders
         ? await invoke<ClaudeProject[]>("scan_all_projects", {
             claudePath,
-            activeProviders,
+            activeProviders: scanProviders,
           })
         : await invoke<ClaudeProject[]>("scan_projects", {
             claudePath,
@@ -174,7 +182,13 @@ export const createProjectSlice: StateCreator<
           `[Frontend] scanProjects: ${projects.length}개 프로젝트, ${duration.toFixed(1)}ms`
         );
       }
+      if (requestId !== latestScanProjectsRequestId) {
+        return;
+      }
       set({ projects });
+      if (requestId !== latestScanProjectsRequestId) {
+        return;
+      }
 
       // Auto-enable worktree grouping if worktrees are detected
       // Only auto-enable if user has never explicitly set the preference
@@ -184,8 +198,14 @@ export const createProjectSlice: StateCreator<
       if (!worktreeGrouping && !userHasSet && projects.length > 0) {
         const { groups } = detectWorktreeGroupsHybrid(projects);
         if (groups.length > 0) {
+          if (requestId !== latestScanProjectsRequestId) {
+            return;
+          }
           // Worktrees detected - auto-enable grouping
           await updateUserSettings({ worktreeGrouping: true });
+          if (requestId !== latestScanProjectsRequestId) {
+            return;
+          }
           if (import.meta.env.DEV) {
             console.log(
               `[Worktree] Auto-enabled grouping: ${groups.length} groups detected`
@@ -194,10 +214,15 @@ export const createProjectSlice: StateCreator<
         }
       }
     } catch (error) {
+      if (requestId !== latestScanProjectsRequestId) {
+        return;
+      }
       console.error("Failed to scan projects:", error);
       set({ error: { type: AppErrorType.UNKNOWN, message: String(error) } });
     } finally {
-      set({ isLoadingProjects: false });
+      if (requestId === latestScanProjectsRequestId) {
+        set({ isLoadingProjects: false });
+      }
     }
   },
 
@@ -227,6 +252,31 @@ export const createProjectSlice: StateCreator<
     } finally {
       set({ isLoadingSessions: false });
     }
+  },
+
+  clearProjectSelection: () => {
+    set({
+      selectedProject: null,
+      selectedSession: null,
+      sessions: [],
+      messages: [],
+      pagination: {
+        currentOffset: 0,
+        pageSize: 0,
+        totalCount: 0,
+        hasMore: false,
+        isLoadingMore: false,
+      },
+      isLoadingMessages: false,
+      isLoadingSessions: false,
+    });
+
+    get().clearSessionSearch();
+    get().clearTokenStats();
+    get().resetAnalytics();
+    get().clearBoard();
+    get().setDateFilter({ start: null, end: null });
+    get().clearTargetMessage();
   },
 
   setClaudePath: async (path: string) => {

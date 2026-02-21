@@ -1,5 +1,5 @@
 // src/components/ProjectTree/index.tsx
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   Folder,
   Database,
@@ -19,6 +19,7 @@ import { useProjectTreeState } from "./hooks/useProjectTreeState";
 import { GroupedProjectList } from "./components/GroupedProjectList";
 import type { ProjectTreeProps } from "./types";
 import type { ProviderId } from "../../types";
+import { useAppStore } from "../../store/useAppStore";
 
 type ProviderTabId = "all" | ProviderId;
 const PROVIDER_ORDER: ProviderId[] = ["claude", "codex", "opencode"];
@@ -51,7 +52,14 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
   onToggleCollapse,
 }) => {
   const { t, i18n } = useTranslation();
-  const [selectedProviderFilters, setSelectedProviderFilters] = useState<ProviderId[]>([]);
+  const activeProviders = useAppStore((state) => state.activeProviders);
+  const detectedProviders = useAppStore((state) => state.providers);
+  const setActiveProviders = useAppStore((state) => state.setActiveProviders);
+  const scanProjects = useAppStore((state) => state.scanProjects);
+  const loadGlobalStats = useAppStore((state) => state.loadGlobalStats);
+  const clearProjectSelection = useAppStore(
+    (state) => state.clearProjectSelection
+  );
 
   const {
     expandedProjects,
@@ -62,36 +70,6 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
     handleContextMenu,
     closeContextMenu,
   } = useProjectTreeState(groupingMode);
-
-  const isAllProvidersSelected = selectedProviderFilters.length === 0;
-  const showProviderBadge = selectedProviderFilters.length !== 1;
-
-  const matchesProviderFilter = useCallback(
-    (project: (typeof projects)[number]) =>
-      isAllProvidersSelected || selectedProviderFilters.includes(getProviderId(project)),
-    [isAllProvidersSelected, selectedProviderFilters]
-  );
-
-  const handleProviderTabClick = useCallback((provider: ProviderTabId) => {
-    if (provider === "all") {
-      setSelectedProviderFilters([]);
-      return;
-    }
-
-    setSelectedProviderFilters((prev) => {
-      if (prev.length === 0) {
-        return [provider];
-      }
-
-      if (prev.includes(provider)) {
-        const next = prev.filter((id) => id !== provider);
-        return next.length > 0 ? next : [];
-      }
-
-      const next = [...prev, provider];
-      return PROVIDER_ORDER.filter((id) => next.includes(id));
-    });
-  }, []);
 
   const providerCounts = useMemo(() => {
     const counts: Record<ProviderTabId, number> = {
@@ -107,6 +85,99 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
 
     return counts;
   }, [projects]);
+
+  const selectableProviderIds = useMemo<ProviderId[]>(() => {
+    const detected = detectedProviders
+      .filter((provider) => provider.is_available)
+      .map((provider) => provider.id as ProviderId);
+    const discoveredFromProjects = PROVIDER_ORDER.filter((id) => providerCounts[id] > 0);
+    const ordered = PROVIDER_ORDER.filter((id) =>
+      detected.includes(id) || discoveredFromProjects.includes(id)
+    );
+    return ordered.length > 0 ? ordered : ["claude"];
+  }, [detectedProviders, providerCounts]);
+
+  const selectedProviderFilters = useMemo<ProviderId[]>(
+    () => PROVIDER_ORDER.filter((id) => activeProviders.includes(id) && selectableProviderIds.includes(id)),
+    [activeProviders, selectableProviderIds]
+  );
+
+  const isAllProvidersSelected = useMemo(
+    () =>
+      selectableProviderIds.length > 0 &&
+      selectableProviderIds.every((provider) => selectedProviderFilters.includes(provider)),
+    [selectableProviderIds, selectedProviderFilters]
+  );
+
+  const showProviderBadge = isAllProvidersSelected || selectedProviderFilters.length !== 1;
+
+  const matchesProviderFilter = useCallback(
+    (project: (typeof projects)[number]) =>
+      isAllProvidersSelected || selectedProviderFilters.includes(getProviderId(project)),
+    [isAllProvidersSelected, selectedProviderFilters]
+  );
+
+  const applyProviderSelection = useCallback(
+    async (nextProviders: ProviderId[]) => {
+      const normalized = PROVIDER_ORDER.filter((id) => nextProviders.includes(id));
+      if (normalized.length === 0) {
+        return;
+      }
+
+      const current = PROVIDER_ORDER.filter((id) => activeProviders.includes(id));
+      const isUnchanged =
+        current.length === normalized.length &&
+        current.every((id, index) => id === normalized[index]);
+      if (isUnchanged) {
+        return;
+      }
+
+      if (selectedProject && !normalized.includes(getProviderId(selectedProject))) {
+        clearProjectSelection();
+      }
+
+      setActiveProviders(normalized);
+      await scanProjects();
+      if (isViewingGlobalStats) {
+        await loadGlobalStats();
+      }
+    },
+    [
+      activeProviders,
+      clearProjectSelection,
+      isViewingGlobalStats,
+      loadGlobalStats,
+      scanProjects,
+      selectedProject,
+      setActiveProviders,
+    ]
+  );
+
+  const handleProviderTabClick = useCallback(async (provider: ProviderTabId) => {
+    if (provider === "all") {
+      await applyProviderSelection(selectableProviderIds);
+      return;
+    }
+
+    if (isAllProvidersSelected) {
+      await applyProviderSelection([provider]);
+      return;
+    }
+
+    if (selectedProviderFilters.includes(provider)) {
+      const next = selectedProviderFilters.filter((id) => id !== provider);
+      if (next.length === 0) {
+        return;
+      }
+      await applyProviderSelection(next);
+      return;
+    }
+
+    const next = PROVIDER_ORDER.filter(
+      (id) => selectableProviderIds.includes(id) && (selectedProviderFilters.includes(id) || id === provider)
+    );
+    await applyProviderSelection(next.length > 0 ? next : [provider]);
+  }, [applyProviderSelection, isAllProvidersSelected, selectableProviderIds, selectedProviderFilters]);
 
   const filteredProjects = useMemo(
     () => projects.filter(matchesProviderFilter),
@@ -396,13 +467,15 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
             {providerTabs.map((tab) => {
               const isActive = tab.id === "all"
                 ? isAllProvidersSelected
-                : selectedProviderFilters.includes(tab.id);
-              const isDisabled = tab.id !== "all" && tab.count === 0;
+                : !isAllProvidersSelected && selectedProviderFilters.includes(tab.id);
+              const isDisabled = tab.id !== "all" && !selectableProviderIds.includes(tab.id);
 
               return (
                 <button
                   key={tab.id}
-                  onClick={() => handleProviderTabClick(tab.id)}
+                  onClick={() => {
+                    void handleProviderTabClick(tab.id);
+                  }}
                   disabled={isDisabled}
                   className={cn(
                     "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-2xs font-medium transition-colors",
@@ -427,7 +500,9 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
               );
             })}
             <button
-              onClick={() => setSelectedProviderFilters([])}
+              onClick={() => {
+                void applyProviderSelection(selectableProviderIds);
+              }}
               disabled={isAllProvidersSelected}
               className={cn(
                 "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-2xs font-medium transition-colors",

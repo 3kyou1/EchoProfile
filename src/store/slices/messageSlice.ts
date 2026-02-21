@@ -396,6 +396,13 @@ export const createMessageSlice: StateCreator<
   },
 
   clearTokenStats: () => {
-    set({ sessionTokenStats: null, projectTokenStats: [] });
+    set({
+      sessionTokenStats: null,
+      projectTokenStats: [],
+      projectTokenStatsPagination: createInitialPaginationWithCount(
+        TOKENS_STATS_PAGE_SIZE
+      ),
+      isLoadingTokenStats: false,
+    });
   },
 });

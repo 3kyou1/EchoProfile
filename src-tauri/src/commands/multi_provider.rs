@@ -40,8 +40,7 @@ pub async fn scan_all_projects(
                     all_projects.extend(projects);
                 }
                 Err(e) => {
-                    #[cfg(debug_assertions)]
-                    eprintln!("Claude scan failed: {e}");
+                    log::warn!("Claude scan failed: {e}");
                 }
             }
         }
@@ -52,8 +51,7 @@ pub async fn scan_all_projects(
         match providers::codex::scan_projects() {
             Ok(projects) => all_projects.extend(projects),
             Err(e) => {
-                #[cfg(debug_assertions)]
-                eprintln!("Codex scan failed: {e}");
+                log::warn!("Codex scan failed: {e}");
             }
         }
     }
@@ -63,8 +61,7 @@ pub async fn scan_all_projects(
         match providers::opencode::scan_projects() {
             Ok(projects) => all_projects.extend(projects),
             Err(e) => {
-                #[cfg(debug_assertions)]
-                eprintln!("OpenCode scan failed: {e}");
+                log::warn!("OpenCode scan failed: {e}");
             }
         }
     }
@@ -180,8 +177,7 @@ pub async fn search_all_providers(
                     all_results.extend(results);
                 }
                 Err(e) => {
-                    #[cfg(debug_assertions)]
-                    eprintln!("Claude search failed: {e}");
+                    log::warn!("Claude search failed: {e}");
                 }
             }
         }
@@ -192,8 +188,7 @@ pub async fn search_all_providers(
         match providers::codex::search(&query, max_results) {
             Ok(results) => all_results.extend(results),
             Err(e) => {
-                #[cfg(debug_assertions)]
-                eprintln!("Codex search failed: {e}");
+                log::warn!("Codex search failed: {e}");
             }
         }
     }
@@ -203,8 +198,7 @@ pub async fn search_all_providers(
         match providers::opencode::search(&query, max_results) {
             Ok(results) => all_results.extend(results),
             Err(e) => {
-                #[cfg(debug_assertions)]
-                eprintln!("OpenCode search failed: {e}");
+                log::warn!("OpenCode search failed: {e}");
             }
         }
     }

@@ -15,6 +15,7 @@ import {
   Copy,
   FileText,
   Play,
+  Archive,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -65,6 +66,9 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   const ignoreBlurRef = useRef<boolean>(false);
   const providerId = session.provider ?? "claude";
   const supportsNativeRename = providerId === "claude" || providerId === "opencode";
+  const isArchivedCodexSession =
+    providerId === "codex" &&
+    /(?:^|[\\/])archived_sessions(?:[\\/]|$)/.test(session.file_path);
 
   // Sync localSummary when session.summary prop changes (e.g., session list refresh)
   useEffect(() => {
@@ -367,6 +371,24 @@ export const SessionItem: React.FC<SessionItemProps> = ({
                       <p className="font-medium">{t("session.cliSync.title", "Synced with Claude Code CLI")}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {t("session.cliSync.description", "This session is synchronized with your terminal")}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {isArchivedCodexSession && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 shrink-0">
+                        <Archive className="w-2.5 h-2.5" aria-hidden="true" />
+                        <span className="text-[9px] font-medium uppercase tracking-wide">
+                          Archived
+                        </span>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="font-medium">Archived session</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Stored under Codex `archived_sessions`.
                       </p>
                     </TooltipContent>
                   </Tooltip>

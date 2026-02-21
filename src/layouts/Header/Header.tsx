@@ -13,6 +13,7 @@ import {
 import { TooltipButton } from "@/shared/TooltipButton";
 import { useAppStore } from "@/store/useAppStore";
 import type { UseAnalyticsReturn } from "@/types/analytics";
+import type { UseUpdaterReturn } from "@/hooks/useUpdater";
 
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -21,9 +22,10 @@ import { SettingDropdown } from "./SettingDropdown";
 interface HeaderProps {
   analyticsActions: UseAnalyticsReturn["actions"];
   analyticsComputed: UseAnalyticsReturn["computed"];
+  updater: UseUpdaterReturn;
 }
 
-export const Header = ({ analyticsActions, analyticsComputed }: HeaderProps) => {
+export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderProps) => {
   const { t } = useTranslation();
 
   const {
@@ -241,7 +243,7 @@ export const Header = ({ analyticsActions, analyticsComputed }: HeaderProps) => 
         />
 
         {/* Settings Dropdown */}
-        <SettingDropdown />
+        <SettingDropdown updater={updater} />
       </div>
     </header>
   );

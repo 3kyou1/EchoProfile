@@ -11,15 +11,18 @@ import { Settings, RefreshCw, MessageSquare, Folder, Loader2 } from "lucide-reac
 
 import { cn } from "@/lib/utils";
 
-import { useUpdater } from "@/hooks/useUpdater";
+import type { UseUpdaterReturn } from "@/hooks/useUpdater";
 import { useTranslation } from "react-i18next";
 import { useModal } from "@/contexts/modal";
 import { ThemeMenuGroup } from "./ThemeMenuGroup";
 import { LanguageMenuGroup } from "./LanguageMenuGroup";
 import { FilterMenuGroup } from "./FilterMenuGroup";
 
-export const SettingDropdown = () => {
-  const updater = useUpdater();
+interface SettingDropdownProps {
+  updater: UseUpdaterReturn;
+}
+
+export const SettingDropdown = ({ updater }: SettingDropdownProps) => {
   const { t } = useTranslation();
   const { openModal } = useModal();
 
@@ -31,6 +34,7 @@ export const SettingDropdown = () => {
         <DropdownMenuTrigger asChild>
           <button
             className="p-2 rounded-lg transition-colors cursor-pointer relative text-muted-foreground/50 hover:text-foreground/80 hover:bg-muted"
+            aria-label={t("common.settings.title")}
           >
             <Settings className="w-5 h-5 text-foreground" />
             {isCheckingForUpdates && (

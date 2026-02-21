@@ -1,0 +1,63 @@
+name: Update Flow Tests
+
+on:
+  push:
+    branches: [main]
+    paths: &update_flow_paths
+      - "src/components/SimpleUpdateManager.tsx"
+      - "src/components/SimpleUpdateModal.tsx"
+      - "src/components/UpToDateNotification.tsx"
+      - "src/components/UpdateCheckingNotification.tsx"
+      - "src/components/UpdateErrorNotification.tsx"
+      - "src/hooks/useUpdater.ts"
+      - "src/hooks/useUpdater.test.ts"
+      - "src/layouts/Header/Header.tsx"
+      - "src/layouts/Header/SettingDropdown/index.tsx"
+      - "src/types/updateSettings.ts"
+      - "src/utils/updateSettings.ts"
+      - "src/test/SimpleUpdateManager.test.tsx"
+      - "src/test/updateFlow.integration.test.tsx"
+      - "src/test/updateSettings.test.ts"
+      - "src/test/setup.ts"
+      - "vite.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/update-flow-tests.yml"
+
+  pull_request:
+    branches: [main]
+    paths: *update_flow_paths
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-flow-tests:
+    name: Update Flow Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run update-focused tests
+        run: >-
+          pnpm -s vitest run
+          src/test/updateFlow.integration.test.tsx
+          src/test/SimpleUpdateManager.test.tsx
+          src/hooks/useUpdater.test.ts
+          src/test/updateSettings.test.ts

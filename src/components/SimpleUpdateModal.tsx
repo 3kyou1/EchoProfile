@@ -3,21 +3,31 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   Button,
 } from "@/components/ui";
 import { LoadingSpinner, LoadingProgress } from "@/components/ui/loading";
 import { Download, AlertTriangle, X, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from "sonner";
 import type { UseUpdaterReturn } from '@/hooks/useUpdater';
 
 interface SimpleUpdateModalProps {
   updater: UseUpdaterReturn;
   isVisible: boolean;
   onClose: () => void;
+  onRemindLater: () => Promise<void> | void;
+  onSkipVersion: () => Promise<void> | void;
 }
 
-export function SimpleUpdateModal({ updater, isVisible, onClose }: SimpleUpdateModalProps) {
+export function SimpleUpdateModal({
+  updater,
+  isVisible,
+  onClose,
+  onRemindLater,
+  onSkipVersion,
+}: SimpleUpdateModalProps) {
   const { t } = useTranslation();
 
   if (!updater.state.hasUpdate) return null;
@@ -26,12 +36,27 @@ export function SimpleUpdateModal({ updater, isVisible, onClose }: SimpleUpdateM
   const newVersion = updater.state.newVersion || 'unknown';
 
   const handleDownload = () => {
-    updater.downloadAndInstall();
+    void updater.downloadAndInstall();
   };
 
-  const handleDismiss = () => {
-    updater.dismissUpdate();
-    onClose();
+  const handleRemindLater = async () => {
+    try {
+      await onRemindLater();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("common.error.updateCheckFailed")
+      );
+    }
+  };
+
+  const handleSkipVersion = async () => {
+    try {
+      await onSkipVersion();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("common.error.updateCheckFailed")
+      );
+    }
   };
 
   return (
@@ -41,6 +66,9 @@ export function SimpleUpdateModal({ updater, isVisible, onClose }: SimpleUpdateM
           <DialogTitle className="flex items-center gap-2">
             {t('simpleUpdateModal.newUpdateAvailable')}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {t('simpleUpdateModal.newUpdateAvailable')}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
@@ -129,11 +157,20 @@ export function SimpleUpdateModal({ updater, isVisible, onClose }: SimpleUpdateM
             <Button
               variant="outline"
               size="sm"
-              onClick={handleDismiss}
+              onClick={() => void handleRemindLater()}
               disabled={updater.state.isDownloading || updater.state.isRestarting}
               className="flex-1 text-xs"
             >
               {t('simpleUpdateModal.remindLater')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleSkipVersion()}
+              disabled={updater.state.isDownloading || updater.state.isRestarting}
+              className="flex-1 text-xs"
+            >
+              {t('simpleUpdateModal.skipVersion')}
             </Button>
             <Button
               variant="outline"

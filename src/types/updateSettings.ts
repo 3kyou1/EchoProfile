@@ -11,6 +11,9 @@ export interface UpdateSettings {
   
   // 마지막 연기 시간
   lastPostponedAt?: number;
+
+  // 마지막 업데이트 확인 시간
+  lastCheckedAt?: number;
   
   // 연기 주기 (시간 단위)
   postponeInterval: number; // 기본 24시간

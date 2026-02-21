@@ -83,6 +83,9 @@ export const createGlobalStatsSlice: StateCreator<
   clearGlobalStats: () => {
     // Bump the request ID so any in-flight global stats requests are invalidated.
     nextRequestId("globalStats");
-    set({ globalSummary: null });
+    set({
+      globalSummary: null,
+      isLoadingGlobalStats: false,
+    });
   },
 });

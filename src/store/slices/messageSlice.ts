@@ -100,8 +100,37 @@ export const createMessageSlice: StateCreator<
   [],
   [],
   MessageSlice
-> = (set, get) => ({
-  ...initialMessageState,
+> = (set, get) => {
+  let tokenStatsLoadingEpoch = 0;
+  let tokenStatsInFlight = 0;
+
+  const beginTokenStatsLoading = (): number => {
+    const epoch = tokenStatsLoadingEpoch;
+    tokenStatsInFlight += 1;
+    if (tokenStatsInFlight === 1) {
+      set({ isLoadingTokenStats: true });
+    }
+    return epoch;
+  };
+
+  const endTokenStatsLoading = (epoch: number): void => {
+    if (epoch !== tokenStatsLoadingEpoch) {
+      return;
+    }
+    tokenStatsInFlight = Math.max(0, tokenStatsInFlight - 1);
+    if (tokenStatsInFlight === 0) {
+      set({ isLoadingTokenStats: false });
+    }
+  };
+
+  const resetTokenStatsLoading = (): void => {
+    tokenStatsLoadingEpoch += 1;
+    tokenStatsInFlight = 0;
+    set({ isLoadingTokenStats: false });
+  };
+
+  return {
+    ...initialMessageState,
 
   selectSession: async (session: ClaudeSession) => {
     // Clear previous session's search index
@@ -250,8 +279,8 @@ export const createMessageSlice: StateCreator<
 
   loadSessionTokenStats: async (sessionPath: string) => {
     const requestId = nextRequestId("sessionTokenStats");
+    const loadingEpoch = beginTokenStatsLoading();
     try {
-      set({ isLoadingTokenStats: true });
       get().setError(null);
 
       const stats = await fetchSessionTokenStats(sessionPath);
@@ -266,17 +295,15 @@ export const createMessageSlice: StateCreator<
       });
       set({ sessionTokenStats: null });
     } finally {
-      if (requestId === getRequestId("sessionTokenStats")) {
-        set({ isLoadingTokenStats: false });
-      }
+      endTokenStatsLoading(loadingEpoch);
     }
   },
 
   loadProjectTokenStats: async (projectPath: string) => {
     const requestId = nextRequestId("projectTokenStats");
+    const loadingEpoch = beginTokenStatsLoading();
     try {
       set({
-        isLoadingTokenStats: true,
         projectTokenStats: [], // Reset on new project load
         projectTokenStatsPagination: {
           ...initialMessageState.projectTokenStatsPagination,
@@ -319,9 +346,7 @@ export const createMessageSlice: StateCreator<
       });
       set({ projectTokenStats: [] });
     } finally {
-      if (requestId === getRequestId("projectTokenStats")) {
-        set({ isLoadingTokenStats: false });
-      }
+      endTokenStatsLoading(loadingEpoch);
     }
   },
 
@@ -412,13 +437,14 @@ export const createMessageSlice: StateCreator<
     // Bump both request IDs so any in-flight token stats requests are invalidated.
     nextRequestId("sessionTokenStats");
     nextRequestId("projectTokenStats");
+    resetTokenStatsLoading();
     set({
       sessionTokenStats: null,
       projectTokenStats: [],
       projectTokenStatsPagination: createInitialPaginationWithCount(
         TOKENS_STATS_PAGE_SIZE
       ),
-      isLoadingTokenStats: false,
     });
   },
-});
+  };
+};

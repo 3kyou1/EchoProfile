@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getLocale } from "../../utils/time";
 import { ProjectContextMenu } from "../ProjectContextMenu";
@@ -116,7 +117,9 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
     [isDetectingProviders, selectableProviderIds, selectedProviderFilters]
   );
 
-  const showProviderBadge = isAllProvidersSelected || selectedProviderFilters.length !== 1;
+  const showProviderBadge = isAllProvidersSelected
+    ? selectableProviderIds.length > 1
+    : selectedProviderFilters.length !== 1;
 
   const matchesProviderFilter = useCallback(
     (project: (typeof projects)[number]) =>
@@ -139,21 +142,30 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
         return;
       }
 
+      const previousSelectedProjectPath = selectedProject?.path;
+      const shouldClearSelection =
+        selectedProject !== null &&
+        !normalized.includes(getProviderId(selectedProject.provider));
+
       try {
         setActiveProviders(normalized);
-
-        // Clear project selection AFTER setActiveProviders so rollback on error
-        // does not leave selection in an inconsistent cleared state.
-        if (selectedProject && !normalized.includes(getProviderId(selectedProject.provider))) {
-          clearProjectSelection();
-        }
 
         if (isViewingGlobalStats) {
           await loadGlobalStats();
         }
+
+        // Clear selection only after provider switch finishes successfully.
+        // This prevents rollback paths from leaving cleared selection behind.
+        if (shouldClearSelection) {
+          const latestSelectedProject = useAppStore.getState().selectedProject;
+          if (latestSelectedProject?.path === previousSelectedProjectPath) {
+            clearProjectSelection();
+          }
+        }
       } catch (error) {
         console.error("Failed to apply provider selection:", error);
         setActiveProviders(current);
+        toast.error(t("common.provider.filterApplyError", "Failed to apply provider filter"));
       }
     },
     [
@@ -163,6 +175,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
       loadGlobalStats,
       selectedProject,
       setActiveProviders,
+      t,
     ]
   );
 

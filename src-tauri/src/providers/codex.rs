@@ -1634,6 +1634,23 @@ mod tests {
     }
 
     #[test]
+    fn convert_agent_reasoning_event_skips_empty_text() {
+        let mut counter = 0u64;
+        let msg = convert_codex_event(
+            &json!({
+                "type": "agent_reasoning",
+                "text": "   "
+            }),
+            "session-1",
+            "2026-02-19T12:00:00Z",
+            &mut counter,
+        );
+
+        assert!(msg.is_none());
+        assert_eq!(counter, 0);
+    }
+
+    #[test]
     fn convert_agent_message_event_to_assistant_text_message() {
         let mut counter = 0u64;
         let msg = convert_codex_event(
@@ -1658,6 +1675,22 @@ mod tests {
             arr[0].get("text").and_then(Value::as_str),
             Some("Working on requested changes")
         );
+    }
+
+    #[test]
+    fn convert_agent_message_event_skips_missing_field() {
+        let mut counter = 0u64;
+        let msg = convert_codex_event(
+            &json!({
+                "type": "agent_message"
+            }),
+            "session-1",
+            "2026-02-19T12:00:00Z",
+            &mut counter,
+        );
+
+        assert!(msg.is_none());
+        assert_eq!(counter, 0);
     }
 
     #[test]

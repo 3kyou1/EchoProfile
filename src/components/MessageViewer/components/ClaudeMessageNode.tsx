@@ -196,7 +196,11 @@ export const ClaudeMessageNode = React.memo(({
   }
 
   // File history snapshot messages
-  if (message.type === "file-history-snapshot" && message.snapshot) {
+  if (message.type === "file-history-snapshot") {
+    if (!message.snapshot) {
+      return null;
+    }
+
     return (
       <div
         data-message-uuid={message.uuid}
@@ -208,7 +212,7 @@ export const ClaudeMessageNode = React.memo(({
         {CaptureHideButton}
         <div className="max-w-4xl mx-auto">
           <FileHistorySnapshotRenderer
-            messageId={message.messageId ?? ""}
+            messageId={message.messageId ?? message.uuid}
             snapshot={message.snapshot}
             isSnapshotUpdate={Boolean(message.isSnapshotUpdate)}
           />

@@ -19,7 +19,7 @@ export interface UpdateState {
 
 export interface UseUpdaterReturn {
   state: UpdateState;
-  checkForUpdates: () => Promise<void>;
+  checkForUpdates: () => Promise<Update | null>;
   downloadAndInstall: () => Promise<void>;
   dismissUpdate: () => void;
 }
@@ -44,13 +44,18 @@ export function useUpdater(): UseUpdaterReturn {
     });
   }, []);
 
-  const checkForUpdates = useCallback(async () => {
+  const checkForUpdates = useCallback(async (): Promise<Update | null> => {
     setState((prev) => ({ ...prev, isChecking: true, error: null }));
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     try {
       // Race between check and timeout
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Update check timeout')), CHECK_TIMEOUT_MS);
+        timeoutId = setTimeout(
+          () => reject(new Error('Update check timeout')),
+          CHECK_TIMEOUT_MS
+        );
       });
 
       const update = await Promise.race([
@@ -65,12 +70,21 @@ export function useUpdater(): UseUpdaterReturn {
         updateInfo: update,
         newVersion: update?.version ?? null,
       }));
+
+      return update ?? null;
     } catch (error) {
       setState((prev) => ({
         ...prev,
         isChecking: false,
+        hasUpdate: false,
+        updateInfo: null,
+        newVersion: null,
         error: error instanceof Error ? error.message : 'Update check failed',
       }));
+
+      return null;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }, []);
 
@@ -119,6 +133,7 @@ export function useUpdater(): UseUpdaterReturn {
       setState((prev) => ({
         ...prev,
         isDownloading: false,
+        isRestarting: false,
         error: error instanceof Error ? error.message : 'Download failed',
       }));
     }

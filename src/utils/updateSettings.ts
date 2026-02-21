@@ -30,6 +30,9 @@ function validateSettings(parsed: unknown): Partial<UpdateSettings> {
   if (typeof obj.lastPostponedAt === 'number') {
     result.lastPostponedAt = obj.lastPostponedAt;
   }
+  if (typeof obj.lastCheckedAt === 'number') {
+    result.lastCheckedAt = obj.lastCheckedAt;
+  }
   if (typeof obj.postponeInterval === 'number' && obj.postponeInterval > 0) {
     result.postponeInterval = obj.postponeInterval;
   }

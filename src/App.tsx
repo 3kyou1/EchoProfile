@@ -11,6 +11,7 @@ import { SettingsManager } from "./components/SettingsManager";
 import { SessionBoard } from "./components/SessionBoard/SessionBoard";
 import { useAppStore } from "./store/useAppStore";
 import { useAnalytics } from "./hooks/useAnalytics";
+import { useUpdater } from "./hooks/useUpdater";
 import { useResizablePanel } from "./hooks/useResizablePanel";
 
 import { useTranslation } from "react-i18next";
@@ -78,6 +79,7 @@ function App() {
   const { t, i18n: i18nInstance } = useTranslation();
   const { language, loadLanguage } = useLanguageStore();
   const { openModal } = useModal();
+  const updater = useUpdater();
 
   const [isViewingGlobalStats, setIsViewingGlobalStats] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -317,6 +319,7 @@ function App() {
         <Header
           analyticsActions={analyticsActions}
           analyticsComputed={computed}
+          updater={updater}
         />
 
         {/* Main Content */}
@@ -534,7 +537,7 @@ function App() {
         </footer>
 
         {/* Update Manager */}
-        <SimpleUpdateManager />
+        <SimpleUpdateManager updater={updater} />
       </div>
 
       {/* Modals */}

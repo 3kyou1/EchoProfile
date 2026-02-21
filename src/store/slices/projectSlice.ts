@@ -18,6 +18,7 @@ import {
 } from "../../utils/worktreeUtils";
 import type { GroupingMode } from "../../types/metadata.types";
 import { DEFAULT_PROVIDER_ID } from "../../utils/providers";
+import { INITIAL_PAGINATION } from "./messageSlice";
 
 // ============================================================================
 // State Interface
@@ -156,6 +157,11 @@ export const createProjectSlice: StateCreator<
     }
   },
 
+  // NOTE: scanProjects always loads ALL available providers' projects.
+  // Filtering by activeProviders happens client-side in the ProjectTree UI.
+  // This is intentionally asymmetric with loadGlobalStats (which filters server-side)
+  // because project scanning is fast and we want instant client-side tab switching,
+  // whereas global stats aggregation is expensive and benefits from server-side filtering.
   scanProjects: async () => {
     const requestId = ++latestScanProjectsRequestId;
     const { claudePath, providers } = get();
@@ -258,13 +264,7 @@ export const createProjectSlice: StateCreator<
       selectedSession: null,
       sessions: [],
       messages: [],
-      pagination: {
-        currentOffset: 0,
-        pageSize: 0,
-        totalCount: 0,
-        hasMore: false,
-        isLoadingMore: false,
-      },
+      pagination: { ...INITIAL_PAGINATION },
       isLoadingMessages: false,
       isLoadingSessions: false,
     });

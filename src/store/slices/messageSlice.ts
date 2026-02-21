@@ -71,15 +71,18 @@ export type MessageSlice = MessageSliceState & MessageSliceActions;
 
 const TOKENS_STATS_PAGE_SIZE = 20;
 
+/** Initial pagination state — shared with `clearProjectSelection` to avoid duplication. */
+export const INITIAL_PAGINATION = {
+  currentOffset: 0,
+  pageSize: 0,
+  totalCount: 0,
+  hasMore: false,
+  isLoadingMore: false,
+} as const;
+
 const initialMessageState: MessageSliceState = {
   messages: [],
-  pagination: {
-    currentOffset: 0,
-    pageSize: 0,
-    totalCount: 0,
-    hasMore: false,
-    isLoadingMore: false,
-  },
+  pagination: { ...INITIAL_PAGINATION },
   isLoadingMessages: false,
   isLoadingTokenStats: false,
   sessionTokenStats: null,
@@ -105,13 +108,7 @@ export const createMessageSlice: StateCreator<
 
     set({
       messages: [],
-      pagination: {
-        currentOffset: 0,
-        pageSize: 0,
-        totalCount: 0,
-        hasMore: false,
-        isLoadingMore: false,
-      },
+      pagination: { ...INITIAL_PAGINATION },
       isLoadingMessages: true,
     });
 

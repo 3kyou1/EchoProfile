@@ -49,6 +49,10 @@ export const createGlobalStatsSlice: StateCreator<
 > = (set, get) => ({
   ...initialGlobalStatsState,
 
+  // NOTE: loadGlobalStats filters by activeProviders on the server side.
+  // This is intentionally asymmetric with scanProjects (which loads all providers
+  // and filters client-side) because stats aggregation is expensive and benefits
+  // from only processing the providers the user has selected.
   loadGlobalStats: async () => {
     const requestId = ++latestGlobalStatsRequestId;
     const { claudePath, activeProviders } = get();

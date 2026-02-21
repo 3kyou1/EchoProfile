@@ -140,11 +140,14 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
       }
 
       try {
+        setActiveProviders(normalized);
+
+        // Clear project selection AFTER setActiveProviders so rollback on error
+        // does not leave selection in an inconsistent cleared state.
         if (selectedProject && !normalized.includes(getProviderId(selectedProject.provider))) {
           clearProjectSelection();
         }
 
-        setActiveProviders(normalized);
         if (isViewingGlobalStats) {
           await loadGlobalStats();
         }

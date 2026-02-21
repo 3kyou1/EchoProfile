@@ -2017,27 +2017,40 @@ pub async fn get_global_stats_summary(
     let mut session_files: Vec<PathBuf> = Vec::new();
     let mut project_names: HashSet<String> = HashSet::new();
     if providers_to_include.contains(&StatsProvider::Claude) && projects_path.exists() {
-        for project_entry in fs::read_dir(&projects_path).map_err(|e| e.to_string())? {
-            let project_entry = project_entry.map_err(|e| e.to_string())?;
-            let project_path = project_entry.path();
+        match fs::read_dir(&projects_path) {
+            Ok(entries) => {
+                for project_entry in entries {
+                    let project_entry = match project_entry {
+                        Ok(entry) => entry,
+                        Err(e) => {
+                            log::warn!("Skipping unreadable Claude project entry: {e}");
+                            continue;
+                        }
+                    };
+                    let project_path = project_entry.path();
 
-            if !project_path.is_dir() {
-                continue;
+                    if !project_path.is_dir() {
+                        continue;
+                    }
+
+                    let project_name = project_path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("Unknown")
+                        .to_string();
+                    project_names.insert(format!("claude:{project_name}"));
+
+                    for entry in WalkDir::new(&project_path)
+                        .into_iter()
+                        .filter_map(std::result::Result::ok)
+                        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
+                    {
+                        session_files.push(entry.path().to_path_buf());
+                    }
+                }
             }
-
-            let project_name = project_path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("Unknown")
-                .to_string();
-            project_names.insert(format!("claude:{project_name}"));
-
-            for entry in WalkDir::new(&project_path)
-                .into_iter()
-                .filter_map(std::result::Result::ok)
-                .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-            {
-                session_files.push(entry.path().to_path_buf());
+            Err(e) => {
+                log::warn!("Failed to read Claude projects directory: {e}");
             }
         }
     }

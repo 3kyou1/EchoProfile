@@ -249,16 +249,16 @@ export const createMessageSlice: StateCreator<
   },
 
   loadSessionTokenStats: async (sessionPath: string) => {
-    const requestId = nextRequestId("tokenStats");
+    const requestId = nextRequestId("sessionTokenStats");
     try {
       set({ isLoadingTokenStats: true });
       get().setError(null);
 
       const stats = await fetchSessionTokenStats(sessionPath);
-      if (requestId !== getRequestId("tokenStats")) return;
+      if (requestId !== getRequestId("sessionTokenStats")) return;
       set({ sessionTokenStats: stats });
     } catch (error) {
-      if (requestId !== getRequestId("tokenStats")) return;
+      if (requestId !== getRequestId("sessionTokenStats")) return;
       console.error("Failed to load session token stats:", error);
       get().setError({
         type: AppErrorType.UNKNOWN,
@@ -266,14 +266,14 @@ export const createMessageSlice: StateCreator<
       });
       set({ sessionTokenStats: null });
     } finally {
-      if (requestId === getRequestId("tokenStats")) {
+      if (requestId === getRequestId("sessionTokenStats")) {
         set({ isLoadingTokenStats: false });
       }
     }
   },
 
   loadProjectTokenStats: async (projectPath: string) => {
-    const requestId = nextRequestId("tokenStats");
+    const requestId = nextRequestId("projectTokenStats");
     try {
       set({
         isLoadingTokenStats: true,
@@ -299,7 +299,7 @@ export const createMessageSlice: StateCreator<
         end_date: endDate?.toISOString(),
       });
 
-      if (requestId !== getRequestId("tokenStats")) return;
+      if (requestId !== getRequestId("projectTokenStats")) return;
       set({
         projectTokenStats: response.items,
         projectTokenStatsPagination: {
@@ -311,7 +311,7 @@ export const createMessageSlice: StateCreator<
         },
       });
     } catch (error) {
-      if (requestId !== getRequestId("tokenStats")) return;
+      if (requestId !== getRequestId("projectTokenStats")) return;
       console.error("Failed to load project token stats:", error);
       get().setError({
         type: AppErrorType.UNKNOWN,
@@ -319,7 +319,7 @@ export const createMessageSlice: StateCreator<
       });
       set({ projectTokenStats: [] });
     } finally {
-      if (requestId === getRequestId("tokenStats")) {
+      if (requestId === getRequestId("projectTokenStats")) {
         set({ isLoadingTokenStats: false });
       }
     }
@@ -331,6 +331,9 @@ export const createMessageSlice: StateCreator<
     if (!canLoadMore(projectTokenStatsPagination)) {
       return;
     }
+
+    // Snapshot the current request ID to detect if a full reset happened mid-flight.
+    const snapshotId = getRequestId("projectTokenStats");
 
     try {
       set({
@@ -356,6 +359,7 @@ export const createMessageSlice: StateCreator<
         end_date: endDate?.toISOString(),
       });
 
+      if (snapshotId !== getRequestId("projectTokenStats")) return;
       set({
         projectTokenStats: [...projectTokenStats, ...response.items],
         projectTokenStatsPagination: {
@@ -367,6 +371,7 @@ export const createMessageSlice: StateCreator<
         },
       });
     } catch (error) {
+      if (snapshotId !== getRequestId("projectTokenStats")) return;
       console.error("Failed to load more project token stats:", error);
       set({
         projectTokenStatsPagination: {
@@ -404,8 +409,9 @@ export const createMessageSlice: StateCreator<
   },
 
   clearTokenStats: () => {
-    // Bump the request ID so any in-flight token stats requests are invalidated.
-    nextRequestId("tokenStats");
+    // Bump both request IDs so any in-flight token stats requests are invalidated.
+    nextRequestId("sessionTokenStats");
+    nextRequestId("projectTokenStats");
     set({
       sessionTokenStats: null,
       projectTokenStats: [],

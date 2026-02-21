@@ -186,9 +186,6 @@ export const createProjectSlice: StateCreator<
         return;
       }
       set({ projects });
-      if (requestId !== latestScanProjectsRequestId) {
-        return;
-      }
 
       // Auto-enable worktree grouping if worktrees are detected
       // Only auto-enable if user has never explicitly set the preference

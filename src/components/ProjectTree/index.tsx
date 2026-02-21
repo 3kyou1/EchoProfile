@@ -132,14 +132,19 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
         return;
       }
 
-      if (selectedProject && !normalized.includes(getProviderId(selectedProject))) {
-        clearProjectSelection();
-      }
+      try {
+        if (selectedProject && !normalized.includes(getProviderId(selectedProject))) {
+          clearProjectSelection();
+        }
 
-      setActiveProviders(normalized);
-      await scanProjects();
-      if (isViewingGlobalStats) {
-        await loadGlobalStats();
+        setActiveProviders(normalized);
+        await scanProjects();
+        if (isViewingGlobalStats) {
+          await loadGlobalStats();
+        }
+      } catch (error) {
+        console.error("Failed to apply provider selection:", error);
+        setActiveProviders(current);
       }
     },
     [

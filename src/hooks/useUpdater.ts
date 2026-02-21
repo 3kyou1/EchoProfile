@@ -2,8 +2,31 @@ import { useState, useEffect, useCallback } from 'react';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from '@tauri-apps/api/app';
+import { UPDATE_MANUAL_RESTART_REQUIRED_ERROR_CODE } from '@/utils/updateError';
 
 const CHECK_TIMEOUT_MS = 20_000; // 20 seconds
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return error;
+  }
+
+  if (
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof (error as { message?: unknown }).message === 'string' &&
+    (error as { message: string }).message.trim().length > 0
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  return fallback;
+}
 
 export interface UpdateState {
   isChecking: boolean;
@@ -73,13 +96,14 @@ export function useUpdater(): UseUpdaterReturn {
 
       return update ?? null;
     } catch (error) {
+      const errorMessage = getErrorMessage(error, 'Update check failed');
       setState((prev) => ({
         ...prev,
         isChecking: false,
         hasUpdate: false,
         updateInfo: null,
         newVersion: null,
-        error: error instanceof Error ? error.message : 'Update check failed',
+        error: errorMessage,
       }));
 
       return null;
@@ -92,6 +116,8 @@ export function useUpdater(): UseUpdaterReturn {
     if (!state.updateInfo) return;
 
     setState((prev) => ({ ...prev, isDownloading: true, error: null }));
+    let finishedEventSeen = false;
+    let installStepCompleted = false;
 
     try {
       let contentLength = 0;
@@ -102,6 +128,7 @@ export function useUpdater(): UseUpdaterReturn {
           case 'Started':
             contentLength = event.data.contentLength ?? 0;
             downloaded = 0;
+            finishedEventSeen = false;
             setState((prev) => ({ ...prev, downloadProgress: 0 }));
             break;
           case 'Progress': {
@@ -113,6 +140,7 @@ export function useUpdater(): UseUpdaterReturn {
             break;
           }
           case 'Finished':
+            finishedEventSeen = true;
             setState((prev) => ({
               ...prev,
               isDownloading: false,
@@ -122,6 +150,7 @@ export function useUpdater(): UseUpdaterReturn {
             break;
         }
       });
+      installStepCompleted = true;
 
       // Show restarting state before relaunch
       setState((prev) => ({ ...prev, isDownloading: false, isRestarting: true }));
@@ -130,11 +159,23 @@ export function useUpdater(): UseUpdaterReturn {
       await new Promise((resolve) => setTimeout(resolve, 500));
       await relaunch();
     } catch (error) {
+      const rawErrorMessage = getErrorMessage(error, 'Download failed');
+      const shouldSuggestManualRestart = installStepCompleted || finishedEventSeen;
+
+      if (shouldSuggestManualRestart) {
+        console.warn(
+          '[Updater] Update payload downloaded but automatic restart failed. Falling back to manual restart.',
+          error
+        );
+      }
+
       setState((prev) => ({
         ...prev,
         isDownloading: false,
         isRestarting: false,
-        error: error instanceof Error ? error.message : 'Download failed',
+        error: shouldSuggestManualRestart
+          ? UPDATE_MANUAL_RESTART_REQUIRED_ERROR_CODE
+          : rawErrorMessage,
       }));
     }
   }, [state.updateInfo]);

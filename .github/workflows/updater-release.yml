@@ -218,7 +218,6 @@ jobs:
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         with:
-          github-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           script: |
             const releaseId = ${{ needs.create-release.outputs.release_id }};
             const tapOwner = 'jhlee0409';
@@ -228,6 +227,11 @@ jobs:
             if (!process.env.HOMEBREW_TAP_TOKEN) {
               throw new Error('HOMEBREW_TAP_TOKEN is required to publish releases safely.');
             }
+
+            // 메인 레포 접근: 기본 GITHUB_TOKEN (github 객체)
+            // tap 레포 접근: HOMEBREW_TAP_TOKEN (별도 Octokit)
+            const { getOctokit } = require('@actions/github');
+            const tapClient = getOctokit(process.env.HOMEBREW_TAP_TOKEN);
 
             const { data: releaseData } = await github.rest.repos.getRelease({
               owner: context.repo.owner,
@@ -284,7 +288,8 @@ jobs:
 
             console.log(`🍺 Syncing Homebrew cask: v${version}, sha256=${sha256}`);
 
-            const { data: caskFile } = await github.rest.repos.getContent({
+            // tap 레포 접근은 tapClient 사용
+            const { data: caskFile } = await tapClient.rest.repos.getContent({
               owner: tapOwner,
               repo: tapRepo,
               path: caskPath,
@@ -301,7 +306,7 @@ jobs:
               .replace(/sha256\s+"[^"]+"/, `sha256 "${sha256}"`);
 
             if (nextContent !== currentContent) {
-              await github.rest.repos.createOrUpdateFileContents({
+              await tapClient.rest.repos.createOrUpdateFileContents({
                 owner: tapOwner,
                 repo: tapRepo,
                 path: caskPath,
@@ -323,7 +328,7 @@ jobs:
               console.log(`✅ Cask already up to date for v${version}`);
             }
 
-            const { data: verifyFile } = await github.rest.repos.getContent({
+            const { data: verifyFile } = await tapClient.rest.repos.getContent({
               owner: tapOwner,
               repo: tapRepo,
               path: caskPath,

@@ -329,8 +329,9 @@ jobs:
               .replace(/version\s+"[^"]+"/, `version "${version}"`)
               .replace(/sha256\s+"[^"]+"/, `sha256 "${sha256}"`);
 
+            let expectedRef = 'main';
             if (nextContent !== currentContent) {
-              await tapRequest(`/contents/${encodedCaskPath}`, {
+              const updateResult = await tapRequest(`/contents/${encodedCaskPath}`, {
                 method: 'PUT',
                 body: {
                   message: `chore: update claude-code-history-viewer to v${version}`,
@@ -347,12 +348,16 @@ jobs:
                   }
                 }
               });
+              const committedSha = updateResult?.commit?.sha;
+              if (typeof committedSha === 'string' && committedSha.length > 0) {
+                expectedRef = committedSha;
+              }
               console.log(`✅ Updated ${tapOwner}/${tapRepo}/${caskPath}`);
             } else {
               console.log(`✅ Cask already up to date for v${version}`);
             }
 
-            const verifyFile = await tapRequest(`/contents/${encodedCaskPath}?ref=main`);
+            const verifyFile = await tapRequest(`/contents/${encodedCaskPath}?ref=${encodeURIComponent(expectedRef)}`);
             if (!verifyFile || Array.isArray(verifyFile) || !('content' in verifyFile)) {
               throw new Error('Failed to re-read cask file for verification.');
             }
@@ -362,7 +367,7 @@ jobs:
               !verifiedContent.includes(`version "${version}"`) ||
               !verifiedContent.includes(`sha256 "${sha256}"`)
             ) {
-              throw new Error('Homebrew cask verification failed after update.');
+              throw new Error(`Homebrew cask verification failed after update (ref=${expectedRef}).`);
             }
             console.log(`✅ Verified Homebrew cask v${version}`);
 

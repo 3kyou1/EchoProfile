@@ -165,7 +165,7 @@ describe("SessionItem", () => {
       expect(mockFormatTimeAgo).toHaveBeenCalledWith(session.last_modified);
     });
 
-    it("should show archived badge for codex archived sessions", () => {
+    it("should show archived icon for codex archived sessions", () => {
       const session = createMockSession({
         provider: "codex",
         file_path: "/Users/test/.codex/archived_sessions/rollout-2026.jsonl",
@@ -180,10 +180,10 @@ describe("SessionItem", () => {
         />
       );
 
-      expect(screen.getByText("Archived")).toBeInTheDocument();
+      expect(screen.getByLabelText("Archived session")).toBeInTheDocument();
     });
 
-    it("should not show archived badge for non-archived sessions", () => {
+    it("should not show archived icon for non-archived sessions", () => {
       const session = createMockSession({
         provider: "codex",
         file_path: "/Users/test/.codex/sessions/2026/02/21/rollout-2026.jsonl",
@@ -198,7 +198,7 @@ describe("SessionItem", () => {
         />
       );
 
-      expect(screen.queryByText("Archived")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Archived session")).not.toBeInTheDocument();
     });
 
     it("should apply selected styles when isSelected is true", () => {

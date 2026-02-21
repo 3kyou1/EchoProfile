@@ -273,16 +273,41 @@ export const SessionItem: React.FC<SessionItemProps> = ({
     >
       {/* Session Header */}
       <div className="flex items-start gap-2.5">
-        <div
-          className={cn(
-            "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-300",
-            isSelected
-              ? "bg-accent text-accent-foreground"
-              : "bg-muted/50 text-muted-foreground"
-          )}
-        >
-          <span title={t("session.item.session")}><MessageCircle className="w-3 h-3" /></span>
-        </div>
+        {isArchivedCodexSession ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                aria-label={t("session.item.archived", "Archived session")}
+                title={t("session.item.archived", "Archived session")}
+                className={cn(
+                  "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-300",
+                  isSelected
+                    ? "bg-amber-500/20 text-amber-300"
+                    : "bg-amber-500/10 text-amber-500"
+                )}
+              >
+                <Archive className="w-3 h-3" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="font-medium">Archived session</p>
+              <p className="text-[11px] text-primary-foreground/80 mt-1 leading-relaxed">
+                Stored under Codex `archived_sessions`.
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <div
+            className={cn(
+              "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-300",
+              isSelected
+                ? "bg-accent text-accent-foreground"
+                : "bg-muted/50 text-muted-foreground"
+            )}
+          >
+            <span title={t("session.item.session")}><MessageCircle className="w-3 h-3" /></span>
+          </div>
+        )}
 
         {/* Session Name / Edit Mode */}
         <div className="flex-1 min-w-0 flex items-start gap-1">
@@ -463,24 +488,6 @@ export const SessionItem: React.FC<SessionItemProps> = ({
           <span title={t("session.item.messageCount")}><Hash className="w-3 h-3" /></span>
           {session.message_count}
         </span>
-        {isArchivedCodexSession && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500">
-                <Archive className="w-2.5 h-2.5" aria-hidden="true" />
-                <span className="text-[9px] font-medium uppercase tracking-wide">
-                  Archived
-                </span>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs">
-              <p className="font-medium">Archived session</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Stored under Codex `archived_sessions`.
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        )}
         {session.has_tool_use && (
           <span title={t("session.item.containsToolUse")}>
             <Wrench

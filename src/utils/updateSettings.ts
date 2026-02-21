@@ -10,7 +10,15 @@ const WEEK_MS = 7 * DAY_MS;
 const VALID_CHECK_INTERVALS = ['startup', 'daily', 'weekly', 'never'] as const;
 
 interface ShouldCheckForUpdatesOptions {
-  settings?: UpdateSettings;
+  settings?: Pick<
+    UpdateSettings,
+    | 'autoCheck'
+    | 'checkInterval'
+    | 'respectOfflineStatus'
+    | 'lastPostponedAt'
+    | 'lastCheckedAt'
+    | 'postponeInterval'
+  >;
   now?: number;
   online?: boolean;
 }

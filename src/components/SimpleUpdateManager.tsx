@@ -27,6 +27,14 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
   const updateError = state.error;
   const newVersion = state.newVersion;
   const currentVersion = state.currentVersion;
+  const {
+    autoCheck,
+    checkInterval,
+    respectOfflineStatus,
+    lastPostponedAt,
+    lastCheckedAt,
+    postponeInterval,
+  } = updateSettings;
 
   const [showUpToDate, setShowUpToDate] = useState(false);
   const [showChecking, setShowChecking] = useState(false);
@@ -43,8 +51,24 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
   }, [checkForUpdates, setUpdateSetting]);
 
   const shouldRunAutoCheck = useCallback(() => {
-    return shouldCheckForUpdates({ settings: updateSettings });
-  }, [updateSettings]);
+    return shouldCheckForUpdates({
+      settings: {
+        autoCheck,
+        checkInterval,
+        respectOfflineStatus,
+        lastPostponedAt,
+        lastCheckedAt,
+        postponeInterval,
+      },
+    });
+  }, [
+    autoCheck,
+    checkInterval,
+    respectOfflineStatus,
+    lastPostponedAt,
+    lastCheckedAt,
+    postponeInterval,
+  ]);
 
   useEffect(() => {
     let mounted = true;

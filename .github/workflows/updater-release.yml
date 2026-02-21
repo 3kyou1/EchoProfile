@@ -106,6 +106,8 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
+          updaterJsonPreferNsis: false
+          includeUpdaterJson: false
 
   generate-updater-metadata:
     needs: [create-release, build-tauri]

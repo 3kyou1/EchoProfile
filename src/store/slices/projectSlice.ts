@@ -19,6 +19,7 @@ import {
 import type { GroupingMode } from "../../types/metadata.types";
 import { DEFAULT_PROVIDER_ID } from "../../utils/providers";
 import { INITIAL_PAGINATION } from "./messageSlice";
+import { nextRequestId, getRequestId } from "../../utils/requestId";
 
 // ============================================================================
 // State Interface
@@ -79,8 +80,6 @@ const isTauriAvailable = () => {
     return false;
   }
 };
-
-let latestScanProjectsRequestId = 0;
 
 // ============================================================================
 // Slice Creator
@@ -163,7 +162,7 @@ export const createProjectSlice: StateCreator<
   // because project scanning is fast and we want instant client-side tab switching,
   // whereas global stats aggregation is expensive and benefits from server-side filtering.
   scanProjects: async () => {
-    const requestId = ++latestScanProjectsRequestId;
+    const requestId = nextRequestId("scanProjects");
     const { claudePath, providers } = get();
     if (!claudePath) return;
 
@@ -189,7 +188,7 @@ export const createProjectSlice: StateCreator<
           `[Frontend] scanProjects: ${projects.length}개 프로젝트, ${duration.toFixed(1)}ms`
         );
       }
-      if (requestId !== latestScanProjectsRequestId) {
+      if (requestId !== getRequestId("scanProjects")) {
         return;
       }
       set({ projects });
@@ -202,12 +201,12 @@ export const createProjectSlice: StateCreator<
       if (!worktreeGrouping && !userHasSet && projects.length > 0) {
         const { groups } = detectWorktreeGroupsHybrid(projects);
         if (groups.length > 0) {
-          if (requestId !== latestScanProjectsRequestId) {
+          if (requestId !== getRequestId("scanProjects")) {
             return;
           }
           // Worktrees detected - auto-enable grouping
           await updateUserSettings({ worktreeGrouping: true });
-          if (requestId !== latestScanProjectsRequestId) {
+          if (requestId !== getRequestId("scanProjects")) {
             return;
           }
           if (import.meta.env.DEV) {
@@ -218,13 +217,13 @@ export const createProjectSlice: StateCreator<
         }
       }
     } catch (error) {
-      if (requestId !== latestScanProjectsRequestId) {
+      if (requestId !== getRequestId("scanProjects")) {
         return;
       }
       console.error("Failed to scan projects:", error);
       set({ error: { type: AppErrorType.UNKNOWN, message: String(error) } });
     } finally {
-      if (requestId === latestScanProjectsRequestId) {
+      if (requestId === getRequestId("scanProjects")) {
         set({ isLoadingProjects: false });
       }
     }

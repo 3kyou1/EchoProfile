@@ -58,6 +58,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
   const { t, i18n } = useTranslation();
   const activeProviders = useAppStore((state) => state.activeProviders);
   const detectedProviders = useAppStore((state) => state.providers);
+  const isDetectingProviders = useAppStore((state) => state.isDetectingProviders);
   const setActiveProviders = useAppStore((state) => state.setActiveProviders);
   const loadGlobalStats = useAppStore((state) => state.loadGlobalStats);
   const clearProjectSelection = useAppStore(
@@ -107,9 +108,12 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
 
   const isAllProvidersSelected = useMemo(
     () =>
-      selectableProviderIds.length > 0 &&
-      selectableProviderIds.every((provider) => selectedProviderFilters.includes(provider)),
-    [selectableProviderIds, selectedProviderFilters]
+      // While provider detection is in progress, treat as "all selected"
+      // to avoid a brief flash of incorrect filter state.
+      isDetectingProviders ||
+      (selectableProviderIds.length > 0 &&
+        selectableProviderIds.every((provider) => selectedProviderFilters.includes(provider))),
+    [isDetectingProviders, selectableProviderIds, selectedProviderFilters]
   );
 
   const showProviderBadge = isAllProvidersSelected || selectedProviderFilters.length !== 1;

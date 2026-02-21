@@ -9,6 +9,7 @@ import { AppErrorType } from "../../types";
 import type { StateCreator } from "zustand";
 import type { FullAppStore } from "./types";
 import { fetchGlobalStatsSummary } from "../../services/analyticsApi";
+import { nextRequestId, getRequestId } from "../../utils/requestId";
 
 // ============================================================================
 // State Interface
@@ -35,8 +36,6 @@ const initialGlobalStatsState: GlobalStatsSliceState = {
   isLoadingGlobalStats: false,
 };
 
-let latestGlobalStatsRequestId = 0;
-
 // ============================================================================
 // Slice Creator
 // ============================================================================
@@ -54,7 +53,7 @@ export const createGlobalStatsSlice: StateCreator<
   // and filters client-side) because stats aggregation is expensive and benefits
   // from only processing the providers the user has selected.
   loadGlobalStats: async () => {
-    const requestId = ++latestGlobalStatsRequestId;
+    const requestId = nextRequestId("globalStats");
     const { claudePath, activeProviders } = get();
     if (!claudePath) return;
 
@@ -63,19 +62,19 @@ export const createGlobalStatsSlice: StateCreator<
 
     try {
       const summary = await fetchGlobalStatsSummary(claudePath, activeProviders);
-      if (requestId !== latestGlobalStatsRequestId) {
+      if (requestId !== getRequestId("globalStats")) {
         return;
       }
       set({ globalSummary: summary });
     } catch (error) {
-      if (requestId !== latestGlobalStatsRequestId) {
+      if (requestId !== getRequestId("globalStats")) {
         return;
       }
       console.error("Failed to load global stats:", error);
       get().setError({ type: AppErrorType.UNKNOWN, message: String(error) });
       set({ globalSummary: null });
     } finally {
-      if (requestId === latestGlobalStatsRequestId) {
+      if (requestId === getRequestId("globalStats")) {
         set({ isLoadingGlobalStats: false });
       }
     }

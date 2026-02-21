@@ -29,6 +29,7 @@ import {
   canLoadMore,
   getNextOffset,
 } from "../../utils/pagination";
+import { nextRequestId, getRequestId } from "../../utils/requestId";
 
 // ============================================================================
 // State Interface
@@ -248,13 +249,16 @@ export const createMessageSlice: StateCreator<
   },
 
   loadSessionTokenStats: async (sessionPath: string) => {
+    const requestId = nextRequestId("tokenStats");
     try {
       set({ isLoadingTokenStats: true });
       get().setError(null);
 
       const stats = await fetchSessionTokenStats(sessionPath);
+      if (requestId !== getRequestId("tokenStats")) return;
       set({ sessionTokenStats: stats });
     } catch (error) {
+      if (requestId !== getRequestId("tokenStats")) return;
       console.error("Failed to load session token stats:", error);
       get().setError({
         type: AppErrorType.UNKNOWN,
@@ -262,11 +266,14 @@ export const createMessageSlice: StateCreator<
       });
       set({ sessionTokenStats: null });
     } finally {
-      set({ isLoadingTokenStats: false });
+      if (requestId === getRequestId("tokenStats")) {
+        set({ isLoadingTokenStats: false });
+      }
     }
   },
 
   loadProjectTokenStats: async (projectPath: string) => {
+    const requestId = nextRequestId("tokenStats");
     try {
       set({
         isLoadingTokenStats: true,
@@ -292,6 +299,7 @@ export const createMessageSlice: StateCreator<
         end_date: endDate?.toISOString(),
       });
 
+      if (requestId !== getRequestId("tokenStats")) return;
       set({
         projectTokenStats: response.items,
         projectTokenStatsPagination: {
@@ -303,6 +311,7 @@ export const createMessageSlice: StateCreator<
         },
       });
     } catch (error) {
+      if (requestId !== getRequestId("tokenStats")) return;
       console.error("Failed to load project token stats:", error);
       get().setError({
         type: AppErrorType.UNKNOWN,
@@ -310,7 +319,9 @@ export const createMessageSlice: StateCreator<
       });
       set({ projectTokenStats: [] });
     } finally {
-      set({ isLoadingTokenStats: false });
+      if (requestId === getRequestId("tokenStats")) {
+        set({ isLoadingTokenStats: false });
+      }
     }
   },
 
@@ -393,6 +404,8 @@ export const createMessageSlice: StateCreator<
   },
 
   clearTokenStats: () => {
+    // Bump the request ID so any in-flight token stats requests are invalidated.
+    nextRequestId("tokenStats");
     set({
       sessionTokenStats: null,
       projectTokenStats: [],

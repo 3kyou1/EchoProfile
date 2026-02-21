@@ -10,6 +10,7 @@ import {
 import { LoadingSpinner, LoadingProgress } from "@/components/ui/loading";
 import { Download, AlertTriangle, X, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from "sonner";
 import type { UseUpdaterReturn } from '@/hooks/useUpdater';
 
 interface SimpleUpdateModalProps {
@@ -39,11 +40,23 @@ export function SimpleUpdateModal({
   };
 
   const handleRemindLater = async () => {
-    await onRemindLater();
+    try {
+      await onRemindLater();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("common.error.updateCheckFailed")
+      );
+    }
   };
 
   const handleSkipVersion = async () => {
-    await onSkipVersion();
+    try {
+      await onSkipVersion();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("common.error.updateCheckFailed")
+      );
+    }
   };
 
   return (

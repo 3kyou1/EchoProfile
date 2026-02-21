@@ -160,9 +160,7 @@ export function useUpdater(): UseUpdaterReturn {
       await relaunch();
     } catch (error) {
       const rawErrorMessage = getErrorMessage(error, 'Download failed');
-      const shouldSuggestManualRestart =
-        installStepCompleted ||
-        (finishedEventSeen && /download failed/i.test(rawErrorMessage));
+      const shouldSuggestManualRestart = installStepCompleted || finishedEventSeen;
 
       if (shouldSuggestManualRestart) {
         console.warn(

@@ -22,6 +22,9 @@ vi.mock('@tauri-apps/api/app', () => ({
 
 import { useUpdater } from './useUpdater';
 
+const MANUAL_RESTART_REQUIRED_MESSAGE =
+  'Update download completed. Please restart the app manually.';
+
 describe('useUpdater', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -242,6 +245,30 @@ describe('useUpdater', () => {
       expect(result.current.state.error).toBe('Download failed');
     });
 
+    it('should preserve string errors from updater invoke', async () => {
+      const mockDownloadAndInstall = vi
+        .fn()
+        .mockRejectedValue('Failed to move the new app into place');
+
+      const mockUpdate = {
+        version: '2.0.0',
+        downloadAndInstall: mockDownloadAndInstall,
+      };
+      mockCheck.mockResolvedValue(mockUpdate);
+
+      const { result } = renderHook(() => useUpdater());
+
+      await act(async () => {
+        await result.current.checkForUpdates();
+      });
+
+      await act(async () => {
+        await result.current.downloadAndInstall();
+      });
+
+      expect(result.current.state.error).toBe('Failed to move the new app into place');
+    });
+
     it('should recover from relaunch failure by resetting restarting state', async () => {
       const mockDownloadAndInstall = vi.fn().mockImplementation((callback) => {
         callback({ event: 'Started', data: { contentLength: 1000 } });
@@ -268,7 +295,36 @@ describe('useUpdater', () => {
 
       expect(result.current.state.isDownloading).toBe(false);
       expect(result.current.state.isRestarting).toBe(false);
-      expect(result.current.state.error).toBe('Relaunch failed');
+      expect(result.current.state.error).toBe(MANUAL_RESTART_REQUIRED_MESSAGE);
+    });
+
+    it('should ask for manual restart when updater fails after finished event', async () => {
+      const mockDownloadAndInstall = vi.fn().mockImplementation((callback) => {
+        callback({ event: 'Started', data: { contentLength: 1000 } });
+        callback({ event: 'Finished' });
+        return Promise.reject(new Error('Download failed'));
+      });
+
+      const mockUpdate = {
+        version: '2.0.0',
+        downloadAndInstall: mockDownloadAndInstall,
+      };
+      mockCheck.mockResolvedValue(mockUpdate);
+
+      const { result } = renderHook(() => useUpdater());
+
+      await act(async () => {
+        await result.current.checkForUpdates();
+      });
+
+      await act(async () => {
+        await result.current.downloadAndInstall();
+      });
+
+      expect(mockRelaunch).not.toHaveBeenCalled();
+      expect(result.current.state.isDownloading).toBe(false);
+      expect(result.current.state.isRestarting).toBe(false);
+      expect(result.current.state.error).toBe(MANUAL_RESTART_REQUIRED_MESSAGE);
     });
   });
 

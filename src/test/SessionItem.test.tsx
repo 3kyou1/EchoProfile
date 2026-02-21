@@ -183,6 +183,24 @@ describe("SessionItem", () => {
       expect(screen.getByLabelText("Archived session")).toBeInTheDocument();
     });
 
+    it("should show archived badge for codex archived sessions on Windows-style paths", () => {
+      const session = createMockSession({
+        provider: "codex",
+        file_path:
+          "C:\\\\Users\\\\test\\\\.codex\\\\archived_sessions\\\\rollout-2026.jsonl",
+      });
+
+      render(
+        <SessionItem
+          session={session}
+          isSelected={false}
+          onSelect={mockOnSelect}
+          formatTimeAgo={mockFormatTimeAgo}
+        />
+      );
+
+      expect(screen.getByText("Archived")).toBeInTheDocument();
+    });
     it("should not show archived icon for non-archived sessions", () => {
       const session = createMockSession({
         provider: "codex",

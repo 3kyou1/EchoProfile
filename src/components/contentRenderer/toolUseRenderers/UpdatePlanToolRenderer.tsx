@@ -68,7 +68,7 @@ export const UpdatePlanToolRenderer = memo(function UpdatePlanToolRenderer({
               className={cn("p-2 border border-border bg-card", layout.rounded, "space-y-1")}
             >
               <div className={cn("flex items-center gap-1.5", layout.smallText)}>
-                <StatusIcon className={cn(layout.iconSizeSmall, color)} />
+                <StatusIcon className={cn(layout.iconSizeSmall, color)} aria-hidden="true" />
                 <span className={cn("font-medium", color)}>
                   {t(getStatusLabelKey(status))}
                 </span>

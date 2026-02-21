@@ -4,8 +4,16 @@ import { DEFAULT_UPDATE_SETTINGS } from '../types/updateSettings';
 import { updateLogger } from './logger';
 
 const SETTINGS_KEY = 'update_settings';
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
 
 const VALID_CHECK_INTERVALS = ['startup', 'daily', 'weekly', 'never'] as const;
+
+interface ShouldCheckForUpdatesOptions {
+  settings?: UpdateSettings;
+  now?: number;
+  online?: boolean;
+}
 
 /**
  * Validate and sanitize parsed settings from localStorage
@@ -73,8 +81,10 @@ export function setUpdateSettings(settings: Partial<UpdateSettings>): void {
   }
 }
 
-export function shouldCheckForUpdates(): boolean {
-  const settings = getUpdateSettings();
+export function shouldCheckForUpdates(options: ShouldCheckForUpdatesOptions = {}): boolean {
+  const settings = options.settings ?? getUpdateSettings();
+  const now = options.now ?? Date.now();
+  const online = options.online ?? isOnline();
   
   // 자동 체크가 비활성화된 경우
   if (!settings.autoCheck) {
@@ -87,17 +97,24 @@ export function shouldCheckForUpdates(): boolean {
   }
   
   // 오프라인 상태를 존중하는 설정이고 현재 오프라인인 경우
-  if (settings.respectOfflineStatus && !isOnline()) {
+  if (settings.respectOfflineStatus && !online) {
     return false;
   }
   
   // 연기된 업데이트가 있는지 확인
   if (settings.lastPostponedAt) {
-    const now = Date.now();
     const timeSincePostpone = now - settings.lastPostponedAt;
     if (timeSincePostpone < settings.postponeInterval) {
       return false; // 아직 연기 기간
     }
+  }
+
+  if (settings.checkInterval === 'daily' && settings.lastCheckedAt) {
+    return now - settings.lastCheckedAt >= DAY_MS;
+  }
+
+  if (settings.checkInterval === 'weekly' && settings.lastCheckedAt) {
+    return now - settings.lastCheckedAt >= WEEK_MS;
   }
   
   return true;

@@ -5,10 +5,9 @@ import { UpToDateNotification } from "./UpToDateNotification";
 import { UpdateCheckingNotification } from "./UpdateCheckingNotification";
 import { UpdateErrorNotification } from "./UpdateErrorNotification";
 import { useAppStore } from "@/store/useAppStore";
+import { shouldCheckForUpdates } from "@/utils/updateSettings";
 
 const AUTO_CHECK_DELAY_MS = 5_000; // 5 seconds after app start
-const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEK_MS = 7 * DAY_MS;
 
 interface SimpleUpdateManagerProps {
   updater: UseUpdaterReturn;
@@ -20,6 +19,14 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
   const setUpdateSetting = useAppStore((state) => state.setUpdateSetting);
   const postponeUpdate = useAppStore((state) => state.postponeUpdate);
   const skipVersion = useAppStore((state) => state.skipVersion);
+  const checkForUpdates = updater.checkForUpdates;
+  const dismissUpdate = updater.dismissUpdate;
+  const { state } = updater;
+  const isChecking = state.isChecking;
+  const hasUpdate = state.hasUpdate;
+  const updateError = state.error;
+  const newVersion = state.newVersion;
+  const currentVersion = state.currentVersion;
 
   const [showUpToDate, setShowUpToDate] = useState(false);
   const [showChecking, setShowChecking] = useState(false);
@@ -30,29 +37,13 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
   const [lastCheckWasManual, setLastCheckWasManual] = useState(false);
   const hasAutoCheckedRef = useRef(false);
 
+  const runCheckAndPersist = useCallback(async () => {
+    await checkForUpdates();
+    await setUpdateSetting("lastCheckedAt", Date.now());
+  }, [checkForUpdates, setUpdateSetting]);
+
   const shouldRunAutoCheck = useCallback(() => {
-    if (!updateSettings.autoCheck) return false;
-    if (updateSettings.checkInterval === "never") return false;
-    if (updateSettings.respectOfflineStatus && !navigator.onLine) return false;
-
-    const now = Date.now();
-
-    if (
-      updateSettings.lastPostponedAt &&
-      now - updateSettings.lastPostponedAt < updateSettings.postponeInterval
-    ) {
-      return false;
-    }
-
-    if (updateSettings.checkInterval === "daily" && updateSettings.lastCheckedAt) {
-      return now - updateSettings.lastCheckedAt >= DAY_MS;
-    }
-
-    if (updateSettings.checkInterval === "weekly" && updateSettings.lastCheckedAt) {
-      return now - updateSettings.lastCheckedAt >= WEEK_MS;
-    }
-
-    return true;
+    return shouldCheckForUpdates({ settings: updateSettings });
   }, [updateSettings]);
 
   useEffect(() => {
@@ -73,57 +64,48 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
     if (import.meta.env.DEV) return;
     if (!isSettingsLoaded) return;
     if (hasAutoCheckedRef.current) return;
-
-    hasAutoCheckedRef.current = true;
-
     if (!shouldRunAutoCheck()) return;
+    hasAutoCheckedRef.current = true;
 
     setLastCheckWasManual(false);
 
     const timer = setTimeout(() => {
-      void updater
-        .checkForUpdates()
-        .finally(() => setUpdateSetting("lastCheckedAt", Date.now()));
+      void runCheckAndPersist();
     }, AUTO_CHECK_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [isSettingsLoaded, shouldRunAutoCheck, updater, setUpdateSetting]);
+  }, [isSettingsLoaded, shouldRunAutoCheck, runCheckAndPersist]);
 
   // Show checking notification during manual check
   useEffect(() => {
-    if (updater.state.isChecking && isManualCheck) {
+    if (isChecking && isManualCheck) {
       setShowChecking(true);
     } else {
       setShowChecking(false);
     }
-  }, [updater.state.isChecking, isManualCheck]);
+  }, [isChecking, isManualCheck]);
 
   // Handle manual check results
   useEffect(() => {
-    if (!updater.state.isChecking && isManualCheck) {
-      if (updater.state.error) {
-        setErrorMessage(updater.state.error);
+    if (!isChecking && isManualCheck) {
+      if (updateError) {
+        setErrorMessage(updateError);
         setShowError(true);
-      } else if (!updater.state.hasUpdate) {
+      } else if (!hasUpdate) {
         setShowUpToDate(true);
         setTimeout(() => setShowUpToDate(false), 3000);
       }
       setIsManualCheck(false);
     }
-  }, [
-    updater.state.isChecking,
-    updater.state.hasUpdate,
-    updater.state.error,
-    isManualCheck,
-  ]);
+  }, [isChecking, hasUpdate, updateError, isManualCheck]);
 
   // Suppress auto-check update modal for postponed/skipped versions
   useEffect(() => {
-    if (updater.state.isChecking) return;
-    if (!updater.state.hasUpdate) return;
+    if (isChecking) return;
+    if (!hasUpdate) return;
     if (lastCheckWasManual) return;
 
-    const version = updater.state.newVersion;
+    const version = newVersion;
     if (!version) return;
 
     const now = Date.now();
@@ -133,13 +115,13 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
     const isSkipped = updateSettings.skippedVersions.includes(version);
 
     if (isPostponed || isSkipped) {
-      updater.dismissUpdate();
+      dismissUpdate();
     }
   }, [
-    updater,
-    updater.state.isChecking,
-    updater.state.hasUpdate,
-    updater.state.newVersion,
+    dismissUpdate,
+    isChecking,
+    hasUpdate,
+    newVersion,
     lastCheckWasManual,
     updateSettings.lastPostponedAt,
     updateSettings.postponeInterval,
@@ -149,38 +131,46 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
   // Listen for manual update check events
   useEffect(() => {
     const handleManualCheck = () => {
-      if (updater.state.isChecking) return;
+      if (isChecking) return;
 
       setLastCheckWasManual(true);
       setIsManualCheck(true);
       setShowError(false);
       setShowUpToDate(false);
 
-      void updater
-        .checkForUpdates()
-        .finally(() => setUpdateSetting("lastCheckedAt", Date.now()));
+      void runCheckAndPersist();
     };
 
     window.addEventListener("manual-update-check", handleManualCheck);
     return () => {
       window.removeEventListener("manual-update-check", handleManualCheck);
     };
-  }, [updater, setUpdateSetting]);
+  }, [isChecking, runCheckAndPersist]);
 
   const handleCloseUpdateModal = () => {
-    updater.dismissUpdate();
+    dismissUpdate();
   };
 
   const handleRemindLater = async () => {
-    await postponeUpdate();
-    updater.dismissUpdate();
+    try {
+      await postponeUpdate();
+      dismissUpdate();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to postpone update");
+      setShowError(true);
+    }
   };
 
   const handleSkipVersion = async () => {
-    if (updater.state.newVersion) {
-      await skipVersion(updater.state.newVersion);
+    try {
+      if (newVersion) {
+        await skipVersion(newVersion);
+      }
+      dismissUpdate();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to skip update version");
+      setShowError(true);
     }
-    updater.dismissUpdate();
   };
 
   return (
@@ -188,7 +178,7 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
       {/* Update Modal */}
       <SimpleUpdateModal
         updater={updater}
-        isVisible={updater.state.hasUpdate}
+        isVisible={hasUpdate}
         onClose={handleCloseUpdateModal}
         onRemindLater={handleRemindLater}
         onSkipVersion={handleSkipVersion}
@@ -205,7 +195,7 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
 
       {/* Up to date notification (manual check) */}
       <UpToDateNotification
-        currentVersion={updater.state.currentVersion}
+        currentVersion={currentVersion}
         onClose={() => setShowUpToDate(false)}
         isVisible={showUpToDate}
       />
@@ -215,14 +205,12 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
         error={errorMessage}
         onClose={() => setShowError(false)}
         onRetry={() => {
-          if (updater.state.isChecking) return;
+          if (isChecking) return;
 
           setLastCheckWasManual(true);
           setIsManualCheck(true);
 
-          void updater
-            .checkForUpdates()
-            .finally(() => setUpdateSetting("lastCheckedAt", Date.now()));
+          void runCheckAndPersist();
         }}
         isVisible={showError}
       />

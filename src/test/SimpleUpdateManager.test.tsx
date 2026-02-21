@@ -58,8 +58,14 @@ vi.mock("../components/UpToDateNotification", () => ({
 }));
 
 vi.mock("../components/UpdateErrorNotification", () => ({
-  UpdateErrorNotification: ({ isVisible }: { isVisible: boolean }) =>
-    isVisible ? <div data-testid="error-notification" /> : null,
+  UpdateErrorNotification: ({
+    isVisible,
+    error,
+  }: {
+    isVisible: boolean;
+    error: string;
+  }) =>
+    isVisible ? <div data-testid="error-notification">{error}</div> : null,
 }));
 
 function createUpdater(
@@ -166,5 +172,24 @@ describe("SimpleUpdateManager", () => {
     await waitFor(() => {
       expect(updater.dismissUpdate).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("shows error notification when postpone action fails", async () => {
+    mockStore.postponeUpdate.mockRejectedValueOnce(new Error("postpone failed"));
+    const updater = createUpdater({ hasUpdate: true, newVersion: "2.0.0" });
+
+    render(<SimpleUpdateManager updater={updater} />);
+
+    await waitFor(() => {
+      expect(mockStore.loadUpdateSettings).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.click(screen.getByText("remind-later"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("error-notification")).toHaveTextContent("postpone failed");
+    });
+
+    expect(updater.dismissUpdate).not.toHaveBeenCalled();
   });
 });

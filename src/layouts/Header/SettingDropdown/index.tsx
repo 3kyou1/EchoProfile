@@ -34,6 +34,7 @@ export const SettingDropdown = ({ updater }: SettingDropdownProps) => {
         <DropdownMenuTrigger asChild>
           <button
             className="p-2 rounded-lg transition-colors cursor-pointer relative text-muted-foreground/50 hover:text-foreground/80 hover:bg-muted"
+            aria-label={t("common.settings.title")}
           >
             <Settings className="w-5 h-5 text-foreground" />
             {isCheckingForUpdates && (

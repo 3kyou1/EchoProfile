@@ -179,6 +179,51 @@ describe("updateSettings", () => {
       });
       expect(shouldCheckForUpdates()).toBe(true);
     });
+
+    it("should return false for daily interval within 24 hours of last check", () => {
+      setUpdateSettings({
+        autoCheck: true,
+        checkInterval: "daily",
+        lastCheckedAt: Date.now() - 12 * 60 * 60 * 1000,
+      });
+      expect(shouldCheckForUpdates()).toBe(false);
+    });
+
+    it("should return true for daily interval after 24 hours of last check", () => {
+      setUpdateSettings({
+        autoCheck: true,
+        checkInterval: "daily",
+        lastCheckedAt: Date.now() - 25 * 60 * 60 * 1000,
+      });
+      expect(shouldCheckForUpdates()).toBe(true);
+    });
+
+    it("should return false for weekly interval within 7 days of last check", () => {
+      setUpdateSettings({
+        autoCheck: true,
+        checkInterval: "weekly",
+        lastCheckedAt: Date.now() - 2 * 24 * 60 * 60 * 1000,
+      });
+      expect(shouldCheckForUpdates()).toBe(false);
+    });
+
+    it("should return true for weekly interval after 7 days of last check", () => {
+      setUpdateSettings({
+        autoCheck: true,
+        checkInterval: "weekly",
+        lastCheckedAt: Date.now() - 8 * 24 * 60 * 60 * 1000,
+      });
+      expect(shouldCheckForUpdates()).toBe(true);
+    });
+
+    it("should return false when offline and offline mode should be respected", () => {
+      setUpdateSettings({
+        autoCheck: true,
+        checkInterval: "startup",
+        respectOfflineStatus: true,
+      });
+      expect(shouldCheckForUpdates({ online: false })).toBe(false);
+    });
   });
 
   describe("shouldShowUpdateForVersion", () => {

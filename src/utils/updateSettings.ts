@@ -9,7 +9,7 @@ const WEEK_MS = 7 * DAY_MS;
 
 const VALID_CHECK_INTERVALS = ['startup', 'daily', 'weekly', 'never'] as const;
 
-interface ShouldCheckForUpdatesOptions {
+export interface ShouldCheckForUpdatesOptions {
   settings?: Pick<
     UpdateSettings,
     | 'autoCheck'
@@ -117,11 +117,11 @@ export function shouldCheckForUpdates(options: ShouldCheckForUpdatesOptions = {}
     }
   }
 
-  if (settings.checkInterval === 'daily' && settings.lastCheckedAt) {
+  if (settings.checkInterval === 'daily' && settings.lastCheckedAt != null) {
     return now - settings.lastCheckedAt >= DAY_MS;
   }
 
-  if (settings.checkInterval === 'weekly' && settings.lastCheckedAt) {
+  if (settings.checkInterval === 'weekly' && settings.lastCheckedAt != null) {
     return now - settings.lastCheckedAt >= WEEK_MS;
   }
   

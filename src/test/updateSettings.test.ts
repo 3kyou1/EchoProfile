@@ -181,48 +181,77 @@ describe("updateSettings", () => {
     });
 
     it("should return false for daily interval within 24 hours of last check", () => {
-      setUpdateSettings({
-        autoCheck: true,
-        checkInterval: "daily",
-        lastCheckedAt: Date.now() - 12 * 60 * 60 * 1000,
-      });
-      expect(shouldCheckForUpdates()).toBe(false);
+      const now = 1_700_000_000_000;
+      expect(
+        shouldCheckForUpdates({
+          settings: {
+            ...DEFAULT_UPDATE_SETTINGS,
+            autoCheck: true,
+            checkInterval: "daily",
+            lastCheckedAt: now - 12 * 60 * 60 * 1000,
+          },
+          now,
+        })
+      ).toBe(false);
     });
 
     it("should return true for daily interval after 24 hours of last check", () => {
-      setUpdateSettings({
-        autoCheck: true,
-        checkInterval: "daily",
-        lastCheckedAt: Date.now() - 25 * 60 * 60 * 1000,
-      });
-      expect(shouldCheckForUpdates()).toBe(true);
+      const now = 1_700_000_000_000;
+      expect(
+        shouldCheckForUpdates({
+          settings: {
+            ...DEFAULT_UPDATE_SETTINGS,
+            autoCheck: true,
+            checkInterval: "daily",
+            lastCheckedAt: now - 25 * 60 * 60 * 1000,
+          },
+          now,
+        })
+      ).toBe(true);
     });
 
     it("should return false for weekly interval within 7 days of last check", () => {
-      setUpdateSettings({
-        autoCheck: true,
-        checkInterval: "weekly",
-        lastCheckedAt: Date.now() - 2 * 24 * 60 * 60 * 1000,
-      });
-      expect(shouldCheckForUpdates()).toBe(false);
+      const now = 1_700_000_000_000;
+      expect(
+        shouldCheckForUpdates({
+          settings: {
+            ...DEFAULT_UPDATE_SETTINGS,
+            autoCheck: true,
+            checkInterval: "weekly",
+            lastCheckedAt: now - 2 * 24 * 60 * 60 * 1000,
+          },
+          now,
+        })
+      ).toBe(false);
     });
 
     it("should return true for weekly interval after 7 days of last check", () => {
-      setUpdateSettings({
-        autoCheck: true,
-        checkInterval: "weekly",
-        lastCheckedAt: Date.now() - 8 * 24 * 60 * 60 * 1000,
-      });
-      expect(shouldCheckForUpdates()).toBe(true);
+      const now = 1_700_000_000_000;
+      expect(
+        shouldCheckForUpdates({
+          settings: {
+            ...DEFAULT_UPDATE_SETTINGS,
+            autoCheck: true,
+            checkInterval: "weekly",
+            lastCheckedAt: now - 8 * 24 * 60 * 60 * 1000,
+          },
+          now,
+        })
+      ).toBe(true);
     });
 
     it("should return false when offline and offline mode should be respected", () => {
-      setUpdateSettings({
-        autoCheck: true,
-        checkInterval: "startup",
-        respectOfflineStatus: true,
-      });
-      expect(shouldCheckForUpdates({ online: false })).toBe(false);
+      expect(
+        shouldCheckForUpdates({
+          settings: {
+            ...DEFAULT_UPDATE_SETTINGS,
+            autoCheck: true,
+            checkInterval: "startup",
+            respectOfflineStatus: true,
+          },
+          online: false,
+        })
+      ).toBe(false);
     });
   });
 

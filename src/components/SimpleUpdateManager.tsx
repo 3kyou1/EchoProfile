@@ -6,6 +6,7 @@ import { UpdateCheckingNotification } from "./UpdateCheckingNotification";
 import { UpdateErrorNotification } from "./UpdateErrorNotification";
 import { useAppStore } from "@/store/useAppStore";
 import { shouldCheckForUpdates } from "@/utils/updateSettings";
+import { useTranslation } from "react-i18next";
 
 const AUTO_CHECK_DELAY_MS = 5_000; // 5 seconds after app start
 
@@ -14,6 +15,7 @@ interface SimpleUpdateManagerProps {
 }
 
 export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
+  const { t } = useTranslation();
   const updateSettings = useAppStore((state) => state.updateSettings);
   const loadUpdateSettings = useAppStore((state) => state.loadUpdateSettings);
   const setUpdateSetting = useAppStore((state) => state.setUpdateSetting);
@@ -46,9 +48,14 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
   const hasAutoCheckedRef = useRef(false);
 
   const runCheckAndPersist = useCallback(async () => {
-    await checkForUpdates();
-    await setUpdateSetting("lastCheckedAt", Date.now());
-  }, [checkForUpdates, setUpdateSetting]);
+    try {
+      await checkForUpdates();
+      await setUpdateSetting("lastCheckedAt", Date.now());
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : t("common.error.updateCheckFailed"));
+      setShowError(true);
+    }
+  }, [checkForUpdates, setUpdateSetting, t]);
 
   const shouldRunAutoCheck = useCallback(() => {
     return shouldCheckForUpdates({
@@ -74,14 +81,24 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
     let mounted = true;
 
     void (async () => {
-      await loadUpdateSettings();
-      if (mounted) setIsSettingsLoaded(true);
+      try {
+        await loadUpdateSettings();
+      } catch (error) {
+        if (mounted) {
+          setErrorMessage(
+            error instanceof Error ? error.message : t("common.error.updateCheckFailed")
+          );
+          setShowError(true);
+        }
+      } finally {
+        if (mounted) setIsSettingsLoaded(true);
+      }
     })();
 
     return () => {
       mounted = false;
     };
-  }, [loadUpdateSettings]);
+  }, [loadUpdateSettings, t]);
 
   // Auto check on app start (production only)
   useEffect(() => {
@@ -180,7 +197,7 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
       await postponeUpdate();
       dismissUpdate();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to postpone update");
+      setErrorMessage(error instanceof Error ? error.message : t("common.error.updateCheckFailed"));
       setShowError(true);
     }
   };
@@ -192,7 +209,7 @@ export function SimpleUpdateManager({ updater }: SimpleUpdateManagerProps) {
       }
       dismissUpdate();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to skip update version");
+      setErrorMessage(error instanceof Error ? error.message : t("common.error.updateCheckFailed"));
       setShowError(true);
     }
   };

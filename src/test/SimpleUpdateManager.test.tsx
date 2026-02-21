@@ -4,6 +4,12 @@ import { SimpleUpdateManager } from "../components/SimpleUpdateManager";
 import type { UseUpdaterReturn } from "../hooks/useUpdater";
 import type { UpdateSettings } from "../types/updateSettings";
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
 const baseUpdateSettings: UpdateSettings = {
   autoCheck: true,
   checkInterval: "startup",

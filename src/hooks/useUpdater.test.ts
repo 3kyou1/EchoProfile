@@ -241,6 +241,35 @@ describe('useUpdater', () => {
       expect(result.current.state.isDownloading).toBe(false);
       expect(result.current.state.error).toBe('Download failed');
     });
+
+    it('should recover from relaunch failure by resetting restarting state', async () => {
+      const mockDownloadAndInstall = vi.fn().mockImplementation((callback) => {
+        callback({ event: 'Started', data: { contentLength: 1000 } });
+        callback({ event: 'Finished' });
+        return Promise.resolve();
+      });
+
+      const mockUpdate = {
+        version: '2.0.0',
+        downloadAndInstall: mockDownloadAndInstall,
+      };
+      mockCheck.mockResolvedValue(mockUpdate);
+      mockRelaunch.mockRejectedValue(new Error('Relaunch failed'));
+
+      const { result } = renderHook(() => useUpdater());
+
+      await act(async () => {
+        await result.current.checkForUpdates();
+      });
+
+      await act(async () => {
+        await result.current.downloadAndInstall();
+      });
+
+      expect(result.current.state.isDownloading).toBe(false);
+      expect(result.current.state.isRestarting).toBe(false);
+      expect(result.current.state.error).toBe('Relaunch failed');
+    });
   });
 
   describe('dismissUpdate', () => {

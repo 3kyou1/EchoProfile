@@ -92,6 +92,16 @@ describe("updateSettings", () => {
       expect(settings.checkInterval).toBe(DEFAULT_UPDATE_SETTINGS.checkInterval);
     });
 
+    it("should accept valid lastCheckedAt timestamp", () => {
+      const storedSettings = {
+        lastCheckedAt: 1234567890,
+      };
+      localStorage.setItem("update_settings", JSON.stringify(storedSettings));
+
+      const settings = getUpdateSettings();
+      expect(settings.lastCheckedAt).toBe(1234567890);
+    });
+
     it("should validate skippedVersions as string array", () => {
       const storedSettings = {
         skippedVersions: [1, 2, 3], // Invalid: numbers instead of strings

@@ -39,6 +39,7 @@ pub async fn scan_all_projects(
                     }
                     all_projects.extend(projects);
                 }
+                #[allow(unused_variables)]
                 Err(e) => {
                     #[cfg(debug_assertions)]
                     eprintln!("Claude scan failed: {e}");
@@ -51,6 +52,7 @@ pub async fn scan_all_projects(
     if providers_to_scan.iter().any(|p| p == "codex") {
         match providers::codex::scan_projects() {
             Ok(projects) => all_projects.extend(projects),
+            #[allow(unused_variables)]
             Err(e) => {
                 #[cfg(debug_assertions)]
                 eprintln!("Codex scan failed: {e}");
@@ -62,6 +64,7 @@ pub async fn scan_all_projects(
     if providers_to_scan.iter().any(|p| p == "opencode") {
         match providers::opencode::scan_projects() {
             Ok(projects) => all_projects.extend(projects),
+            #[allow(unused_variables)]
             Err(e) => {
                 #[cfg(debug_assertions)]
                 eprintln!("OpenCode scan failed: {e}");
@@ -179,6 +182,7 @@ pub async fn search_all_providers(
                     }
                     all_results.extend(results);
                 }
+                #[allow(unused_variables)]
                 Err(e) => {
                     #[cfg(debug_assertions)]
                     eprintln!("Claude search failed: {e}");
@@ -191,6 +195,7 @@ pub async fn search_all_providers(
     if providers_to_search.iter().any(|p| p == "codex") {
         match providers::codex::search(&query, max_results) {
             Ok(results) => all_results.extend(results),
+            #[allow(unused_variables)]
             Err(e) => {
                 #[cfg(debug_assertions)]
                 eprintln!("Codex search failed: {e}");
@@ -202,6 +207,7 @@ pub async fn search_all_providers(
     if providers_to_search.iter().any(|p| p == "opencode") {
         match providers::opencode::search(&query, max_results) {
             Ok(results) => all_results.extend(results),
+            #[allow(unused_variables)]
             Err(e) => {
                 #[cfg(debug_assertions)]
                 eprintln!("OpenCode search failed: {e}");

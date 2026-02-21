@@ -569,7 +569,7 @@ fn read_message_parts(parts_dir: &Path) -> Result<Vec<Value>, String> {
     Ok(parts.into_iter().map(|(_, v)| v).collect())
 }
 
-/// Sum two Option<u32> values, treating None as absent (not zero)
+/// Sum two `Option<u32>` values, treating None as absent (not zero)
 fn sum_opt(a: Option<u32>, b: Option<u32>) -> Option<u32> {
     match (a, b) {
         (Some(x), Some(y)) => Some(x.saturating_add(y)),

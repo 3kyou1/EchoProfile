@@ -7,7 +7,6 @@
 Claude Code, Codex CLI, OpenCode의 대화 기록을 분석, 세션 보드, 실시간 모니터링과 함께 탐색하는 데스크톱 앱.
 
 [![Version](https://img.shields.io/github/v/release/jhlee0409/claude-code-history-viewer?label=Version&color=blue)](https://github.com/jhlee0409/claude-code-history-viewer/releases)
-[![Downloads](https://img.shields.io/github/downloads/jhlee0409/claude-code-history-viewer/total?color=green)](https://github.com/jhlee0409/claude-code-history-viewer/releases)
 [![Stars](https://img.shields.io/github/stars/jhlee0409/claude-code-history-viewer?style=flat&color=yellow)](https://github.com/jhlee0409/claude-code-history-viewer/stargazers)
 [![License](https://img.shields.io/github/license/jhlee0409/claude-code-history-viewer)](LICENSE)
 [![Rust Tests](https://img.shields.io/github/actions/workflow/status/jhlee0409/claude-code-history-viewer/rust-tests.yml?label=Rust%20Tests)](https://github.com/jhlee0409/claude-code-history-viewer/actions/workflows/rust-tests.yml)
@@ -19,6 +18,9 @@ Claude Code, Codex CLI, OpenCode의 대화 기록을 분석, 세션 보드, 실�
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
 
 </div>
+
+> **프로젝트 이름 변경을 검토 중입니다** — 멀티 도구 지원(Claude Code, Codex CLI, OpenCode)을 더 잘 반영하기 위해서입니다.
+> 의견과 이름 제안을 [토론에서](https://github.com/jhlee0409/claude-code-history-viewer/discussions/149) 공유해주세요!
 
 ---
 

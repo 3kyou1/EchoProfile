@@ -7,7 +7,6 @@
 Claude Code、Codex CLI、OpenCodeの会話履歴を分析ダッシュボード、セッションボード、リアルタイム監視で閲覧するデスクトップアプリ。
 
 [![Version](https://img.shields.io/github/v/release/jhlee0409/claude-code-history-viewer?label=Version&color=blue)](https://github.com/jhlee0409/claude-code-history-viewer/releases)
-[![Downloads](https://img.shields.io/github/downloads/jhlee0409/claude-code-history-viewer/total?color=green)](https://github.com/jhlee0409/claude-code-history-viewer/releases)
 [![Stars](https://img.shields.io/github/stars/jhlee0409/claude-code-history-viewer?style=flat&color=yellow)](https://github.com/jhlee0409/claude-code-history-viewer/stargazers)
 [![License](https://img.shields.io/github/license/jhlee0409/claude-code-history-viewer)](LICENSE)
 [![Rust Tests](https://img.shields.io/github/actions/workflow/status/jhlee0409/claude-code-history-viewer/rust-tests.yml?label=Rust%20Tests)](https://github.com/jhlee0409/claude-code-history-viewer/actions/workflows/rust-tests.yml)
@@ -19,6 +18,9 @@ Claude Code、Codex CLI、OpenCodeの会話履歴を分析ダッシュボード�
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
 
 </div>
+
+> **プロジェクト名の変更を検討中です** — マルチツール対応（Claude Code、Codex CLI、OpenCode）をより反映するためです。
+> ご意見や名前の提案を[ディスカッション](https://github.com/jhlee0409/claude-code-history-viewer/discussions/149)でお聞かせください！
 
 ---
 

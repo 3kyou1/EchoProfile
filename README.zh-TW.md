@@ -7,7 +7,6 @@
 讀取 Claude Code、Codex CLI 和 OpenCode 對話記錄的桌面應用，支援資料分析、工作階段面板和即時監控。
 
 [![Version](https://img.shields.io/github/v/release/jhlee0409/claude-code-history-viewer?label=Version&color=blue)](https://github.com/jhlee0409/claude-code-history-viewer/releases)
-[![Downloads](https://img.shields.io/github/downloads/jhlee0409/claude-code-history-viewer/total?color=green)](https://github.com/jhlee0409/claude-code-history-viewer/releases)
 [![Stars](https://img.shields.io/github/stars/jhlee0409/claude-code-history-viewer?style=flat&color=yellow)](https://github.com/jhlee0409/claude-code-history-viewer/stargazers)
 [![License](https://img.shields.io/github/license/jhlee0409/claude-code-history-viewer)](LICENSE)
 [![Rust Tests](https://img.shields.io/github/actions/workflow/status/jhlee0409/claude-code-history-viewer/rust-tests.yml?label=Rust%20Tests)](https://github.com/jhlee0409/claude-code-history-viewer/actions/workflows/rust-tests.yml)
@@ -19,6 +18,9 @@
 **Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
 
 </div>
+
+> **我們正在考慮重新命名此專案**，以更好地反映多工具支援（Claude Code、Codex CLI、OpenCode）。
+> 請在[討論區](https://github.com/jhlee0409/claude-code-history-viewer/discussions/149)分享您的想法和命名建議！
 
 ---
 

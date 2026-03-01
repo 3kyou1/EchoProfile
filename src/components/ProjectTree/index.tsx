@@ -9,6 +9,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   RotateCcw,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
@@ -19,7 +20,7 @@ import { ProjectContextMenu } from "../ProjectContextMenu";
 import { useProjectTreeState } from "./hooks/useProjectTreeState";
 import { GroupedProjectList } from "./components/GroupedProjectList";
 import type { ProjectTreeProps } from "./types";
-import type { ProviderId } from "../../types";
+import type { ProviderId, ClaudeSession } from "../../types";
 import { useAppStore } from "../../store/useAppStore";
 import {
   buildTreeItemAnnouncement,
@@ -62,6 +63,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
   isCollapsed = false,
   onToggleCollapse,
   asideId = "project-explorer",
+  onClose,
 }) => {
   const { t, i18n } = useTranslation();
   const keyboardHelpId = `${asideId}-keyboard-help`;
@@ -82,6 +84,15 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
     handleContextMenu,
     closeContextMenu,
   } = useProjectTreeState(groupingMode);
+
+  // Wrap session select to also close mobile drawer
+  const handleSessionSelect = useCallback(
+    (session: ClaudeSession) => {
+      onSessionSelect(session);
+      onClose?.();
+    },
+    [onSessionSelect, onClose]
+  );
 
   const providerCounts = useMemo(() => {
     const counts: Record<ProviderTabId, number> = {
@@ -634,7 +645,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
       id={asideId}
       aria-label={t("project.explorer")}
       tabIndex={-1}
-      className={cn("flex-shrink-0 bg-sidebar border-r-0 flex h-full", !width && "w-64", isResizing && "select-none")}
+      className={cn("flex-shrink-0 bg-sidebar border-r-0 flex h-full", !width && (onClose ? "w-full" : "w-64"), isResizing && "select-none")}
       style={sidebarStyle}
     >
       {/* Content Area */}
@@ -646,7 +657,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
         <div className="px-4 py-3 bg-accent/5 border-b border-accent/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {/* Collapse Button */}
+              {/* Collapse Button (desktop) */}
               {onToggleCollapse && (
                 <button
                   onClick={onToggleCollapse}
@@ -658,6 +669,20 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                   aria-label={t("project.collapseSidebar", "Collapse sidebar")}
                 >
                   <PanelLeftClose className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {/* Close Button (mobile drawer) */}
+              {!onToggleCollapse && onClose && (
+                <button
+                  onClick={onClose}
+                  className={cn(
+                    "p-1 rounded-md transition-colors",
+                    "text-muted-foreground hover:text-accent hover:bg-accent/10"
+                  )}
+                  title={t("common.close", "Close")}
+                  aria-label={t("common.close", "Close")}
+                >
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
               <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
@@ -867,7 +892,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
                 isProjectExpanded={isProjectExpanded}
                 handleProjectClick={handleProjectClick}
                 handleContextMenu={handleContextMenu}
-                onSessionSelect={onSessionSelect}
+                onSessionSelect={handleSessionSelect}
                 onSessionHover={onSessionHover}
                 formatTimeAgo={formatTimeAgo}
               />

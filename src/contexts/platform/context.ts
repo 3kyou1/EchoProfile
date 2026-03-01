@@ -6,6 +6,7 @@ export interface PlatformContextValue {
   platform: PlatformType;
   isDesktop: boolean;
   isWeb: boolean;
+  isMobile: boolean;
 }
 
 export const PlatformContext = createContext<PlatformContextValue | null>(null);

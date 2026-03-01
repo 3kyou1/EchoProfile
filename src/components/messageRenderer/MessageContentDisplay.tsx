@@ -194,7 +194,7 @@ export const MessageContentDisplay: React.FC<MessageContentDisplayProps> = ({
 
     return (
       <div className="mb-3 flex justify-end">
-        <div className="max-w-xs sm:max-w-md lg:max-w-lg bg-accent text-accent-foreground rounded-2xl px-4 py-3 relative group shadow-sm">
+        <div className="max-w-[85%] md:max-w-md lg:max-w-lg bg-accent text-accent-foreground rounded-2xl px-4 py-3 relative group shadow-sm">
           <div className={cn(
             "whitespace-pre-wrap break-words",
             layout.bodyText
@@ -251,7 +251,7 @@ export const MessageContentDisplay: React.FC<MessageContentDisplayProps> = ({
 
     return (
       <div className="mb-3 flex justify-start">
-        <div className="max-w-xs sm:max-w-md lg:max-w-2xl bg-secondary text-secondary-foreground rounded-2xl px-4 py-3 relative group shadow-sm border border-border">
+        <div className="max-w-[95%] md:max-w-2xl bg-secondary text-secondary-foreground rounded-2xl px-4 py-3 relative group shadow-sm border border-border">
           {/* 검색 중일 때는 plain text로 렌더링 (성능 + 하이라이팅) */}
           {searchQuery ? (
             <div className={`whitespace-pre-wrap break-words ${layout.bodyText}`}>

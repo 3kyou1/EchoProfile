@@ -213,7 +213,7 @@ export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
             className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_30%_0%,_var(--metric-green)_/_0.08,_transparent_50%),_radial-gradient(ellipse_at_70%_100%,_var(--metric-purple)_/_0.05,_transparent_50%)]"
           />
 
-          <div className="relative p-6">
+          <div className="relative p-4 md:p-6">
             {/* Header */}
             <div className="flex items-center gap-3 mb-5">
               <div
@@ -387,16 +387,16 @@ export const TokenStatsViewer: React.FC<TokenStatsViewerProps> = ({
       <div className="space-y-6">
         {/* Header */}
         {(title || (dateFilter && setDateFilter)) && (
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             {title && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center"
                   style={{ background: "color-mix(in oklch, var(--metric-purple) 15%, transparent)" }}
                 >
                   <Sparkles className="w-4 h-4" style={{ color: "var(--metric-purple)" }} />
                 </div>
-                <h2 className="text-lg font-semibold text-foreground tracking-tight">
+                <h2 className="text-lg font-semibold text-foreground tracking-tight whitespace-nowrap">
                   {title}
                 </h2>
               </div>

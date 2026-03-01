@@ -94,19 +94,19 @@ export const RecentEditsViewer: React.FC<RecentEditsViewerProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="h-full flex flex-col p-3 md:p-6">
       {/* Header with stats */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
+      <div className="mb-4 md:mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-accent/20 flex items-center justify-center">
               <span title="File Edits"><FileEdit className="w-5 h-5 text-accent" /></span>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-foreground tracking-tight">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-foreground tracking-tight truncate">
                 {t("recentEdits.title")}
               </h2>
-              <p className={`${layout.smallText} text-muted-foreground`}>
+              <p className={`${layout.smallText} text-muted-foreground truncate`}>
                 {t("recentEdits.stats", {
                   files: stats.uniqueFilesCount,
                   edits: stats.totalEditsCount,
@@ -114,12 +114,12 @@ export const RecentEditsViewer: React.FC<RecentEditsViewerProps> = ({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
             <span className="text-[11px] text-muted-foreground font-mono">
               {recentEdits?.files?.length ?? 0} / {totalUniqueFiles}
             </span>
             <div
-              className={`flex items-center gap-2 ${layout.bodyText} text-accent bg-accent/10 px-3 py-1.5 rounded-full`}
+              className={`flex items-center gap-2 ${layout.bodyText} text-accent bg-accent/10 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full`}
             >
               <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
               <span className="font-medium">{stats.totalEditsCount} edits</span>

@@ -30,16 +30,16 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         "hover:bg-card hover:border-border/60"
       )}
     >
-      <div className="relative p-5 flex flex-col h-full">
+      <div className="relative p-3 md:p-5 flex flex-col h-full">
         {/* Top row: Icon + Trend */}
         <div className="flex items-start justify-between mb-3">
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center"
             style={{
               background: `color-mix(in oklch, ${colorVar} 15%, transparent)`,
             }}
           >
-            <Icon className="w-5 h-5" style={{ color: colorVar }} />
+            <Icon className="w-4 h-4 md:w-5 md:h-5" style={{ color: colorVar }} />
           </div>
 
           {/* Trend indicator */}
@@ -67,7 +67,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         </div>
 
         {/* Value */}
-        <div className="font-mono text-3xl font-bold tracking-tight text-foreground mb-1 tabular-nums">
+        <div className="font-mono text-xl md:text-3xl font-bold tracking-tight text-foreground mb-1 tabular-nums">
           {value}
         </div>
 

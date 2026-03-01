@@ -48,69 +48,74 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   return (
     <aside
       className={cn(
-        "w-60 shrink-0 flex flex-col gap-3",
-        "border-r border-border/40 pr-4",
-        "overflow-y-auto min-h-0"
+        // Mobile: horizontal bar with scroll
+        "w-full shrink-0 flex flex-row gap-2 overflow-x-auto pb-2 border-b border-border/40",
+        // Desktop: vertical sidebar
+        "md:w-60 md:flex-col md:gap-3 md:border-b-0 md:border-r md:pr-4 md:pb-0 md:overflow-y-auto md:min-h-0"
       )}
     >
       {/* Context Selector - Always visible, not collapsible */}
-      <div className="space-y-1">
-        <h3 className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-1">
+      <div className="space-y-1 shrink-0">
+        <h3 className="hidden md:block text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-1">
           {t("settingsManager.unified.sidebar.context") || "Context"}
         </h3>
         <ContextSelector availableScopes={availableScopes} />
       </div>
 
       {/* Divider */}
-      <div className="border-t border-border/40" />
+      <div className="hidden md:block border-t border-border/40" />
 
-      {/* Presets Section */}
-      <Collapsible open={presetsExpanded} onOpenChange={setPresetsExpanded}>
-        <CollapsibleTrigger
-          className={cn(
-            "flex items-center gap-1 w-full py-1.5 px-2 rounded-md",
-            "text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors duration-150"
-          )}
-        >
-          {presetsExpanded ? (
-            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-          )}
-          <h3 className="text-[11px] font-semibold text-foreground/70 uppercase tracking-wider">
-            {t("settingsManager.unified.sidebar.presets")}
-          </h3>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          <PresetPanel />
-        </CollapsibleContent>
-      </Collapsible>
+      {/* Presets Section - Desktop only */}
+      <div className="hidden md:block">
+        <Collapsible open={presetsExpanded} onOpenChange={setPresetsExpanded}>
+          <CollapsibleTrigger
+            className={cn(
+              "flex items-center gap-1 w-full py-1.5 px-2 rounded-md",
+              "text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors duration-150"
+            )}
+          >
+            {presetsExpanded ? (
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            )}
+            <h3 className="text-[11px] font-semibold text-foreground/70 uppercase tracking-wider">
+              {t("settingsManager.unified.sidebar.presets")}
+            </h3>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <PresetPanel />
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
 
       {/* Divider */}
-      <div className="border-t border-border/40" />
+      <div className="hidden md:block border-t border-border/40" />
 
-      {/* Advanced Options - Now directly after Presets */}
-      <Collapsible open={advancedExpanded} onOpenChange={setAdvancedExpanded}>
-        <CollapsibleTrigger
-          className={cn(
-            "flex items-center gap-1.5 w-full py-1.5 px-2 rounded-md",
-            "text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/50 transition-colors duration-150"
-          )}
-        >
-          <Settings2 className="w-3.5 h-3.5" />
-          <span className="text-[11px] font-medium flex-1 text-left">
-            {t("settingsManager.unified.sidebar.advanced") || "Advanced"}
-          </span>
-          {advancedExpanded ? (
-            <ChevronDown className="w-3 h-3" />
-          ) : (
-            <ChevronRight className="w-3 h-3" />
-          )}
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          <ActionPanel />
-        </CollapsibleContent>
-      </Collapsible>
+      {/* Advanced Options - Desktop only */}
+      <div className="hidden md:block">
+        <Collapsible open={advancedExpanded} onOpenChange={setAdvancedExpanded}>
+          <CollapsibleTrigger
+            className={cn(
+              "flex items-center gap-1.5 w-full py-1.5 px-2 rounded-md",
+              "text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/50 transition-colors duration-150"
+            )}
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-medium flex-1 text-left">
+              {t("settingsManager.unified.sidebar.advanced") || "Advanced"}
+            </span>
+            {advancedExpanded ? (
+              <ChevronDown className="w-3 h-3" />
+            ) : (
+              <ChevronRight className="w-3 h-3" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <ActionPanel />
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
     </aside>
   );
 };

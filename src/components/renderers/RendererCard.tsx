@@ -203,7 +203,8 @@ const CardHeader = memo(function CardHeader({
         className={cn(
           "flex items-center text-left flex-1 min-w-0",
           layout.iconGap,
-          "hover:bg-muted/50 transition-colors rounded-sm -m-1 p-1"
+          "hover:bg-muted/50 transition-colors rounded-sm -m-1 p-1",
+          "min-h-[44px] md:min-h-0"
         )}
       >
         <ChevronRight

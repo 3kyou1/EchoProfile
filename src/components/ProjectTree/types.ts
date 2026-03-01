@@ -36,6 +36,8 @@ export interface ProjectTreeProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   asideId?: string;
+  // Mobile drawer close callback
+  onClose?: () => void;
 }
 
 export type GroupingStrategy = "none" | "directory" | "worktree";

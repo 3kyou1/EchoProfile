@@ -51,7 +51,7 @@ export const SessionStatsView: React.FC<SessionStatsViewProps> = ({
     <div className="space-y-6">
       {/* Performance Banner */}
       <div className="rounded-lg bg-card/80 backdrop-blur-sm border border-border/40 overflow-hidden">
-        <div className="p-5">
+        <div className="p-3 md:p-5">
           {/* Header */}
           <div className="flex items-start justify-between mb-5">
             <div>

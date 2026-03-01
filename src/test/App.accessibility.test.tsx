@@ -129,6 +129,20 @@ vi.mock("@/components/SessionBoard/SessionBoard", () => ({
   SessionBoard: () => <div>session-board</div>,
 }));
 
+vi.mock("@/components/mobile/BottomTabBar", () => ({
+  BottomTabBar: () => null,
+}));
+
+vi.mock("@/components/mobile/MobileNavigatorSheet", () => ({
+  MobileNavigatorSheet: () => null,
+}));
+
+vi.mock("@/components/ui/sheet", () => ({
+  Sheet: () => null,
+  SheetContent: () => null,
+  SheetTitle: () => null,
+}));
+
 vi.mock("@/layouts/Header/Header", () => ({
   Header: () => (
     <header id="app-header">
@@ -215,6 +229,17 @@ vi.mock("@/contexts/modal", () => ({
   useModal: () => ({
     openModal: vi.fn(),
   }),
+}));
+
+vi.mock("@/contexts/platform", () => ({
+  usePlatform: () => ({
+    platform: "web",
+    isDesktop: false,
+    isWeb: true,
+    isMobile: false,
+  }),
+  DesktopOnly: () => null,
+  MobileOnly: () => null,
 }));
 
 vi.mock("@/store/useAppStore", () => ({

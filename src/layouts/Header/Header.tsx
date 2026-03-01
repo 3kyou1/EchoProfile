@@ -8,12 +8,15 @@ import {
   Terminal,
   SlidersHorizontal,
   Columns,
+  Menu,
+  Search,
 } from "lucide-react";
 
 import { TooltipButton } from "@/shared/TooltipButton";
 import { useAppStore } from "@/store/useAppStore";
 import type { UseAnalyticsReturn } from "@/types/analytics";
 import type { UseUpdaterReturn } from "@/hooks/useUpdater";
+import { useModal } from "@/contexts/modal";
 
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -23,10 +26,12 @@ interface HeaderProps {
   analyticsActions: UseAnalyticsReturn["actions"];
   analyticsComputed: UseAnalyticsReturn["computed"];
   updater: UseUpdaterReturn;
+  onOpenSidebar?: () => void;
 }
 
-export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderProps) => {
+export const Header = ({ analyticsActions, analyticsComputed, updater, onOpenSidebar }: HeaderProps) => {
   const { t } = useTranslation();
+  const { openModal } = useModal();
 
   const {
     selectedProject,
@@ -83,34 +88,50 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
     >
 
       {/* Left: Logo & Title */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2.5 min-w-0">
+        {/* Hamburger menu (mobile only) */}
+        {onOpenSidebar && (
+          <button
+            onClick={onOpenSidebar}
+            className="md:hidden p-2 -ml-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            aria-label={t("common.mobile.openSidebar")}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
         <img
           src="/app-icon.png"
           alt="Claude Code History"
-          className="w-6 h-6"
+          className="w-6 h-6 hidden md:block"
         />
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <h1 className="text-sm font-semibold text-foreground">
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-sm font-semibold text-foreground hidden md:block">
               {t('common.appName')}
             </h1>
             {selectedProject && (
               <>
-                <span className="text-muted-foreground/40">/</span>
+                <span className="text-muted-foreground/40 hidden md:block">/</span>
                 <span className="text-sm text-muted-foreground truncate max-w-[180px]">
                   {selectedProject.name}
                 </span>
               </>
             )}
+            {!selectedProject && (
+              <h1 className="text-sm font-semibold text-foreground md:hidden">
+                {t('common.appName')}
+              </h1>
+            )}
           </div>
           {selectedSession ? (
-            <p className="text-2xs text-muted-foreground truncate max-w-sm">
-              <span className="text-muted-foreground/60">Session:</span>{" "}
+            <p className="text-2xs text-muted-foreground truncate max-w-[200px] md:max-w-sm">
+              <span className="text-muted-foreground/60 hidden md:inline">Session:</span>{" "}
               {selectedSession.summary ||
                 `${t("session.title")} ${selectedSession.session_id.slice(-8)}`}
             </p>
           ) : (
-            <p className="text-2xs text-muted-foreground">{t('common.appDescription')}</p>
+            <p className="text-2xs text-muted-foreground hidden md:block">{t('common.appDescription')}</p>
           )}
         </div>
       </div>
@@ -127,126 +148,138 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1">
-        {selectedProject && (
-          <>
-            {/* Analytics */}
-            <NavButton
-              icon={computed.isLoadingAnalytics ? Loader2 : BarChart3}
-              label={t("analytics.dashboard")}
-              isActive={computed.isAnalyticsView}
-              isLoading={computed.isLoadingAnalytics}
-              onClick={() => {
-                if (computed.isAnalyticsView) {
-                  analyticsActions.switchToMessages();
-                } else {
-                  handleLoadAnalytics();
-                }
-              }}
-              disabled={computed.isLoadingAnalytics}
-            />
+        {/* Mobile search button */}
+        <button
+          onClick={() => openModal("globalSearch")}
+          className="md:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          aria-label={t("common.commandPalette")}
+        >
+          <Search className="w-5 h-5" />
+        </button>
 
-            {/* Token Stats */}
-            <NavButton
-              icon={computed.isLoadingTokenStats ? Loader2 : Activity}
-              label={t('messages.tokenStats.existing')}
-              isActive={computed.isTokenStatsView}
-              isLoading={computed.isLoadingTokenStats}
-              onClick={() => {
-                if (computed.isTokenStatsView) {
-                  analyticsActions.switchToMessages();
-                } else {
-                  handleLoadTokenStats();
-                }
-              }}
-              disabled={computed.isLoadingTokenStats}
-            />
-
-            {/* Recent Edits */}
-            <NavButton
-              icon={computed.isLoadingRecentEdits ? Loader2 : FileEdit}
-              label={t("recentEdits.title")}
-              isActive={computed.isRecentEditsView}
-              isLoading={computed.isLoadingRecentEdits}
-              onClick={() => {
-                if (computed.isRecentEditsView) {
-                  analyticsActions.switchToMessages();
-                } else {
-                  handleLoadRecentEdits();
-                }
-              }}
-              disabled={computed.isLoadingRecentEdits}
-            />
-
-            {/* Session Board */}
-            <NavButton
-              icon={Columns}
-              label={
-                isClaudeProject
-                  ? t("session.board.title")
-                  : `${t("session.board.title")} (Claude only)`
-              }
-              isActive={computed.isBoardView}
-              disabled={!isClaudeProject}
-              onClick={() => {
-                if (computed.isBoardView) {
-                  analyticsActions.switchToMessages();
-                } else {
-                  handleLoadBoard();
-                }
-              }}
-            />
-          </>
-        )}
-
-        {selectedSession && (
-          <>
-            {/* Divider */}
-            <div className="w-px h-6 bg-border mx-2" />
-
-            {/* Messages */}
-            <NavButton
-              icon={MessageSquare}
-              label={t("message.view")}
-              isActive={computed.isMessagesView}
-              onClick={() => {
-                if (!computed.isMessagesView) {
-                  analyticsActions.switchToMessages();
-                }
-              }}
-            />
-
-            {/* Refresh */}
-            <TooltipButton
-              onClick={() => refreshCurrentSession()}
-              disabled={isLoadingMessages}
-              className={cn(
-                "p-2 rounded-md transition-colors",
-                "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-              content={t("session.refresh")}
-            >
-              <RefreshCw
-                className={cn("w-4 h-4", isLoadingMessages && "animate-spin")}
+        {/* Desktop nav buttons */}
+        <div className="hidden md:flex items-center gap-1">
+          {selectedProject && (
+            <>
+              {/* Analytics */}
+              <NavButton
+                icon={computed.isLoadingAnalytics ? Loader2 : BarChart3}
+                label={t("analytics.dashboard")}
+                isActive={computed.isAnalyticsView}
+                isLoading={computed.isLoadingAnalytics}
+                onClick={() => {
+                  if (computed.isAnalyticsView) {
+                    analyticsActions.switchToMessages();
+                  } else {
+                    handleLoadAnalytics();
+                  }
+                }}
+                disabled={computed.isLoadingAnalytics}
               />
-            </TooltipButton>
-          </>
-        )}
 
-        {/* Settings Manager */}
-        <NavButton
-          icon={SlidersHorizontal}
-          label={t("settingsManager.title")}
-          isActive={computed.isSettingsView}
-          onClick={() => {
-            if (computed.isSettingsView) {
-              analyticsActions.switchToMessages();
-            } else {
-              analyticsActions.switchToSettings();
-            }
-          }}
-        />
+              {/* Token Stats */}
+              <NavButton
+                icon={computed.isLoadingTokenStats ? Loader2 : Activity}
+                label={t('messages.tokenStats.existing')}
+                isActive={computed.isTokenStatsView}
+                isLoading={computed.isLoadingTokenStats}
+                onClick={() => {
+                  if (computed.isTokenStatsView) {
+                    analyticsActions.switchToMessages();
+                  } else {
+                    handleLoadTokenStats();
+                  }
+                }}
+                disabled={computed.isLoadingTokenStats}
+              />
 
-        {/* Settings Dropdown */}
+              {/* Recent Edits */}
+              <NavButton
+                icon={computed.isLoadingRecentEdits ? Loader2 : FileEdit}
+                label={t("recentEdits.title")}
+                isActive={computed.isRecentEditsView}
+                isLoading={computed.isLoadingRecentEdits}
+                onClick={() => {
+                  if (computed.isRecentEditsView) {
+                    analyticsActions.switchToMessages();
+                  } else {
+                    handleLoadRecentEdits();
+                  }
+                }}
+                disabled={computed.isLoadingRecentEdits}
+              />
+
+              {/* Session Board */}
+              <NavButton
+                icon={Columns}
+                label={
+                  isClaudeProject
+                    ? t("session.board.title")
+                    : `${t("session.board.title")} (Claude only)`
+                }
+                isActive={computed.isBoardView}
+                disabled={!isClaudeProject}
+                onClick={() => {
+                  if (computed.isBoardView) {
+                    analyticsActions.switchToMessages();
+                  } else {
+                    handleLoadBoard();
+                  }
+                }}
+              />
+            </>
+          )}
+
+          {selectedSession && (
+            <>
+              {/* Divider */}
+              <div className="w-px h-6 bg-border mx-2" />
+
+              {/* Messages */}
+              <NavButton
+                icon={MessageSquare}
+                label={t("message.view")}
+                isActive={computed.isMessagesView}
+                onClick={() => {
+                  if (!computed.isMessagesView) {
+                    analyticsActions.switchToMessages();
+                  }
+                }}
+              />
+
+              {/* Refresh */}
+              <TooltipButton
+                onClick={() => refreshCurrentSession()}
+                disabled={isLoadingMessages}
+                className={cn(
+                  "p-2 rounded-md transition-colors",
+                  "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+                content={t("session.refresh")}
+              >
+                <RefreshCw
+                  className={cn("w-4 h-4", isLoadingMessages && "animate-spin")}
+                />
+              </TooltipButton>
+            </>
+          )}
+
+          {/* Settings Manager */}
+          <NavButton
+            icon={SlidersHorizontal}
+            label={t("settingsManager.title")}
+            isActive={computed.isSettingsView}
+            onClick={() => {
+              if (computed.isSettingsView) {
+                analyticsActions.switchToMessages();
+              } else {
+                analyticsActions.switchToSettings();
+              }
+            }}
+          />
+        </div>
+
+        {/* Settings Dropdown (visible on all sizes) */}
         <SettingDropdown updater={updater} />
       </div>
     </header>

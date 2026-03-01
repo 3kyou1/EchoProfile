@@ -339,7 +339,8 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
       <div
         role="search"
         className={cn(
-          "flex items-center gap-3 px-4 py-2.5 border-b sticky top-0 z-10",
+          "flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-2.5 border-b sticky top-0 z-10",
+          "flex-wrap lg:flex-nowrap",
           "bg-gradient-to-r from-zinc-900/95 via-zinc-800/95 to-zinc-900/95",
           "backdrop-blur-sm border-zinc-700/50"
         )}
@@ -350,7 +351,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
             type="button"
             onClick={onBack}
             className={cn(
-              "p-2 mr-2 rounded-lg transition-all duration-200",
+              "shrink-0 p-2 rounded-lg transition-all duration-200",
               "bg-zinc-800/60 hover:bg-zinc-700/80 text-zinc-400 hover:text-zinc-100",
               "border border-zinc-700/40 hover:border-zinc-600/50"
             )}
@@ -361,7 +362,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         )}
 
         {/* Filter Toggle - Segmented control style */}
-        <div className="flex items-center bg-zinc-800/60 rounded-lg p-0.5 border border-zinc-700/40">
+        <div className="shrink-0 flex items-center bg-zinc-800/60 rounded-lg p-0.5 border border-zinc-700/40 order-2 lg:order-none">
           <button
             type="button"
             onClick={() => onFilterTypeChange("content")}
@@ -391,7 +392,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         </div>
 
         {/* Search Input - Glass morphism */}
-        <div className="relative flex-1 group">
+        <div className="relative flex-1 min-w-0 group order-1 lg:order-none w-full lg:w-auto">
           <Search className={cn(
             "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
             "text-zinc-500 group-focus-within:text-zinc-300 transition-colors"
@@ -437,8 +438,8 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
 
         {/* Match Navigation - Enhanced touch targets */}
         {sessionSearch.query && sessionSearch.matches && sessionSearch.matches.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-mono tabular-nums text-zinc-300 bg-zinc-700/50 px-2 py-1 rounded-md border border-zinc-600/30">
+          <div className="shrink-0 flex items-center gap-1.5 order-3 lg:order-none">
+            <span className="whitespace-nowrap text-xs font-mono tabular-nums text-zinc-300 bg-zinc-700/50 px-2 py-1 rounded-md border border-zinc-600/30">
               {sessionSearch.currentMatchIndex + 1}/{sessionSearch.matches.length}
             </span>
             <div className="flex items-center gap-0.5 bg-zinc-800/60 rounded-lg p-0.5 border border-zinc-700/40">
@@ -474,13 +475,13 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* Capture Mode Button - Editorial style entry point */}
+        {/* Capture Mode Button - Wide desktop only */}
         {!isCaptureMode && (
           <button
             type="button"
             onClick={enterCaptureMode}
             className={cn(
-              "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg",
+              "hidden lg:flex shrink-0 items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap",
               "transition-all duration-200",
               "bg-zinc-700/60 hover:bg-zinc-600/70",
               "text-zinc-300 hover:text-zinc-100",
@@ -494,18 +495,18 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </button>
         )}
 
-        {/* Meta Info - Subtle pill style */}
-        <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-          <span className="bg-zinc-800/40 px-2 py-0.5 rounded-full">
+        {/* Meta Info - Wide desktop only */}
+        <div className="hidden lg:flex shrink-0 items-center gap-1.5 text-xs text-zinc-400">
+          <span className="whitespace-nowrap bg-zinc-800/40 px-2 py-0.5 rounded-full">
             {messages.length} {t("messageViewer.messagesShort")}
           </span>
           {selectedSession?.has_tool_use && (
-            <span className="bg-zinc-800/40 px-2 py-0.5 rounded-full">
+            <span className="whitespace-nowrap bg-zinc-800/40 px-2 py-0.5 rounded-full">
               {t("messageViewer.toolsUsed")}
             </span>
           )}
           {selectedSession?.has_errors && (
-            <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
+            <span className="whitespace-nowrap bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
               {t("messageViewer.hasErrors")}
             </span>
           )}
@@ -631,7 +632,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         )}
 
         {/* Floating scroll buttons */}
-        <div className="fixed bottom-10 right-2 flex flex-col gap-2 z-50">
+        <div className="fixed bottom-[8.5rem] md:bottom-10 right-3 md:right-2 flex flex-col gap-2 z-50">
           {showScrollToTop && (
             <button
               type="button"

@@ -49,7 +49,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   if (isViewingGlobalStats || !selectedProject) {
     if (isLoadingGlobalStats) {
       return (
-        <div className="flex-1 p-6 flex items-center justify-center bg-background">
+        <div className="flex-1 p-4 md:p-6 flex items-center justify-center bg-background">
           <LoadingState
             isLoading={true}
             loadingMessage={t("analytics.loadingGlobalStats")}
@@ -96,7 +96,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   }
 
   return (
-    <div className="flex-1 p-6 overflow-auto bg-background">
+    <div className="flex-1 p-4 md:p-6 overflow-auto bg-background">
       <div className="relative">
         {/* Header Controls */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">

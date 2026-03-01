@@ -15,7 +15,7 @@ const PREVIEW_LINE_HEIGHT = 20; // Approximate height of one text line with line
 
 interface MessageNavigatorProps {
   messages: ClaudeMessage[];
-  width: number;
+  width?: number;
   isResizing: boolean;
   onResizeStart: (e: React.MouseEvent<HTMLElement>) => void;
   isCollapsed: boolean;
@@ -204,9 +204,10 @@ export const MessageNavigator: React.FC<MessageNavigatorProps> = ({
       tabIndex={-1}
       className={cn(
         "relative flex flex-col bg-sidebar border-l border-border/50 h-full",
-        isResizing && "select-none"
+        isResizing && "select-none",
+        width == null && "w-full"
       )}
-      style={{ width, minWidth: width, maxWidth: width }}
+      style={width != null ? { width, minWidth: width, maxWidth: width } : undefined}
     >
       {/* Resize handle (left edge) */}
       <div

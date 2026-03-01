@@ -9,6 +9,8 @@ import { RecentEditsViewer } from "./components/RecentEditsViewer";
 import { SimpleUpdateManager } from "./components/SimpleUpdateManager";
 import { SettingsManager } from "./components/SettingsManager";
 import { SessionBoard } from "./components/SessionBoard/SessionBoard";
+import { BottomTabBar } from "./components/mobile/BottomTabBar";
+import { MobileNavigatorSheet } from "./components/mobile/MobileNavigatorSheet";
 import { useAppStore } from "./store/useAppStore";
 import { useAnalytics } from "./hooks/useAnalytics";
 import { useUpdater } from "./hooks/useUpdater";
@@ -23,8 +25,10 @@ import {
 } from "./types";
 import type { GroupingMode } from "./types/metadata.types";
 import { AlertTriangle, MessageSquare, Database, BarChart3, FileEdit, Coins, Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useLanguageStore } from "./store/useLanguageStore";
 import { type SupportedLanguage } from "./i18n";
 
@@ -94,7 +98,7 @@ function App() {
   const { t, i18n: i18nInstance } = useTranslation();
   const { language, loadLanguage } = useLanguageStore();
   const { openModal } = useModal();
-  const { isDesktop } = usePlatform();
+  const { isDesktop, isMobile } = usePlatform();
   const updater = useUpdater();
   const appVersion = updater.state.currentVersion || "—";
   const globalOverviewDescription = useMemo(() => {
@@ -155,6 +159,7 @@ function App() {
 
   const [isViewingGlobalStats, setIsViewingGlobalStats] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Sidebar resize
   const {
@@ -307,16 +312,16 @@ function App() {
         e.preventDefault();
         openModal("globalSearch");
       }
-      // Cmd+Shift+M to toggle navigator
+      // Cmd+Shift+M to toggle navigator (desktop only)
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "m") {
         e.preventDefault();
-        toggleNavigator();
+        if (!isMobile) toggleNavigator();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [openModal, toggleNavigator]);
+  }, [openModal, toggleNavigator, isMobile]);
 
   const handleProjectSelect = useCallback(
     async (project: ClaudeProject) => {
@@ -413,7 +418,7 @@ function App() {
           >
             {t("common.a11y.skipToMain", { defaultValue: "Skip to main content" })}
           </a>
-          {isNavigatorOpen && selectedSession && (
+          {!isMobile && isNavigatorOpen && selectedSession && (
             <a
               href="#message-navigator"
               className="absolute left-[23rem] top-[-40px] z-[700] rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-all focus:top-2"
@@ -434,43 +439,79 @@ function App() {
           analyticsActions={analyticsActions}
           analyticsComputed={computed}
           updater={updater}
+          onOpenSidebar={isMobile ? () => setIsMobileSidebarOpen(true) : undefined}
         />
+
+        {/* Mobile Sidebar Drawer */}
+        {isMobile && (
+          <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+            <SheetContent side="left" className="w-[var(--mobile-drawer-width)] p-0" showCloseButton={false}>
+              <SheetTitle className="sr-only">{t("common.mobile.openSidebar")}</SheetTitle>
+              <ProjectTree
+                projects={projects}
+                sessions={sessions}
+                selectedProject={selectedProject}
+                selectedSession={selectedSession}
+                onProjectSelect={handleProjectSelect}
+                onSessionSelect={handleSessionSelect}
+                onSessionHover={handleSessionHover}
+                onGlobalStatsClick={handleGlobalStatsClick}
+                isLoading={isLoadingProjects || isLoadingSessions}
+                isViewingGlobalStats={isViewingGlobalStats}
+                groupingMode={groupingMode}
+                worktreeGroups={worktreeGroups}
+                directoryGroups={directoryGroups}
+                ungroupedProjects={ungroupedProjects}
+                onGroupingModeChange={handleGroupingModeChange}
+                onHideProject={hideProject}
+                onUnhideProject={unhideProject}
+                isProjectHidden={isProjectHidden}
+                onClose={() => setIsMobileSidebarOpen(false)}
+                asideId="project-explorer"
+              />
+            </SheetContent>
+          </Sheet>
+        )}
 
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Sidebar */}
-          <ProjectTree
-            projects={projects}
-            sessions={sessions}
-            selectedProject={selectedProject}
-            selectedSession={selectedSession}
-            onProjectSelect={handleProjectSelect}
-            onSessionSelect={handleSessionSelect}
-            onSessionHover={handleSessionHover}
-            onGlobalStatsClick={handleGlobalStatsClick}
-            isLoading={isLoadingProjects || isLoadingSessions}
-            isViewingGlobalStats={isViewingGlobalStats}
-            width={isSidebarCollapsed ? undefined : sidebarWidth}
-            isResizing={isSidebarResizing}
-            onResizeStart={handleSidebarResizeStart}
-            groupingMode={groupingMode}
-            worktreeGroups={worktreeGroups}
-            directoryGroups={directoryGroups}
-            ungroupedProjects={ungroupedProjects}
-            onGroupingModeChange={handleGroupingModeChange}
-            onHideProject={hideProject}
-            onUnhideProject={unhideProject}
-            isProjectHidden={isProjectHidden}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={handleToggleSidebar}
-            asideId="project-explorer"
-          />
+          {/* Desktop Sidebar */}
+          {!isMobile && (
+            <div className="hidden md:block">
+              <ProjectTree
+                projects={projects}
+                sessions={sessions}
+                selectedProject={selectedProject}
+                selectedSession={selectedSession}
+                onProjectSelect={handleProjectSelect}
+                onSessionSelect={handleSessionSelect}
+                onSessionHover={handleSessionHover}
+                onGlobalStatsClick={handleGlobalStatsClick}
+                isLoading={isLoadingProjects || isLoadingSessions}
+                isViewingGlobalStats={isViewingGlobalStats}
+                width={isSidebarCollapsed ? undefined : sidebarWidth}
+                isResizing={isSidebarResizing}
+                onResizeStart={handleSidebarResizeStart}
+                groupingMode={groupingMode}
+                worktreeGroups={worktreeGroups}
+                directoryGroups={directoryGroups}
+                ungroupedProjects={ungroupedProjects}
+                onGroupingModeChange={handleGroupingModeChange}
+                onHideProject={hideProject}
+                onUnhideProject={unhideProject}
+                isProjectHidden={isProjectHidden}
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={handleToggleSidebar}
+                asideId="project-explorer"
+              />
+            </div>
+          )}
 
           {/* Main Content Area */}
           <main
             id="main-content"
             tabIndex={-1}
-            className="flex-1 flex flex-col min-w-0 bg-background"
+            className="flex-1 flex flex-col min-w-0 bg-background pb-14 md:pb-0"
           >
             {/* Content Header for non-message views */}
             {(computed.isTokenStatsView ||
@@ -478,8 +519,8 @@ function App() {
               computed.isRecentEditsView ||
               computed.isSettingsView ||
               computed.isBoardView ||
-              isViewingGlobalStats) && (
-              <div className="px-6 py-4 border-b border-border/50 bg-card/50">
+              (isViewingGlobalStats && !computed.isSettingsView)) && (
+              <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border/50 bg-card/50">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
                     {isViewingGlobalStats ? (
@@ -530,10 +571,56 @@ function App() {
               </div>
             )}
 
+            {/* Mobile Analytics Sub-Nav: toggle between analytics/tokenStats/recentEdits */}
+            {isMobile && selectedProject && !isViewingGlobalStats &&
+              (computed.isAnalyticsView || computed.isTokenStatsView || computed.isRecentEditsView) && (
+              <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border/40 bg-card/30 md:hidden overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => analyticsActions.switchToAnalytics()}
+                  className={cn(
+                    "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                    computed.isAnalyticsView
+                      ? "bg-accent/15 text-accent border border-accent/30"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  {t("analytics.dashboard")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => analyticsActions.switchToTokenStats()}
+                  className={cn(
+                    "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                    computed.isTokenStatsView
+                      ? "bg-accent/15 text-accent border border-accent/30"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <Coins className="w-3.5 h-3.5" />
+                  {t("messages.tokenStats.title")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => analyticsActions.switchToRecentEdits()}
+                  className={cn(
+                    "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                    computed.isRecentEditsView
+                      ? "bg-accent/15 text-accent border border-accent/30"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <FileEdit className="w-3.5 h-3.5" />
+                  {t("recentEdits.title")}
+                </button>
+              </div>
+            )}
+
             {/* Content */}
             <div className="flex-1 overflow-hidden">
               {computed.isSettingsView ? (
-                <div className="h-full flex flex-col p-6">
+                <div className="h-full flex flex-col p-3 md:p-6">
                   <SettingsManager
                     projectPath={selectedProject?.actual_path}
                     className="flex-1 min-h-0"
@@ -569,7 +656,7 @@ function App() {
                   className="h-full"
                   options={{ scrollbars: { theme: "os-theme-custom", autoHide: "leave" } }}
                 >
-                  <div className="p-6">
+                  <div className="p-3 md:p-6">
                     <TokenStatsViewer
                       title={t('messages.tokenStats.title')}
                       sessionStats={sessionTokenStats}
@@ -606,15 +693,17 @@ function App() {
                       onBack={() => analyticsActions.switchToBoard()}
                     />
                   </div>
-                  <MessageNavigator
-                    messages={messages}
-                    width={navigatorWidth}
-                    isResizing={isNavigatorResizing}
-                    onResizeStart={handleNavigatorResizeStart}
-                    isCollapsed={!isNavigatorOpen}
-                    onToggleCollapse={toggleNavigator}
-                    asideId="message-navigator"
-                  />
+                  <div className="hidden md:block">
+                    <MessageNavigator
+                      messages={messages}
+                      width={navigatorWidth}
+                      isResizing={isNavigatorResizing}
+                      onResizeStart={handleNavigatorResizeStart}
+                      isCollapsed={!isNavigatorOpen}
+                      onToggleCollapse={toggleNavigator}
+                      asideId="message-navigator"
+                    />
+                  </div>
                 </div>
               ) : (
                 /* Empty State */
@@ -636,8 +725,8 @@ function App() {
           </main>
         </div>
 
-        {/* Status Bar */}
-        <footer className="h-7 px-4 flex items-center justify-between bg-sidebar border-t border-border/50 text-2xs text-muted-foreground">
+        {/* Status Bar (desktop only) */}
+        <footer className="h-7 px-4 hidden md:flex items-center justify-between bg-sidebar border-t border-border/50 text-2xs text-muted-foreground">
           <div className="flex items-center gap-3 font-mono tabular-nums">
             <span>
               {isDesktop
@@ -682,6 +771,38 @@ function App() {
         <DesktopOnly>
           <SimpleUpdateManager updater={updater} />
         </DesktopOnly>
+
+        {/* Mobile Bottom Tab Bar */}
+        {isMobile && (
+          <BottomTabBar
+            activeView={analyticsState.currentView}
+            onOpenSidebar={() => setIsMobileSidebarOpen(true)}
+            isViewingGlobalStats={isViewingGlobalStats}
+            onSwitchView={(view) => {
+              setIsViewingGlobalStats(false);
+              switch (view) {
+                case "messages":
+                  analyticsActions.switchToMessages();
+                  break;
+                case "board":
+                  void analyticsActions.switchToBoard();
+                  break;
+                case "analytics":
+                  void analyticsActions.switchToAnalytics();
+                  break;
+                case "settings":
+                  analyticsActions.switchToSettings();
+                  break;
+              }
+            }}
+            hasProject={!!selectedProject}
+          />
+        )}
+
+        {/* Mobile Navigator Sheet */}
+        {isMobile && selectedSession && computed.isMessagesView && (
+          <MobileNavigatorSheet messages={messages} />
+        )}
       </div>
 
       {/* Modals */}

@@ -117,6 +117,10 @@ pub fn to_file_watch_event(event: &DebouncedEvent) -> Option<FileWatchEvent> {
 
     let (project_path, session_path) = extract_paths(path)?;
 
+    // Note: `notify_debouncer_mini` only provides `Any` / `AnyContinuous` kinds —
+    // it does not distinguish create vs modify vs delete.  All events are emitted
+    // as "session-file-changed" and the frontend treats them uniformly as a
+    // signal to refresh the affected session data.
     let event_type = match event.kind {
         DebouncedEventKind::Any | DebouncedEventKind::AnyContinuous | _ => "session-file-changed",
     };

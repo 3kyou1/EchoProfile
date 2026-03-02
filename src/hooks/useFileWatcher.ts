@@ -10,19 +10,17 @@ type UnlistenFn = () => void;
 interface FileWatcherEvent {
   projectPath: string;
   sessionPath: string;
-  eventType: 'changed' | 'created' | 'deleted';
+  eventType: string;
 }
 
 /**
  * Configuration options for the file watcher hook
  */
 interface UseFileWatcherOptions {
-  /** Callback fired when a session file is modified */
+  /** Callback fired when a session file changes (create, modify, or delete).
+   *  The backend (notify_debouncer_mini) does not distinguish event kinds,
+   *  so all filesystem events are surfaced through this single callback. */
   onSessionChanged?: (event: FileWatcherEvent) => void;
-  /** Callback fired when a new session file is created */
-  onSessionCreated?: (event: FileWatcherEvent) => void;
-  /** Callback fired when a session file is deleted */
-  onSessionDeleted?: (event: FileWatcherEvent) => void;
   /** Whether file watching is enabled (default: true) */
   enabled?: boolean;
   /** Debounce delay in milliseconds to batch rapid changes (default: 300) */
@@ -62,8 +60,6 @@ export interface UseFileWatcherResult {
 export function useFileWatcher(options: UseFileWatcherOptions = {}): UseFileWatcherResult {
   const {
     onSessionChanged,
-    onSessionCreated,
-    onSessionDeleted,
     enabled = true,
     debounceMs = 300,
   } = options;
@@ -149,18 +145,6 @@ export function useFileWatcher(options: UseFileWatcherOptions = {}): UseFileWatc
         unlisteners.push(unlistenChanged);
         if (watchVersionRef.current !== version) { unlisteners.forEach((fn) => fn()); return; }
 
-        const unlistenCreated = await listen<FileWatcherEvent>('session-file-created', (event) => {
-          createDebouncedCallback(onSessionCreated, event.payload);
-        });
-        unlisteners.push(unlistenCreated);
-        if (watchVersionRef.current !== version) { unlisteners.forEach((fn) => fn()); return; }
-
-        const unlistenDeleted = await listen<FileWatcherEvent>('session-file-deleted', (event) => {
-          createDebouncedCallback(onSessionDeleted, event.payload);
-        });
-        unlisteners.push(unlistenDeleted);
-        if (watchVersionRef.current !== version) { unlisteners.forEach((fn) => fn()); return; }
-
         unlistenersRef.current = unlisteners;
         isWatchingRef.current = true;
         setIsWatching(true);
@@ -196,16 +180,6 @@ export function useFileWatcher(options: UseFileWatcherOptions = {}): UseFileWatc
           if (event) createDebouncedCallback(onSessionChanged, event);
         });
 
-        es.addEventListener('session-file-created', (e: MessageEvent) => {
-          const event = safeParse(e.data);
-          if (event) createDebouncedCallback(onSessionCreated, event);
-        });
-
-        es.addEventListener('session-file-deleted', (e: MessageEvent) => {
-          const event = safeParse(e.data);
-          if (event) createDebouncedCallback(onSessionDeleted, event);
-        });
-
         // Detect permanent disconnection (e.g. 401, server shutdown)
         es.onerror = () => {
           if (es.readyState === EventSource.CLOSED) {
@@ -227,7 +201,7 @@ export function useFileWatcher(options: UseFileWatcherOptions = {}): UseFileWatc
         setIsWatching(false);
       }
     }
-  }, [onSessionChanged, onSessionCreated, onSessionDeleted, createDebouncedCallback]);
+  }, [onSessionChanged, createDebouncedCallback]);
 
   /**
    * Auto-start/stop based on enabled prop

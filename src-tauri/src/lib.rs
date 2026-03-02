@@ -231,7 +231,11 @@ fn resolve_auth_token(args: &[String]) -> Option<String> {
         return None;
     }
     if let Some(token) = parse_cli_flag(args, "--token") {
-        return Some(token);
+        let trimmed = token.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+        eprintln!("⚠ --token value is empty; falling back to auto-generated token");
     }
     if let Ok(token) = std::env::var("CCHV_TOKEN") {
         if !token.is_empty() {

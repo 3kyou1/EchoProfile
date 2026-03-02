@@ -28,8 +28,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Update = any;
+/** The Update type from @tauri-apps/plugin-updater.
+ *  Extracted via ReturnType to avoid a static import that breaks web mode. */
+type Update = Awaited<ReturnType<typeof import('@tauri-apps/plugin-updater')['check']>>;
 
 export interface UpdateState {
   isChecking: boolean;

@@ -49,13 +49,17 @@ export async function api<T>(
     body: JSON.stringify(args ?? {}),
   });
 
-  // On 401, prompt for the token and retry once (no infinite recursion)
+  // On 401, try to extract token from URL params and retry once.
+  // If no token is available, redirect to force re-authentication.
   if (response.status === 401 && !_retried) {
-    const entered = window.prompt("Authentication required. Enter token:");
-    if (entered) {
-      setAuthToken(entered);
+    const urlToken = new URLSearchParams(window.location.search).get("token");
+    if (urlToken) {
+      setAuthToken(urlToken);
       return api<T>(command, args, true);
     }
+    // Clear stale token and reload — the server landing page will show auth error
+    setAuthToken("");
+    window.location.replace(`${window.location.pathname}?auth_error=1`);
     throw new Error("Authentication required");
   }
 

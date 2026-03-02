@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
@@ -79,16 +80,25 @@ function SheetContent({
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="sheet-close"
-            className="ring-offset-background focus:ring-ring absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
-          >
-            <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
+          <SheetCloseButton />
         )}
       </DialogPrimitive.Content>
     </SheetPortal>
+  );
+}
+
+function SheetCloseButton() {
+  const { t } = useTranslation();
+  const label = t("common.close", "Close");
+  return (
+    <DialogPrimitive.Close
+      data-slot="sheet-close"
+      aria-label={label}
+      className="ring-offset-background focus:ring-ring absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+    >
+      <XIcon className="size-4" />
+      <span className="sr-only">{label}</span>
+    </DialogPrimitive.Close>
   );
 }
 

@@ -88,6 +88,7 @@ export const SessionNameEditor: React.FC<SessionNameEditorProps> = ({
           }}
           className="p-1 rounded hover:bg-accent/20 text-accent"
           title={t("common.save")}
+          aria-label={t("common.save")}
         >
           <Check className="w-3 h-3" />
         </button>
@@ -102,6 +103,7 @@ export const SessionNameEditor: React.FC<SessionNameEditorProps> = ({
           }}
           className="p-1 rounded hover:bg-destructive/20 text-destructive"
           title={t("common.cancel")}
+          aria-label={t("common.cancel")}
         >
           <X className="w-3 h-3" />
         </button>
@@ -172,6 +174,7 @@ export const SessionNameEditor: React.FC<SessionNameEditorProps> = ({
               isContextMenuOpen && "opacity-100"
             )}
             title={t("session.rename", "Rename session")}
+            aria-label={t("session.rename", "Rename session")}
           >
             <Pencil className="w-3 h-3" />
           </button>

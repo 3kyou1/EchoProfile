@@ -19,9 +19,9 @@ export const SessionHeader: React.FC<SessionHeaderProps> = ({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div
+          <button
+            type="button"
             aria-label={t("session.item.archived", "Archived session")}
-            title={t("session.item.archived", "Archived session")}
             className={cn(
               "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-300",
               isSelected
@@ -30,12 +30,12 @@ export const SessionHeader: React.FC<SessionHeaderProps> = ({
             )}
           >
             <Archive className="w-3 h-3" />
-          </div>
+          </button>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
-          <p className="font-medium">Archived session</p>
+          <p className="font-medium">{t("session.item.archived", "Archived session")}</p>
           <p className="text-[11px] text-primary-foreground/80 mt-1 leading-relaxed">
-            Stored under Codex `archived_sessions`.
+            {t("session.item.archivedDescription", "Stored under Codex archived_sessions.")}
           </p>
         </TooltipContent>
       </Tooltip>

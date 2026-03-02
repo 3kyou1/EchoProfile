@@ -43,11 +43,15 @@ async function loadStore(
 
   // Web fallback — localStorage with namespace
   const prefix = `webui:${name}:`;
+  const defaults = _options?.defaults;
   return {
     get: <T = unknown>(key: string) => {
       try {
         const raw = localStorage.getItem(`${prefix}${key}`);
-        return Promise.resolve(raw != null ? (JSON.parse(raw) as T) : null);
+        if (raw != null) return Promise.resolve(JSON.parse(raw) as T);
+        // Apply defaults to match Tauri store behavior
+        if (defaults && key in defaults) return Promise.resolve(defaults[key] as T);
+        return Promise.resolve(null);
       } catch {
         return Promise.resolve(null);
       }

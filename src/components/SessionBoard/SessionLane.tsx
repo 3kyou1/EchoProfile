@@ -281,13 +281,13 @@ export const SessionLane = ({
                                 <div className="flex items-center gap-1 text-emerald-500" title={t("analytics.inputTokens")}>
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-[10px] font-mono">{formatNumber(stats.inputTokens || 0)}</span>
-                                    <span className="text-[9px] opacity-60">in</span>
+                                    <span className="text-[9px] opacity-60">{t("analytics.in", "in")}</span>
                                 </div>
 
                                 <div className="flex items-center gap-1 text-purple-500" title={t("analytics.outputTokens")}>
                                     <Zap className="w-3 h-3" />
                                     <span className="text-[10px] font-mono">{formatNumber(stats.outputTokens || 0)}</span>
-                                    <span className="text-[9px] opacity-60">out</span>
+                                    <span className="text-[9px] opacity-60">{t("analytics.out", "out")}</span>
                                 </div>
 
 

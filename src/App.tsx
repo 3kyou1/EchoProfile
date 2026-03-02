@@ -176,18 +176,22 @@ function App() {
 
   const handleSessionSelect = useCallback(
     async (session: ClaudeSession) => {
-      setIsViewingGlobalStats(false);
-      setAnalyticsCurrentView("messages");
+      try {
+        setIsViewingGlobalStats(false);
+        setAnalyticsCurrentView("messages");
 
-      const currentProject = useAppStore.getState().selectedProject;
-      if (!currentProject || currentProject.name !== session.project_name) {
-        const project = projects.find((p) => p.name === session.project_name);
-        if (project) {
-          await selectProject(project);
+        const currentProject = useAppStore.getState().selectedProject;
+        if (!currentProject || currentProject.name !== session.project_name) {
+          const project = projects.find((p) => p.name === session.project_name);
+          if (project) {
+            await selectProject(project);
+          }
         }
-      }
 
-      await selectSession(session);
+        await selectSession(session);
+      } catch (error) {
+        console.error("Failed to select session:", error);
+      }
     },
     [projects, selectProject, selectSession, setAnalyticsCurrentView]
   );

@@ -186,7 +186,7 @@ fn run_server(args: &[String]) {
     let display_addr = format!("{display_host}:{port}");
     if let Some(ref token) = auth_token {
         // Show truncated token in logs to reduce log-leakage risk
-        let preview = &token[..token.len().min(8)];
+        let preview: String = token.chars().take(8).collect();
         eprintln!("🔑 Auth token: {preview}... (full token in browser URL below)");
         eprintln!("   Open in browser: http://{display_addr}?token={token}");
     } else {

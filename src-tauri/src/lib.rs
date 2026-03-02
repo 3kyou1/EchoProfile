@@ -218,10 +218,12 @@ fn get_local_ip() -> Option<String> {
     Some(addr.ip().to_string())
 }
 
-/// Resolve the authentication token from CLI arguments.
+/// Resolve the authentication token from CLI arguments or environment.
 ///
+/// Priority:
 /// - `--no-auth` → `None` (auth disabled)
-/// - `--token <value>` → `Some(value)` (user-supplied)
+/// - `--token <value>` → `Some(value)` (user-supplied via CLI)
+/// - `CCHV_TOKEN` env var → `Some(value)` (user-supplied via env, e.g. systemd)
 /// - otherwise → `Some(uuid-v4)` (auto-generated)
 #[cfg(feature = "webui-server")]
 fn resolve_auth_token(args: &[String]) -> Option<String> {
@@ -230,6 +232,11 @@ fn resolve_auth_token(args: &[String]) -> Option<String> {
     }
     if let Some(token) = parse_cli_flag(args, "--token") {
         return Some(token);
+    }
+    if let Ok(token) = std::env::var("CCHV_TOKEN") {
+        if !token.is_empty() {
+            return Some(token);
+        }
     }
     Some(uuid::Uuid::new_v4().to_string())
 }

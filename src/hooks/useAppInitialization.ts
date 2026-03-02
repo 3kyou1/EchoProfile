@@ -30,8 +30,11 @@ export function useAppInitialization(deps: {
         await loadLanguage();
       } catch (error) {
         console.error("Failed to load language:", error);
-      } finally {
+      }
+      try {
         await initializeApp();
+      } catch (error) {
+        console.error("Failed to initialize app:", error);
       }
     };
     initialize();

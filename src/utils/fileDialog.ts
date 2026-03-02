@@ -22,7 +22,7 @@ interface OpenDialogOptions {
 /**
  * Show a "Save file" dialog and write content.
  *
- * - Tauri: shows native save dialog and writes the file via IPC.
+ * - Tauri: shows native save dialog, then writes the file via IPC (`write_text_file`).
  * - Web: triggers a browser download with the given content.
  *
  * Returns `true` if the save completed (web always returns true).

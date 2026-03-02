@@ -29,8 +29,10 @@ ExecStart=/usr/local/bin/cchv-server --serve --host 0.0.0.0
 Restart=on-failure
 RestartSec=5
 
-# To require a fixed access token, use the --token flag:
+# To require a fixed access token, use either the --token flag or CCHV_TOKEN env var:
 # ExecStart=/usr/local/bin/cchv-server --serve --host 0.0.0.0 --token your-secret-token
+# Or via environment variable:
+# Environment=CCHV_TOKEN=your-secret-token
 
 # ── Security hardening ──
 NoNewPrivileges=true

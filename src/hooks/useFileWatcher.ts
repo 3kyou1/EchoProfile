@@ -146,20 +146,20 @@ export function useFileWatcher(options: UseFileWatcherOptions = {}): UseFileWatc
         const unlistenChanged = await listen<FileWatcherEvent>('session-file-changed', (event) => {
           createDebouncedCallback(onSessionChanged, event.payload);
         });
-        if (watchVersionRef.current !== version) { unlistenChanged(); return; }
         unlisteners.push(unlistenChanged);
+        if (watchVersionRef.current !== version) { unlisteners.forEach((fn) => fn()); return; }
 
         const unlistenCreated = await listen<FileWatcherEvent>('session-file-created', (event) => {
           createDebouncedCallback(onSessionCreated, event.payload);
         });
-        if (watchVersionRef.current !== version) { unlisteners.forEach((fn) => fn()); return; }
         unlisteners.push(unlistenCreated);
+        if (watchVersionRef.current !== version) { unlisteners.forEach((fn) => fn()); return; }
 
         const unlistenDeleted = await listen<FileWatcherEvent>('session-file-deleted', (event) => {
           createDebouncedCallback(onSessionDeleted, event.payload);
         });
-        if (watchVersionRef.current !== version) { unlisteners.forEach((fn) => fn()); return; }
         unlisteners.push(unlistenDeleted);
+        if (watchVersionRef.current !== version) { unlisteners.forEach((fn) => fn()); return; }
 
         unlistenersRef.current = unlisteners;
         isWatchingRef.current = true;

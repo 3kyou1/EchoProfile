@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Download, Upload, Archive, FolderOpen, ShieldAlert } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -140,6 +141,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       });
     } catch (error) {
       console.error("Export failed:", error);
+      toast.error(t("settingsManager.exportImport.exportFailed", "Export failed"));
     } finally {
       setIsExporting(false);
     }
@@ -159,6 +161,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       }
     } catch (error) {
       console.error("Import failed:", error);
+      toast.error(t("settingsManager.exportImport.importFailed", "Import failed"));
     } finally {
       setIsImporting(false);
     }
@@ -169,7 +172,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
 
     // Validate projectPath for non-user scopes
     if (importScope !== "user" && !projectPath) {
-      console.error("Apply import failed: projectPath is required for project/local scope");
+      toast.error(t("settingsManager.exportImport.applyFailed", "Apply failed: project path required for this scope"));
       return;
     }
 
@@ -185,6 +188,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       setImportedSettings(null);
     } catch (error) {
       console.error("Apply import failed:", error);
+      toast.error(t("settingsManager.exportImport.applyFailed", "Failed to apply settings"));
     }
   };
 
@@ -248,6 +252,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       });
     } catch (error) {
       console.error("Export all failed:", error);
+      toast.error(t("settingsManager.exportImport.exportFailed", "Export failed"));
     } finally {
       setIsExportingAll(false);
     }
@@ -269,11 +274,12 @@ export const ExportImport: React.FC<ExportImportProps> = ({
           setImportedBackup(parsed);
           setIsImportAllPreviewOpen(true);
         } else {
-          console.error("Invalid backup format");
+          toast.error(t("settingsManager.exportImport.invalidBackupFormat", "Invalid backup format"));
         }
       }
     } catch (error) {
       console.error("Import all failed:", error);
+      toast.error(t("settingsManager.exportImport.importFailed", "Import failed"));
     } finally {
       setIsImportingAll(false);
     }
@@ -293,7 +299,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       }
       if (importedBackup.scopes.project) {
         if (!projectPath) {
-          console.error("Cannot apply project scope: projectPath is undefined");
+          toast.error(t("settingsManager.exportImport.applyFailed", "Apply failed: project path required"));
           return;
         }
         await api("save_settings", {
@@ -304,7 +310,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       }
       if (importedBackup.scopes.local) {
         if (!projectPath) {
-          console.error("Cannot apply local scope: projectPath is undefined");
+          toast.error(t("settingsManager.exportImport.applyFailed", "Apply failed: project path required"));
           return;
         }
         await api("save_settings", {
@@ -319,6 +325,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       setImportedBackup(null);
     } catch (error) {
       console.error("Apply import all failed:", error);
+      toast.error(t("settingsManager.exportImport.applyFailed", "Failed to apply settings"));
     }
   };
 

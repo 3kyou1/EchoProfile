@@ -202,7 +202,7 @@ const ServerRow: React.FC<ServerRowProps> = React.memo(({
       </div>
       {/* Bottom row: command in monospace */}
       <div className="mt-1.5 pl-5.5">
-        <code className="text-[11px] text-muted-foreground/70 font-mono truncate block">
+        <code className="text-[11px] text-muted-foreground/70 font-mono break-all whitespace-normal md:truncate md:whitespace-nowrap block">
           {server.config.command} {server.config.args?.join(" ")}
         </code>
       </div>

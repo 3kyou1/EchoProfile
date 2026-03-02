@@ -63,11 +63,11 @@ export const EffectiveSummaryBanner: React.FC<EffectiveSummaryBannerProps> = ({
 
   return (
     <div className="mt-3 shrink-0">
-      <div className="bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
+      <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
         <div className="flex items-center gap-3 flex-wrap text-sm">
           <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Info className="w-3.5 h-3.5" />
-            <span className="text-xs font-medium">
+            <Info className="w-4 h-4" />
+            <span className="text-sm md:text-xs font-medium">
               {t("settingsManager.unified.banner.whatsActive")}:
             </span>
           </div>

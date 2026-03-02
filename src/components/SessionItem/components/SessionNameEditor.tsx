@@ -167,7 +167,7 @@ export const SessionNameEditor: React.FC<SessionNameEditorProps> = ({
             type="button"
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              "p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity",
+              "p-1 rounded opacity-40 md:opacity-0 md:group-hover:opacity-100 transition-opacity",
               "hover:bg-accent/20 text-muted-foreground hover:text-accent",
               isContextMenuOpen && "opacity-100"
             )}

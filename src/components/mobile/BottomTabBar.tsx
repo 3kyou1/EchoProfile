@@ -63,6 +63,11 @@ export function BottomTabBar({ activeView, onOpenSidebar, onSwitchView, hasProje
             >
               <Icon className="w-5 h-5" />
               <span className="text-3xs font-medium truncate max-w-full">{t(labelKey)}</span>
+              {isDisabled && (
+                <span className="text-3xs text-muted-foreground/60 truncate max-w-full">
+                  ({t("common.mobile.selectProject")})
+                </span>
+              )}
               {isActive && (
                 <span className="absolute bottom-1 w-1 h-1 rounded-full bg-accent" />
               )}

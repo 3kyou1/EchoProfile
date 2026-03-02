@@ -125,7 +125,7 @@ export const Header = ({ analyticsActions, analyticsComputed, updater, onOpenSid
             )}
           </div>
           {selectedSession ? (
-            <p className="text-2xs text-muted-foreground truncate max-w-[200px] md:max-w-sm">
+            <p className="text-2xs text-muted-foreground truncate max-w-[280px] md:max-w-sm">
               <span className="text-muted-foreground/60 hidden md:inline">Session:</span>{" "}
               {selectedSession.summary ||
                 `${t("session.title")} ${selectedSession.session_id.slice(-8)}`}

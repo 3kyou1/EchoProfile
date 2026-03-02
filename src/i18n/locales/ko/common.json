@@ -55,6 +55,7 @@
   "common.mobile.tab.messages": "메시지",
   "common.mobile.tab.projects": "프로젝트",
   "common.mobile.tab.settings": "설정",
+  "common.mobile.selectProject": "프로젝트 선택",
   "common.noDataAvailable": "데이터 없음",
   "common.ok": "확인",
   "common.pending": "대기 중",

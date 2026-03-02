@@ -160,7 +160,7 @@ export const ClaudeToolResultItem = memo(function ClaudeToolResultItem({
             <div className={cn("flex items-center", layout.iconSpacing)}>
               {renderCopyButton(code, `tool-result-code-${index}`, t("toolResult.copyCode"))}
               {toolUseId && (
-                <code className={cn(layout.smallText, "px-1 bg-secondary text-foreground/80", layout.rounded)}>
+                <code className={cn(layout.smallText, "hidden md:inline px-1 bg-secondary text-foreground/80", layout.rounded)}>
                   {renderToolUseId(toolUseId)}
                 </code>
               )}
@@ -168,6 +168,11 @@ export const ClaudeToolResultItem = memo(function ClaudeToolResultItem({
           }
         />
         <Renderer.Content>
+          {toolUseId && (
+            <code className={cn(layout.monoText, "block md:hidden mb-2 text-muted-foreground")}>
+              {t("common.toolId")}: {toolUseId}
+            </code>
+          )}
           {/* Description */}
           {description && (
             <div className={cn("p-2 bg-secondary border border-border mb-2", layout.rounded)}>
@@ -240,7 +245,7 @@ export const ClaudeToolResultItem = memo(function ClaudeToolResultItem({
             <div className={cn("flex items-center", layout.iconSpacing)}>
               {renderCopyButton(cleanContent, `file-search-result-${index}`, t("toolResult.copyResult"))}
               {toolUseId && (
-                <code className={cn(layout.smallText, "px-1 bg-secondary text-foreground/80", layout.rounded)}>
+                <code className={cn(layout.smallText, "hidden md:inline px-1 bg-secondary text-foreground/80", layout.rounded)}>
                   {renderToolUseId(toolUseId)}
                 </code>
               )}
@@ -248,6 +253,11 @@ export const ClaudeToolResultItem = memo(function ClaudeToolResultItem({
           }
         />
         <Renderer.Content>
+          {toolUseId && (
+            <code className={cn(layout.monoText, "block md:hidden mb-2 text-muted-foreground")}>
+              {t("common.toolId")}: {toolUseId}
+            </code>
+          )}
           {renderFileSearchResult(cleanContent)}
           {renderSystemMessages(reminders)}
         </Renderer.Content>
@@ -264,13 +274,18 @@ export const ClaudeToolResultItem = memo(function ClaudeToolResultItem({
         titleClassName={styles.title}
         rightContent={
           toolUseId && (
-            <code className={cn(layout.smallText, isError ? "text-destructive" : styles.accent)}>
+            <code className={cn(layout.smallText, "hidden md:inline", isError ? "text-destructive" : styles.accent)}>
               {renderToolUseId(toolUseId)}
             </code>
           )
         }
       />
       <Renderer.Content>
+        {toolUseId && (
+          <code className={cn(layout.monoText, "block md:hidden mb-2 text-muted-foreground")}>
+            {t("common.toolId")}: {toolUseId}
+          </code>
+        )}
         <div className={layout.bodyText}>
           {typeof content === "string" ? (
             <div className={layout.prose}>

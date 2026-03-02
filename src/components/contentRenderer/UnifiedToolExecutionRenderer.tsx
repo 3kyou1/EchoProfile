@@ -101,7 +101,7 @@ export const UnifiedToolExecutionRenderer = memo(function UnifiedToolExecutionRe
           <div className={cn("flex items-center", layout.iconGap)}>
             {statusBadge}
               {toolId && (
-                <code className={cn(layout.monoText, "px-2 py-0.5", layout.rounded, styles.badge, styles.badgeText)}>
+                <code className={cn(layout.monoText, "hidden md:inline px-2 py-0.5", layout.rounded, styles.badge, styles.badgeText)}>
                   {t("common.id")}: {toolId}
                 </code>
               )}
@@ -109,6 +109,11 @@ export const UnifiedToolExecutionRenderer = memo(function UnifiedToolExecutionRe
           }
         />
       <Renderer.Content>
+        {toolId && (
+          <code className={cn(layout.monoText, "block md:hidden mb-2 text-muted-foreground")}>
+            {t("common.id")}: {toolId}
+          </code>
+        )}
         {primaryPreview && (
           <pre className={cn(layout.monoText, "mb-2 p-2 bg-secondary text-foreground rounded overflow-x-auto whitespace-pre-wrap")}>
             {primaryPreview}

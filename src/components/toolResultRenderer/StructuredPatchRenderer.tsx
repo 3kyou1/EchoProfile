@@ -70,7 +70,7 @@ export const StructuredPatchRenderer = ({ toolResult }: Props) => {
         titleClassName="text-foreground"
         rightContent={
           filePath && (
-            <span className={`${layout.smallText} text-tool-code truncate max-w-[250px]`} title={filePath}>
+            <span className={`${layout.smallText} text-tool-code truncate max-w-[150px] md:max-w-[250px]`} title={filePath}>
               {formatShortPath(filePath)}
             </span>
           )

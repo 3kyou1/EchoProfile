@@ -125,7 +125,7 @@ export const ClaudeMessageNode = React.memo(({
       <div
         data-message-uuid={message.uuid}
         className={cn(
-          "relative w-full px-4 py-2 transition-all duration-200",
+          "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
           isCaptureMode && CAPTURE_HOVER_BG
         )}
       >
@@ -143,7 +143,7 @@ export const ClaudeMessageNode = React.memo(({
       <div
         data-message-uuid={message.uuid}
         className={cn(
-          "relative w-full px-4 py-2 transition-all duration-200",
+          "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
           isCaptureMode && CAPTURE_HOVER_BG
         )}
       >
@@ -164,7 +164,7 @@ export const ClaudeMessageNode = React.memo(({
       <div
         data-message-uuid={message.uuid}
         className={cn(
-          "relative w-full px-4 py-2 transition-all duration-200",
+          "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
           isCaptureMode && CAPTURE_HOVER_BG
         )}
       >
@@ -205,7 +205,7 @@ export const ClaudeMessageNode = React.memo(({
       <div
         data-message-uuid={message.uuid}
         className={cn(
-          "relative w-full px-4 py-2 transition-all duration-200",
+          "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
           isCaptureMode && CAPTURE_HOVER_BG
         )}
       >
@@ -227,7 +227,7 @@ export const ClaudeMessageNode = React.memo(({
       <div
         data-message-uuid={message.uuid}
         className={cn(
-          "relative w-full px-4 py-1 transition-all duration-200",
+          "relative w-full px-2 md:px-4 py-1 transition-all duration-200",
           isCaptureMode && CAPTURE_HOVER_BG
         )}
       >
@@ -255,7 +255,7 @@ export const ClaudeMessageNode = React.memo(({
     <div
       data-message-uuid={message.uuid}
       className={cn(
-        "relative w-full px-4 py-2 transition-all duration-200",
+        "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
         message.isSidechain && "bg-muted",
         // Search highlight
         isCurrentMatch && "bg-highlight-current ring-2 ring-warning",

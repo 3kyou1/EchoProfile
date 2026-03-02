@@ -177,7 +177,7 @@ export const FileContent = ({
         titleClassName="text-tool-file"
         rightContent={
           <div className="flex items-center gap-2">
-            <span className={`${layout.smallText} text-tool-file truncate max-w-[250px]`} title={filePath}>
+            <span className={`${layout.smallText} text-tool-file truncate max-w-[150px] md:max-w-[250px]`} title={filePath}>
               {filePath && formatShortPath(filePath)}
               {formatLineInfo() && (
                 <span className="ml-1.5">· {formatLineInfo()}</span>

@@ -54,7 +54,7 @@ export const ThinkingRenderer = memo(function ThinkingRenderer({
           )}
         />
         <Bot className={cn(layout.iconSize, "text-thinking-foreground shrink-0")} />
-        <span className={cn(layout.titleText, "text-thinking-foreground")}>
+        <span className={cn(layout.titleText, "text-thinking-foreground whitespace-nowrap shrink-0")}>
           {t("thinkingRenderer.title")}
         </span>
         {!isExpanded && (

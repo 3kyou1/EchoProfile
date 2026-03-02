@@ -55,7 +55,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
       )}
     >
       {/* Context Selector - Always visible, not collapsible */}
-      <div className="space-y-1 shrink-0">
+      <div className="space-y-1 shrink-0 w-full">
         <h3 className="hidden md:block text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-1">
           {t("settingsManager.unified.sidebar.context") || "Context"}
         </h3>

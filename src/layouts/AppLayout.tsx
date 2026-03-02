@@ -272,9 +272,6 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
           analyticsActions={analyticsActions}
           analyticsComputed={computed}
           updater={updater}
-          onOpenSidebar={
-            isMobile ? () => setIsMobileSidebarOpen(true) : undefined
-          }
         />
 
         {/* Mobile Sidebar Drawer */}

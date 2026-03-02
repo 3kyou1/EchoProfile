@@ -194,7 +194,7 @@ export const ToolUseRenderer = memo(function ToolUseRenderer({
               <code
                 className={cn(
                   layout.monoText,
-                  "px-2 py-1",
+                  "hidden md:inline px-2 py-1",
                   layout.rounded,
                   writeStyles.badge,
                   writeStyles.badgeText
@@ -206,6 +206,11 @@ export const ToolUseRenderer = memo(function ToolUseRenderer({
           }
         />
         <Renderer.Content>
+          {toolId && (
+            <code className={cn(layout.monoText, "block md:hidden mb-2 text-muted-foreground")}>
+              {renderToolId(toolId)}
+            </code>
+          )}
           {/* File path */}
           <div className={cn("mb-3 p-2 border bg-info/10 border-info/30", layout.rounded)}>
             <div className={cn("flex items-center", layout.iconSpacing)}>
@@ -301,7 +306,7 @@ export const ToolUseRenderer = memo(function ToolUseRenderer({
           titleClassName={cn("font-bold", infoStyles.title)}
           rightContent={
             toolId && (
-              <div className={cn("flex items-center", layout.iconSpacing, layout.bodyText)}>
+              <div className={cn("hidden md:flex items-center", layout.iconSpacing, layout.bodyText)}>
                 <Hash className={cn(layout.iconSizeSmall, infoStyles.icon)} />
                 <span className={cn("font-mono", infoStyles.accent)}>
                   {renderToolId(toolId)}
@@ -311,6 +316,11 @@ export const ToolUseRenderer = memo(function ToolUseRenderer({
           }
         />
         <Renderer.Content>
+          {toolId && (
+            <code className={cn(layout.monoText, "block md:hidden mb-2 text-muted-foreground")}>
+              {renderToolId(toolId)}
+            </code>
+          )}
           <div className="mb-4">
             <div className={cn(layout.bodyText, "font-semibold mb-2 text-foreground")}>
               {t("toolUseRenderer.taskDescription")}
@@ -347,7 +357,7 @@ export const ToolUseRenderer = memo(function ToolUseRenderer({
             <code
               className={cn(
                 layout.monoText,
-                "px-2 py-1",
+                "hidden md:inline px-2 py-1",
                 layout.rounded,
                 styles.badge,
                 styles.badgeText
@@ -360,6 +370,11 @@ export const ToolUseRenderer = memo(function ToolUseRenderer({
       />
 
       <Renderer.Content>
+        {toolId && (
+          <code className={cn(layout.monoText, "block md:hidden mb-2 text-muted-foreground")}>
+            {renderToolId(toolId)}
+          </code>
+        )}
         <div className={cn(layout.titleText, "mb-2 text-muted-foreground")}>
           {t("toolUseRenderer.toolInputParameters")}
         </div>

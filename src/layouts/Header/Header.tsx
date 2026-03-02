@@ -8,7 +8,6 @@ import {
   Terminal,
   SlidersHorizontal,
   Columns,
-  Menu,
   Search,
 } from "lucide-react";
 
@@ -26,10 +25,9 @@ interface HeaderProps {
   analyticsActions: UseAnalyticsReturn["actions"];
   analyticsComputed: UseAnalyticsReturn["computed"];
   updater: UseUpdaterReturn;
-  onOpenSidebar?: () => void;
 }
 
-export const Header = ({ analyticsActions, analyticsComputed, updater, onOpenSidebar }: HeaderProps) => {
+export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderProps) => {
   const { t } = useTranslation();
   const { openModal } = useModal();
 
@@ -89,17 +87,6 @@ export const Header = ({ analyticsActions, analyticsComputed, updater, onOpenSid
 
       {/* Left: Logo & Title */}
       <div className="flex items-center gap-2.5 min-w-0">
-        {/* Hamburger menu (mobile only) */}
-        {onOpenSidebar && (
-          <button
-            onClick={onOpenSidebar}
-            className="md:hidden p-2 -ml-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label={t("common.mobile.openSidebar")}
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-        )}
-
         <img
           src="/app-icon.png"
           alt="Claude Code History"

@@ -11,11 +11,13 @@ import { PlatformProvider } from "./contexts/platform";
 import { ThemeProvider } from "./contexts/theme/ThemeProvider.tsx";
 import { ModalProvider } from "./contexts/modal/ModalProvider.tsx";
 import { Toaster } from "sonner";
-import { initAuthToken } from "./utils/platform";
+import { initAuthToken, recoverAuthFromErrorQuery } from "./utils/platform";
 
 // Initialise WebUI auth token from URL before anything else.
 // (No-op in Tauri desktop mode.)
 initAuthToken();
+// If startup hit `?auth_error=1`, prompt for token and reload once recovered.
+recoverAuthFromErrorQuery();
 
 // Apply OverlayScrollbars globally to body
 OverlayScrollbars(document.body, {

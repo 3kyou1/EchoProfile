@@ -9,7 +9,13 @@
  *   const result = await api<MyType>("command_name", { key: "value" });
  */
 
-import { isTauri, getApiBase, getAuthToken, setAuthToken } from "@/utils/platform";
+import {
+  isTauri,
+  getApiBase,
+  getAuthToken,
+  setAuthToken,
+  clearAuthToken,
+} from "@/utils/platform";
 
 /** Validate command name to prevent path traversal in URL. */
 const COMMAND_RE = /^[a-zA-Z0-9_]+$/;
@@ -52,14 +58,26 @@ export async function api<T>(
   // On 401, try to extract token from URL params and retry once.
   // If no token is available, redirect to force re-authentication.
   if (response.status === 401 && !_retried) {
-    const urlToken = new URLSearchParams(window.location.search).get("token");
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get("token");
     if (urlToken) {
       setAuthToken(urlToken);
       return api<T>(command, args, true);
     }
-    // Clear stale token and reload — the server landing page will show auth error
-    setAuthToken("");
-    window.location.replace(`${window.location.pathname}?auth_error=1`);
+
+    // Avoid redirect loops when already on an auth error page.
+    if (params.get("auth_error") === "1") {
+      clearAuthToken();
+      throw new Error("Authentication required. Open the app with a valid token.");
+    }
+
+    // Clear stale token and redirect once to an explicit auth-error URL.
+    clearAuthToken();
+    params.set("auth_error", "1");
+    const query = params.toString();
+    window.location.replace(
+      query ? `${window.location.pathname}?${query}` : window.location.pathname,
+    );
     throw new Error("Authentication required");
   }
 

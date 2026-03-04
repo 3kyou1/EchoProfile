@@ -69,7 +69,7 @@ describe('useUpdater', () => {
 
   describe('checkForUpdates', () => {
     it('should set isChecking true during check', async () => {
-      let resolveCheck!: (value: null) => void;
+      let resolveCheck: ((value: null) => void) | undefined;
       mockCheck.mockImplementation(
         () => new Promise((resolve) => { resolveCheck = resolve; })
       );
@@ -83,7 +83,14 @@ describe('useUpdater', () => {
         checkPromise = result.current.checkForUpdates();
       });
 
+      await waitFor(() => {
+        expect(mockCheck).toHaveBeenCalledTimes(1);
+      });
       expect(result.current.state.isChecking).toBe(true);
+
+      if (!resolveCheck) {
+        throw new Error('check resolver was not captured');
+      }
 
       await act(async () => {
         resolveCheck(null);
@@ -106,7 +113,9 @@ describe('useUpdater', () => {
         await result.current.checkForUpdates();
       });
 
-      expect(result.current.state.hasUpdate).toBe(true);
+      await waitFor(() => {
+        expect(result.current.state.hasUpdate).toBe(true);
+      });
       expect(result.current.state.updateInfo).toEqual(mockUpdate);
       expect(result.current.state.newVersion).toBe('2.0.0');
     });
@@ -145,9 +154,11 @@ describe('useUpdater', () => {
 
       const { result } = renderHook(() => useUpdater());
 
-      // Start checkForUpdates and flush microtasks (dynamic import)
-      const checkPromise = result.current.checkForUpdates();
-      await act(async () => {});
+      // Start checkForUpdates inside act so initial state updates are tracked.
+      let checkPromise!: Promise<unknown>;
+      await act(async () => {
+        checkPromise = result.current.checkForUpdates();
+      });
 
       expect(result.current.state.isChecking).toBe(true);
 

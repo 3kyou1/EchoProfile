@@ -110,11 +110,19 @@ jobs:
       - name: Download release assets and compute SHA256
         run: |
           BASE="https://github.com/jhlee0409/claude-code-history-viewer/releases/download/${GITHUB_REF_NAME}"
+          : > CHECKSUMS.sha256
           for asset in cchv-server-macos-arm64 cchv-server-macos-x64 cchv-server-linux-arm64 cchv-server-linux-x64; do
             curl -fsSL -o "${asset}.tar.gz" "${BASE}/${asset}.tar.gz"
             sha=$(sha256sum "${asset}.tar.gz" | cut -d' ' -f1)
-            echo "${asset}=${sha}" >> "$GITHUB_ENV"
+            printf "%s  %s\n" "${sha}" "${asset}.tar.gz" >> CHECKSUMS.sha256
+            asset_var=$(echo "${asset}" | tr '-' '_')
+            echo "${asset_var}=${sha}" >> "$GITHUB_ENV"
           done
+
+      - name: Upload checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" CHECKSUMS.sha256 --clobber
 
       - name: Update Homebrew formula
         env:

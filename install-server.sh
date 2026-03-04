@@ -113,11 +113,12 @@ install() {
     info "Installing to ${INSTALL_DIR}/${BINARY_NAME}..."
     if [ -w "$INSTALL_DIR" ]; then
         mv "${TMPDIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+        chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     else
         info "Elevated permissions required to install to ${INSTALL_DIR}"
         sudo mv "${TMPDIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+        sudo chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     fi
-    chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 }
 
 # ---------------------------------------------------------------------------

@@ -168,6 +168,8 @@ pub fn build_router(state: Arc<AppState>, host: &str, port: u16, dist_dir: Optio
         .route("/health", get(health_handler))
         .nest("/api", api)
         .with_state(state)
+        // Apply security headers to all responses (API + static assets).
+        .layer(middleware::from_fn(security_headers_middleware))
         .layer(cors)
         // Limit request body size to 10 MB to prevent memory exhaustion DoS
         .layer(DefaultBodyLimit::max(10 * 1024 * 1024));
@@ -192,6 +194,20 @@ pub fn build_router(state: Arc<AppState>, host: &str, port: u16, dist_dir: Optio
 // ---------------------------------------------------------------------------
 // Auth middleware
 // ---------------------------------------------------------------------------
+
+/// Apply response security headers globally.
+async fn security_headers_middleware(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    response.headers_mut().insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("no-referrer"),
+    );
+    response.headers_mut().insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    response
+}
 
 /// Axum middleware that validates a Bearer token on every `/api/*` request.
 ///
@@ -220,19 +236,30 @@ async fn auth_middleware(
         }
     }
 
-    // 2. Check ?token= query parameter (for EventSource which cannot set headers)
-    if let Some(query) = request.uri().query() {
-        for pair in query.split('&') {
-            if let Some(token) = pair.strip_prefix("token=") {
-                let decoded = urlencoding::decode(token).unwrap_or_default();
-                if constant_time_eq(decoded.as_bytes(), expected.as_bytes()) {
-                    return Ok(next.run(request).await);
+    // 2. Check ?token= query parameter only for SSE endpoint
+    // (EventSource cannot set custom Authorization headers).
+    if allow_query_token(&request) {
+        if let Some(query) = request.uri().query() {
+            for pair in query.split('&') {
+                if let Some(token) = pair.strip_prefix("token=") {
+                    let decoded = urlencoding::decode(token).unwrap_or_default();
+                    if constant_time_eq(decoded.as_bytes(), expected.as_bytes()) {
+                        return Ok(next.run(request).await);
+                    }
                 }
             }
         }
     }
 
     Err(StatusCode::UNAUTHORIZED)
+}
+
+/// Query-token auth is allowed only for SSE endpoint requests.
+fn allow_query_token(request: &Request) -> bool {
+    if request.method() != Method::GET {
+        return false;
+    }
+    matches!(request.uri().path(), "/api/events" | "/events")
 }
 
 /// Constant-time byte comparison to prevent timing side-channel attacks on token validation.
@@ -350,4 +377,34 @@ async fn shutdown_signal() {
         .await
         .expect("Failed to install CTRL+C signal handler");
     eprintln!("\n🛑 Shutting down WebUI server...");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+
+    #[test]
+    fn test_allow_query_token_only_for_sse_get() {
+        let sse_get = Request::builder()
+            .method(Method::GET)
+            .uri("/api/events?token=abc")
+            .body(Body::empty())
+            .unwrap();
+        assert!(allow_query_token(&sse_get));
+
+        let api_post = Request::builder()
+            .method(Method::POST)
+            .uri("/api/scan_projects?token=abc")
+            .body(Body::empty())
+            .unwrap();
+        assert!(!allow_query_token(&api_post));
+
+        let non_sse_get = Request::builder()
+            .method(Method::GET)
+            .uri("/api/load_project_sessions?token=abc")
+            .body(Body::empty())
+            .unwrap();
+        assert!(!allow_query_token(&non_sse_get));
+    }
 }

@@ -25,7 +25,7 @@ RUN cargo build --release --features webui-server
 # ── Stage 3: Minimal runtime image ──────────────────────────────────
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
+    ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Run as non-root user for security

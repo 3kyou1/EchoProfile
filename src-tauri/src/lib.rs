@@ -164,7 +164,8 @@ fn run_server(args: &[String]) {
     let dist_dir = parse_cli_flag(args, "--dist");
 
     // Auth token: --token <value> | --no-auth | auto-generated uuid v4
-    let auth_token = resolve_auth_token(args);
+    let auth_token_info = resolve_auth_token(args);
+    let auth_token = auth_token_info.as_ref().map(|(token, _)| token.clone());
 
     let metadata = Arc::new(MetadataState::default());
     let (event_tx, _rx) =
@@ -184,11 +185,24 @@ fn run_server(args: &[String]) {
         host.clone()
     };
     let display_addr = format!("{display_host}:{port}");
-    if let Some(ref token) = auth_token {
-        // Show truncated token in logs to reduce log-leakage risk
+    if let Some((token, source)) = auth_token_info {
         let preview: String = token.chars().take(8).collect();
-        eprintln!("🔑 Auth token: {preview}... (full token in browser URL below)");
-        eprintln!("   Open in browser: http://{display_addr}?token={token}");
+        eprintln!("🔑 Auth token enabled: {preview}...");
+        eprintln!("   Open in browser: http://{display_addr}");
+
+        match source {
+            AuthTokenSource::Generated => {
+                if let Some(path) = write_generated_token_file(&token) {
+                    eprintln!("   Generated token saved to: {}", path.to_string_lossy());
+                    eprintln!("   First login: append '?token=<token-from-file>' to the URL");
+                } else {
+                    eprintln!("⚠ Failed to persist generated token. Re-run with --token <value>.");
+                }
+            }
+            AuthTokenSource::Cli | AuthTokenSource::Env => {
+                eprintln!("   First login: append '?token=<your-token>' to the URL");
+            }
+        }
     } else {
         eprintln!("🔓 Authentication disabled (--no-auth)");
         if host == "0.0.0.0" {
@@ -218,6 +232,14 @@ fn get_local_ip() -> Option<String> {
     Some(addr.ip().to_string())
 }
 
+#[cfg(feature = "webui-server")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AuthTokenSource {
+    Cli,
+    Env,
+    Generated,
+}
+
 /// Resolve the authentication token from CLI arguments or environment.
 ///
 /// Priority:
@@ -226,23 +248,40 @@ fn get_local_ip() -> Option<String> {
 /// - `CCHV_TOKEN` env var → `Some(value)` (user-supplied via env, e.g. systemd)
 /// - otherwise → `Some(uuid-v4)` (auto-generated)
 #[cfg(feature = "webui-server")]
-fn resolve_auth_token(args: &[String]) -> Option<String> {
+fn resolve_auth_token(args: &[String]) -> Option<(String, AuthTokenSource)> {
     if args.iter().any(|a| a == "--no-auth") {
         return None;
     }
     if let Some(token) = parse_cli_flag(args, "--token") {
         let trimmed = token.trim();
         if !trimmed.is_empty() {
-            return Some(trimmed.to_string());
+            return Some((trimmed.to_string(), AuthTokenSource::Cli));
         }
         eprintln!("⚠ --token value is empty; falling back to auto-generated token");
     }
     if let Ok(token) = std::env::var("CCHV_TOKEN") {
-        if !token.is_empty() {
-            return Some(token);
+        let trimmed = token.trim();
+        if !trimmed.is_empty() {
+            return Some((trimmed.to_string(), AuthTokenSource::Env));
         }
     }
-    Some(uuid::Uuid::new_v4().to_string())
+    Some((uuid::Uuid::new_v4().to_string(), AuthTokenSource::Generated))
+}
+
+/// Persist auto-generated token to a local file instead of logging the full secret.
+#[cfg(feature = "webui-server")]
+fn write_generated_token_file(token: &str) -> Option<std::path::PathBuf> {
+    let home = dirs::home_dir()?;
+    let dir = home.join(".claude-history-viewer");
+    std::fs::create_dir_all(&dir).ok()?;
+    let path = dir.join("webui-token.txt");
+    std::fs::write(&path, format!("{token}\n")).ok()?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
+    Some(path)
 }
 
 /// Start a `notify`-based file watcher that pushes change events into the
@@ -254,14 +293,9 @@ fn resolve_auth_token(args: &[String]) -> Option<String> {
 fn start_server_file_watcher(
     state: &std::sync::Arc<server::state::AppState>,
 ) -> Option<notify_debouncer_mini::Debouncer<notify::RecommendedWatcher>> {
-    let home = dirs::home_dir()?;
-    let projects_dir = home.join(".claude").join("projects");
-
-    if !projects_dir.is_dir() {
-        eprintln!(
-            "⚠ {} not found; real-time file watcher disabled",
-            projects_dir.display()
-        );
+    let watch_paths = collect_watch_paths();
+    if watch_paths.is_empty() {
+        eprintln!("⚠ No supported provider directories found; real-time file watcher disabled");
         return None;
     }
 
@@ -283,20 +317,74 @@ fn start_server_file_watcher(
     )
     .ok()?;
 
-    if debouncer
-        .watcher()
-        .watch(&projects_dir, notify::RecursiveMode::Recursive)
-        .is_err()
-    {
-        eprintln!(
-            "⚠ Failed to watch {}; real-time updates disabled",
-            projects_dir.display()
-        );
+    let mut watched_count = 0usize;
+    for path in &watch_paths {
+        match debouncer
+            .watcher()
+            .watch(path, notify::RecursiveMode::Recursive)
+        {
+            Ok(()) => {
+                watched_count += 1;
+                eprintln!("👁 File watcher active: {}", path.display());
+            }
+            Err(e) => {
+                eprintln!("⚠ Failed to watch {}: {e}", path.display());
+            }
+        }
+    }
+
+    if watched_count == 0 {
+        eprintln!("⚠ Real-time updates disabled (no watch path could be registered)");
         return None;
     }
 
-    eprintln!("👁 File watcher active: {}", projects_dir.display());
     Some(debouncer)
+}
+
+/// Collect available provider directories to watch for live session file updates.
+#[cfg(feature = "webui-server")]
+fn collect_watch_paths() -> Vec<std::path::PathBuf> {
+    use std::collections::HashSet;
+    use std::path::PathBuf;
+
+    let mut paths: Vec<PathBuf> = Vec::new();
+
+    if let Some(home) = dirs::home_dir() {
+        let claude_projects = home.join(".claude").join("projects");
+        if claude_projects.is_dir() {
+            paths.push(claude_projects);
+        }
+    }
+
+    if let Some(codex_base) = providers::codex::get_base_path() {
+        let base = PathBuf::from(codex_base);
+        let sessions = base.join("sessions");
+        let archived_sessions = base.join("archived_sessions");
+        if sessions.is_dir() {
+            paths.push(sessions);
+        }
+        if archived_sessions.is_dir() {
+            paths.push(archived_sessions);
+        }
+    }
+
+    if let Some(opencode_base) = providers::opencode::get_base_path() {
+        let storage = PathBuf::from(opencode_base).join("storage");
+        let session = storage.join("session");
+        let message = storage.join("message");
+        if session.is_dir() {
+            paths.push(session);
+        }
+        if message.is_dir() {
+            paths.push(message);
+        }
+    }
+
+    let mut seen = HashSet::new();
+    paths
+        .into_iter()
+        .filter(|p| seen.insert(p.clone()))
+        .collect::<Vec<_>>()
 }
 
 /// Parse a CLI flag value: `--flag value` or `--flag=value`.

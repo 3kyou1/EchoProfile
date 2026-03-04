@@ -59,6 +59,38 @@ export function initAuthToken(): void {
   }
 }
 
+/**
+ * Recover from `?auth_error=1` by asking user for a token once.
+ *
+ * Returns true when a reload has been triggered and normal app bootstrap should stop.
+ */
+export function recoverAuthFromErrorQuery(): boolean {
+  if (isTauri()) return false;
+
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("auth_error") !== "1") return false;
+
+  const existing = getAuthToken();
+  if (existing && existing.trim().length > 0) {
+    url.searchParams.delete("auth_error");
+    window.history.replaceState(window.history.state, "", url.toString());
+    return false;
+  }
+
+  const input = window.prompt(
+    "Authentication required. Paste your WebUI token to continue:",
+  );
+  if (!input || input.trim().length === 0) {
+    return false;
+  }
+
+  setAuthToken(input);
+  url.searchParams.delete("auth_error");
+  window.history.replaceState(window.history.state, "", url.toString());
+  window.location.reload();
+  return true;
+}
+
 /** Read the saved auth token (returns `null` when unavailable). */
 export function getAuthToken(): string | null {
   try {
@@ -71,8 +103,22 @@ export function getAuthToken(): string | null {
 /** Persist an auth token to `localStorage`. */
 export function setAuthToken(token: string): void {
   try {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    const normalized = token.trim();
+    if (normalized.length === 0) {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      return;
+    }
+    localStorage.setItem(AUTH_TOKEN_KEY, normalized);
   } catch {
     // localStorage unavailable (e.g. private browsing quota exceeded)
+  }
+}
+
+/** Remove persisted auth token from `localStorage`. */
+export function clearAuthToken(): void {
+  try {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  } catch {
+    // localStorage unavailable
   }
 }

@@ -837,6 +837,8 @@ pub async fn update_project_metadata(
     State(state): State<Arc<AppState>>,
     Json(p): Json<UpdateProjectMetadataParams>,
 ) -> Result<Json<Value>, ApiError> {
+    commands::metadata::validate_project_metadata_key(&p.project_path).map_err(ApiError::from)?;
+
     let metadata_to_save = {
         let mut cached = state
             .metadata
@@ -897,6 +899,8 @@ pub async fn is_project_hidden(
     State(state): State<Arc<AppState>>,
     Json(p): Json<ProjectPathParam>,
 ) -> Result<Json<Value>, ApiError> {
+    commands::metadata::validate_project_metadata_key(&p.project_path).map_err(ApiError::from)?;
+
     let cached = state
         .metadata
         .metadata

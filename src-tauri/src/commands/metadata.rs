@@ -10,14 +10,34 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::State;
 
-/// Validate that a project path is absolute
-fn validate_absolute_path(project_path: &str) -> Result<(), String> {
+/// Validate a metadata project key.
+///
+/// Allowed formats:
+/// - absolute filesystem paths (Claude projects)
+/// - `codex://<cwd>` virtual project keys
+/// - `opencode://<project_id>` virtual project keys
+pub(crate) fn validate_project_metadata_key(project_path: &str) -> Result<(), String> {
+    if let Some(cwd) = project_path.strip_prefix("codex://") {
+        if !cwd.trim().is_empty() {
+            return Ok(());
+        }
+        return Err("Codex project key must not be empty".to_string());
+    }
+
+    if let Some(project_id) = project_path.strip_prefix("opencode://") {
+        if crate::utils::is_safe_storage_id(project_id) {
+            return Ok(());
+        }
+        return Err(format!("Invalid OpenCode project key: {project_path}"));
+    }
+
     let path = Path::new(project_path);
     if !path.is_absolute() {
         return Err(format!(
-            "Project path must be absolute, got relative path: {project_path}"
+            "Project key must be absolute path or provider virtual path, got: {project_path}"
         ));
     }
+
     Ok(())
 }
 
@@ -185,7 +205,7 @@ pub async fn update_project_metadata(
     state: State<'_, MetadataState>,
 ) -> Result<UserMetadata, String> {
     // Validate that project path is absolute
-    validate_absolute_path(&project_path)?;
+    validate_project_metadata_key(&project_path)?;
 
     // Perform quick in-memory mutation while holding lock, then release
     let metadata_to_save = {
@@ -250,7 +270,7 @@ pub async fn is_project_hidden(
     state: State<'_, MetadataState>,
 ) -> Result<bool, String> {
     // Validate that project path is absolute
-    validate_absolute_path(&project_path)?;
+    validate_project_metadata_key(&project_path)?;
 
     let cached = state
         .metadata
@@ -350,5 +370,23 @@ mod tests {
         assert_eq!(loaded.version, metadata.version);
 
         drop(temp);
+    }
+
+    #[test]
+    fn test_validate_project_metadata_key_absolute_path() {
+        assert!(validate_project_metadata_key("/tmp/project").is_ok());
+    }
+
+    #[test]
+    fn test_validate_project_metadata_key_virtual_provider_paths() {
+        assert!(validate_project_metadata_key("codex:///Users/test/workspace").is_ok());
+        assert!(validate_project_metadata_key("opencode://project_123").is_ok());
+    }
+
+    #[test]
+    fn test_validate_project_metadata_key_rejects_invalid_values() {
+        assert!(validate_project_metadata_key("relative/path").is_err());
+        assert!(validate_project_metadata_key("codex://").is_err());
+        assert!(validate_project_metadata_key("opencode://../etc").is_err());
     }
 }

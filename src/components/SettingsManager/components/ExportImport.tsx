@@ -65,8 +65,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
   const [isImportAllPreviewOpen, setIsImportAllPreviewOpen] = useState(false);
   const [importedBackup, setImportedBackup] = useState<SettingsBackup | null>(null);
 
-  // Get settings for selected export scope
-  const getExportSettings = (): ClaudeCodeSettings => {
+  const exportSettings = useMemo<ClaudeCodeSettings>(() => {
     if (!allSettings) return {};
     const content = allSettings[exportScope];
     if (!content) return {};
@@ -75,7 +74,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
     } catch {
       return {};
     }
-  };
+  }, [allSettings, exportScope]);
 
   // Remove sensitive data from settings
   const sanitizeSettings = (settings: ClaudeCodeSettings): ClaudeCodeSettings => {
@@ -118,9 +117,8 @@ export const ExportImport: React.FC<ExportImportProps> = ({
 
   // Analyze if current export settings contain sensitive data
   const sensitiveAnalysis = useMemo(() => {
-    const settings = getExportSettings();
-    return analyzeSensitiveData(settings);
-  }, [allSettings, exportScope]);
+    return analyzeSensitiveData(exportSettings);
+  }, [exportSettings]);
 
   // Check if export scope has settings
   const hasExportSettings = allSettings != null && allSettings[exportScope] != null;
@@ -130,10 +128,9 @@ export const ExportImport: React.FC<ExportImportProps> = ({
 
     setIsExporting(true);
     try {
-      const currentSettings = getExportSettings();
       const settingsToExport = excludeSensitive
-        ? sanitizeSettings(currentSettings)
-        : currentSettings;
+        ? sanitizeSettings(exportSettings)
+        : exportSettings;
 
       await saveFileDialog(JSON.stringify(settingsToExport, null, 2), {
         filters: [{ name: "JSON", extensions: ["json"] }],

@@ -38,6 +38,11 @@ export function useAnalyticsAutoLoad(computed: {
     loadSessionTokenStats,
     loadGlobalStats,
   } = useAppStore();
+  const dateFilterStartMs = dateFilter.start?.getTime() ?? null;
+  const dateFilterEndMs = dateFilter.end?.getTime() ?? null;
+  const selectedProjectPath = selectedProject?.path ?? null;
+  const selectedSessionId = selectedSession?.actual_session_id ?? null;
+  const selectedSessionFilePath = selectedSession?.file_path ?? null;
 
   /**
    * Session change auto-refresh for analytics view
@@ -49,15 +54,15 @@ export function useAnalyticsAutoLoad(computed: {
 
     if (
       analytics.currentView === "analytics" &&
-      selectedProject &&
-      selectedSession
+      selectedProjectPath &&
+      selectedSessionId &&
+      selectedSessionFilePath
     ) {
-      const autoloadKey = `${selectedSession.actual_session_id}:${dateFilter.start?.getTime() ?? "none"}:${dateFilter.end?.getTime() ?? "none"}`;
+      const autoloadKey = `${selectedSessionId}:${dateFilterStartMs ?? "none"}:${dateFilterEndMs ?? "none"}`;
       const hasCachedSessionComparison =
-        analytics.sessionComparison?.session_id ===
-        selectedSession.actual_session_id;
+        analytics.sessionComparison?.session_id === selectedSessionId;
       const hasCachedSessionTokenStats =
-        sessionTokenStats?.session_id === selectedSession.actual_session_id;
+        sessionTokenStats?.session_id === selectedSessionId;
 
       if (hasCachedSessionComparison && hasCachedSessionTokenStats) {
         analyticsSessionAutoloadAttemptKeyRef.current = null;
@@ -79,8 +84,8 @@ export function useAnalyticsAutoLoad(computed: {
           if (!hasCachedSessionComparison) {
             promises.push(
               loadSessionComparison(
-                selectedSession.actual_session_id,
-                selectedProject.path
+                selectedSessionId,
+                selectedProjectPath
               ).then((comparison) => {
                 setAnalyticsSessionComparison(comparison);
                 setAnalyticsSessionComparisonError(null);
@@ -90,7 +95,7 @@ export function useAnalyticsAutoLoad(computed: {
 
           if (!hasCachedSessionTokenStats) {
             promises.push(
-              loadSessionTokenStats(selectedSession.file_path)
+              loadSessionTokenStats(selectedSessionFilePath)
             );
           }
 
@@ -111,12 +116,11 @@ export function useAnalyticsAutoLoad(computed: {
     }
   }, [
     t,
-    selectedSession?.actual_session_id,
-    selectedProject?.path,
-    selectedProject,
-    selectedSession,
-    dateFilter.start?.getTime(),
-    dateFilter.end?.getTime(),
+    selectedSessionId,
+    selectedSessionFilePath,
+    selectedProjectPath,
+    dateFilterStartMs,
+    dateFilterEndMs,
     sessionTokenStats?.session_id,
     analytics.currentView,
     analytics.sessionComparison?.session_id,
@@ -137,10 +141,14 @@ export function useAnalyticsAutoLoad(computed: {
       return;
     }
 
-    if (analytics.currentView === "tokenStats" && selectedSession) {
-      const autoloadKey = `${selectedSession.actual_session_id}:${dateFilter.start?.getTime() ?? "none"}:${dateFilter.end?.getTime() ?? "none"}`;
+    if (
+      analytics.currentView === "tokenStats" &&
+      selectedSessionId &&
+      selectedSessionFilePath
+    ) {
+      const autoloadKey = `${selectedSessionId}:${dateFilterStartMs ?? "none"}:${dateFilterEndMs ?? "none"}`;
       const hasCachedSessionTokenStats =
-        sessionTokenStats?.session_id === selectedSession.actual_session_id;
+        sessionTokenStats?.session_id === selectedSessionId;
 
       if (hasCachedSessionTokenStats) {
         tokenStatsSessionAutoloadAttemptKeyRef.current = null;
@@ -155,7 +163,7 @@ export function useAnalyticsAutoLoad(computed: {
 
       const updateSessionTokenStats = async () => {
         try {
-          await loadSessionTokenStats(selectedSession.file_path);
+          await loadSessionTokenStats(selectedSessionFilePath);
         } catch (error) {
           console.error("Failed to update session token stats:", error);
         }
@@ -164,11 +172,10 @@ export function useAnalyticsAutoLoad(computed: {
       updateSessionTokenStats();
     }
   }, [
-    dateFilter.start?.getTime(),
-    dateFilter.end?.getTime(),
-    selectedSession?.actual_session_id,
-    selectedSession?.file_path,
-    selectedSession,
+    dateFilterStartMs,
+    dateFilterEndMs,
+    selectedSessionId,
+    selectedSessionFilePath,
     sessionTokenStats?.session_id,
     analytics.currentView,
     isLoadingTokenStats,
@@ -179,7 +186,7 @@ export function useAnalyticsAutoLoad(computed: {
    * Date filter change auto-refresh
    */
   useEffect(() => {
-    const currentDateFilterKey = `${dateFilter.start?.getTime() ?? "none"}:${dateFilter.end?.getTime() ?? "none"}`;
+    const currentDateFilterKey = `${dateFilterStartMs ?? "none"}:${dateFilterEndMs ?? "none"}`;
 
     if (dateFilterKeyRef.current === null) {
       dateFilterKeyRef.current = currentDateFilterKey;
@@ -194,7 +201,7 @@ export function useAnalyticsAutoLoad(computed: {
       requestSeq !== dateFilterRequestSeqRef.current;
 
     const isGlobalScope =
-      !selectedProject && analytics.currentView === "analytics";
+      !selectedProjectPath && analytics.currentView === "analytics";
 
     const update = async () => {
       try {
@@ -203,17 +210,17 @@ export function useAnalyticsAutoLoad(computed: {
           return;
         }
 
-        if (!selectedProject) {
+        if (!selectedProjectPath) {
           return;
         }
 
         if (computed.isTokenStatsView) {
           const promises: Promise<unknown>[] = [
-            loadProjectTokenStats(selectedProject.path),
+            loadProjectTokenStats(selectedProjectPath),
           ];
-          if (selectedSession) {
+          if (selectedSessionFilePath) {
             promises.push(
-              loadSessionTokenStats(selectedSession.file_path)
+              loadSessionTokenStats(selectedSessionFilePath)
             );
           }
           await Promise.all(promises);
@@ -223,22 +230,22 @@ export function useAnalyticsAutoLoad(computed: {
         } else if (computed.isAnalyticsView) {
           setAnalyticsLoadingProjectSummary(true);
           const summary = await loadProjectStatsSummary(
-            selectedProject.path
+            selectedProjectPath
           );
           if (isStaleRequest()) {
             return;
           }
           setAnalyticsProjectSummary(summary);
 
-          if (selectedSession) {
+          if (selectedSessionId && selectedSessionFilePath) {
             setAnalyticsLoadingSessionComparison(true);
             try {
               const [comparison] = await Promise.all([
                 loadSessionComparison(
-                  selectedSession.actual_session_id,
-                  selectedProject.path
+                  selectedSessionId,
+                  selectedProjectPath
                 ),
-                loadSessionTokenStats(selectedSession.file_path),
+                loadSessionTokenStats(selectedSessionFilePath),
               ]);
               if (isStaleRequest()) {
                 return;
@@ -288,14 +295,14 @@ export function useAnalyticsAutoLoad(computed: {
       void update();
     }
   }, [
-    dateFilter.start?.getTime(),
-    dateFilter.end?.getTime(),
+    dateFilterStartMs,
+    dateFilterEndMs,
     analytics.currentView,
     computed.isTokenStatsView,
     computed.isAnalyticsView,
-    selectedSession?.actual_session_id,
-    selectedSession?.file_path,
-    selectedProject?.path,
+    selectedSessionId,
+    selectedSessionFilePath,
+    selectedProjectPath,
     loadGlobalStats,
     loadProjectTokenStats,
     loadSessionTokenStats,

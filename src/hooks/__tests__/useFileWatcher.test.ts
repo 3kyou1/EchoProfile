@@ -168,7 +168,9 @@ describe('useFileWatcher', () => {
       );
 
       // Manually advance for the useEffect to run
-      await vi.advanceTimersByTimeAsync(10);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10);
+      });
 
       // Fire multiple events rapidly
       const eventPayload = {
@@ -177,15 +179,19 @@ describe('useFileWatcher', () => {
         eventType: 'changed' as const,
       };
 
-      capturedCallback?.({ payload: eventPayload });
-      capturedCallback?.({ payload: eventPayload });
-      capturedCallback?.({ payload: eventPayload });
+      act(() => {
+        capturedCallback?.({ payload: eventPayload });
+        capturedCallback?.({ payload: eventPayload });
+        capturedCallback?.({ payload: eventPayload });
+      });
 
       // Should not have been called yet
       expect(onSessionChanged).not.toHaveBeenCalled();
 
       // Advance timers past debounce
-      await vi.advanceTimersByTimeAsync(350);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
 
       // Should only be called once
       expect(onSessionChanged).toHaveBeenCalledTimes(1);

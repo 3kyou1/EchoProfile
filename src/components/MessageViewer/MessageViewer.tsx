@@ -16,9 +16,13 @@ import { LoadingSpinner, LoadingState } from "@/components/ui/loading";
 import type { MessageViewerProps } from "./types";
 import { VirtualizedMessageRow } from "./components/VirtualizedMessageRow";
 import { CaptureModeToolbar } from "./components/CaptureModeToolbar";
+import { OffScreenCaptureRenderer } from "./components/OffScreenCaptureRenderer";
+import { ScreenshotPreviewModal } from "./components/ScreenshotPreviewModal";
 import { useSearchState } from "./hooks/useSearchState";
 import { useScrollNavigation } from "./hooks/useScrollNavigation";
 import { useMessageVirtualization } from "./hooks/useMessageVirtualization";
+import { useCapturePreview } from "../../hooks/useCapturePreview";
+import { MAX_CAPTURE_MESSAGES } from "../../hooks/useCaptureScreenshot";
 import {
   groupAgentTasks,
   groupAgentProgressMessages,
@@ -49,15 +53,32 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   const {
     isCaptureMode,
     hiddenMessageIds,
+    selectedMessageIds,
     enterCaptureMode,
     hideMessage,
     showMessage,
     restoreMessages,
+    isCapturing,
+    handleSelectionClick,
+    clearSelection,
     // Navigation state
     targetMessageUuid,
     shouldHighlightTarget,
     clearTargetMessage,
   } = useAppStore();
+
+  // Screenshot preview hook
+  const {
+    previewDataUrl,
+    previewWidth,
+    previewHeight,
+    captureAndPreview,
+    savePreview,
+    discardPreview,
+  } = useCapturePreview();
+  const { setIsCapturing } = useAppStore();
+  const offScreenRef = useRef<HTMLDivElement>(null);
+  const [captureToast, setCaptureToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Search state management
   const {
@@ -225,6 +246,159 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     hiddenMessageIds,
     isCaptureMode,
   });
+
+  // Set of selected message UUIDs for O(1) lookup
+  const selectedSet = useMemo(
+    () => new Set(selectedMessageIds),
+    [selectedMessageIds],
+  );
+
+  // Ordered list of message UUIDs (for range selection)
+  const orderedMessageUuids = useMemo(
+    () =>
+      flattenedMessages
+        .filter(
+          (item): item is Extract<typeof item, { type: "message" }> =>
+            item.type === "message" &&
+            !item.isGroupMember &&
+            !item.isProgressGroupMember &&
+            !item.isTaskOperationGroupMember,
+        )
+        .map((item) => item.message.uuid),
+    [flattenedMessages],
+  );
+
+  // Stable selection handler (avoids creating new function per row in render loop)
+  const handleRangeSelect = useCallback(
+    (uuid: string, modifiers: { shift: boolean; cmdOrCtrl: boolean }) => {
+      handleSelectionClick(uuid, orderedMessageUuids, modifiers);
+    },
+    [handleSelectionClick, orderedMessageUuids],
+  );
+
+  // Count selected visible messages (excluding hidden)
+  const selectedVisibleCount = useMemo(() => {
+    const hiddenSet = new Set(hiddenMessageIds);
+    let count = 0;
+    for (const uuid of selectedMessageIds) {
+      if (!hiddenSet.has(uuid)) count++;
+    }
+    return count;
+  }, [selectedMessageIds, hiddenMessageIds]);
+
+  const hasSelection = selectedMessageIds.length > 0;
+
+  const waitForCaptureAssets = useCallback(async (root: HTMLElement) => {
+    const CAPTURE_ASSET_TIMEOUT_MS = 3000;
+    const images = Array.from(root.querySelectorAll("img"));
+
+    const imagePromises = images.map((img) => new Promise<void>((resolve) => {
+      if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        resolve();
+        return;
+      }
+
+      const done = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+
+      img.addEventListener("load", done, { once: true });
+      img.addEventListener("error", done, { once: true });
+
+      // Never block capture indefinitely for broken/slow resources.
+      const timer = setTimeout(() => {
+        img.removeEventListener("load", done);
+        img.removeEventListener("error", done);
+        resolve();
+      }, CAPTURE_ASSET_TIMEOUT_MS);
+    }));
+
+    const fontsPromise =
+      "fonts" in document
+        ? Promise.race([
+            document.fonts?.ready ?? Promise.resolve(),
+            new Promise<void>((resolve) => setTimeout(resolve, CAPTURE_ASSET_TIMEOUT_MS)),
+          ])
+        : Promise.resolve();
+
+    await Promise.all([...imagePromises, fontsPromise]);
+  }, []);
+
+  // Screenshot handler — capture to preview modal
+  const handleScreenshot = useCallback(async () => {
+    if (!hasSelection || selectedVisibleCount === 0) {
+      setCaptureToast({
+        type: "error",
+        message: t("captureMode.selectMessages"),
+      });
+      return;
+    }
+    if (selectedVisibleCount > MAX_CAPTURE_MESSAGES) {
+      setCaptureToast({
+        type: "error",
+        message: t("captureMode.tooManyMessages", { max: MAX_CAPTURE_MESSAGES }),
+      });
+      return;
+    }
+
+    // 1. Mount the capture renderer
+    setIsCapturing(true);
+    try {
+      // 2. Wait for React to render + browser to lay out the content
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+
+      // 3. Capture the rendered element → open preview (no file save yet)
+      const el = offScreenRef.current;
+      if (!el) {
+        setCaptureToast({ type: "error", message: t("captureMode.captureError") });
+        return;
+      }
+
+      await waitForCaptureAssets(el);
+
+      const result = await captureAndPreview(el, selectedSession?.session_id);
+      if (!result.success && result.message) {
+        setCaptureToast({ type: "error", message: result.message });
+      }
+    } catch {
+      setCaptureToast({ type: "error", message: t("captureMode.captureError") });
+    } finally {
+      setIsCapturing(false);
+    }
+  }, [
+    hasSelection,
+    selectedVisibleCount,
+    captureAndPreview,
+    setIsCapturing,
+    selectedSession?.session_id,
+    t,
+    waitForCaptureAssets,
+  ]);
+
+  // Save from preview modal
+  const handlePreviewSave = useCallback(async () => {
+    try {
+      const result = await savePreview();
+      if (result.message) {
+        setCaptureToast({
+          type: result.success ? "success" : "error",
+          message: result.message,
+        });
+      }
+    } catch {
+      setCaptureToast({ type: "error", message: t("captureMode.captureError") });
+    }
+  }, [savePreview, t]);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!captureToast) return;
+    const timer = setTimeout(() => setCaptureToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [captureToast]);
 
   // Scroll navigation with virtualizer support
   const {
@@ -514,7 +688,14 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
       </div>
 
       {/* Capture Mode Toolbar */}
-      {isCaptureMode && <CaptureModeToolbar />}
+      {isCaptureMode && (
+        <CaptureModeToolbar
+          selectedCount={selectedVisibleCount}
+          hasSelection={hasSelection}
+          onScreenshot={handleScreenshot}
+          onClearSelection={clearSelection}
+        />
+      )}
 
       <OverlayScrollbarsComponent
         ref={scrollContainerRef}
@@ -610,6 +791,8 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
 
               const messageMatchIndex = (isMessage && currentMatchUuid === item.message.uuid) ? currentMatch?.matchIndex : undefined;
 
+              const itemIsSelected = isMessage && selectedSet.has(item.message.uuid);
+
               return (
                 <VirtualizedMessageRow
                   key={virtualRow.key}
@@ -625,6 +808,8 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
                   onHideMessage={hideMessage}
                   onRestoreOne={showMessage}
                   onRestoreAll={restoreMessages}
+                  isSelected={itemIsSelected}
+                  onRangeSelect={isCaptureMode ? handleRangeSelect : undefined}
                 />
               );
             })}
@@ -665,6 +850,46 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           )}
         </div>
       </OverlayScrollbarsComponent>
+
+      {/* Capture renderer — only mounted during active capture */}
+      {isCapturing && hasSelection && (
+        <OffScreenCaptureRenderer
+          ref={offScreenRef}
+          flattenedMessages={flattenedMessages}
+          selectedMessageIds={selectedMessageIds}
+          hiddenMessageIds={hiddenMessageIds}
+        />
+      )}
+
+      {/* Screenshot preview modal */}
+      {previewDataUrl && (
+        <ScreenshotPreviewModal
+          dataUrl={previewDataUrl}
+          width={previewWidth}
+          height={previewHeight}
+          onSave={handlePreviewSave}
+          onClose={discardPreview}
+        />
+      )}
+
+      {/* Capture toast notification */}
+      {captureToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className={cn(
+            "fixed bottom-6 left-1/2 -translate-x-1/2 z-50",
+            "px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium",
+            "animate-in fade-in slide-in-from-bottom-2 duration-200",
+            captureToast.type === "success"
+              ? "bg-emerald-600 text-white"
+              : "bg-red-600 text-white"
+          )}
+        >
+          {captureToast.message}
+        </div>
+      )}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { CheckCircle2, Clock3, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Renderer } from "@/shared/RendererHeader";
+import { useForceExpanded } from "@/contexts/CaptureExpandContext";
 import { ToolIcon } from "../ToolIcon";
 import { getToolVariant } from "@/utils/toolIconUtils";
 import { getVariantStyles, layout } from "../renderers";
@@ -54,6 +55,7 @@ export const UnifiedToolExecutionRenderer = memo(function UnifiedToolExecutionRe
   toolResults,
 }: Props) {
   const { t } = useTranslation();
+  const forceExpanded = useForceExpanded();
 
   const toolName = (toolUse.name as string) || "";
   const toolId = (toolUse.id as string) || "";
@@ -120,7 +122,7 @@ export const UnifiedToolExecutionRenderer = memo(function UnifiedToolExecutionRe
           </pre>
         )}
 
-        <details className="mb-2">
+        <details open={forceExpanded || undefined} className="mb-2">
           <summary className={cn(layout.smallText, "cursor-pointer text-muted-foreground")}>
             {t("common.input")}
           </summary>
@@ -132,7 +134,7 @@ export const UnifiedToolExecutionRenderer = memo(function UnifiedToolExecutionRe
         {toolResults.length > 0 ? (
           <div className="space-y-2">
             {toolResults.map((result, idx) => (
-              <details key={idx}>
+              <details open={forceExpanded || undefined} key={idx}>
                 <summary className={cn(layout.smallText, "cursor-pointer text-muted-foreground")}>
                   {t("toolResult.toolExecutionResult")} #{idx + 1}
                 </summary>

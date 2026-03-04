@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Globe, Wrench } from "lucide-react";
+import { useForceExpanded } from "@/contexts/CaptureExpandContext";
 import { useTranslation } from "react-i18next";
 import { safeStringify } from "../../utils/jsonUtils";
 import { getVariantStyles, layout } from "@/components/renderers";
@@ -18,6 +19,7 @@ export const ServerToolUseRenderer = memo(function ServerToolUseRenderer({
   input,
 }: Props) {
   const { t } = useTranslation();
+  const forceExpanded = useForceExpanded();
   const variant = name === "web_search" ? "web" : "mcp";
   const styles = getVariantStyles(variant);
 
@@ -57,7 +59,7 @@ export const ServerToolUseRenderer = memo(function ServerToolUseRenderer({
       )}
       {Object.keys(input).length > 0 &&
         !(name === "web_search" && Object.keys(input).length === 1) && (
-          <details className="mt-2">
+          <details open={forceExpanded || undefined} className="mt-2">
             <summary className={cn(layout.monoText, styles.accent, "cursor-pointer hover:opacity-80")}>
               {t("serverToolUseRenderer.showInput")}
             </summary>

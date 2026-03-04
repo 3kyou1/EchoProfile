@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { FileEdit } from "lucide-react";
 import * as Diff from "diff";
 import { layout } from "@/components/renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 
 type DiffMode =
   | "chars"
@@ -29,7 +30,7 @@ export const AdvancedTextDiff = ({
 }: Props) => {
   const { t } = useTranslation();
   const [currentMode, setCurrentMode] = useState<DiffMode>(diffMode);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
 
   const defaultTitle = title || t("advancedTextDiff.textChanges");
 
@@ -119,7 +120,7 @@ export const AdvancedTextDiff = ({
         </div>
         {shouldCollapse && (
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={() => setIsExpanded(prev => !prev)}
             className={`${layout.smallText} px-2 py-1 bg-secondary hover:bg-secondary/80 text-foreground rounded transition-colors`}
           >
             {isExpanded

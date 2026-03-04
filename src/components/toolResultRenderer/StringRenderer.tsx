@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
+import { memo, useEffect } from "react";
 import { Folder, Check, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +8,7 @@ import remarkGfm from "remark-gfm";
 import { Renderer } from "../../shared/RendererHeader";
 import { layout } from "@/components/renderers";
 import { cn } from "@/lib/utils";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { AnsiText } from "../common/AnsiText";
 import { hasAnsiCodes } from "@/utils/ansiToHtml";
 
@@ -24,14 +25,14 @@ export const StringRenderer = memo(function StringRenderer({ result, searchQuery
     (result.includes("- ") || result.includes("├") || result.includes("└"));
 
   // 접기/펼치기 상태 관리
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
 
   // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
   useEffect(() => {
     if (searchQuery && result.toLowerCase().includes(searchQuery.toLowerCase())) {
       setIsExpanded(true);
     }
-  }, [searchQuery, result]);
+  }, [searchQuery, result, setIsExpanded]);
   const MAX_LINES = 15; // 최대 표시 줄 수
   const resultLines = result.split("\n");
   const shouldCollapse = resultLines.length > MAX_LINES;
@@ -55,7 +56,7 @@ export const StringRenderer = memo(function StringRenderer({ result, searchQuery
         rightContent={
           shouldCollapse && (
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={() => setIsExpanded(prev => !prev)}
               className={`${layout.smallText} px-2 py-1 rounded transition-colors bg-secondary text-foreground hover:bg-secondary/80`}
             >
               {isExpanded ? (

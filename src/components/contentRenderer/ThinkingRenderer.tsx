@@ -1,8 +1,9 @@
-import { useState, useEffect, memo } from "react";
+import { useEffect, memo } from "react";
 import { Bot, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { layout } from "@/components/renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { HighlightedText } from "../common/HighlightedText";
 
 type Props = {
@@ -19,14 +20,14 @@ export const ThinkingRenderer = memo(function ThinkingRenderer({
   currentMatchIndex = 0,
 }: Props) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
 
   // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
   useEffect(() => {
     if (searchQuery && thinking.toLowerCase().includes(searchQuery.toLowerCase())) {
       setIsExpanded(true);
     }
-  }, [searchQuery, thinking]);
+  }, [searchQuery, thinking, setIsExpanded]);
 
   if (!thinking) return null;
 
@@ -37,7 +38,7 @@ export const ThinkingRenderer = memo(function ThinkingRenderer({
     <div className={cn("bg-thinking border border-thinking-border mt-2 overflow-hidden", layout.rounded)}>
       <button
         type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setIsExpanded(prev => !prev)}
         className={cn(
           "w-full flex items-center text-left",
           layout.headerPadding,

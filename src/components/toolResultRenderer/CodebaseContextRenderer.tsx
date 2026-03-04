@@ -1,11 +1,11 @@
 "use client";
 
 import { FileText, ChevronRight } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Renderer } from "../../shared/RendererHeader";
 import { cn } from "@/lib/utils";
 import { layout } from "@/components/renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { HighlightedText } from "../common/HighlightedText";
 
 type Props = {
@@ -29,7 +29,7 @@ export const CodebaseContextRenderer = ({
   const relevantFiles =
     contextData.relevant_files || contextData.relevantFiles || [];
 
-  const [showFiles, setShowFiles] = useState(false);
+  const [showFiles, setShowFiles] = useCaptureExpandState(false);
 
   return (
     <Renderer className="bg-accent/10 border-accent/30">
@@ -62,7 +62,7 @@ export const CodebaseContextRenderer = ({
           <div className="mt-3">
             <button
               type="button"
-              onClick={() => setShowFiles(!showFiles)}
+              onClick={() => setShowFiles(prev => !prev)}
               className={cn("flex items-center font-medium cursor-pointer text-accent", layout.iconSpacing, layout.bodyText)}
             >
               <ChevronRight className={cn(layout.iconSizeSmall, "transition-transform", showFiles && "rotate-90")} />

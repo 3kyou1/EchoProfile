@@ -12,7 +12,8 @@ pub mod test_utils;
 use crate::commands::{
     claude_settings::{
         get_all_mcp_servers, get_all_settings, get_claude_json_config, get_mcp_servers,
-        get_settings_by_scope, read_text_file, save_mcp_servers, save_settings, write_text_file,
+        get_settings_by_scope, read_text_file, save_mcp_servers, save_screenshot, save_settings,
+        write_text_file,
     },
     feedback::{get_system_info, open_github_issues, send_feedback},
     mcp_presets::{delete_mcp_preset, get_mcp_preset, load_mcp_presets, save_mcp_preset},
@@ -133,6 +134,7 @@ fn run_tauri() {
             // File I/O commands for export/import
             write_text_file,
             read_text_file,
+            save_screenshot,
             // Native session rename commands
             rename_session_native,
             reset_session_native_name,

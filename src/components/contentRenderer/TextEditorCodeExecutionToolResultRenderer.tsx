@@ -6,6 +6,7 @@
  */
 
 import { memo } from "react";
+import { useForceExpanded } from "@/contexts/CaptureExpandContext";
 import { FileEdit, CheckCircle, AlertCircle, Eye, FilePlus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ export const TextEditorCodeExecutionToolResultRenderer = memo(
     content,
   }: Props) {
     const { t } = useTranslation();
+    const forceExpanded = useForceExpanded();
     const errorMessages: Record<string, string> = {
       ...getCommonToolErrorMessages(t),
       file_not_found: t("toolError.fileNotFound"),
@@ -124,7 +126,7 @@ export const TextEditorCodeExecutionToolResultRenderer = memo(
 
           {/* File content preview */}
           {fileContent && (
-            <details className="mt-2">
+            <details open={forceExpanded || undefined} className="mt-2">
               <summary className={cn(
                 layout.smallText,
                 "cursor-pointer hover:opacity-80",

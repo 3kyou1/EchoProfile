@@ -568,7 +568,7 @@ pub async fn get_claude_json_config(
 ///
 /// # Returns
 /// Ok(()) if path is safe, error message if not
-fn is_safe_path(path: &Path) -> Result<(), String> {
+pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
     let home = dirs::home_dir().ok_or("Could not find home directory")?;
     let allowed_dirs = [
         home.join(".claude-history-viewer").join("exports"),
@@ -623,6 +623,58 @@ pub async fn write_text_file(path: String, content: String) -> Result<(), String
                 e
             )
         })?;
+        file.sync_all()
+            .map_err(|e| format!("Failed to sync temp file: {e}"))?;
+        super::fs_utils::atomic_rename(&temp_path, &path)?;
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+/// Save screenshot binary data to a user-selected path.
+///
+/// The path is expected to come from a native save dialog and must be absolute.
+/// Directory allowlisting for `WebUI` callers is enforced at the HTTP handler layer.
+///
+/// # Arguments
+/// * `path` - Absolute path chosen by user via save dialog
+/// * `data` - Base64-encoded PNG data
+#[tauri::command]
+pub async fn save_screenshot(path: String, data: String) -> Result<(), String> {
+    use base64::Engine;
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(&path);
+        if !path.is_absolute() {
+            return Err("Path must be absolute".to_string());
+        }
+        if path
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+        {
+            return Err("Path cannot contain '..' components".to_string());
+        }
+
+        // Ensure parent directory exists
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                return Err(format!(
+                    "Parent directory does not exist: {}",
+                    parent.display()
+                ));
+            }
+        }
+
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(&data)
+            .map_err(|e| format!("Base64 decode error: {e}"))?;
+
+        // Atomic write: temp file + rename
+        let temp_path = path.with_extension("tmp");
+        let mut file = fs::File::create(&temp_path)
+            .map_err(|e| format!("Failed to create temp file {}: {}", temp_path.display(), e))?;
+        file.write_all(&bytes)
+            .map_err(|e| format!("Failed to write temp file: {e}"))?;
         file.sync_all()
             .map_err(|e| format!("Failed to sync temp file: {e}"))?;
         super::fs_utils::atomic_rename(&temp_path, &path)?;

@@ -6,9 +6,10 @@
  * - useExpandableContent: Toggle and auto-expand logic
  */
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import { getVariantStyles, type VariantStyles } from "./styles";
 import type { RendererVariant } from "./types";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 
 /**
  * Get memoized variant styles
@@ -44,7 +45,7 @@ export function useExpandableContent({
   toggle: () => void;
   setIsExpanded: (value: boolean) => void;
 } {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(defaultExpanded);
 
   // Auto-expand when search query matches content
   useEffect(() => {
@@ -55,7 +56,7 @@ export function useExpandableContent({
     ) {
       setIsExpanded(true);
     }
-  }, [searchQuery, content]);
+  }, [searchQuery, content, setIsExpanded]);
 
   const toggle = () => setIsExpanded((prev) => !prev);
 

@@ -22,12 +22,19 @@ import { AgentTaskGroupRenderer, TaskOperationGroupRenderer } from "../../toolRe
 import { extractClaudeMessageContent } from "../../../utils/messageUtils";
 import { isEmptyMessage } from "../helpers/messageHelpers";
 import { isToolUseContent, isToolResultContent } from "../../../utils/typeGuards";
+import { isActionModifier } from "../../../utils/platform";
 import { MessageHeader } from "./MessageHeader";
 import { SummaryMessage } from "./SummaryMessage";
 import type { MessageNodeProps } from "../types";
 
 // Capture mode hover background style (uses named group to avoid conflicts)
 const CAPTURE_HOVER_BG = "group-hover/capture:bg-red-500/5 group-hover/capture:ring-1 group-hover/capture:ring-red-500/20";
+
+// Selection highlight style
+const SELECTED_BG = "bg-blue-500/10 ring-1 ring-blue-500/40";
+
+// Click priority: interactive elements take precedence over capture selection
+const INTERACTIVE_SELECTOR = "button, a, summary, input, select, textarea, [role='button']";
 
 export const ClaudeMessageNode = React.memo(({
   message,
@@ -45,8 +52,28 @@ export const ClaudeMessageNode = React.memo(({
   isTaskOperationGroupMember,
   isCaptureMode,
   onHideMessage,
+  isSelected,
+  onRangeSelect,
 }: MessageNodeProps) => {
   const { t } = useTranslation();
+
+  const handleSelectionClick = isCaptureMode && onRangeSelect
+    ? (e: React.MouseEvent) => {
+        // Let interactive elements handle their own clicks
+        if ((e.target as HTMLElement).closest(INTERACTIVE_SELECTOR)) return;
+        // Prevent browser native text selection on Shift+click
+        e.preventDefault();
+        onRangeSelect(message.uuid, {
+          shift: e.shiftKey,
+          cmdOrCtrl: isActionModifier(e),
+        });
+      }
+    : undefined;
+
+  const selectionHighlight = isCaptureMode && isSelected ? SELECTED_BG : "";
+  const selectionCursor = isCaptureMode && onRangeSelect
+    ? "cursor-crosshair select-none"
+    : "";
 
   // Capture mode hide button - appears on hover
   const CaptureHideButton = isCaptureMode && onHideMessage ? (
@@ -124,9 +151,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleSelectionClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+          selectionHighlight,
+          selectionCursor
         )}
       >
         {CaptureHideButton}
@@ -142,9 +172,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleSelectionClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+          selectionHighlight,
+          selectionCursor
         )}
       >
         {CaptureHideButton}
@@ -163,9 +196,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleSelectionClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+          selectionHighlight,
+          selectionCursor
         )}
       >
         {CaptureHideButton}
@@ -184,9 +220,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleSelectionClick}
         className={cn(
           "relative max-w-4xl mx-auto transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+          selectionHighlight,
+          selectionCursor
         )}
       >
         {CaptureHideButton}
@@ -204,9 +243,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleSelectionClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+          selectionHighlight,
+          selectionCursor
         )}
       >
         {CaptureHideButton}
@@ -226,9 +268,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleSelectionClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-1 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+          selectionHighlight,
+          selectionCursor
         )}
       >
         {CaptureHideButton}
@@ -254,6 +299,7 @@ export const ClaudeMessageNode = React.memo(({
   return (
     <div
       data-message-uuid={message.uuid}
+      onClick={handleSelectionClick}
       className={cn(
         "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
         message.isSidechain && "bg-muted",
@@ -261,7 +307,10 @@ export const ClaudeMessageNode = React.memo(({
         isCurrentMatch && "bg-highlight-current ring-2 ring-warning",
         isMatch && !isCurrentMatch && "bg-highlight",
         // Capture mode hover effect
-        isCaptureMode && !isCurrentMatch && !isMatch && CAPTURE_HOVER_BG
+        isCaptureMode && !isCurrentMatch && !isMatch && !isSelected && CAPTURE_HOVER_BG,
+        // Range selection highlight
+        selectionHighlight,
+        selectionCursor
       )}
     >
       {CaptureHideButton}

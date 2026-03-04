@@ -5,7 +5,7 @@
  * showing only the latest status in the header.
  */
 
-import { memo, useState, useMemo } from "react";
+import { memo, useMemo } from "react";
 import {
   ChevronRight,
   Bot,
@@ -19,6 +19,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getVariantStyles, layout } from "@/components/renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import type { ProgressData } from "@/types";
 
 interface AgentProgressEntry {
@@ -119,7 +120,7 @@ export const AgentProgressGroupRenderer = memo(function AgentProgressGroupRender
   agentId,
 }: AgentProgressGroupRendererProps) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
   const styles = getVariantStyles("info");
 
   // Get the latest entry for summary
@@ -144,7 +145,7 @@ export const AgentProgressGroupRenderer = memo(function AgentProgressGroupRender
       {/* Header */}
       <button
         type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setIsExpanded(prev => !prev)}
         className={cn(
           "w-full flex items-center gap-2 px-3 py-2 text-left",
           "hover:bg-muted/30 transition-colors"

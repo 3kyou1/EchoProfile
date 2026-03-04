@@ -21,6 +21,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { layout, getVariantStyles } from "@/components/renderers";
+import { useCaptureExpandState, useForceExpanded } from "@/contexts/CaptureExpandContext";
 
 type Props = {
   text: string;
@@ -210,9 +211,10 @@ const getPreviewLines = (text: string, lineCount: number = 3): string => {
 
 export const TaskNotificationRenderer = memo(function TaskNotificationRenderer({ text }: Props) {
   const { t } = useTranslation();
-  const [isGroupExpanded, setIsGroupExpanded] = useState(true); // Default open
+  const forceExpanded = useForceExpanded();
+  const [isGroupExpanded, setIsGroupExpanded] = useCaptureExpandState(true);
   const [expandedTaskIndices, setExpandedTaskIndices] = useState<Set<number>>(new Set());
-  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false); // Details collapsed by default
+  const [isDetailsExpanded, setIsDetailsExpanded] = useCaptureExpandState(false);
 
   // Get task variant styles
   const styles = getVariantStyles("task");
@@ -287,7 +289,7 @@ export const TaskNotificationRenderer = memo(function TaskNotificationRenderer({
       )}>
         {/* Header - Mission Control style */}
         <button
-          onClick={() => setIsGroupExpanded(!isGroupExpanded)}
+          onClick={() => setIsGroupExpanded(prev => !prev)}
           className={cn(
             "w-full flex items-center justify-between",
             "px-3 py-2",
@@ -395,7 +397,7 @@ export const TaskNotificationRenderer = memo(function TaskNotificationRenderer({
                 key={`${notification.taskId || index}-${index}`}
                 notification={notification}
                 index={index}
-                isExpanded={expandedTaskIndices.has(index)}
+                isExpanded={forceExpanded || expandedTaskIndices.has(index)}
                 onToggle={() => toggleTaskExpanded(index)}
               />
             ))}
@@ -410,7 +412,7 @@ export const TaskNotificationRenderer = memo(function TaskNotificationRenderer({
           )}>
             {/* Section header - clickable */}
             <button
-              onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+              onClick={() => setIsDetailsExpanded(prev => !prev)}
               className={cn(
                 "w-full flex items-center justify-between gap-2 px-3 py-1.5",
                 "hover:bg-muted/20 transition-colors",

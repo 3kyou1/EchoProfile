@@ -47,6 +47,9 @@ export interface MessageNodeProps {
   // Capture mode
   isCaptureMode?: boolean;
   onHideMessage?: (uuid: string) => void;
+  // Multi-selection
+  isSelected?: boolean;
+  onRangeSelect?: (uuid: string, modifiers: { shift: boolean; cmdOrCtrl: boolean }) => void;
 }
 
 export interface MessageHeaderProps {

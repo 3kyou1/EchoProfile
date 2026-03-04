@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -10,6 +10,7 @@ import { useTheme } from "@/contexts/theme";
 import { useTranslation } from "react-i18next";
 import { Renderer } from "../shared/RendererHeader";
 import { layout } from "@/components/renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import {
   getPreStyles,
   getLineStyles,
@@ -153,7 +154,7 @@ export const FileContent = ({
   };
 
   // 접기/펼치기 상태 관리
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
   const MAX_LINES = 20; // 최대 표시 줄 수
 
   // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
@@ -161,7 +162,7 @@ export const FileContent = ({
     if (searchQuery && content.toLowerCase().includes(searchQuery.toLowerCase())) {
       setIsExpanded(true);
     }
-  }, [searchQuery, content]);
+  }, [searchQuery, content, setIsExpanded]);
   const contentLines = content.split("\n");
   const shouldCollapse = contentLines.length > MAX_LINES;
   const displayContent =
@@ -214,7 +215,7 @@ export const FileContent = ({
               </div>
               {shouldCollapse && (
                 <button
-                  onClick={() => setIsExpanded(!isExpanded)}
+                  onClick={() => setIsExpanded(prev => !prev)}
                   className={`${layout.smallText} px-2 py-1 rounded transition-colors bg-tool-file/10 text-tool-file hover:bg-tool-file/20`}
                 >
                   {isExpanded ? (

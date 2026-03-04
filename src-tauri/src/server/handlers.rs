@@ -7,6 +7,7 @@ use axum::extract::State;
 use axum::Json;
 use serde::Deserialize;
 use serde_json::Value;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use super::state::AppState;
@@ -261,6 +262,12 @@ pub struct WriteFileParams {
 }
 
 #[derive(Deserialize)]
+pub struct SaveScreenshotParams {
+    pub path: String,
+    pub data: String,
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RenameSessionParams {
     pub file_path: String,
@@ -481,6 +488,17 @@ handler_json!(
     WriteFileParams,
     |p: WriteFileParams| async move {
         commands::claude_settings::write_text_file(p.path, p.content).await
+    }
+);
+
+handler_json!(
+    save_screenshot,
+    SaveScreenshotParams,
+    |p: SaveScreenshotParams| async move {
+        // WebUI endpoint must stay within safe export directories.
+        let path = PathBuf::from(&p.path);
+        commands::claude_settings::is_safe_path(&path)?;
+        commands::claude_settings::save_screenshot(p.path, p.data).await
     }
 );
 

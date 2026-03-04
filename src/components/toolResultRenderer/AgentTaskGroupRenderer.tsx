@@ -19,6 +19,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getVariantStyles, layout } from "@/components/renderers";
+import { useCaptureExpandState, useForceExpanded } from "@/contexts/CaptureExpandContext";
 
 export interface AgentTask {
   agentId: string;
@@ -170,7 +171,8 @@ export const AgentTaskGroupRenderer = memo(function AgentTaskGroupRenderer({
   tasks,
 }: AgentTaskGroupRendererProps) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const forceExpanded = useForceExpanded();
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const styles = getVariantStyles("task");
 
@@ -205,7 +207,7 @@ export const AgentTaskGroupRenderer = memo(function AgentTaskGroupRenderer({
       <div className={cn(layout.rounded, "border", styles.container)}>
         <button
           type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => setIsExpanded(prev => !prev)}
           className={cn(
             "w-full flex items-center gap-2 px-3 py-2 text-left",
             "hover:bg-muted/30 transition-colors"
@@ -279,7 +281,7 @@ export const AgentTaskGroupRenderer = memo(function AgentTaskGroupRenderer({
       {/* Group Header */}
       <button
         type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setIsExpanded(prev => !prev)}
         className={cn(
           "w-full flex items-center gap-2 px-3 py-2 text-left",
           "hover:bg-muted/30 transition-colors"
@@ -331,7 +333,7 @@ export const AgentTaskGroupRenderer = memo(function AgentTaskGroupRenderer({
             <AgentTaskItem
               key={task.agentId}
               task={task}
-              isExpanded={expandedTasks.has(task.agentId)}
+              isExpanded={forceExpanded || expandedTasks.has(task.agentId)}
               onToggle={() => toggleTask(task.agentId)}
             />
           ))}

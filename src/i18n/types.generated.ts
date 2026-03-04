@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-02-28T21:45:41.410Z
- * 총 키 개수: 1609
+ * 생성 시간: 2026-03-04T14:15:16.046Z
+ * 총 키 개수: 1655
  * Namespace 수: 11
  */
 
@@ -40,7 +40,7 @@ export type I18nNamespace =
   | 'recentEdits';
 
 /**
- * common namespace의 번역 키 (138개)
+ * common namespace의 번역 키 (148개)
  * 파일: locales/{lang}/common.json
  */
 export type CommonKeys =
@@ -93,6 +93,15 @@ export type CommonKeys =
   | 'common.id'
   | 'common.input'
   | 'common.loading'
+  | 'common.mobile.closeSidebar'
+  | 'common.mobile.openNavigator'
+  | 'common.mobile.openSidebar'
+  | 'common.mobile.selectProject'
+  | 'common.mobile.tab.analytics'
+  | 'common.mobile.tab.board'
+  | 'common.mobile.tab.messages'
+  | 'common.mobile.tab.projects'
+  | 'common.mobile.tab.settings'
   | 'common.noDataAvailable'
   | 'common.ok'
   | 'common.pending'
@@ -172,6 +181,7 @@ export type CommonKeys =
   | 'status.loadingStats'
   | 'status.scanning'
   | 'status.versionLabel'
+  | 'status.webMode'
   | 'time.day'
   | 'time.days'
   | 'time.end'
@@ -184,7 +194,7 @@ export type CommonKeys =
   | 'time.start';
 
 /**
- * analytics namespace의 번역 키 (177개)
+ * analytics namespace의 번역 키 (179개)
  * 파일: locales/{lang}/analytics.json
  */
 export type AnalyticsKeys =
@@ -244,6 +254,7 @@ export type AnalyticsKeys =
   | 'analytics.heatmapTooltip'
   | 'analytics.highActivity'
   | 'analytics.hourSuffix'
+  | 'analytics.in'
   | 'analytics.input'
   | 'analytics.inputTokens'
   | 'analytics.lastMessage'
@@ -271,6 +282,7 @@ export type AnalyticsKeys =
   | 'analytics.noTokenData'
   | 'analytics.nonConversation'
   | 'analytics.oneHundredPercent'
+  | 'analytics.out'
   | 'analytics.output'
   | 'analytics.outputTokens'
   | 'analytics.percentile'
@@ -367,7 +379,7 @@ export type AnalyticsKeys =
   | 'analytics.weeklyActivity';
 
 /**
- * session namespace의 번역 키 (163개)
+ * session namespace의 번역 키 (169개)
  * 파일: locales/{lang}/session.json
  */
 export type SessionKeys =
@@ -455,6 +467,7 @@ export type SessionKeys =
   | 'session.board.webSearch'
   | 'session.boardNotSupported'
   | 'session.claudeCodeSynced'
+  | 'session.cliSync.badge'
   | 'session.cliSync.description'
   | 'session.cliSync.title'
   | 'session.copiedFilePath'
@@ -500,6 +513,8 @@ export type SessionKeys =
   | 'session.interaction.outputTokens'
   | 'session.interaction.userMessage'
   | 'session.interaction.verifiedCommit'
+  | 'session.item.archived'
+  | 'session.item.archivedDescription'
   | 'session.item.containsErrors'
   | 'session.item.containsToolUse'
   | 'session.item.lastModified'
@@ -524,6 +539,9 @@ export type SessionKeys =
   | 'session.nativeRename.warningOpenCode'
   | 'session.refresh'
   | 'session.rename'
+  | 'session.renameAction'
+  | 'session.renameHint'
+  | 'session.renameMenuItem'
   | 'session.renamePlaceholder'
   | 'session.resetError'
   | 'session.resetName'
@@ -536,7 +554,7 @@ export type SessionKeys =
   | 'session.title';
 
 /**
- * settings namespace의 번역 키 (499개)
+ * settings namespace의 번역 키 (503개)
  * 파일: locales/{lang}/settings.json
  */
 export type SettingsKeys =
@@ -673,6 +691,7 @@ export type SettingsKeys =
   | 'settingsManager.diagnostics.warningCount'
   | 'settingsManager.error'
   | 'settingsManager.exportImport.apply'
+  | 'settingsManager.exportImport.applyFailed'
   | 'settingsManager.exportImport.excludeSensitive'
   | 'settingsManager.exportImport.export'
   | 'settingsManager.exportImport.exportAll'
@@ -680,6 +699,7 @@ export type SettingsKeys =
   | 'settingsManager.exportImport.exportAllDescription'
   | 'settingsManager.exportImport.exportButton'
   | 'settingsManager.exportImport.exportDescription'
+  | 'settingsManager.exportImport.exportFailed'
   | 'settingsManager.exportImport.exportScope'
   | 'settingsManager.exportImport.import'
   | 'settingsManager.exportImport.importAll'
@@ -689,6 +709,8 @@ export type SettingsKeys =
   | 'settingsManager.exportImport.importAllPreviewTitle'
   | 'settingsManager.exportImport.importButton'
   | 'settingsManager.exportImport.importDescription'
+  | 'settingsManager.exportImport.importFailed'
+  | 'settingsManager.exportImport.invalidBackupFormat'
   | 'settingsManager.exportImport.noSettings'
   | 'settingsManager.exportImport.preview'
   | 'settingsManager.exportImport.previewTitle'
@@ -1159,7 +1181,7 @@ export type ErrorKeys =
   | 'error.viewDetails';
 
 /**
- * message namespace의 번역 키 (80개)
+ * message namespace의 번역 키 (81개)
  * 파일: locales/{lang}/message.json
  */
 export type MessageKeys =
@@ -1186,6 +1208,7 @@ export type MessageKeys =
   | 'messageContentDisplay.copyMessage'
   | 'messageContentDisplay.showLess'
   | 'messageContentDisplay.showMore'
+  | 'messageContentDisplay.showMoreRows'
   | 'messageViewer.allMessagesLoaded'
   | 'messageViewer.branch'
   | 'messageViewer.checkConsole'
@@ -1245,7 +1268,7 @@ export type MessageKeys =
   | 'navigator.toggle';
 
 /**
- * renderers namespace의 번역 키 (322개)
+ * renderers namespace의 번역 키 (345개)
  * 파일: locales/{lang}/renderers.json
  */
 export type RenderersKeys =
@@ -1286,11 +1309,34 @@ export type RenderersKeys =
   | 'bashCodeExecutionToolResultRenderer.noOutput'
   | 'bashCodeExecutionToolResultRenderer.title'
   | 'captureMode.active'
+  | 'captureMode.captureError'
+  | 'captureMode.captureSuccess'
+  | 'captureMode.capturing'
+  | 'captureMode.clearSelection'
   | 'captureMode.done'
   | 'captureMode.enter'
+  | 'captureMode.exit'
   | 'captureMode.hiddenCount'
   | 'captureMode.hideBlock'
+  | 'captureMode.modifierHintMac'
+  | 'captureMode.modifierHintOther'
+  | 'captureMode.preview.cancel'
+  | 'captureMode.preview.dimensions'
+  | 'captureMode.preview.fitToScreen'
+  | 'captureMode.preview.imageAlt'
+  | 'captureMode.preview.save'
+  | 'captureMode.preview.title'
+  | 'captureMode.preview.zoomIn'
+  | 'captureMode.preview.zoomLevel'
+  | 'captureMode.preview.zoomOut'
+  | 'captureMode.rangeEnd'
+  | 'captureMode.rangeStart'
   | 'captureMode.restoreAll'
+  | 'captureMode.screenshot'
+  | 'captureMode.selectMessages'
+  | 'captureMode.selectRange'
+  | 'captureMode.selectedCount'
+  | 'captureMode.tooManyMessages'
   | 'captureMode.tooltip'
   | 'citationRenderer.blockLocation'
   | 'citationRenderer.charLocation'
@@ -1800,6 +1846,7 @@ export type TranslationKey =
   | 'analytics.heatmapTooltip'
   | 'analytics.highActivity'
   | 'analytics.hourSuffix'
+  | 'analytics.in'
   | 'analytics.input'
   | 'analytics.inputTokens'
   | 'analytics.lastMessage'
@@ -1827,6 +1874,7 @@ export type TranslationKey =
   | 'analytics.noTokenData'
   | 'analytics.nonConversation'
   | 'analytics.oneHundredPercent'
+  | 'analytics.out'
   | 'analytics.output'
   | 'analytics.outputTokens'
   | 'analytics.percentile'
@@ -1932,11 +1980,34 @@ export type TranslationKey =
   | 'bashCodeExecutionToolResultRenderer.noOutput'
   | 'bashCodeExecutionToolResultRenderer.title'
   | 'captureMode.active'
+  | 'captureMode.captureError'
+  | 'captureMode.captureSuccess'
+  | 'captureMode.capturing'
+  | 'captureMode.clearSelection'
   | 'captureMode.done'
   | 'captureMode.enter'
+  | 'captureMode.exit'
   | 'captureMode.hiddenCount'
   | 'captureMode.hideBlock'
+  | 'captureMode.modifierHintMac'
+  | 'captureMode.modifierHintOther'
+  | 'captureMode.preview.cancel'
+  | 'captureMode.preview.dimensions'
+  | 'captureMode.preview.fitToScreen'
+  | 'captureMode.preview.imageAlt'
+  | 'captureMode.preview.save'
+  | 'captureMode.preview.title'
+  | 'captureMode.preview.zoomIn'
+  | 'captureMode.preview.zoomLevel'
+  | 'captureMode.preview.zoomOut'
+  | 'captureMode.rangeEnd'
+  | 'captureMode.rangeStart'
   | 'captureMode.restoreAll'
+  | 'captureMode.screenshot'
+  | 'captureMode.selectMessages'
+  | 'captureMode.selectRange'
+  | 'captureMode.selectedCount'
+  | 'captureMode.tooManyMessages'
   | 'captureMode.tooltip'
   | 'citationRenderer.blockLocation'
   | 'citationRenderer.charLocation'
@@ -2037,6 +2108,15 @@ export type TranslationKey =
   | 'common.id'
   | 'common.input'
   | 'common.loading'
+  | 'common.mobile.closeSidebar'
+  | 'common.mobile.openNavigator'
+  | 'common.mobile.openSidebar'
+  | 'common.mobile.selectProject'
+  | 'common.mobile.tab.analytics'
+  | 'common.mobile.tab.board'
+  | 'common.mobile.tab.messages'
+  | 'common.mobile.tab.projects'
+  | 'common.mobile.tab.settings'
   | 'common.noDataAvailable'
   | 'common.ok'
   | 'common.pending'
@@ -2309,6 +2389,7 @@ export type TranslationKey =
   | 'messageContentDisplay.copyMessage'
   | 'messageContentDisplay.showLess'
   | 'messageContentDisplay.showMore'
+  | 'messageContentDisplay.showMoreRows'
   | 'messageViewer.allMessagesLoaded'
   | 'messageViewer.branch'
   | 'messageViewer.checkConsole'
@@ -2522,6 +2603,7 @@ export type TranslationKey =
   | 'session.board.webSearch'
   | 'session.boardNotSupported'
   | 'session.claudeCodeSynced'
+  | 'session.cliSync.badge'
   | 'session.cliSync.description'
   | 'session.cliSync.title'
   | 'session.copiedFilePath'
@@ -2567,6 +2649,8 @@ export type TranslationKey =
   | 'session.interaction.outputTokens'
   | 'session.interaction.userMessage'
   | 'session.interaction.verifiedCommit'
+  | 'session.item.archived'
+  | 'session.item.archivedDescription'
   | 'session.item.containsErrors'
   | 'session.item.containsToolUse'
   | 'session.item.lastModified'
@@ -2591,6 +2675,9 @@ export type TranslationKey =
   | 'session.nativeRename.warningOpenCode'
   | 'session.refresh'
   | 'session.rename'
+  | 'session.renameAction'
+  | 'session.renameHint'
+  | 'session.renameMenuItem'
   | 'session.renamePlaceholder'
   | 'session.resetError'
   | 'session.resetName'
@@ -2718,6 +2805,7 @@ export type TranslationKey =
   | 'settingsManager.diagnostics.warningCount'
   | 'settingsManager.error'
   | 'settingsManager.exportImport.apply'
+  | 'settingsManager.exportImport.applyFailed'
   | 'settingsManager.exportImport.excludeSensitive'
   | 'settingsManager.exportImport.export'
   | 'settingsManager.exportImport.exportAll'
@@ -2725,6 +2813,7 @@ export type TranslationKey =
   | 'settingsManager.exportImport.exportAllDescription'
   | 'settingsManager.exportImport.exportButton'
   | 'settingsManager.exportImport.exportDescription'
+  | 'settingsManager.exportImport.exportFailed'
   | 'settingsManager.exportImport.exportScope'
   | 'settingsManager.exportImport.import'
   | 'settingsManager.exportImport.importAll'
@@ -2734,6 +2823,8 @@ export type TranslationKey =
   | 'settingsManager.exportImport.importAllPreviewTitle'
   | 'settingsManager.exportImport.importButton'
   | 'settingsManager.exportImport.importDescription'
+  | 'settingsManager.exportImport.importFailed'
+  | 'settingsManager.exportImport.invalidBackupFormat'
   | 'settingsManager.exportImport.noSettings'
   | 'settingsManager.exportImport.preview'
   | 'settingsManager.exportImport.previewTitle'
@@ -3116,6 +3207,7 @@ export type TranslationKey =
   | 'status.loadingStats'
   | 'status.scanning'
   | 'status.versionLabel'
+  | 'status.webMode'
   | 'structuredPatch.areasChanged'
   | 'structuredPatch.changeStats'
   | 'structuredPatch.fileChanges'

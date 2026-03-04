@@ -2,33 +2,22 @@
  * Toggle Hook
  *
  * Simple boolean state toggle utility for managing open/closed states.
+ * Respects CaptureExpandContext — always open during screenshot capture.
  *
- * @example Basic Usage
- * ```typescript
+ * @example
  * const [isOpen, toggle] = useToggle();
- *
- * return (
- *   <div>
- *     <button onClick={toggle}>Toggle</button>
- *     {isOpen && <div>Content</div>}
- *   </div>
- * );
- * ```
- *
- * @returns Tuple of [isOpen, toggle] - state and toggle function
  */
 
-import { useState } from "react";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 
-/**
- * Hook for boolean toggle state
- *
- * @returns [isOpen, toggle] - Current state and toggle function
- */
-export const useToggle = (): [boolean, () => void] => {
-  const [isOpen, setIsOpen] = useState(false);
-  const toggle = () => {
-    setIsOpen(!isOpen);
-  };
+type BooleanStateSetter = (value: boolean | ((prev: boolean) => boolean)) => void;
+type BooleanStateHook = (initialState: boolean) => [boolean, BooleanStateSetter];
+
+export const createUseToggle = (useBooleanState: BooleanStateHook) => (): [boolean, () => void] => {
+  // Intentional composition: capture-aware state keeps expandable UI open during screenshot capture.
+  const [isOpen, setIsOpen] = useBooleanState(false);
+  const toggle = () => setIsOpen((prev) => !prev);
   return [isOpen, toggle];
 };
+
+export const useToggle = createUseToggle(useCaptureExpandState);

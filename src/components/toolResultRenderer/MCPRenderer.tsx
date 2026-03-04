@@ -1,11 +1,11 @@
 "use client";
 
 import { Globe, ChevronRight } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Renderer } from "../../shared/RendererHeader";
 import { cn } from "@/lib/utils";
 import { layout } from "@/components/renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { HighlightedText } from "../common/HighlightedText";
 import { safeStringify } from "@/utils/jsonUtils";
 
@@ -29,8 +29,8 @@ export const MCPRenderer = ({
   const result = mcpData.result || {};
   const error = mcpData.error;
 
-  const [showParams, setShowParams] = useState(false);
-  const [showResult, setShowResult] = useState(false);
+  const [showParams, setShowParams] = useCaptureExpandState(false);
+  const [showResult, setShowResult] = useCaptureExpandState(false);
 
   return (
     <Renderer className="bg-tool-mcp/10 border-tool-mcp/30">
@@ -50,7 +50,7 @@ export const MCPRenderer = ({
           <div>
             <button
               type="button"
-              onClick={() => setShowParams(!showParams)}
+              onClick={() => setShowParams(prev => !prev)}
               className={cn("flex items-center font-medium cursor-pointer text-tool-mcp", layout.iconSpacing, layout.bodyText)}
             >
               <ChevronRight className={cn(layout.iconSizeSmall, "transition-transform", showParams && "rotate-90")} />
@@ -86,7 +86,7 @@ export const MCPRenderer = ({
             <div>
               <button
                 type="button"
-                onClick={() => setShowResult(!showResult)}
+                onClick={() => setShowResult(prev => !prev)}
                 className={cn("flex items-center font-medium cursor-pointer text-tool-mcp", layout.iconSpacing, layout.bodyText)}
               >
                 <ChevronRight className={cn(layout.iconSizeSmall, "transition-transform", showResult && "rotate-90")} />

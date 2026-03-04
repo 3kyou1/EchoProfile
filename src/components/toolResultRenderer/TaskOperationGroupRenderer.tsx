@@ -5,7 +5,7 @@
  * showing only the latest status per task. TaskUpdate rows are not displayed separately.
  */
 
-import { memo, useState, useMemo } from "react";
+import { memo, useMemo } from "react";
 import {
   ChevronRight,
   ListTodo,
@@ -15,6 +15,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getVariantStyles, layout } from "@/components/renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import type { TaskOperation, TaskInfo } from "../MessageViewer/helpers/taskOperationHelpers";
 import { TASK_STATUS_CONFIG } from "./taskStatusConfig";
 
@@ -106,13 +107,13 @@ const TaskRow = memo(function TaskRow({
   const StatusIcon = statusInfo?.icon ?? TASK_STATUS_CONFIG["pending"]!.icon;
   const statusColor = statusInfo?.color ?? "text-muted-foreground";
   const hasDescription = task.isCreate && !!task.description;
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useCaptureExpandState(false);
 
   return (
     <div className="border-b border-border/50 last:border-b-0">
       <button
         type="button"
-        onClick={hasDescription ? () => setExpanded(!expanded) : undefined}
+        onClick={hasDescription ? () => setExpanded(prev => !prev) : undefined}
         aria-label={hasDescription ? (expanded ? t("taskOperation.collapse") : t("taskOperation.expand")) : undefined}
         className={cn(
           "w-full flex items-center gap-2 px-2 py-1.5 text-left",
@@ -187,7 +188,7 @@ export const TaskOperationGroupRenderer = memo(function TaskOperationGroupRender
   taskRegistry,
 }: Props) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(true);
   const styles = getVariantStyles("task");
 
   const { tasks, otherOps } = useMemo(() => mergeOperations(operations, taskRegistry), [operations, taskRegistry]);
@@ -200,7 +201,7 @@ export const TaskOperationGroupRenderer = memo(function TaskOperationGroupRender
       {/* Group Header */}
       <button
         type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setIsExpanded(prev => !prev)}
         aria-label={isExpanded ? t("taskOperation.collapse") : t("taskOperation.expand")}
         className={cn(
           "w-full flex items-center gap-2 px-3 py-2 text-left",

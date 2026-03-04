@@ -1,4 +1,4 @@
-import React, { useState, useMemo, Children, isValidElement } from "react";
+import React, { useMemo, Children, isValidElement } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Copy, ChevronDown } from "lucide-react";
@@ -9,6 +9,7 @@ import { TooltipButton } from "../../shared/TooltipButton";
 import { HighlightedText } from "../common";
 import { layout } from "@/components/renderers";
 import { cn } from "@/lib/utils";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 
 const LINE_LIMIT = 3;
 const TABLE_ROW_LIMIT = 2;
@@ -41,7 +42,7 @@ const getTextInfo = (text: string) => {
 
 // Collapsible table component for markdown
 const CollapsibleTable = ({ children, ...props }: React.HTMLAttributes<HTMLTableElement>) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
 
   // Extract thead and tbody from children
   const childArray = Children.toArray(children);
@@ -83,7 +84,7 @@ const CollapsibleTable = ({ children, ...props }: React.HTMLAttributes<HTMLTable
 
       {needsExpand && (
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => setIsExpanded(prev => !prev)}
           className={cn(
             "flex items-center justify-center gap-1 w-full py-1.5 mt-1",
             "text-2xs text-muted-foreground hover:text-foreground",
@@ -122,7 +123,7 @@ export const MessageContentDisplay: React.FC<MessageContentDisplayProps> = ({
   currentMatchIndex = 0,
 }) => {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
 
   // Check if content needs expand (for both user and assistant)
   const textInfo = useMemo(() => {
@@ -214,7 +215,7 @@ export const MessageContentDisplay: React.FC<MessageContentDisplayProps> = ({
           {/* Show more / Show less button */}
           {textInfo.needsExpand && !searchQuery && (
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={() => setIsExpanded(prev => !prev)}
               className={cn(
                 "flex items-center gap-1 mt-1.5 text-2xs",
                 "text-accent-foreground/70 hover:text-accent-foreground",
@@ -285,7 +286,7 @@ export const MessageContentDisplay: React.FC<MessageContentDisplayProps> = ({
           {/* Show more / Show less button */}
           {textInfo.needsExpand && !searchQuery && (
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={() => setIsExpanded(prev => !prev)}
               className={cn(
                 "flex items-center gap-1 mt-2 text-2xs",
                 "text-muted-foreground hover:text-foreground",

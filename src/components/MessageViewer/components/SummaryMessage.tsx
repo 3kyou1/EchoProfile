@@ -4,21 +4,22 @@
  * Collapsible summary message display for prior context.
  */
 
-import React, { useState } from "react";
+import React from "react";
 import { ChevronRight, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { formatTimeShort } from "../../../utils/time";
 import type { SummaryMessageProps } from "../types";
 
 export const SummaryMessage: React.FC<SummaryMessageProps> = ({ content, timestamp }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
   const { t } = useTranslation();
 
   return (
     <div className="rounded-md border mx-4 my-2 bg-info/10 border-info/30">
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setIsExpanded(prev => !prev)}
         className={cn(
           "w-full flex items-center gap-1.5 px-3 py-2 h-8",
           "text-left hover:bg-info/20 transition-colors rounded-md"

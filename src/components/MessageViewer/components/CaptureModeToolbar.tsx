@@ -2,18 +2,34 @@
  * Capture Mode Toolbar
  *
  * Minimal status bar when capture mode is active.
- * Inspired by professional video editing software.
+ * Shows range selection info and screenshot capture button.
  */
 
-import { RotateCcw, X } from "lucide-react";
+import { Camera, Loader2, RotateCcw, X, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "../../../store/useAppStore";
 
-export function CaptureModeToolbar() {
+interface CaptureModeToolbarProps {
+  selectedCount: number;
+  hasRange: boolean;
+  onScreenshot: () => void;
+  onClearRange: () => void;
+}
+
+export function CaptureModeToolbar({
+  selectedCount,
+  hasRange,
+  onScreenshot,
+  onClearRange,
+}: CaptureModeToolbarProps) {
   const { t } = useTranslation();
-  const { hiddenMessageIds, restoreAllMessages, exitCaptureMode } =
-    useAppStore();
+  const {
+    hiddenMessageIds,
+    restoreAllMessages,
+    exitCaptureMode,
+    isCapturing,
+  } = useAppStore();
 
   const hiddenCount = hiddenMessageIds.length;
 
@@ -38,7 +54,7 @@ export function CaptureModeToolbar() {
         </div>
 
         {/* Divider */}
-        {hiddenCount > 0 && (
+        {(hiddenCount > 0 || hasRange) && (
           <div className="h-4 w-px bg-zinc-800" />
         )}
 
@@ -58,23 +74,82 @@ export function CaptureModeToolbar() {
             <RotateCcw className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
         )}
+
+        {/* Range selection info */}
+        {hasRange && (
+          <>
+            {hiddenCount > 0 && <div className="h-4 w-px bg-zinc-800" />}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono tabular-nums text-blue-400">
+                {t("captureMode.selectedCount", { count: selectedCount })}
+              </span>
+              <button
+                onClick={onClearRange}
+                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                title={t("captureMode.clearSelection")}
+                aria-label={t("captureMode.clearSelection")}
+              >
+                <XCircle className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Range selection hint */}
+        {!hasRange && (
+          <span className="text-xs text-zinc-600 italic">
+            {t("captureMode.selectRange")}
+          </span>
+        )}
       </div>
 
-      {/* Right: Exit button */}
-      <button
-        onClick={exitCaptureMode}
-        className={cn(
-          "flex items-center gap-2 px-3 py-1.5",
-          "text-xs font-medium",
-          "bg-zinc-800 hover:bg-zinc-700",
-          "text-zinc-300 hover:text-zinc-100",
-          "border border-zinc-700 hover:border-zinc-600",
-          "rounded transition-all duration-150"
+      {/* Right: Screenshot + Exit buttons */}
+      <div className="flex items-center gap-2">
+        {/* Screenshot button */}
+        {hasRange && (
+          <button
+            onClick={onScreenshot}
+            disabled={isCapturing}
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5",
+              "text-xs font-medium",
+              "bg-blue-600 hover:bg-blue-500",
+              "text-white",
+              "border border-blue-500 hover:border-blue-400",
+              "rounded transition-all duration-150",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            {isCapturing ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>{t("captureMode.capturing")}</span>
+              </>
+            ) : (
+              <>
+                <Camera className="w-3.5 h-3.5" />
+                <span>{t("captureMode.screenshot")}</span>
+              </>
+            )}
+          </button>
         )}
-      >
-        <span>{t("captureMode.done")}</span>
-        <X className="w-3.5 h-3.5" />
-      </button>
+
+        {/* Exit button */}
+        <button
+          onClick={exitCaptureMode}
+          className={cn(
+            "flex items-center gap-2 px-3 py-1.5",
+            "text-xs font-medium",
+            "bg-zinc-800 hover:bg-zinc-700",
+            "text-zinc-300 hover:text-zinc-100",
+            "border border-zinc-700 hover:border-zinc-600",
+            "rounded transition-all duration-150"
+          )}
+        >
+          <span>{t("captureMode.done")}</span>
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 }

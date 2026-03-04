@@ -27,6 +27,9 @@ interface VirtualizedMessageRowProps {
   onHideMessage?: (uuid: string) => void;
   onRestoreOne?: (uuid: string) => void;
   onRestoreAll?: (uuids: string[]) => void;
+  // Range selection
+  onRangeSelect?: (uuid: string) => void;
+  rangePosition?: "start" | "end" | "in-range" | null;
 }
 
 /**
@@ -48,6 +51,8 @@ export const VirtualizedMessageRow = forwardRef<
     onHideMessage,
     onRestoreOne,
     onRestoreAll,
+    onRangeSelect,
+    rangePosition,
   },
   ref
 ) {
@@ -140,6 +145,8 @@ export const VirtualizedMessageRow = forwardRef<
         isTaskOperationGroupMember={false}
         isCaptureMode={isCaptureMode}
         onHideMessage={onHideMessage}
+        onRangeSelect={onRangeSelect}
+        rangePosition={rangePosition}
       />
     </div>
   );

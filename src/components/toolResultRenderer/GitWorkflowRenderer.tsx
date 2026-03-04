@@ -1,11 +1,11 @@
 "use client";
 
 import { GitBranch, ChevronRight } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Renderer } from "../../shared/RendererHeader";
 import { cn } from "@/lib/utils";
 import { layout } from "@/components/renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { HighlightedText } from "../common/HighlightedText";
 
 type Props = {
@@ -27,8 +27,8 @@ export const GitWorkflowRenderer = ({
   const files = gitData.files || [];
   const diff = gitData.diff || "";
 
-  const [showFiles, setShowFiles] = useState(false);
-  const [showDiff, setShowDiff] = useState(false);
+  const [showFiles, setShowFiles] = useCaptureExpandState(false);
+  const [showDiff, setShowDiff] = useCaptureExpandState(false);
 
   return (
     <Renderer className="bg-tool-git/10 border-tool-git/30">
@@ -65,7 +65,7 @@ export const GitWorkflowRenderer = ({
           <div className="mb-2">
             <button
               type="button"
-              onClick={() => setShowFiles(!showFiles)}
+              onClick={() => setShowFiles(prev => !prev)}
               className={cn("flex items-center font-medium cursor-pointer text-tool-git", layout.iconSpacing, layout.bodyText)}
             >
               <ChevronRight className={cn(layout.iconSizeSmall, "transition-transform", showFiles && "rotate-90")} />
@@ -99,7 +99,7 @@ export const GitWorkflowRenderer = ({
           <div>
             <button
               type="button"
-              onClick={() => setShowDiff(!showDiff)}
+              onClick={() => setShowDiff(prev => !prev)}
               className={cn("flex items-center font-medium cursor-pointer text-tool-git", layout.iconSpacing, layout.bodyText)}
             >
               <ChevronRight className={cn(layout.iconSizeSmall, "transition-transform", showDiff && "rotate-90")} />

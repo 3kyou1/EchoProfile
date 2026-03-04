@@ -632,6 +632,49 @@ pub async fn write_text_file(path: String, content: String) -> Result<(), String
     .map_err(|e| format!("Task join error: {e}"))?
 }
 
+/// Save screenshot binary data to a user-selected path.
+///
+/// The path is expected to come from a native save dialog,
+/// so no directory restriction is enforced (user explicitly chose the location).
+///
+/// # Arguments
+/// * `path` - Absolute path chosen by user via save dialog
+/// * `data` - Base64-encoded PNG data
+#[tauri::command]
+pub async fn save_screenshot(path: String, data: String) -> Result<(), String> {
+    use base64::Engine;
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(&path);
+
+        // Ensure parent directory exists
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                return Err(format!(
+                    "Parent directory does not exist: {}",
+                    parent.display()
+                ));
+            }
+        }
+
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(&data)
+            .map_err(|e| format!("Base64 decode error: {e}"))?;
+
+        // Atomic write: temp file + rename
+        let temp_path = path.with_extension("tmp");
+        let mut file = fs::File::create(&temp_path)
+            .map_err(|e| format!("Failed to create temp file {}: {}", temp_path.display(), e))?;
+        file.write_all(&bytes)
+            .map_err(|e| format!("Failed to write temp file: {e}"))?;
+        file.sync_all()
+            .map_err(|e| format!("Failed to sync temp file: {e}"))?;
+        super::fs_utils::atomic_rename(&temp_path, &path)?;
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
 /// Read text content from a file
 ///
 /// # Arguments

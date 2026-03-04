@@ -56,6 +56,50 @@ export async function saveFileDialog(
 }
 
 /**
+ * Show a "Save file" dialog and write binary content (e.g., PNG image).
+ *
+ * - Tauri: shows native save dialog, then writes binary via IPC (`save_screenshot`).
+ * - Web: triggers a browser download with the given blob.
+ *
+ * Returns `true` if the save completed (web always returns true).
+ */
+export async function saveBinaryFileDialog(
+  data: Uint8Array,
+  options?: SaveDialogOptions & { mimeType?: string },
+): Promise<boolean> {
+  if (isTauri()) {
+    const dialogModule = await import("@tauri-apps/plugin-dialog");
+    const filePath = await dialogModule.save(options);
+    if (!filePath) return false;
+
+    // Convert to base64 for IPC transfer
+    let binary = "";
+    for (let i = 0; i < data.length; i++) {
+      binary += String.fromCharCode(data[i]!);
+    }
+    const base64Data = btoa(binary);
+
+    const { api } = await import("@/services/api");
+    await api("save_screenshot", { path: filePath, data: base64Data });
+    return true;
+  }
+
+  // Web fallback: Blob download
+  const filename = options?.defaultPath ?? "download.png";
+  const mimeType = options?.mimeType ?? "image/png";
+  const blob = new Blob([data], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  return true;
+}
+
+/**
  * Show an "Open file" dialog and read a single text file.
  *
  * - Tauri: shows native open dialog, reads via IPC.

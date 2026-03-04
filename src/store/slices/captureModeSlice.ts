@@ -17,6 +17,12 @@ export interface CaptureModeSliceState {
   isCaptureMode: boolean;
   /** List of hidden message UUIDs (persisted across mode toggles) */
   hiddenMessageIds: string[];
+  /** UUID of range selection start message */
+  rangeStart: string | null;
+  /** UUID of range selection end message */
+  rangeEnd: string | null;
+  /** True during image generation (loading state) */
+  isCapturing: boolean;
 }
 
 export interface CaptureModeSliceActions {
@@ -36,6 +42,12 @@ export interface CaptureModeSliceActions {
   isMessageHidden: (uuid: string) => boolean;
   /** Get count of hidden messages */
   getHiddenCount: () => number;
+  /** Toggle range selection point (first click = start, second click = end) */
+  toggleRangePoint: (uuid: string) => void;
+  /** Clear range selection */
+  clearRange: () => void;
+  /** Set capturing loading state */
+  setIsCapturing: (v: boolean) => void;
 }
 
 export type CaptureModeSlice = CaptureModeSliceState & CaptureModeSliceActions;
@@ -47,6 +59,9 @@ export type CaptureModeSlice = CaptureModeSliceState & CaptureModeSliceActions;
 const initialCaptureModeState: CaptureModeSliceState = {
   isCaptureMode: false,
   hiddenMessageIds: [],
+  rangeStart: null,
+  rangeEnd: null,
+  isCapturing: false,
 };
 
 // ============================================================================
@@ -66,7 +81,7 @@ export const createCaptureModeSlice: StateCreator<
   },
 
   exitCaptureMode: () => {
-    set({ isCaptureMode: false });
+    set({ isCaptureMode: false, rangeStart: null, rangeEnd: null, isCapturing: false });
   },
 
   hideMessage: (uuid: string) => {
@@ -103,5 +118,32 @@ export const createCaptureModeSlice: StateCreator<
 
   getHiddenCount: () => {
     return get().hiddenMessageIds.length;
+  },
+
+  toggleRangePoint: (uuid: string) => {
+    const { rangeStart, rangeEnd } = get();
+    if (rangeStart == null) {
+      // First click: set start
+      set({ rangeStart: uuid, rangeEnd: null });
+    } else if (rangeEnd == null) {
+      if (uuid === rangeStart) {
+        // Clicking the same message deselects
+        set({ rangeStart: null });
+      } else {
+        // Second click: set end
+        set({ rangeEnd: uuid });
+      }
+    } else {
+      // Both set: start fresh
+      set({ rangeStart: uuid, rangeEnd: null });
+    }
+  },
+
+  clearRange: () => {
+    set({ rangeStart: null, rangeEnd: null });
+  },
+
+  setIsCapturing: (v: boolean) => {
+    set({ isCapturing: v });
   },
 });

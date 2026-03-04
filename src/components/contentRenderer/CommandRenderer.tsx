@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Terminal, CheckCircle, AlertCircle, Info, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { layout } from "@/components/renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { HighlightedText } from "../common/HighlightedText";
 import { AnsiText } from "../common/AnsiText";
 import { stripAnsiCodes } from "@/utils/ansiToHtml";
@@ -39,14 +40,14 @@ export const CommandRenderer = ({
   currentMatchIndex = 0,
 }: Props) => {
   const { t } = useTranslation();
-  const [isCommandExpanded, setIsCommandExpanded] = useState(false);
+  const [isCommandExpanded, setIsCommandExpanded] = useCaptureExpandState(false);
 
   // Auto-expand on search query match
   useEffect(() => {
     if (searchQuery && text.toLowerCase().includes(searchQuery.toLowerCase())) {
       setIsCommandExpanded(true);
     }
-  }, [searchQuery, text]);
+  }, [searchQuery, text, setIsCommandExpanded]);
 
   // Command 그룹 (name, message, args) 추출
   const commandNameRegex = /<command-name>\s*(.*?)\s*<\/command-name>/gs;
@@ -169,7 +170,7 @@ export const CommandRenderer = ({
         <div className={cn(layout.rounded, "border bg-accent/10 border-accent/30")}>
           {hasExpandableContent ? (
             <button
-              onClick={() => setIsCommandExpanded(!isCommandExpanded)}
+              onClick={() => setIsCommandExpanded(prev => !prev)}
               aria-expanded={isCommandExpanded}
               aria-label={`${isCommandExpanded ? t("commandRenderer.collapse") : t("commandRenderer.expand")} ${commandGroup.name || t("commandRenderer.commandExecution")}`}
               className={cn(
@@ -387,7 +388,7 @@ const CaveatRenderer = ({
   isCurrentMatch = false,
   currentMatchIndex = 0,
 }: CaveatRendererProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
   const { t } = useTranslation();
 
   // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
@@ -395,12 +396,12 @@ const CaveatRenderer = ({
     if (searchQuery && content.toLowerCase().includes(searchQuery.toLowerCase())) {
       setIsExpanded(true);
     }
-  }, [searchQuery, content]);
+  }, [searchQuery, content, setIsExpanded]);
 
   return (
     <div className={cn(layout.rounded, "border bg-info/10 border-info/30")}>
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setIsExpanded(prev => !prev)}
         aria-expanded={isExpanded}
         aria-label={`${isExpanded ? t("commandRenderer.collapse") : t("commandRenderer.expand")} ${t("commandRenderer.systemNote")}`}
         className={cn(

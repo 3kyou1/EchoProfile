@@ -148,6 +148,9 @@ export interface AppStoreState {
   // Capture mode state
   isCaptureMode: boolean;
   hiddenMessageIds: string[];
+  rangeStart: string | null;
+  rangeEnd: string | null;
+  isCapturing: boolean;
 
   // Board state
   boardSessions: Record<string, import("../../types/board.types").BoardSessionData>;
@@ -288,6 +291,9 @@ export interface AppStoreActions {
   restoreAllMessages: () => void;
   isMessageHidden: (uuid: string) => boolean;
   getHiddenCount: () => number;
+  toggleRangePoint: (uuid: string) => void;
+  clearRange: () => void;
+  setIsCapturing: (v: boolean) => void;
 
   // Board actions
   loadBoardSessions: (sessions: ClaudeSession[]) => Promise<void>;

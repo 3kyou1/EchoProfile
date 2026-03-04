@@ -29,6 +29,18 @@ import type { MessageNodeProps } from "../types";
 // Capture mode hover background style (uses named group to avoid conflicts)
 const CAPTURE_HOVER_BG = "group-hover/capture:bg-red-500/5 group-hover/capture:ring-1 group-hover/capture:ring-red-500/20";
 
+// Range selection styles
+const RANGE_IN_RANGE_BG = "bg-blue-500/10";
+const RANGE_ANCHOR_BORDER_START = "ring-2 ring-blue-500/60 bg-blue-500/15";
+const RANGE_ANCHOR_BORDER_END = "ring-2 ring-blue-400/60 bg-blue-500/15";
+
+function getRangeClasses(position: "start" | "end" | "in-range" | null | undefined): string {
+  if (position === "start") return RANGE_ANCHOR_BORDER_START;
+  if (position === "end") return RANGE_ANCHOR_BORDER_END;
+  if (position === "in-range") return RANGE_IN_RANGE_BG;
+  return "";
+}
+
 export const ClaudeMessageNode = React.memo(({
   message,
   isCurrentMatch,
@@ -45,8 +57,22 @@ export const ClaudeMessageNode = React.memo(({
   isTaskOperationGroupMember,
   isCaptureMode,
   onHideMessage,
+  onRangeSelect,
+  rangePosition,
 }: MessageNodeProps) => {
   const { t } = useTranslation();
+
+  // Range selection click handler
+  const handleRangeClick = isCaptureMode && onRangeSelect
+    ? (e: React.MouseEvent) => {
+        // Don't trigger range select if clicking the hide button
+        if ((e.target as HTMLElement).closest("button")) return;
+        onRangeSelect(message.uuid);
+      }
+    : undefined;
+
+  const rangeHighlight = isCaptureMode ? getRangeClasses(rangePosition) : "";
+  const rangeCursor = isCaptureMode && onRangeSelect ? "cursor-crosshair" : "";
 
   // Capture mode hide button - appears on hover
   const CaptureHideButton = isCaptureMode && onHideMessage ? (
@@ -124,9 +150,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleRangeClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !rangePosition && CAPTURE_HOVER_BG,
+          rangeHighlight,
+          rangeCursor
         )}
       >
         {CaptureHideButton}
@@ -142,9 +171,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleRangeClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !rangePosition && CAPTURE_HOVER_BG,
+          rangeHighlight,
+          rangeCursor
         )}
       >
         {CaptureHideButton}
@@ -163,9 +195,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleRangeClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !rangePosition && CAPTURE_HOVER_BG,
+          rangeHighlight,
+          rangeCursor
         )}
       >
         {CaptureHideButton}
@@ -184,9 +219,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleRangeClick}
         className={cn(
           "relative max-w-4xl mx-auto transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !rangePosition && CAPTURE_HOVER_BG,
+          rangeHighlight,
+          rangeCursor
         )}
       >
         {CaptureHideButton}
@@ -204,9 +242,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleRangeClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !rangePosition && CAPTURE_HOVER_BG,
+          rangeHighlight,
+          rangeCursor
         )}
       >
         {CaptureHideButton}
@@ -226,9 +267,12 @@ export const ClaudeMessageNode = React.memo(({
     return (
       <div
         data-message-uuid={message.uuid}
+        onClick={handleRangeClick}
         className={cn(
           "relative w-full px-2 md:px-4 py-1 transition-all duration-200",
-          isCaptureMode && CAPTURE_HOVER_BG
+          isCaptureMode && !rangePosition && CAPTURE_HOVER_BG,
+          rangeHighlight,
+          rangeCursor
         )}
       >
         {CaptureHideButton}
@@ -254,6 +298,7 @@ export const ClaudeMessageNode = React.memo(({
   return (
     <div
       data-message-uuid={message.uuid}
+      onClick={handleRangeClick}
       className={cn(
         "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
         message.isSidechain && "bg-muted",
@@ -261,7 +306,10 @@ export const ClaudeMessageNode = React.memo(({
         isCurrentMatch && "bg-highlight-current ring-2 ring-warning",
         isMatch && !isCurrentMatch && "bg-highlight",
         // Capture mode hover effect
-        isCaptureMode && !isCurrentMatch && !isMatch && CAPTURE_HOVER_BG
+        isCaptureMode && !isCurrentMatch && !isMatch && !rangePosition && CAPTURE_HOVER_BG,
+        // Range selection highlight
+        rangeHighlight,
+        rangeCursor
       )}
     >
       {CaptureHideButton}

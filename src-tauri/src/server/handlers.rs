@@ -261,6 +261,12 @@ pub struct WriteFileParams {
 }
 
 #[derive(Deserialize)]
+pub struct SaveScreenshotParams {
+    pub path: String,
+    pub data: String,
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RenameSessionParams {
     pub file_path: String,
@@ -481,6 +487,14 @@ handler_json!(
     WriteFileParams,
     |p: WriteFileParams| async move {
         commands::claude_settings::write_text_file(p.path, p.content).await
+    }
+);
+
+handler_json!(
+    save_screenshot,
+    SaveScreenshotParams,
+    |p: SaveScreenshotParams| async move {
+        commands::claude_settings::save_screenshot(p.path, p.data).await
     }
 );
 

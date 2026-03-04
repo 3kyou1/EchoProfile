@@ -288,6 +288,39 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
 
   const hasSelection = selectedMessageIds.length > 0;
 
+  const waitForCaptureAssets = useCallback(async (root: HTMLElement) => {
+    const images = Array.from(root.querySelectorAll("img"));
+
+    const imagePromises = images.map((img) => new Promise<void>((resolve) => {
+      if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        resolve();
+        return;
+      }
+
+      const done = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+
+      img.addEventListener("load", done, { once: true });
+      img.addEventListener("error", done, { once: true });
+
+      // Never block capture indefinitely for broken/slow resources.
+      const timer = setTimeout(() => {
+        img.removeEventListener("load", done);
+        img.removeEventListener("error", done);
+        resolve();
+      }, 3000);
+    }));
+
+    const fontsPromise =
+      "fonts" in document
+        ? (document.fonts?.ready ?? Promise.resolve())
+        : Promise.resolve();
+
+    await Promise.all([...imagePromises, fontsPromise]);
+  }, []);
+
   // Screenshot handler — capture to preview modal
   const handleScreenshot = useCallback(async () => {
     if (!hasSelection || selectedVisibleCount === 0) {
@@ -320,6 +353,8 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         return;
       }
 
+      await waitForCaptureAssets(el);
+
       const result = await captureAndPreview(el, selectedSession?.session_id);
       if (!result.success && result.message) {
         setCaptureToast({ type: "error", message: result.message });
@@ -329,7 +364,15 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     } finally {
       setIsCapturing(false);
     }
-  }, [hasSelection, selectedVisibleCount, captureAndPreview, setIsCapturing, selectedSession?.session_id, t]);
+  }, [
+    hasSelection,
+    selectedVisibleCount,
+    captureAndPreview,
+    setIsCapturing,
+    selectedSession?.session_id,
+    t,
+    waitForCaptureAssets,
+  ]);
 
   // Save from preview modal
   const handlePreviewSave = useCallback(async () => {

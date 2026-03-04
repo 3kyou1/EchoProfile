@@ -48,7 +48,7 @@ export const EditorFooter: React.FC<EditorFooterProps> = ({
         <Button
           variant={editorMode === "visual" ? "secondary" : "ghost"}
           size="sm"
-          className={`h-7 px-2.5 gap-1.5 transition-colors duration-150 ${
+          className={`h-9 md:h-7 px-2.5 gap-1.5 transition-colors duration-150 ${
             editorMode === "visual" ? "shadow-sm" : "hover:bg-accent/10 hover:text-accent"
           }`}
           onClick={() => onModeChange("visual")}
@@ -59,7 +59,7 @@ export const EditorFooter: React.FC<EditorFooterProps> = ({
         <Button
           variant={editorMode === "json" ? "secondary" : "ghost"}
           size="sm"
-          className={`h-7 px-2.5 gap-1.5 transition-colors duration-150 ${
+          className={`h-9 md:h-7 px-2.5 gap-1.5 transition-colors duration-150 ${
             editorMode === "json" ? "shadow-sm" : "hover:bg-accent/10 hover:text-accent"
           }`}
           onClick={() => onModeChange("json")}
@@ -75,7 +75,7 @@ export const EditorFooter: React.FC<EditorFooterProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8"
+          className="h-10 md:h-8"
           onClick={onReset}
           disabled={!hasUnsavedChanges || readOnly}
         >
@@ -86,7 +86,7 @@ export const EditorFooter: React.FC<EditorFooterProps> = ({
         {/* Save Button */}
         <Button
           size="sm"
-          className="h-8"
+          className="h-10 md:h-8"
           onClick={onSave}
           disabled={!hasUnsavedChanges || readOnly || isSaving || hasJsonError}
         >

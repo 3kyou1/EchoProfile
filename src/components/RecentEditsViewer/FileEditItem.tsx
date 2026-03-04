@@ -9,7 +9,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Markdown } from "../common";
-import { invoke } from "@tauri-apps/api/core";
+import { api } from "@/services/api";
 import {
   FileEdit,
   FilePlus,
@@ -66,7 +66,7 @@ export const FileEditItem: React.FC<FileEditItemProps> = ({ edit, isDarkMode }) 
     setErrorMessage(null);
     try {
       setRestoreStatus("loading");
-      await invoke("restore_file", {
+      await api("restore_file", {
         filePath: edit.file_path,
         content: edit.content_after_change,
       });
@@ -305,10 +305,16 @@ export const FileEditItem: React.FC<FileEditItemProps> = ({ edit, isDarkMode }) 
                     })}
                   >
                     {tokens.map((line, i) => {
-                      const lineProps = getLineProps({ line, key: i });
+                      const {
+                        key: lineKey,
+                        ...lineProps
+                      } = getLineProps({ line, key: i }) as React.HTMLAttributes<HTMLDivElement> & {
+                        key?: React.Key;
+                        style?: React.CSSProperties;
+                      };
                       return (
                         <div
-                          key={i}
+                          key={lineKey ?? i}
                           {...lineProps}
                           style={getLineStyles(lineProps.style, { display: "table-row" })}
                         >
@@ -316,11 +322,17 @@ export const FileEditItem: React.FC<FileEditItemProps> = ({ edit, isDarkMode }) 
                             {i + 1}
                           </span>
                           <span style={getTokenContainerStyles()}>
-                            {line.map((token, key) => {
-                              const tokenProps = getTokenProps({ token, key });
+                            {line.map((token, tokenIndex) => {
+                              const {
+                                key: tokenKey,
+                                ...tokenProps
+                              } = getTokenProps({ token, key: tokenIndex }) as React.HTMLAttributes<HTMLSpanElement> & {
+                                key?: React.Key;
+                                style?: React.CSSProperties;
+                              };
                               return (
                                 <span
-                                  key={key}
+                                  key={tokenKey ?? tokenIndex}
                                   {...tokenProps}
                                   style={getTokenStyles(isDarkMode, tokenProps.style)}
                                 />

@@ -71,7 +71,7 @@ export const DatePickerHeader = ({
             <div className="flex items-center gap-1.5">
                 <input
                     type="date"
-                    className="bg-transparent text-[10px] font-mono text-foreground outline-none border-b border-transparent focus:border-accent w-24 dark:[color-scheme:dark]"
+                    className="bg-transparent text-[10px] font-mono text-foreground outline-none border-b border-transparent focus:border-accent w-24 min-h-[36px] dark:[color-scheme:dark]"
                     value={formatDateForInput(dateFilter.start)}
                     max={formatDateForInput(dateFilter.end)}
                     onChange={(e) => handleDateChange('start', e.target.value)}
@@ -79,7 +79,7 @@ export const DatePickerHeader = ({
                 <span className="text-muted-foreground text-[10px]">-</span>
                 <input
                     type="date"
-                    className="bg-transparent text-[10px] font-mono text-foreground outline-none border-b border-transparent focus:border-accent w-24 dark:[color-scheme:dark]"
+                    className="bg-transparent text-[10px] font-mono text-foreground outline-none border-b border-transparent focus:border-accent w-24 min-h-[36px] dark:[color-scheme:dark]"
                     value={formatDateForInput(dateFilter.end)}
                     min={formatDateForInput(dateFilter.start)}
                     onChange={(e) => handleDateChange('end', e.target.value)}

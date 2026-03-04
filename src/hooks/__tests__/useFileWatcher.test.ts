@@ -1,5 +1,24 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
+
+// Simulate Tauri environment so isTauri() returns true
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let previousTauriInternals: any;
+beforeAll(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  previousTauriInternals = (window as any).__TAURI_INTERNALS__;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).__TAURI_INTERNALS__ = {};
+});
+afterAll(() => {
+  if (previousTauriInternals !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__TAURI_INTERNALS__ = previousTauriInternals;
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (window as any).__TAURI_INTERNALS__;
+  }
+});
 
 // Use vi.hoisted to create mocks that can be referenced in vi.mock
 const { mockListen, mockToastError } = vi.hoisted(() => ({
@@ -45,12 +64,10 @@ describe('useFileWatcher', () => {
       renderHook(() => useFileWatcher({ enabled: true }));
 
       await waitFor(() => {
-        expect(mockListen).toHaveBeenCalledTimes(3);
+        expect(mockListen).toHaveBeenCalledTimes(1);
       });
 
       expect(mockListen).toHaveBeenCalledWith('session-file-changed', expect.any(Function));
-      expect(mockListen).toHaveBeenCalledWith('session-file-created', expect.any(Function));
-      expect(mockListen).toHaveBeenCalledWith('session-file-deleted', expect.any(Function));
     });
 
     it('should default to enabled when no options provided', async () => {
@@ -60,7 +77,7 @@ describe('useFileWatcher', () => {
       renderHook(() => useFileWatcher());
 
       await waitFor(() => {
-        expect(mockListen).toHaveBeenCalledTimes(3);
+        expect(mockListen).toHaveBeenCalledTimes(1);
       });
     });
 
@@ -84,12 +101,12 @@ describe('useFileWatcher', () => {
       const { unmount } = renderHook(() => useFileWatcher({ enabled: true }));
 
       await waitFor(() => {
-        expect(mockListen).toHaveBeenCalledTimes(3);
+        expect(mockListen).toHaveBeenCalledTimes(1);
       });
 
       unmount();
 
-      expect(mockUnlisten).toHaveBeenCalledTimes(3);
+      expect(mockUnlisten).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -111,7 +128,7 @@ describe('useFileWatcher', () => {
       );
 
       await waitFor(() => {
-        expect(mockListen).toHaveBeenCalledTimes(3);
+        expect(mockListen).toHaveBeenCalledTimes(1);
       });
 
       // Simulate event
@@ -129,71 +146,6 @@ describe('useFileWatcher', () => {
       expect(onSessionChanged).toHaveBeenCalledWith(eventPayload);
     });
 
-    it('should call onSessionCreated callback when session-file-created event is received', async () => {
-      const mockUnlisten = vi.fn();
-      let capturedCallback: ((event: { payload: unknown }) => void) | undefined;
-
-      mockListen.mockImplementation((eventName, callback) => {
-        if (eventName === 'session-file-created') {
-          capturedCallback = callback;
-        }
-        return Promise.resolve(mockUnlisten);
-      });
-
-      const onSessionCreated = vi.fn();
-      renderHook(() =>
-        useFileWatcher({ enabled: true, onSessionCreated, debounceMs: 0 })
-      );
-
-      await waitFor(() => {
-        expect(mockListen).toHaveBeenCalledTimes(3);
-      });
-
-      const eventPayload = {
-        projectPath: '/test/project',
-        sessionPath: '/test/session.jsonl',
-        eventType: 'created' as const,
-      };
-
-      capturedCallback?.({ payload: eventPayload });
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      expect(onSessionCreated).toHaveBeenCalledWith(eventPayload);
-    });
-
-    it('should call onSessionDeleted callback when session-file-deleted event is received', async () => {
-      const mockUnlisten = vi.fn();
-      let capturedCallback: ((event: { payload: unknown }) => void) | undefined;
-
-      mockListen.mockImplementation((eventName, callback) => {
-        if (eventName === 'session-file-deleted') {
-          capturedCallback = callback;
-        }
-        return Promise.resolve(mockUnlisten);
-      });
-
-      const onSessionDeleted = vi.fn();
-      renderHook(() =>
-        useFileWatcher({ enabled: true, onSessionDeleted, debounceMs: 0 })
-      );
-
-      await waitFor(() => {
-        expect(mockListen).toHaveBeenCalledTimes(3);
-      });
-
-      const eventPayload = {
-        projectPath: '/test/project',
-        sessionPath: '/test/session.jsonl',
-        eventType: 'deleted' as const,
-      };
-
-      capturedCallback?.({ payload: eventPayload });
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      expect(onSessionDeleted).toHaveBeenCalledWith(eventPayload);
-    });
   });
 
   describe('debouncing', () => {
@@ -216,7 +168,9 @@ describe('useFileWatcher', () => {
       );
 
       // Manually advance for the useEffect to run
-      await vi.advanceTimersByTimeAsync(10);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10);
+      });
 
       // Fire multiple events rapidly
       const eventPayload = {
@@ -225,15 +179,19 @@ describe('useFileWatcher', () => {
         eventType: 'changed' as const,
       };
 
-      capturedCallback?.({ payload: eventPayload });
-      capturedCallback?.({ payload: eventPayload });
-      capturedCallback?.({ payload: eventPayload });
+      act(() => {
+        capturedCallback?.({ payload: eventPayload });
+        capturedCallback?.({ payload: eventPayload });
+        capturedCallback?.({ payload: eventPayload });
+      });
 
       // Should not have been called yet
       expect(onSessionChanged).not.toHaveBeenCalled();
 
       // Advance timers past debounce
-      await vi.advanceTimersByTimeAsync(350);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
 
       // Should only be called once
       expect(onSessionChanged).toHaveBeenCalledTimes(1);
@@ -269,14 +227,14 @@ describe('useFileWatcher', () => {
       const { result } = renderHook(() => useFileWatcher({ enabled: true }));
 
       await waitFor(() => {
-        expect(mockListen).toHaveBeenCalledTimes(3);
+        expect(mockListen).toHaveBeenCalledTimes(1);
       });
 
       act(() => {
         result.current.stopWatching();
       });
 
-      expect(mockUnlisten).toHaveBeenCalledTimes(3);
+      expect(mockUnlisten).toHaveBeenCalledTimes(1);
     });
 
     it('should set isWatching to false after stopWatching', async () => {

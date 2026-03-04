@@ -276,6 +276,7 @@ export const SessionBoard = () => {
 
     const selectedMessageIdRef = useRef(selectedMessageId);
     selectedMessageIdRef.current = selectedMessageId;
+    const selectedSessionId = selectedSession?.session_id;
 
     const handleInteractionClick = useCallback((id: string) => {
         setSelectedMessageId(selectedMessageIdRef.current === id ? null : id);
@@ -311,8 +312,8 @@ export const SessionBoard = () => {
 
     // Scroll active session into view when transitioning from Detail view
     useEffect(() => {
-        if (selectedSession && visibleSessionIdsRef.current.length > 0) {
-            const index = visibleSessionIdsRef.current.indexOf(selectedSession.session_id);
+        if (selectedSessionId && visibleSessionIdsRef.current.length > 0) {
+            const index = visibleSessionIdsRef.current.indexOf(selectedSessionId);
             if (index !== -1) {
                 // Small timeout to ensure virtualizer is ready and layout is stable
                 requestAnimationFrame(() => {
@@ -320,7 +321,7 @@ export const SessionBoard = () => {
                 });
             }
         }
-    }, [selectedSession?.session_id, columnVirtualizer]); // Only run when the ID changes (or on mount if set)
+    }, [selectedSessionId, columnVirtualizer]); // Only run when the ID changes (or on mount if set)
 
     if (isLoadingBoard) {
         return (

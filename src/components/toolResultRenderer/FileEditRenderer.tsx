@@ -56,7 +56,7 @@ export const FileEditRenderer = ({ toolResult, searchQuery }: Props) => {
         rightContent={
           <div className={cn("flex items-center", layout.iconGap)}>
             {filePath && (
-              <span className={cn(layout.smallText, "text-tool-code truncate max-w-[250px]")} title={filePath}>
+              <span className={cn(layout.smallText, "text-tool-code truncate max-w-[150px] md:max-w-[250px]")} title={filePath}>
                 {formatShortPath(filePath)}
               </span>
             )}

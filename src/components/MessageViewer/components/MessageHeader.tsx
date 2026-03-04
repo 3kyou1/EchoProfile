@@ -4,7 +4,7 @@
  * Displays message metadata (role, timestamp, model info, usage stats).
  */
 
-import React from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,23 @@ import type { ClaudeAssistantMessage } from "../../../types";
 
 export const MessageHeader: React.FC<MessageHeaderProps> = ({ message }) => {
   const { t } = useTranslation();
+  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const handleTooltipToggle = useCallback(() => {
+    setIsTooltipOpen((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (!isTooltipOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
+        setIsTooltipOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isTooltipOpen]);
   const isToolResultMessage =
     (message.type === "user" || message.type === "assistant") &&
     !!message.toolUseResult;
@@ -61,15 +78,23 @@ export const MessageHeader: React.FC<MessageHeaderProps> = ({ message }) => {
       </div>
 
       {message.type === "assistant" && message.model && (
-        <div className="relative group flex items-center gap-1.5">
+        <div ref={tooltipRef} className="relative group flex items-center gap-1.5">
           <span className="text-muted-foreground">{getShortModelName(message.model)}</span>
           {message.usage && (
             <>
-              <HelpCircle className="w-3 h-3 cursor-help text-muted-foreground" />
+              <button
+                type="button"
+                onClick={handleTooltipToggle}
+                className="inline-flex items-center justify-center cursor-help text-muted-foreground"
+                aria-label={t("assistantMessageDetails.model")}
+              >
+                <HelpCircle className="w-3 h-3" />
+              </button>
               <div className={cn(
                 "absolute bottom-full mb-2 right-0 w-52 bg-popover text-popover-foreground",
                 "text-xs rounded-md p-2.5",
-                "opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-10 border border-border"
+                "transition-opacity shadow-lg z-10 border border-border",
+                isTooltipOpen ? "opacity-100 pointer-events-auto" : "opacity-0 group-hover:opacity-100 pointer-events-none"
               )}>
                 <p className="mb-1"><strong>{t("assistantMessageDetails.model")}:</strong> {message.model}</p>
                 <p className="mb-1"><strong>{t("messageViewer.time")}:</strong> {formatTime(message.timestamp)}</p>

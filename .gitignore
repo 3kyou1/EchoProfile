@@ -69,3 +69,7 @@ debug.log*
 # Auto-generated AI context files
 **/*/CLAUDE.md
 .serena/memories/
+
+# AFC plugin state
+.claude/afc/
+.claude/afc.config.md

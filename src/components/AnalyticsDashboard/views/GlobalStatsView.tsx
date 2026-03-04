@@ -95,7 +95,7 @@ export const GlobalStatsView: React.FC<GlobalStatsViewProps> = ({
   }, [globalSummary.date_range.last_message, t]);
 
   return (
-    <div className="flex-1 p-6 overflow-auto bg-background space-y-6 animate-stagger">
+    <div className="flex-1 p-3 md:p-6 overflow-auto bg-background space-y-4 md:space-y-6 animate-stagger">
       <p className="text-[11px] text-muted-foreground">
         {t(
           "analytics.providerScopeProjectTree",
@@ -104,7 +104,7 @@ export const GlobalStatsView: React.FC<GlobalStatsViewProps> = ({
       </p>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <MetricCard
           icon={Activity}
           label={t("analytics.totalTokens")}

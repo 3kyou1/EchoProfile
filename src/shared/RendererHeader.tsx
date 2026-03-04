@@ -85,7 +85,7 @@ const RendererHeader = ({
   if (!enableToggle) {
     return (
       <div className={cn("flex items-center justify-between", layout.headerPadding, layout.headerHeight)}>
-        <div className={cn("flex items-center", layout.iconGap)}>
+        <div className={cn("flex items-center min-w-0 flex-1", layout.iconGap)}>
           {hasError ? (
             <X className={cn(layout.iconSize, "shrink-0 text-destructive")} />
           ) : (
@@ -101,7 +101,7 @@ const RendererHeader = ({
             {`${title} ${hasError ? t('common.errorOccurred') : ""}`}
           </span>
         </div>
-        <div className={cn("flex items-center shrink-0 overflow-hidden", layout.iconGap, layout.smallText)}>
+        <div className={cn("flex items-center min-w-0 overflow-hidden", layout.iconGap, layout.smallText)}>
           {rightContent}
         </div>
       </div>
@@ -118,7 +118,7 @@ const RendererHeader = ({
         "hover:bg-muted/50 transition-colors"
       )}
     >
-      <div className={cn("flex items-center", layout.iconGap)}>
+      <div className={cn("flex items-center min-w-0 flex-1", layout.iconGap)}>
         <ChevronRight
           className={cn(
             layout.iconSize,
@@ -141,7 +141,7 @@ const RendererHeader = ({
           {`${title} ${hasError ? t('common.errorOccurred') : ""}`}
         </span>
       </div>
-      <div className={cn("flex items-center shrink-0 overflow-hidden", layout.iconGap, layout.smallText)}>
+      <div className={cn("flex items-center min-w-0 overflow-hidden", layout.iconGap, layout.smallText)}>
         {rightContent}
       </div>
     </button>

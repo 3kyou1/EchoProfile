@@ -1,8 +1,19 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import {
   UPDATE_INSTALL_FAILED_ERROR_CODE,
 } from '@/utils/updateError';
+
+// Simulate Tauri environment so isTauri() returns true
+beforeAll(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).__TAURI_INTERNALS__ = {};
+});
+
+afterAll(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  delete (window as any).__TAURI_INTERNALS__;
+});
 
 // Use vi.hoisted to create mocks that can be referenced in vi.mock
 const { mockCheck, mockRelaunch, mockGetVersion } = vi.hoisted(() => ({
@@ -32,6 +43,7 @@ describe('useUpdater', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.resetAllMocks();
   });
 
@@ -57,21 +69,32 @@ describe('useUpdater', () => {
 
   describe('checkForUpdates', () => {
     it('should set isChecking true during check', async () => {
-      let resolveCheck: (value: null) => void;
+      let resolveCheck: ((value: null) => void) | undefined;
       mockCheck.mockImplementation(
         () => new Promise((resolve) => { resolveCheck = resolve; })
       );
 
       const { result } = renderHook(() => useUpdater());
 
-      act(() => {
-        result.current.checkForUpdates();
+      // Start checkForUpdates; async act flushes microtasks (dynamic import)
+      // so mockCheck is called and resolveCheck is assigned
+      let checkPromise!: Promise<unknown>;
+      await act(async () => {
+        checkPromise = result.current.checkForUpdates();
       });
 
+      await waitFor(() => {
+        expect(mockCheck).toHaveBeenCalledTimes(1);
+      });
       expect(result.current.state.isChecking).toBe(true);
 
+      if (!resolveCheck) {
+        throw new Error('check resolver was not captured');
+      }
+
       await act(async () => {
-        resolveCheck!(null);
+        resolveCheck(null);
+        await checkPromise;
       });
 
       expect(result.current.state.isChecking).toBe(false);
@@ -90,7 +113,9 @@ describe('useUpdater', () => {
         await result.current.checkForUpdates();
       });
 
-      expect(result.current.state.hasUpdate).toBe(true);
+      await waitFor(() => {
+        expect(result.current.state.hasUpdate).toBe(true);
+      });
       expect(result.current.state.updateInfo).toEqual(mockUpdate);
       expect(result.current.state.newVersion).toBe('2.0.0');
     });
@@ -129,21 +154,22 @@ describe('useUpdater', () => {
 
       const { result } = renderHook(() => useUpdater());
 
-      act(() => {
-        result.current.checkForUpdates();
+      // Start checkForUpdates inside act so initial state updates are tracked.
+      let checkPromise!: Promise<unknown>;
+      await act(async () => {
+        checkPromise = result.current.checkForUpdates();
       });
 
       expect(result.current.state.isChecking).toBe(true);
 
-      // Fast-forward past timeout (20 seconds)
+      // Fast-forward past timeout (20 seconds) — use async variant to flush microtasks
       await act(async () => {
-        vi.advanceTimersByTime(21000);
+        await vi.advanceTimersByTimeAsync(21000);
+        await checkPromise;
       });
 
       expect(result.current.state.isChecking).toBe(false);
       expect(result.current.state.error).toContain('timeout');
-
-      vi.useRealTimers();
     });
   });
 

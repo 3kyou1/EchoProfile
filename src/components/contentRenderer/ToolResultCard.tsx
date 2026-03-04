@@ -32,12 +32,19 @@ export const ToolResultCard = memo(function ToolResultCard({
           <div className={cn("flex items-center gap-2", layout.smallText)}>
             {rightContent}
             {toolUseId && (
-              <span className={cn(layout.monoText, styles.accent)}>{toolUseId}</span>
+              <span className={cn(layout.monoText, "hidden md:inline", styles.accent)}>{toolUseId}</span>
             )}
           </div>
         }
       />
-      <Renderer.Content>{children}</Renderer.Content>
+      <Renderer.Content>
+        {toolUseId && (
+          <code className={cn(layout.monoText, "block md:hidden mb-2 text-muted-foreground")}>
+            {toolUseId}
+          </code>
+        )}
+        {children}
+      </Renderer.Content>
     </Renderer>
   );
 });

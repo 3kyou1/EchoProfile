@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
-import { save, open } from "@tauri-apps/plugin-dialog";
+import { api } from "@/services/api";
+import { saveFileDialog, openFileDialog } from "@/utils/fileDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Download, Upload, Archive, FolderOpen, ShieldAlert } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -64,8 +65,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
   const [isImportAllPreviewOpen, setIsImportAllPreviewOpen] = useState(false);
   const [importedBackup, setImportedBackup] = useState<SettingsBackup | null>(null);
 
-  // Get settings for selected export scope
-  const getExportSettings = (): ClaudeCodeSettings => {
+  const exportSettings = useMemo<ClaudeCodeSettings>(() => {
     if (!allSettings) return {};
     const content = allSettings[exportScope];
     if (!content) return {};
@@ -74,7 +74,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
     } catch {
       return {};
     }
-  };
+  }, [allSettings, exportScope]);
 
   // Remove sensitive data from settings
   const sanitizeSettings = (settings: ClaudeCodeSettings): ClaudeCodeSettings => {
@@ -117,9 +117,8 @@ export const ExportImport: React.FC<ExportImportProps> = ({
 
   // Analyze if current export settings contain sensitive data
   const sensitiveAnalysis = useMemo(() => {
-    const settings = getExportSettings();
-    return analyzeSensitiveData(settings);
-  }, [allSettings, exportScope]);
+    return analyzeSensitiveData(exportSettings);
+  }, [exportSettings]);
 
   // Check if export scope has settings
   const hasExportSettings = allSettings != null && allSettings[exportScope] != null;
@@ -129,24 +128,17 @@ export const ExportImport: React.FC<ExportImportProps> = ({
 
     setIsExporting(true);
     try {
-      const currentSettings = getExportSettings();
       const settingsToExport = excludeSensitive
-        ? sanitizeSettings(currentSettings)
-        : currentSettings;
+        ? sanitizeSettings(exportSettings)
+        : exportSettings;
 
-      const filePath = await save({
+      await saveFileDialog(JSON.stringify(settingsToExport, null, 2), {
         filters: [{ name: "JSON", extensions: ["json"] }],
         defaultPath: `claude-settings-${exportScope}.json`,
       });
-
-      if (filePath) {
-        await invoke("write_text_file", {
-          path: filePath,
-          content: JSON.stringify(settingsToExport, null, 2),
-        });
-      }
     } catch (error) {
       console.error("Export failed:", error);
+      toast.error(t("settingsManager.exportImport.exportFailed", "Export failed"));
     } finally {
       setIsExporting(false);
     }
@@ -155,21 +147,18 @@ export const ExportImport: React.FC<ExportImportProps> = ({
   const handleImport = async () => {
     setIsImporting(true);
     try {
-      const filePath = await open({
+      const content = await openFileDialog({
         filters: [{ name: "JSON", extensions: ["json"] }],
-        multiple: false,
       });
 
-      if (filePath && typeof filePath === "string") {
-        const content = await invoke<string>("read_text_file", {
-          path: filePath,
-        });
+      if (content != null) {
         const parsed = JSON.parse(content) as ClaudeCodeSettings;
         setImportedSettings(parsed);
         setIsImportPreviewOpen(true);
       }
     } catch (error) {
       console.error("Import failed:", error);
+      toast.error(t("settingsManager.exportImport.importFailed", "Import failed"));
     } finally {
       setIsImporting(false);
     }
@@ -180,12 +169,12 @@ export const ExportImport: React.FC<ExportImportProps> = ({
 
     // Validate projectPath for non-user scopes
     if (importScope !== "user" && !projectPath) {
-      console.error("Apply import failed: projectPath is required for project/local scope");
+      toast.error(t("settingsManager.exportImport.applyFailed", "Apply failed: project path required for this scope"));
       return;
     }
 
     try {
-      await invoke("save_settings", {
+      await api("save_settings", {
         scope: importScope,
         content: JSON.stringify(importedSettings, null, 2),
         projectPath: importScope !== "user" ? projectPath : undefined,
@@ -196,6 +185,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       setImportedSettings(null);
     } catch (error) {
       console.error("Apply import failed:", error);
+      toast.error(t("settingsManager.exportImport.applyFailed", "Failed to apply settings"));
     }
   };
 
@@ -253,19 +243,13 @@ export const ExportImport: React.FC<ExportImportProps> = ({
         }
       }
 
-      const filePath = await save({
+      await saveFileDialog(JSON.stringify(backup, null, 2), {
         filters: [{ name: "JSON", extensions: ["json"] }],
         defaultPath: `claude-settings-backup-${new Date().toISOString().split("T")[0]}.json`,
       });
-
-      if (filePath) {
-        await invoke("write_text_file", {
-          path: filePath,
-          content: JSON.stringify(backup, null, 2),
-        });
-      }
     } catch (error) {
       console.error("Export all failed:", error);
+      toast.error(t("settingsManager.exportImport.exportFailed", "Export failed"));
     } finally {
       setIsExportingAll(false);
     }
@@ -275,15 +259,11 @@ export const ExportImport: React.FC<ExportImportProps> = ({
   const handleImportAll = async () => {
     setIsImportingAll(true);
     try {
-      const filePath = await open({
+      const content = await openFileDialog({
         filters: [{ name: "JSON", extensions: ["json"] }],
-        multiple: false,
       });
 
-      if (filePath && typeof filePath === "string") {
-        const content = await invoke<string>("read_text_file", {
-          path: filePath,
-        });
+      if (content != null) {
         const parsed = JSON.parse(content) as SettingsBackup;
 
         // Validate backup format
@@ -291,11 +271,12 @@ export const ExportImport: React.FC<ExportImportProps> = ({
           setImportedBackup(parsed);
           setIsImportAllPreviewOpen(true);
         } else {
-          console.error("Invalid backup format");
+          toast.error(t("settingsManager.exportImport.invalidBackupFormat", "Invalid backup format"));
         }
       }
     } catch (error) {
       console.error("Import all failed:", error);
+      toast.error(t("settingsManager.exportImport.importFailed", "Import failed"));
     } finally {
       setIsImportingAll(false);
     }
@@ -308,17 +289,17 @@ export const ExportImport: React.FC<ExportImportProps> = ({
     try {
       // Apply each scope
       if (importedBackup.scopes.user) {
-        await invoke("save_settings", {
+        await api("save_settings", {
           scope: "user",
           content: JSON.stringify(importedBackup.scopes.user, null, 2),
         });
       }
       if (importedBackup.scopes.project) {
         if (!projectPath) {
-          console.error("Cannot apply project scope: projectPath is undefined");
+          toast.error(t("settingsManager.exportImport.applyFailed", "Apply failed: project path required"));
           return;
         }
-        await invoke("save_settings", {
+        await api("save_settings", {
           scope: "project",
           content: JSON.stringify(importedBackup.scopes.project, null, 2),
           projectPath,
@@ -326,10 +307,10 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       }
       if (importedBackup.scopes.local) {
         if (!projectPath) {
-          console.error("Cannot apply local scope: projectPath is undefined");
+          toast.error(t("settingsManager.exportImport.applyFailed", "Apply failed: project path required"));
           return;
         }
-        await invoke("save_settings", {
+        await api("save_settings", {
           scope: "local",
           content: JSON.stringify(importedBackup.scopes.local, null, 2),
           projectPath,
@@ -341,6 +322,7 @@ export const ExportImport: React.FC<ExportImportProps> = ({
       setImportedBackup(null);
     } catch (error) {
       console.error("Apply import all failed:", error);
+      toast.error(t("settingsManager.exportImport.applyFailed", "Failed to apply settings"));
     }
   };
 

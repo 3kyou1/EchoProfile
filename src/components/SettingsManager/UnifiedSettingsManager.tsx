@@ -10,7 +10,7 @@
 
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
+import { api } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading";
 import { RefreshCw, FolderTree } from "lucide-react";
@@ -130,7 +130,7 @@ export const UnifiedSettingsManager: React.FC<UnifiedSettingsManagerProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      const settingsResult = await invoke<AllSettingsResponse>("get_all_settings", { projectPath });
+      const settingsResult = await api<AllSettingsResponse>("get_all_settings", { projectPath });
       setAllSettings(settingsResult);
     } catch (err) {
       setError(String(err));
@@ -163,7 +163,7 @@ export const UnifiedSettingsManager: React.FC<UnifiedSettingsManagerProps> = ({
         throw new Error("Project path is required for non-user scope settings");
       }
       try {
-        await invoke("save_settings", {
+        await api("save_settings", {
           scope,
           content: JSON.stringify(newSettings, null, 2),
           projectPath: scope !== "user" ? effectiveProjectPath : undefined,
@@ -253,7 +253,7 @@ export const UnifiedSettingsManager: React.FC<UnifiedSettingsManagerProps> = ({
     <SettingsManagerContext.Provider value={contextValue}>
       <div className={`flex flex-col ${className || ""}`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 shrink-0">
           <h2 className="text-xl font-semibold">{t("settingsManager.title")}</h2>
           <div className="flex items-center gap-2">
             <Button
@@ -263,11 +263,11 @@ export const UnifiedSettingsManager: React.FC<UnifiedSettingsManagerProps> = ({
               className={activePanel === "diagnostics" ? "shadow-sm ring-1 ring-ring/20" : ""}
             >
               <FolderTree className="h-4 w-4 mr-2" />
-              {t("settingsManager.diagnostics.button")}
+              <span className="hidden sm:inline">{t("settingsManager.diagnostics.button")}</span>
             </Button>
             <Button variant="ghost" size="sm" onClick={loadSettings}>
               <RefreshCw className="h-4 w-4 mr-2" />
-              {t("common.refresh")}
+              <span className="hidden sm:inline">{t("common.refresh")}</span>
             </Button>
           </div>
         </div>
@@ -286,7 +286,7 @@ export const UnifiedSettingsManager: React.FC<UnifiedSettingsManagerProps> = ({
             error={error}
           />
         ) : (
-          <div className="flex gap-4 flex-1 min-h-0">
+          <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0">
             {/* Left Sidebar */}
             <SettingsSidebar availableScopes={availableScopes} />
 

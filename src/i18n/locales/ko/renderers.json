@@ -37,6 +37,7 @@
   "bashCodeExecutionToolResultRenderer.title": "Bash 실행",
   "captureMode.active": "캡처 모드",
   "captureMode.done": "완료",
+  "captureMode.exit": "나가기",
   "captureMode.enter": "캡처 모드",
   "captureMode.hiddenCount": "{{count}}개 숨김",
   "captureMode.hideBlock": "이 블록 숨기기",

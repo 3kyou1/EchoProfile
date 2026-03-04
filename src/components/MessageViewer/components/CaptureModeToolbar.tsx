@@ -143,7 +143,7 @@ export function CaptureModeToolbar({
         <button
           onClick={exitCaptureMode}
           className={cn(
-            "flex items-center gap-2 px-3 py-1.5",
+            "flex items-center gap-1.5 px-3 py-1.5",
             "text-xs font-medium",
             "bg-zinc-800 hover:bg-zinc-700",
             "text-zinc-300 hover:text-zinc-100",
@@ -151,8 +151,8 @@ export function CaptureModeToolbar({
             "rounded transition-all duration-150"
           )}
         >
-          <span>{t("captureMode.done")}</span>
           <X className="w-3.5 h-3.5" />
+          <span>{t("captureMode.exit")}</span>
         </button>
       </div>
     </div>

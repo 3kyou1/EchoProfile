@@ -37,6 +37,7 @@
   "bashCodeExecutionToolResultRenderer.title": "Bash執行",
   "captureMode.active": "截圖模式",
   "captureMode.done": "完成",
+  "captureMode.exit": "退出",
   "captureMode.enter": "截圖模式",
   "captureMode.hiddenCount": "已隱藏 {{count}} 個",
   "captureMode.hideBlock": "隱藏此區塊",

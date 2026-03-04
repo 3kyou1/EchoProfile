@@ -289,6 +289,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   const hasSelection = selectedMessageIds.length > 0;
 
   const waitForCaptureAssets = useCallback(async (root: HTMLElement) => {
+    const CAPTURE_ASSET_TIMEOUT_MS = 3000;
     const images = Array.from(root.querySelectorAll("img"));
 
     const imagePromises = images.map((img) => new Promise<void>((resolve) => {
@@ -310,12 +311,15 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         img.removeEventListener("load", done);
         img.removeEventListener("error", done);
         resolve();
-      }, 3000);
+      }, CAPTURE_ASSET_TIMEOUT_MS);
     }));
 
     const fontsPromise =
       "fonts" in document
-        ? (document.fonts?.ready ?? Promise.resolve())
+        ? Promise.race([
+            document.fonts?.ready ?? Promise.resolve(),
+            new Promise<void>((resolve) => setTimeout(resolve, CAPTURE_ASSET_TIMEOUT_MS)),
+          ])
         : Promise.resolve();
 
     await Promise.all([...imagePromises, fontsPromise]);

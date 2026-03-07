@@ -689,6 +689,9 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                 case "settings":
                   analyticsActions.switchToSettings();
                   break;
+                case "archive":
+                  analyticsActions.switchToArchive();
+                  break;
               }
             }}
             hasProject={!!selectedProject}

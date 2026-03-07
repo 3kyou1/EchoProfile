@@ -11,11 +11,11 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/services/api";
-import { useAppStore } from "@/store/useAppStore";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading";
 import { RefreshCw, FolderTree, Archive, ChevronRight } from "lucide-react";
 import { useMCPServers } from "@/hooks/useMCPServers";
+import { useAnalyticsNavigation } from "@/hooks/analytics/useAnalyticsNavigation";
 import type {
   AllSettingsResponse,
   SettingsScope,
@@ -95,6 +95,7 @@ export const UnifiedSettingsManager: React.FC<UnifiedSettingsManagerProps> = ({
   className,
 }) => {
   const { t } = useTranslation();
+  const { switchToArchive } = useAnalyticsNavigation();
 
   // Settings state
   const [allSettings, setAllSettings] = React.useState<AllSettingsResponse | null>(null);
@@ -250,19 +251,13 @@ export const UnifiedSettingsManager: React.FC<UnifiedSettingsManagerProps> = ({
     };
   }, [allSettings]);
 
-  const handleSwitchToArchive = () => {
-    const store = useAppStore.getState();
-    store.setAnalyticsCurrentView("archive");
-    store.loadArchives();
-  };
-
   return (
     <SettingsManagerContext.Provider value={contextValue}>
       <div className={`flex flex-col ${className || ""}`}>
         {/* Archive Manager Link (mobile access point) */}
         <button
           type="button"
-          onClick={handleSwitchToArchive}
+          onClick={switchToArchive}
           className="flex items-center gap-3 p-3 mb-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors text-left w-full md:hidden"
         >
           <div className="w-8 h-8 rounded-md bg-accent/10 flex items-center justify-center shrink-0">

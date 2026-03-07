@@ -421,6 +421,9 @@ export function useAnalyticsNavigation() {
         break;
       case "messages":
         break;
+      case "archive":
+        await useAppStore.getState().loadArchives();
+        break;
       default:
         console.warn("Unknown analytics view:", analytics.currentView);
     }

@@ -35,6 +35,18 @@ import { isTauri } from '@/utils/platform';
 import { ArchiveCreateDialog } from './ArchiveCreateDialog';
 import type { ArchiveEntry, ArchiveSessionInfo } from '@/types';
 
+const joinArchivePath = (...parts: string[]) =>
+  parts
+    .map((part, index) => {
+      const normalized = part.replace(/\\/g, '/');
+      if (index === 0) {
+        return normalized.replace(/\/+$/g, '');
+      }
+      return normalized.replace(/^\/+|\/+$/g, '');
+    })
+    .filter(Boolean)
+    .join('/');
+
 export const ArchiveBrowser: React.FC = () => {
   const { t } = useTranslation();
   const {
@@ -169,7 +181,7 @@ export const ArchiveBrowser: React.FC = () => {
   const handleExportSession = useCallback(
     (archiveId: string, session: ArchiveSessionInfo) => {
       if (!archiveBasePath) return;
-      const filePath = `${archiveBasePath}/${archiveId}/sessions/${session.fileName}`;
+      const filePath = joinArchivePath(archiveBasePath, archiveId, 'sessions', session.fileName);
       const downloadName = `${session.summary || session.sessionId}.json`;
       handleExportFile(filePath, downloadName, session.sessionId);
     },
@@ -179,7 +191,13 @@ export const ArchiveBrowser: React.FC = () => {
   const handleExportSubagent = useCallback(
     (archiveId: string, sessionId: string, subagentFileName: string) => {
       if (!archiveBasePath) return;
-      const filePath = `${archiveBasePath}/${archiveId}/subagents/${sessionId}/${subagentFileName}`;
+      const filePath = joinArchivePath(
+        archiveBasePath,
+        archiveId,
+        'subagents',
+        sessionId,
+        subagentFileName
+      );
       const stem = subagentFileName.replace(/\.jsonl$/, '');
       const downloadName = `${stem}.json`;
       handleExportFile(filePath, downloadName, `${sessionId}/${subagentFileName}`);

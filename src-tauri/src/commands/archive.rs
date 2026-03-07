@@ -15,14 +15,13 @@ use std::time::SystemTime;
 use uuid::Uuid;
 
 lazy_static! {
-    /// Regex for validating archive ID.
-    /// Supports both legacy UUID format and new name-based format:
-    /// - Legacy: `3f8a1b2c-1234-5678-9abc-def012345678`
-    /// - New: `project-backup_3f8a1b2c` (sanitized name + underscore + 8-char hex)
-    ///
-    /// Must not contain path separators, `..`, or null bytes.
+    /// Regex used only to detect legacy UUID-based archive IDs during migration.
     static ref ARCHIVE_ID_REGEX: Regex =
         Regex::new(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$").unwrap();
+    /// Allowed characters for archive IDs used as directory names.
+    /// Supports Unicode letters/numbers plus `_` and `-`.
+    static ref ARCHIVE_ID_SAFE_CHARS_REGEX: Regex =
+        Regex::new(r"^[\p{L}\p{N}_-]+$").unwrap();
 }
 
 // ---------------------------------------------------------------------------
@@ -167,16 +166,31 @@ fn validate_archive_id(id: &str) -> Result<(), String> {
     if id.is_empty() {
         return Err("Archive ID must not be empty".to_string());
     }
+    if id.len() > 120 {
+        return Err(format!(
+            "Invalid archive ID '{id}': exceeds maximum length of 120 characters"
+        ));
+    }
+    if id.trim() != id {
+        return Err(format!(
+            "Invalid archive ID '{id}': must not have leading or trailing whitespace"
+        ));
+    }
     // Reject path traversal and separators
     if id.contains('/') || id.contains('\\') || id.contains("..") || id.contains('\0') {
         return Err(format!(
             "Invalid archive ID '{id}': contains forbidden characters"
         ));
     }
-    // Must not start or end with whitespace/dots
+    // Must not start or end with dots (Windows-sensitive)
     if id.starts_with('.') || id.ends_with('.') {
         return Err(format!(
             "Invalid archive ID '{id}': must not start or end with a dot"
+        ));
+    }
+    if !ARCHIVE_ID_SAFE_CHARS_REGEX.is_match(id) {
+        return Err(format!(
+            "Invalid archive ID '{id}': only letters, numbers, underscores, and hyphens are allowed"
         ));
     }
     Ok(())
@@ -536,7 +550,17 @@ pub async fn list_archives() -> Result<ArchiveManifest, String> {
                         if let Ok(mut val) = serde_json::from_str::<serde_json::Value>(&content) {
                             val["archiveId"] = serde_json::Value::String(new_id.clone());
                             if let Ok(updated) = serde_json::to_string_pretty(&val) {
-                                let _ = fs::write(&per_manifest, updated);
+                                let tmp = per_manifest
+                                    .with_extension(format!("json.{}.tmp", Uuid::new_v4()));
+                                if let Ok(mut f) = fs::File::create(&tmp) {
+                                    if f.write_all(updated.as_bytes()).is_ok()
+                                        && f.sync_all().is_ok()
+                                    {
+                                        let _ = super::fs_utils::atomic_rename(&tmp, &per_manifest);
+                                    } else {
+                                        let _ = fs::remove_file(&tmp);
+                                    }
+                                }
                             }
                         }
                     }
@@ -1399,21 +1423,25 @@ mod tests {
 
     #[test]
     fn test_validate_archive_id_uppercase_accepted() {
-        // New format accepts Unicode and mixed case
+        // Name-based IDs may contain mixed case
         assert!(validate_archive_id("UPPERCASE-UUID").is_ok());
     }
 
     #[test]
-    fn test_validate_archive_id_special_chars() {
-        // Exclamation marks and spaces are allowed in name-based IDs
-        assert!(validate_archive_id("abc!def").is_ok());
-        // Path separators are rejected
+    fn test_validate_archive_id_invalid_chars() {
+        assert!(validate_archive_id("abc!def").is_err());
+        assert!(validate_archive_id("abc def").is_err());
+        assert!(validate_archive_id("abc:def").is_err());
+        assert!(validate_archive_id("abc*def").is_err());
+        assert!(validate_archive_id("abc.def").is_err());
         assert!(validate_archive_id("abc/def").is_err());
-        // Spaces are allowed (sanitize_for_dirname handles conversion)
-        assert!(validate_archive_id("abc def").is_ok());
-        // Path traversal rejected
         assert!(validate_archive_id("abc..def").is_err());
         assert!(validate_archive_id("abc\0def").is_err());
+    }
+
+    #[test]
+    fn test_validate_archive_id_unicode_allowed() {
+        assert!(validate_archive_id("프로젝트-백업_3f8a1b2c").is_ok());
     }
 
     #[test]

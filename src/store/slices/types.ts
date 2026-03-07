@@ -340,7 +340,7 @@ export interface AppStoreActions {
     includeSubagents?: boolean;
   }) => Promise<import('../../types').ArchiveEntry>;
   deleteArchive: (id: string) => Promise<void>;
-  renameArchive: (id: string, name: string) => Promise<void>;
+  renameArchive: (id: string, name: string) => Promise<string>;
   loadArchiveSessions: (id: string) => Promise<void>;
   loadDiskUsage: () => Promise<void>;
   loadExpiringSessions: (projectPath: string, thresholdDays?: number) => Promise<void>;

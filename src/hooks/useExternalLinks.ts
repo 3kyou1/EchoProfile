@@ -27,9 +27,6 @@ export function useExternalLinks(): void {
       const anchor = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
       if (!anchor) return;
 
-      const target = (anchor.getAttribute("target") ?? "").toLowerCase();
-      if (target && target !== "_self") return;
-
       const href = anchor.getAttribute("href");
       if (!href || !isExternalUrl(href)) return;
 

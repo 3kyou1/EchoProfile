@@ -129,11 +129,19 @@ export function setAuthToken(token: string): void {
  * In WebUI/browser mode, falls back to `window.open`.
  */
 export async function openExternalUrl(url: string): Promise<void> {
+  const normalized = url.trim();
+  if (!/^https?:\/\//i.test(normalized) && !/^mailto:/i.test(normalized)) {
+    throw new Error(`Unsupported URL scheme: ${normalized}`);
+  }
+
   if (isTauri()) {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
-    await openUrl(url);
+    await openUrl(normalized);
   } else {
-    window.open(url, "_blank", "noopener,noreferrer");
+    const opened = window.open(normalized, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      throw new Error("Popup blocked or failed to open");
+    }
   }
 }
 

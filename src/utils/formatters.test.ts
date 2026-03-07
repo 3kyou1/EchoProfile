@@ -12,7 +12,12 @@ describe("formatBytes", () => {
 
   it("clamps units for very large values", () => {
     const formatted = formatBytes(1024 ** 6);
-    expect(formatted).toContain("TB");
-    expect(formatted).not.toContain("undefined");
+    expect(formatted).toMatch(/^-?\d+(?:\.\d+)? TB$/);
+    expect(formatted).not.toContain("NaN");
+    expect(formatted).not.toContain("Infinity");
+  });
+
+  it("returns 0 B for positive sub-byte values", () => {
+    expect(formatBytes(0.5)).toBe("0 B");
   });
 });

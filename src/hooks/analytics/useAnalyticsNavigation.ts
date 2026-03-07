@@ -47,8 +47,11 @@ export function useAnalyticsNavigation() {
   const switchToArchive = useCallback(() => {
     setAnalyticsCurrentView("archive");
     clearAnalyticsErrors();
-    // Load archives list when switching to archive view
-    useAppStore.getState().loadArchives();
+    // Load archives list when switching to archive view.
+    const store = useAppStore.getState();
+    if (!store.archive.isLoadingArchives) {
+      void store.loadArchives();
+    }
   }, [setAnalyticsCurrentView, clearAnalyticsErrors]);
 
   const switchToTokenStats = useCallback(async () => {
@@ -422,7 +425,9 @@ export function useAnalyticsNavigation() {
       case "messages":
         break;
       case "archive":
-        await useAppStore.getState().loadArchives();
+        if (!useAppStore.getState().archive.isLoadingArchives) {
+          await useAppStore.getState().loadArchives();
+        }
         break;
       default:
         console.warn("Unknown analytics view:", analytics.currentView);

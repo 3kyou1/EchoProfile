@@ -19,9 +19,9 @@ lazy_static! {
     static ref ARCHIVE_ID_REGEX: Regex =
         Regex::new(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$").unwrap();
     /// Allowed characters for archive IDs used as directory names.
-    /// Supports Unicode letters/numbers plus `_` and `-`.
+    /// Supports ASCII letters/numbers plus `_` and `-`.
     static ref ARCHIVE_ID_SAFE_CHARS_REGEX: Regex =
-        Regex::new(r"^[\p{L}\p{N}_-]+$").unwrap();
+        Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
 }
 
 // ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ fn validate_archive_id(id: &str) -> Result<(), String> {
 ///
 /// - Trims whitespace
 /// - Replaces whitespace with hyphens
-/// - Removes characters unsafe for file systems: `/`, `\`, `..`, `<`, `>`, `:`, `"`, `|`, `?`, `*`, null
+/// - Replaces non-ASCII-safe characters with hyphens
 /// - Collapses consecutive hyphens
 /// - Truncates to 50 characters
 fn sanitize_for_dirname(name: &str) -> String {
@@ -210,7 +210,8 @@ fn sanitize_for_dirname(name: &str) -> String {
         .map(|c| match c {
             '/' | '\\' | '<' | '>' | ':' | '"' | '|' | '?' | '*' | '\0' => '-',
             c if c.is_whitespace() => '-',
-            c => c,
+            c if c.is_ascii_alphanumeric() || c == '_' || c == '-' => c,
+            _ => '-',
         })
         .collect();
 
@@ -274,6 +275,54 @@ fn save_manifest(manifest: &ArchiveManifest) -> Result<(), String> {
 
     super::fs_utils::atomic_rename(&tmp_path, &path)?;
     Ok(())
+}
+
+/// Atomically writes string content to a file.
+fn atomic_write_string(path: &Path, content: &str) -> Result<(), String> {
+    let tmp_path = path.with_extension(format!("json.{}.tmp", Uuid::new_v4()));
+    let mut file = fs::File::create(&tmp_path)
+        .map_err(|e| format!("Failed to create temp file '{}': {e}", tmp_path.display()))?;
+    file.write_all(content.as_bytes())
+        .map_err(|e| format!("Failed to write temp file '{}': {e}", tmp_path.display()))?;
+    file.sync_all()
+        .map_err(|e| format!("Failed to sync temp file '{}': {e}", tmp_path.display()))?;
+    drop(file);
+    super::fs_utils::atomic_rename(&tmp_path, path)?;
+    Ok(())
+}
+
+/// Updates archive metadata in a per-archive manifest.json file.
+fn update_per_archive_manifest(
+    per_manifest_path: &Path,
+    archive_id: &str,
+    archive_name: Option<&str>,
+) -> Result<(), String> {
+    if !per_manifest_path.exists() {
+        return Ok(());
+    }
+    let content = fs::read_to_string(per_manifest_path).map_err(|e| {
+        format!(
+            "Failed to read per-archive manifest '{}': {e}",
+            per_manifest_path.display()
+        )
+    })?;
+    let mut val: serde_json::Value = serde_json::from_str(&content).map_err(|e| {
+        format!(
+            "Failed to parse per-archive manifest '{}': {e}",
+            per_manifest_path.display()
+        )
+    })?;
+    val["archiveId"] = serde_json::Value::String(archive_id.to_string());
+    if let Some(name) = archive_name {
+        val["name"] = serde_json::Value::String(name.to_string());
+    }
+    let updated = serde_json::to_string_pretty(&val).map_err(|e| {
+        format!(
+            "Failed to serialize per-archive manifest '{}': {e}",
+            per_manifest_path.display()
+        )
+    })?;
+    atomic_write_string(per_manifest_path, &updated)
 }
 
 /// Counts the number of non-sidechain messages in a JSONL file.
@@ -519,6 +568,7 @@ pub async fn list_archives() -> Result<ArchiveManifest, String> {
     tauri::async_runtime::spawn_blocking(|| {
         let mut manifest = load_manifest()?;
         let mut changed = false;
+        let mut migrated_pairs: Vec<(String, String)> = Vec::new();
 
         for entry in &mut manifest.archives {
             // Detect legacy UUID-based IDs
@@ -533,46 +583,49 @@ pub async fn list_archives() -> Result<ArchiveManifest, String> {
             } else {
                 format!("{sanitized}_{short_uuid}")
             };
+            if validate_archive_id(&new_id).is_err() {
+                continue;
+            }
+            let old_id = entry.id.clone();
 
             // Rename the directory
             let archives_dir = match get_archives_dir() {
                 Ok(d) => d,
                 Err(_) => continue,
             };
-            let old_dir = archives_dir.join(&entry.id);
+            let old_dir = archives_dir.join(&old_id);
             let new_dir = archives_dir.join(&new_id);
 
             if old_dir.exists() && !new_dir.exists() && fs::rename(&old_dir, &new_dir).is_ok() {
                 // Update per-archive manifest.json if it exists
                 let per_manifest = new_dir.join("manifest.json");
-                if per_manifest.exists() {
-                    if let Ok(content) = fs::read_to_string(&per_manifest) {
-                        if let Ok(mut val) = serde_json::from_str::<serde_json::Value>(&content) {
-                            val["archiveId"] = serde_json::Value::String(new_id.clone());
-                            if let Ok(updated) = serde_json::to_string_pretty(&val) {
-                                let tmp = per_manifest
-                                    .with_extension(format!("json.{}.tmp", Uuid::new_v4()));
-                                if let Ok(mut f) = fs::File::create(&tmp) {
-                                    if f.write_all(updated.as_bytes()).is_ok()
-                                        && f.sync_all().is_ok()
-                                    {
-                                        let _ = super::fs_utils::atomic_rename(&tmp, &per_manifest);
-                                    } else {
-                                        let _ = fs::remove_file(&tmp);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                let _ = update_per_archive_manifest(&per_manifest, &new_id, None);
 
                 entry.id.clone_from(&new_id);
+                migrated_pairs.push((old_id, new_id));
                 changed = true;
             }
         }
 
         if changed {
-            save_manifest(&manifest)?;
+            if let Err(e) = save_manifest(&manifest) {
+                // Best-effort rollback of migrated directories when global manifest save fails.
+                let archives_dir = get_archives_dir()?;
+                for (old_id, new_id) in migrated_pairs.iter().rev() {
+                    let old_dir = archives_dir.join(old_id);
+                    let new_dir = archives_dir.join(new_id);
+                    if new_dir.exists()
+                        && !old_dir.exists()
+                        && fs::rename(&new_dir, &old_dir).is_ok()
+                    {
+                        let per_manifest = old_dir.join("manifest.json");
+                        let _ = update_per_archive_manifest(&per_manifest, old_id, None);
+                    }
+                }
+                return Err(format!(
+                    "Failed to save migrated archive manifest (rollback attempted): {e}"
+                ));
+            }
         }
 
         Ok(manifest)
@@ -611,11 +664,14 @@ pub async fn create_archive(
         let uuid = Uuid::new_v4().to_string();
         let short_uuid = &uuid[..8];
         let sanitized_name = sanitize_for_dirname(&name);
-        let archive_id = if sanitized_name.is_empty() {
+        let mut archive_id = if sanitized_name.is_empty() {
             uuid.clone()
         } else {
             format!("{sanitized_name}_{short_uuid}")
         };
+        if validate_archive_id(&archive_id).is_err() {
+            archive_id.clone_from(&uuid);
+        }
         let archive_dir = get_archives_dir()?.join(&archive_id);
         let sessions_dir = archive_dir.join("sessions");
         let subagents_dir = archive_dir.join("subagents");
@@ -849,10 +905,10 @@ pub async fn rename_archive(archive_id: String, new_name: String) -> Result<Stri
         }
 
         let mut manifest = load_manifest()?;
-        let entry = manifest
+        let entry_index = manifest
             .archives
-            .iter_mut()
-            .find(|a| a.id == archive_id)
+            .iter()
+            .position(|a| a.id == archive_id)
             .ok_or_else(|| format!("Archive not found: {archive_id}"))?;
 
         // Generate new directory name from the new name
@@ -869,9 +925,7 @@ pub async fn rename_archive(archive_id: String, new_name: String) -> Result<Stri
         } else {
             format!("{sanitized}_{short_uuid}")
         };
-
-        entry.name.clone_from(&new_name);
-        entry.id.clone_from(&new_id);
+        validate_archive_id(&new_id)?;
 
         // Rename the directory if the ID changed
         let archives_dir = get_archives_dir()?;
@@ -889,29 +943,42 @@ pub async fn rename_archive(archive_id: String, new_name: String) -> Result<Stri
                 .map_err(|e| format!("Failed to rename archive directory: {e}"))?;
         }
 
+        let target_dir = if archive_id == new_id {
+            &old_dir
+        } else {
+            &new_dir
+        };
+
         // Update the per-archive manifest.json if it exists
-        let per_manifest_path = new_dir.join("manifest.json");
-        if per_manifest_path.exists() {
-            let content = fs::read_to_string(&per_manifest_path)
-                .map_err(|e| format!("Failed to read per-archive manifest: {e}"))?;
-            let mut val: serde_json::Value = serde_json::from_str(&content)
-                .map_err(|e| format!("Failed to parse per-archive manifest: {e}"))?;
-            val["name"] = serde_json::Value::String(new_name);
-            val["archiveId"] = serde_json::Value::String(new_id.clone());
-            let updated = serde_json::to_string_pretty(&val)
-                .map_err(|e| format!("Failed to serialize per-archive manifest: {e}"))?;
-            let tmp = per_manifest_path.with_extension(format!("json.{}.tmp", Uuid::new_v4()));
-            let mut f = fs::File::create(&tmp)
-                .map_err(|e| format!("Failed to create temp manifest file: {e}"))?;
-            f.write_all(updated.as_bytes())
-                .map_err(|e| format!("Failed to write temp manifest file: {e}"))?;
-            f.sync_all()
-                .map_err(|e| format!("Failed to sync temp manifest file: {e}"))?;
-            drop(f);
-            super::fs_utils::atomic_rename(&tmp, &per_manifest_path)?;
+        let per_manifest_path = target_dir.join("manifest.json");
+        let previous_per_manifest = if per_manifest_path.exists() {
+            Some(
+                fs::read_to_string(&per_manifest_path)
+                    .map_err(|e| format!("Failed to read per-archive manifest: {e}"))?,
+            )
+        } else {
+            None
+        };
+        if let Err(e) = update_per_archive_manifest(&per_manifest_path, &new_id, Some(&new_name)) {
+            if archive_id != new_id && new_dir.exists() && !old_dir.exists() {
+                let _ = fs::rename(&new_dir, &old_dir);
+            }
+            return Err(e);
         }
 
-        save_manifest(&manifest)?;
+        manifest.archives[entry_index].name.clone_from(&new_name);
+        manifest.archives[entry_index].id.clone_from(&new_id);
+
+        if let Err(e) = save_manifest(&manifest) {
+            if let Some(prev) = previous_per_manifest.as_deref() {
+                let _ = atomic_write_string(&per_manifest_path, prev);
+            }
+            if archive_id != new_id && new_dir.exists() && !old_dir.exists() {
+                let _ = fs::rename(&new_dir, &old_dir);
+            }
+            return Err(format!("Failed to save archive manifest after rename: {e}"));
+        }
+
         Ok(new_id)
     })
     .await
@@ -1020,25 +1087,39 @@ pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessi
                 let mut total_sa_size: u64 = 0;
 
                 if sa_dir.exists() {
-                    if let Ok(rd) = fs::read_dir(&sa_dir) {
-                        for sa_entry in rd.flatten() {
-                            let sa_path = sa_entry.path();
-                            if sa_path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
-                                continue;
+                    if let Ok(dir_meta) = fs::symlink_metadata(&sa_dir) {
+                        if !dir_meta.file_type().is_symlink() {
+                            if let Ok(rd) = fs::read_dir(&sa_dir) {
+                                for sa_entry in rd.flatten() {
+                                    let sa_path = sa_entry.path();
+                                    let Ok(sa_meta) = fs::symlink_metadata(&sa_path) else {
+                                        continue;
+                                    };
+                                    if sa_meta.file_type().is_symlink() {
+                                        continue;
+                                    }
+                                    if !sa_meta.is_file() {
+                                        continue;
+                                    }
+                                    if sa_path.extension().and_then(|e| e.to_str()) != Some("jsonl")
+                                    {
+                                        continue;
+                                    }
+                                    let sa_file_name = sa_path
+                                        .file_name()
+                                        .and_then(|n| n.to_str())
+                                        .unwrap_or("")
+                                        .to_string();
+                                    let sa_size = sa_meta.len();
+                                    let sa_msg_count = count_messages(&sa_path);
+                                    total_sa_size += sa_size;
+                                    sa_list.push(SubagentFileInfo {
+                                        file_name: sa_file_name,
+                                        size_bytes: sa_size,
+                                        message_count: sa_msg_count,
+                                    });
+                                }
                             }
-                            let sa_file_name = sa_path
-                                .file_name()
-                                .and_then(|n| n.to_str())
-                                .unwrap_or("")
-                                .to_string();
-                            let sa_size = sa_path.metadata().map(|m| m.len()).unwrap_or(0);
-                            let sa_msg_count = count_messages(&sa_path);
-                            total_sa_size += sa_size;
-                            sa_list.push(SubagentFileInfo {
-                                file_name: sa_file_name,
-                                size_bytes: sa_size,
-                                message_count: sa_msg_count,
-                            });
                         }
                     }
                 }
@@ -1440,8 +1521,8 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_archive_id_unicode_allowed() {
-        assert!(validate_archive_id("프로젝트-백업_3f8a1b2c").is_ok());
+    fn test_validate_archive_id_unicode_rejected() {
+        assert!(validate_archive_id("프로젝트-백업_3f8a1b2c").is_err());
     }
 
     #[test]
@@ -1450,10 +1531,8 @@ mod tests {
         assert_eq!(sanitize_for_dirname("  spaces  "), "spaces");
         assert_eq!(sanitize_for_dirname("a/b\\c"), "a-b-c");
         assert_eq!(sanitize_for_dirname("a--b"), "a-b");
-        assert_eq!(
-            sanitize_for_dirname("프로젝트 백업 2026년 3월"),
-            "프로젝트-백업-2026년-3월"
-        );
+        assert_eq!(sanitize_for_dirname("v1.2 release!"), "v1-2-release");
+        assert_eq!(sanitize_for_dirname("프로젝트 백업 2026년 3월"), "2026-3");
         assert_eq!(sanitize_for_dirname("...dots..."), "dots");
         assert_eq!(sanitize_for_dirname(""), "");
     }

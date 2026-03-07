@@ -78,7 +78,10 @@ export const ArchiveBrowser: React.FC = () => {
 
   useEffect(() => {
     loadArchives();
-    archiveApi.getBasePath().then(setArchiveBasePath).catch(() => {});
+    archiveApi
+      .getBasePath()
+      .then(setArchiveBasePath)
+      .catch((error) => console.error('Failed to load archive base path:', error));
   }, [loadArchives]);
 
   const handleOpenInFileManager = useCallback(async () => {
@@ -126,11 +129,9 @@ export const ArchiveBrowser: React.FC = () => {
   const handleRename = async () => {
     if (!targetArchive || !renameName.trim()) return;
     try {
-      await renameArchive(targetArchive.id, renameName.trim());
-      // Archive ID changes after rename (name-based format).
-      // Collapse the expanded archive to avoid stale ID reference.
+      const newId = await renameArchive(targetArchive.id, renameName.trim());
       if (expandedArchiveId === targetArchive.id) {
-        setExpandedArchiveId(null);
+        setExpandedArchiveId(newId);
       }
       toast.success(t('archive.browse.rename.success', { name: renameName.trim() }));
       setIsRenameOpen(false);
@@ -180,17 +181,23 @@ export const ArchiveBrowser: React.FC = () => {
 
   const handleExportSession = useCallback(
     (archiveId: string, session: ArchiveSessionInfo) => {
-      if (!archiveBasePath) return;
+      if (!archiveBasePath) {
+        toast.error(t('archive.error.exportFailed'));
+        return;
+      }
       const filePath = joinArchivePath(archiveBasePath, archiveId, 'sessions', session.fileName);
       const downloadName = `${session.summary || session.sessionId}.json`;
       handleExportFile(filePath, downloadName, session.sessionId);
     },
-    [archiveBasePath, handleExportFile]
+    [archiveBasePath, handleExportFile, t]
   );
 
   const handleExportSubagent = useCallback(
     (archiveId: string, sessionId: string, subagentFileName: string) => {
-      if (!archiveBasePath) return;
+      if (!archiveBasePath) {
+        toast.error(t('archive.error.exportFailed'));
+        return;
+      }
       const filePath = joinArchivePath(
         archiveBasePath,
         archiveId,
@@ -202,7 +209,7 @@ export const ArchiveBrowser: React.FC = () => {
       const downloadName = `${stem}.json`;
       handleExportFile(filePath, downloadName, `${sessionId}/${subagentFileName}`);
     },
-    [archiveBasePath, handleExportFile]
+    [archiveBasePath, handleExportFile, t]
   );
 
   const archives = archive.manifest?.archives ?? [];

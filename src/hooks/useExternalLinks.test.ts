@@ -87,18 +87,18 @@ describe("useExternalLinks", () => {
     unmount();
   });
 
-  it("does not intercept links with non-self target", () => {
+  it("intercepts links with _blank target", () => {
     const { unmount } = renderHook(() => useExternalLinks());
     const anchor = document.createElement("a");
     anchor.href = "https://example.com";
     anchor.setAttribute("target", "_blank");
-    anchor.addEventListener("click", (event) => event.preventDefault());
     document.body.appendChild(anchor);
 
     const event = new MouseEvent("click", { bubbles: true, cancelable: true });
     anchor.dispatchEvent(event);
 
-    expect(openExternalUrl).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
+    expect(openExternalUrl).toHaveBeenCalledWith("https://example.com");
     unmount();
   });
 

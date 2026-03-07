@@ -3,6 +3,7 @@ import {
   clearAuthToken,
   getAuthToken,
   initAuthToken,
+  openExternalUrl,
   recoverAuthFromErrorQuery,
   setAuthToken,
 } from "./platform";
@@ -60,5 +61,21 @@ describe("platform auth token helpers", () => {
     expect(promptSpy).toHaveBeenCalled();
     expect(getAuthToken()).toBeNull();
     expect(new URL(window.location.href).searchParams.get("auth_error")).toBe("1");
+  });
+});
+
+describe("openExternalUrl", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    delete (window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+  });
+
+  it("rejects unsupported URL schemes", async () => {
+    await expect(openExternalUrl("javascript:alert(1)")).rejects.toThrow("Unsupported URL scheme");
+  });
+
+  it("rejects when popup is blocked in web mode", async () => {
+    vi.spyOn(window, "open").mockReturnValueOnce(null);
+    await expect(openExternalUrl("https://example.com")).rejects.toThrow("Popup blocked or failed to open");
   });
 });

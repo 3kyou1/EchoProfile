@@ -111,7 +111,7 @@
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.88 0.01 240);
   --input: oklch(0.92 0.005 240);
-  --ring: oklch(0.50 0.15 250);
+  --ring: oklch(0.60 0.05 250);
 
   /* === Semantic Status Colors === */
   --success: oklch(0.45 0.12 145);
@@ -232,7 +232,7 @@
   --destructive-foreground: oklch(0.12 0 0);
   --border: oklch(0.25 0.015 260);
   --input: oklch(0.22 0.015 260);
-  --ring: oklch(0.72 0.14 250);
+  --ring: oklch(0.50 0.05 250);
 
   /* === Semantic Status Colors (Dark) === */
   --success: oklch(0.78 0.16 145);
@@ -524,7 +524,7 @@
 
   /* Focus styles */
   :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply outline-none;
   }
 
   /* Cursor */

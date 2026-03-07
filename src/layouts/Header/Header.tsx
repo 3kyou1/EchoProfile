@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   Columns,
   Search,
+  Archive,
 } from "lucide-react";
 
 import { TooltipButton } from "@/shared/TooltipButton";
@@ -250,6 +251,25 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
               </TooltipButton>
             </>
           )}
+
+          {/* Archive Manager */}
+          <NavButton
+            icon={Archive}
+            label={
+              isClaudeProject
+                ? t("archive.title")
+                : `${t("archive.title")} (Claude only)`
+            }
+            isActive={computed.isArchiveView}
+            disabled={!isClaudeProject}
+            onClick={() => {
+              if (computed.isArchiveView) {
+                analyticsActions.switchToMessages();
+              } else {
+                analyticsActions.switchToArchive();
+              }
+            }}
+          />
 
           {/* Settings Manager */}
           <NavButton

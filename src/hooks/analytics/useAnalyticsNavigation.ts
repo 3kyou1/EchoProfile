@@ -44,6 +44,13 @@ export function useAnalyticsNavigation() {
     clearAnalyticsErrors();
   }, [setAnalyticsCurrentView, clearAnalyticsErrors]);
 
+  const switchToArchive = useCallback(() => {
+    setAnalyticsCurrentView("archive");
+    clearAnalyticsErrors();
+    // Load archives list when switching to archive view
+    useAppStore.getState().loadArchives();
+  }, [setAnalyticsCurrentView, clearAnalyticsErrors]);
+
   const switchToTokenStats = useCallback(async () => {
     const project = useAppStore.getState().selectedProject;
     if (!project) {
@@ -443,6 +450,7 @@ export function useAnalyticsNavigation() {
     switchToRecentEdits,
     switchToSettings,
     switchToBoard,
+    switchToArchive,
     setStatsMode,
     setMetricMode,
     refreshAnalytics,

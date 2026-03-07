@@ -27,7 +27,9 @@ export function useExternalLinks(): void {
       if (!href || !isExternalUrl(href)) return;
 
       e.preventDefault();
-      openExternalUrl(href);
+      openExternalUrl(href).catch((err) => {
+        console.error("[useExternalLinks] Failed to open URL:", err);
+      });
     }
 
     document.addEventListener("click", handleClick);

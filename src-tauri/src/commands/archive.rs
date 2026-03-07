@@ -244,6 +244,34 @@ fn get_archive_dir(archive_id: &str) -> Result<PathBuf, String> {
     Ok(get_archives_dir()?.join(archive_id))
 }
 
+/// Ensures a directory exists and is not a symlink.
+fn ensure_real_directory(path: &Path, label: &str) -> Result<bool, String> {
+    match fs::symlink_metadata(path) {
+        Ok(meta) if meta.file_type().is_symlink() => {
+            Err(format!("{label} must not be a symlink: {}", path.display()))
+        }
+        Ok(meta) if meta.is_dir() => Ok(true),
+        Ok(_) => Err(format!("{label} is not a directory: {}", path.display())),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(format!("Failed to inspect {label}: {e}")),
+    }
+}
+
+/// Ensures a file exists and is not a symlink.
+fn ensure_real_file(path: &Path, label: &str) -> Result<(), String> {
+    match fs::symlink_metadata(path) {
+        Ok(meta) if meta.file_type().is_symlink() => {
+            Err(format!("{label} must not be a symlink: {}", path.display()))
+        }
+        Ok(meta) if meta.is_file() => Ok(()),
+        Ok(_) => Err(format!("{label} is not a file: {}", path.display())),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            Err(format!("{label} not found: {}", path.display()))
+        }
+        Err(e) => Err(format!("Failed to inspect {label}: {e}")),
+    }
+}
+
 /// Loads the global archive manifest from disk (returns default if missing).
 fn load_manifest() -> Result<ArchiveManifest, String> {
     let path = get_manifest_path()?;
@@ -736,6 +764,16 @@ pub async fn create_archive(
                     format!("Failed to copy session file '{session_path_str}': {e}")
                 })?;
 
+                let dest_file_name = dest
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or(file_name)
+                    .to_string();
+                let dest_stem = dest
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("session")
+                    .to_string();
                 let file_size = dest.metadata().map(|m| m.len()).unwrap_or(0);
                 total_size += file_size;
                 session_count += 1;
@@ -747,42 +785,53 @@ pub async fn create_archive(
                 if include_subagents {
                     let subagent_files = find_subagent_files(session_path);
                     if !subagent_files.is_empty() {
-                        let stem = session_path
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("unknown");
-                        let dest_subagent_dir = subagents_dir.join(stem);
+                        let dest_subagent_dir = subagents_dir.join(&dest_stem);
                         fs::create_dir_all(&dest_subagent_dir)
                             .map_err(|e| format!("Failed to create subagents directory: {e}"))?;
 
                         for subagent_file in &subagent_files {
+                            let subagent_meta =
+                                fs::symlink_metadata(subagent_file).map_err(|e| {
+                                    format!(
+                                        "Failed to inspect subagent file '{}': {e}",
+                                        subagent_file.display()
+                                    )
+                                })?;
+                            if !subagent_meta.is_file() {
+                                return Err(format!(
+                                    "Subagent path is not a file: {}",
+                                    subagent_file.display()
+                                ));
+                            }
+
                             let sa_name = subagent_file
                                 .file_name()
                                 .and_then(|n| n.to_str())
                                 .unwrap_or("agent.jsonl");
                             let sa_dest = dest_subagent_dir.join(sa_name);
-                            if fs::copy(subagent_file, &sa_dest).is_ok() {
-                                subagent_size += sa_dest.metadata().map(|m| m.len()).unwrap_or(0);
-                                subagent_count += 1;
-                            }
+                            fs::copy(subagent_file, &sa_dest).map_err(|e| {
+                                format!(
+                                    "Failed to copy subagent file '{}': {e}",
+                                    subagent_file.display()
+                                )
+                            })?;
+                            let copied_meta = sa_dest.metadata().map_err(|e| {
+                                format!(
+                                    "Failed to read copied subagent file '{}': {e}",
+                                    sa_dest.display()
+                                )
+                            })?;
+                            subagent_size += copied_meta.len();
+                            subagent_count += 1;
                         }
                         total_size += subagent_size;
                     }
                 }
 
                 // Extract per-session metadata for the archive manifest
-                let stem = session_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("");
                 let (msg_count, first_ts, last_ts, summary) = extract_session_metadata(&dest);
-
-                let dest_file_name = dest
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or(file_name);
                 per_session_info.push(serde_json::json!({
-                    "sessionId": stem,
+                    "sessionId": dest_stem,
                     "fileName": dest_file_name,
                     "originalFilePath": session_path_str,
                     "messageCount": msg_count,
@@ -994,15 +1043,15 @@ pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessi
     tauri::async_runtime::spawn_blocking(move || {
         validate_archive_id(&archive_id)?;
 
-        let archive_dir = get_archives_dir()?.join(&archive_id);
-        if !archive_dir.exists() {
+        let archive_dir = get_archive_dir(&archive_id)?;
+        if !ensure_real_directory(&archive_dir, "Archive directory")? {
             return Err(format!("Archive not found: {archive_id}"));
         }
 
         let sessions_dir = archive_dir.join("sessions");
         let subagents_dir = archive_dir.join("subagents");
 
-        if !sessions_dir.exists() {
+        if !ensure_real_directory(&sessions_dir, "Archive sessions directory")? {
             return Ok(Vec::new());
         }
 
@@ -1039,6 +1088,12 @@ pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessi
 
         for entry in rd.flatten() {
             let path = entry.path();
+            let Ok(path_meta) = fs::symlink_metadata(&path) else {
+                continue;
+            };
+            if path_meta.file_type().is_symlink() || !path_meta.is_file() {
+                continue;
+            }
             if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
                 continue;
             }
@@ -1053,7 +1108,7 @@ pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessi
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_string();
-            let size_bytes = path.metadata().map(|m| m.len()).unwrap_or(0);
+            let size_bytes = path_meta.len();
 
             // Prefer cached metadata from manifest, fall back to live parsing
             let (message_count, first_message_time, last_message_time, summary) =
@@ -1200,20 +1255,20 @@ pub async fn load_archive_session_messages(
         ));
     }
 
-    let session_path = {
-        let archives_dir = get_archives_dir()?;
-        archives_dir
-            .join(&archive_id)
-            .join("sessions")
-            .join(&session_file_name)
-    };
-
-    if !session_path.exists() {
+    let archive_dir = get_archive_dir(&archive_id)?;
+    if !ensure_real_directory(&archive_dir, "Archive directory")? {
+        return Err(format!("Archive not found: {archive_id}"));
+    }
+    let sessions_dir = archive_dir.join("sessions");
+    if !ensure_real_directory(&sessions_dir, "Archive sessions directory")? {
         return Err(format!(
-            "Session file not found in archive: {}",
-            session_path.display()
+            "Archive sessions directory not found: {}",
+            sessions_dir.display()
         ));
     }
+
+    let session_path = sessions_dir.join(&session_file_name);
+    ensure_real_file(&session_path, "Archive session file")?;
 
     let path_str = session_path.to_string_lossy().to_string();
 
@@ -1475,6 +1530,8 @@ pub async fn export_session(
 mod tests {
     use super::*;
     use std::env;
+    #[cfg(unix)]
+    use std::os::unix::fs as unix_fs;
     use tempfile::TempDir;
 
     /// Sets up an isolated HOME directory for testing.
@@ -1840,6 +1897,162 @@ mod tests {
         assert_eq!(sessions[0].file_name, "sess_abc.jsonl");
         assert_eq!(sessions[0].first_message_time, "2026-02-01T08:00:00Z");
         assert_eq!(sessions[0].summary, Some("A good talk".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_create_archive_uses_destination_stem_for_duplicate_file_names() {
+        let _temp = setup_test_env();
+
+        let dir_a = tempfile::tempdir().unwrap();
+        let session_a = dir_a.path().join("duplicate.jsonl");
+        fs::write(&session_a, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"a"}}"#).unwrap();
+        let subagent_a_dir = dir_a.path().join("subagents").join("duplicate");
+        fs::create_dir_all(&subagent_a_dir).unwrap();
+        fs::write(
+            subagent_a_dir.join("alpha.jsonl"),
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:01:00Z","message":{"role":"assistant","content":"alpha"}}"#,
+        )
+        .unwrap();
+
+        let dir_b = tempfile::tempdir().unwrap();
+        let session_b = dir_b.path().join("duplicate.jsonl");
+        fs::write(&session_b, r#"{"type":"user","timestamp":"2026-01-02T00:00:00Z","message":{"role":"user","content":"b"}}"#).unwrap();
+        let subagent_b_dir = dir_b.path().join("subagents").join("duplicate");
+        fs::create_dir_all(&subagent_b_dir).unwrap();
+        fs::write(
+            subagent_b_dir.join("beta.jsonl"),
+            r#"{"type":"assistant","timestamp":"2026-01-02T00:01:00Z","message":{"role":"assistant","content":"beta"}}"#,
+        )
+        .unwrap();
+
+        let entry = create_archive(
+            "Duplicate Names".to_string(),
+            None,
+            vec![
+                session_a.to_string_lossy().to_string(),
+                session_b.to_string_lossy().to_string(),
+            ],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            true,
+        )
+        .await
+        .unwrap();
+
+        let mut sessions = get_archive_sessions(entry.id).await.unwrap();
+        sessions.sort_by(|a, b| a.file_name.cmp(&b.file_name));
+
+        assert_eq!(sessions.len(), 2);
+        assert_eq!(sessions[0].file_name, "duplicate.jsonl");
+        assert_eq!(sessions[0].session_id, "duplicate");
+        assert_eq!(sessions[0].subagents.len(), 1);
+        assert_eq!(sessions[0].subagents[0].file_name, "alpha.jsonl");
+
+        assert_eq!(sessions[1].file_name, "duplicate_1.jsonl");
+        assert_eq!(sessions[1].session_id, "duplicate_1");
+        assert_eq!(sessions[1].subagents.len(), 1);
+        assert_eq!(sessions[1].subagents[0].file_name, "beta.jsonl");
+    }
+
+    #[tokio::test]
+    async fn test_create_archive_fails_when_subagent_copy_fails() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("with_subagent.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"hello"}}"#).unwrap();
+
+        let invalid_subagent = session_dir
+            .path()
+            .join("subagents")
+            .join("with_subagent")
+            .join("broken.jsonl");
+        fs::create_dir_all(&invalid_subagent).unwrap();
+
+        let result = create_archive(
+            "Broken Archive".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            true,
+        )
+        .await;
+
+        let err = result.unwrap_err();
+        assert!(err.contains("Subagent path is not a file"));
+
+        let manifest = list_archives().await.unwrap();
+        assert!(manifest.archives.is_empty());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_get_archive_sessions_skips_symlinked_session_files() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("primary.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"safe"}}"#).unwrap();
+
+        let entry = create_archive(
+            "Symlink Guard".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let outside_dir = tempfile::tempdir().unwrap();
+        let outside_file = outside_dir.path().join("linked.jsonl");
+        fs::write(&outside_file, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"outside"}}"#).unwrap();
+
+        let archive_sessions_dir = get_archives_dir().unwrap().join(&entry.id).join("sessions");
+        unix_fs::symlink(&outside_file, archive_sessions_dir.join("linked.jsonl")).unwrap();
+
+        let sessions = get_archive_sessions(entry.id).await.unwrap();
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].file_name, "primary.jsonl");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_load_archive_session_messages_rejects_symlinked_session_file() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("primary.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"safe"}}"#).unwrap();
+
+        let entry = create_archive(
+            "Symlink Load Guard".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let outside_dir = tempfile::tempdir().unwrap();
+        let outside_file = outside_dir.path().join("linked.jsonl");
+        fs::write(&outside_file, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"outside"}}"#).unwrap();
+
+        let archive_sessions_dir = get_archives_dir().unwrap().join(&entry.id).join("sessions");
+        unix_fs::symlink(&outside_file, archive_sessions_dir.join("linked.jsonl")).unwrap();
+
+        let err = load_archive_session_messages(entry.id, "linked.jsonl".to_string())
+            .await
+            .unwrap_err();
+        assert!(err.contains("must not be a symlink"));
     }
 
     #[tokio::test]

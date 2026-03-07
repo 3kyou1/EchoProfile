@@ -46,6 +46,7 @@ export const getApiBase = (): string => {
 // ---------------------------------------------------------------------------
 
 const AUTH_TOKEN_KEY = "webui-auth-token";
+export const EXTERNAL_OPEN_HELPER_ATTRIBUTE = "data-external-open-helper";
 
 /**
  * Initialise the auth token from the URL query string.
@@ -126,7 +127,7 @@ export function setAuthToken(token: string): void {
  * Open a URL in the system default browser.
  *
  * In Tauri mode, uses `@tauri-apps/plugin-opener` to open links externally.
- * In WebUI/browser mode, falls back to `window.open`.
+ * In WebUI/browser mode, falls back to a secure anchor click.
  */
 export async function openExternalUrl(url: string): Promise<void> {
   const normalized = url.trim();
@@ -138,9 +139,23 @@ export async function openExternalUrl(url: string): Promise<void> {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
     await openUrl(normalized);
   } else {
-    const opened = window.open(normalized, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      throw new Error("Popup blocked or failed to open");
+    const root = document.body ?? document.documentElement;
+    if (!root) {
+      throw new Error("Document root unavailable");
+    }
+
+    const link = document.createElement("a");
+    link.href = normalized;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.style.display = "none";
+    link.setAttribute(EXTERNAL_OPEN_HELPER_ATTRIBUTE, "true");
+
+    root.appendChild(link);
+    try {
+      link.click();
+    } finally {
+      root.removeChild(link);
     }
   }
 }

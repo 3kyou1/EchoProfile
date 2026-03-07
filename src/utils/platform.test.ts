@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  EXTERNAL_OPEN_HELPER_ATTRIBUTE,
   clearAuthToken,
   getAuthToken,
   initAuthToken,
@@ -74,8 +75,22 @@ describe("openExternalUrl", () => {
     await expect(openExternalUrl("javascript:alert(1)")).rejects.toThrow("Unsupported URL scheme");
   });
 
-  it("rejects when popup is blocked in web mode", async () => {
-    vi.spyOn(window, "open").mockReturnValueOnce(null);
-    await expect(openExternalUrl("https://example.com")).rejects.toThrow("Popup blocked or failed to open");
+  it("opens web URLs through a helper anchor in web mode", async () => {
+    const openSpy = vi.spyOn(window, "open");
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+
+    await expect(openExternalUrl("https://example.com")).resolves.toBeUndefined();
+
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    const helperLink = clickSpy.mock.instances[0] as HTMLAnchorElement;
+    expect(helperLink.getAttribute("href")).toBe("https://example.com");
+    expect(helperLink.target).toBe("_blank");
+    expect(helperLink.rel).toBe("noopener noreferrer");
+    expect(helperLink.getAttribute(EXTERNAL_OPEN_HELPER_ATTRIBUTE)).toBe("true");
+    expect(document.querySelector(`[${EXTERNAL_OPEN_HELPER_ATTRIBUTE}]`)).toBeNull();
   });
 });

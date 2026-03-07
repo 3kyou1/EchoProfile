@@ -5,6 +5,7 @@ import { openExternalUrl } from "@/utils/platform";
 import { toast } from "sonner";
 
 vi.mock("@/utils/platform", () => ({
+  EXTERNAL_OPEN_HELPER_ATTRIBUTE: "data-external-open-helper",
   openExternalUrl: vi.fn(),
 }));
 
@@ -114,6 +115,21 @@ describe("useExternalLinks", () => {
     await Promise.resolve();
 
     expect(toast.error).toHaveBeenCalledWith("Failed to open link.");
+    unmount();
+  });
+
+  it("ignores helper anchors created by the browser fallback", () => {
+    const { unmount } = renderHook(() => useExternalLinks());
+    const anchor = document.createElement("a");
+    anchor.href = "https://example.com";
+    anchor.setAttribute("data-external-open-helper", "true");
+    anchor.addEventListener("click", (event) => event.preventDefault());
+    document.body.appendChild(anchor);
+
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    anchor.dispatchEvent(event);
+
+    expect(openExternalUrl).not.toHaveBeenCalled();
     unmount();
   });
 });

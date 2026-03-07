@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { openExternalUrl } from "@/utils/platform";
+import {
+  EXTERNAL_OPEN_HELPER_ATTRIBUTE,
+  openExternalUrl,
+} from "@/utils/platform";
 
 /**
  * Returns true when the URL points outside the current app.
@@ -26,6 +29,7 @@ export function useExternalLinks(): void {
 
       const anchor = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
       if (!anchor) return;
+      if (anchor.hasAttribute(EXTERNAL_OPEN_HELPER_ATTRIBUTE)) return;
 
       const href = anchor.getAttribute("href");
       if (!href || !isExternalUrl(href)) return;

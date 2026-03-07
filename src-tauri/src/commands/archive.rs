@@ -1,0 +1,1852 @@
+//! Tauri commands for managing session archives
+//!
+//! This module provides commands for creating, listing, and managing
+//! archived sessions stored in ~/.claude-history-viewer/archives/
+
+use crate::models::ClaudeSession;
+use chrono::Utc;
+use lazy_static::lazy_static;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::io::{BufRead, BufReader, Write};
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
+use uuid::Uuid;
+
+lazy_static! {
+    /// Regex for validating archive ID (strict UUID format: lowercase hex and hyphens)
+    static ref ARCHIVE_ID_REGEX: Regex =
+        Regex::new(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$").unwrap();
+}
+
+// ---------------------------------------------------------------------------
+// Data structures
+// ---------------------------------------------------------------------------
+
+/// Global archive list stored in archive-manifest.json
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveManifest {
+    pub version: u32,
+    pub archives: Vec<ArchiveEntry>,
+}
+
+impl Default for ArchiveManifest {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            archives: Vec::new(),
+        }
+    }
+}
+
+/// A single archive entry in the global manifest
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveEntry {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: String,
+    pub source_provider: String,
+    pub source_project_path: String,
+    pub source_project_name: String,
+    pub session_count: u32,
+    pub total_size_bytes: u64,
+    pub include_subagents: bool,
+}
+
+/// Metadata for a single session file within an archive
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveSessionInfo {
+    pub session_id: String,
+    pub file_name: String,
+    pub original_file_path: String,
+    pub message_count: usize,
+    pub first_message_time: String,
+    pub last_message_time: String,
+    pub summary: Option<String>,
+    pub size_bytes: u64,
+    pub subagent_count: u32,
+    pub subagent_size_bytes: u64,
+}
+
+/// Disk usage summary for all archives
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveDiskUsage {
+    pub total_bytes: u64,
+    pub archive_count: usize,
+    pub session_count: usize,
+    pub per_archive: Vec<ArchiveDiskEntry>,
+}
+
+/// Per-archive disk usage entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveDiskEntry {
+    pub archive_id: String,
+    pub archive_name: String,
+    pub size_bytes: u64,
+    pub session_count: u32,
+}
+
+/// A session that is about to expire (within `threshold_days`)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExpiringSession {
+    pub session: ClaudeSession,
+    pub days_remaining: i64,
+    pub file_size_bytes: u64,
+    pub subagent_count: u32,
+}
+
+/// Result of exporting a session
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportResult {
+    pub content: String,
+    pub format: String,
+    pub session_id: String,
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/// Returns the archives base directory path: `~/.claude-history-viewer/archives/`
+fn get_archives_dir() -> Result<PathBuf, String> {
+    let home = dirs::home_dir().ok_or("Could not find home directory")?;
+    Ok(home.join(".claude-history-viewer").join("archives"))
+}
+
+/// Ensures the archives base directory exists.
+fn ensure_archives_dir() -> Result<PathBuf, String> {
+    let dir = get_archives_dir()?;
+    if dir.exists() {
+        if !dir.is_dir() {
+            return Err(format!(
+                "Archives path exists but is not a directory: {}",
+                dir.display()
+            ));
+        }
+    } else {
+        fs::create_dir_all(&dir)
+            .map_err(|e| format!("Failed to create archives directory: {e}"))?;
+    }
+    Ok(dir)
+}
+
+/// Path to the global archive manifest file.
+fn get_manifest_path() -> Result<PathBuf, String> {
+    Ok(get_archives_dir()?.join("archive-manifest.json"))
+}
+
+/// Validates an archive ID against the allowed pattern `^[a-f0-9-]+$`.
+fn validate_archive_id(id: &str) -> Result<(), String> {
+    if id.is_empty() {
+        return Err("Archive ID must not be empty".to_string());
+    }
+    if !ARCHIVE_ID_REGEX.is_match(id) {
+        return Err(format!(
+            "Invalid archive ID '{id}': only lowercase hex characters and hyphens are allowed"
+        ));
+    }
+    Ok(())
+}
+
+/// Returns the directory path for an individual archive.
+fn get_archive_dir(archive_id: &str) -> Result<PathBuf, String> {
+    validate_archive_id(archive_id)?;
+    Ok(get_archives_dir()?.join(archive_id))
+}
+
+/// Loads the global archive manifest from disk (returns default if missing).
+fn load_manifest() -> Result<ArchiveManifest, String> {
+    let path = get_manifest_path()?;
+    if !path.exists() {
+        return Ok(ArchiveManifest::default());
+    }
+    let content =
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read archive manifest: {e}"))?;
+    let manifest: ArchiveManifest = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse archive manifest: {e}"))?;
+    Ok(manifest)
+}
+
+/// Atomically writes the global archive manifest to disk.
+fn save_manifest(manifest: &ArchiveManifest) -> Result<(), String> {
+    ensure_archives_dir()?;
+    let path = get_manifest_path()?;
+    let content = serde_json::to_string_pretty(manifest)
+        .map_err(|e| format!("Failed to serialize archive manifest: {e}"))?;
+
+    let tmp_path = path.with_extension(format!("json.{}.tmp", Uuid::new_v4()));
+    let mut file = fs::File::create(&tmp_path)
+        .map_err(|e| format!("Failed to create temp manifest file: {e}"))?;
+    file.write_all(content.as_bytes())
+        .map_err(|e| format!("Failed to write temp manifest file: {e}"))?;
+    file.sync_all()
+        .map_err(|e| format!("Failed to sync temp manifest file: {e}"))?;
+    drop(file);
+
+    super::fs_utils::atomic_rename(&tmp_path, &path)?;
+    Ok(())
+}
+
+/// Counts the number of non-sidechain messages in a JSONL file.
+fn count_messages(path: &Path) -> usize {
+    let file = match fs::File::open(path) {
+        Ok(f) => f,
+        Err(_) => return 0,
+    };
+    let reader = BufReader::new(file);
+    let mut count = 0usize;
+    for line in reader.lines().map_while(Result::ok) {
+        if line.trim().is_empty() {
+            continue;
+        }
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&line) {
+            let is_sidechain = val
+                .get("isSidechain")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false);
+            if !is_sidechain {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
+/// Extracts the first and last timestamp from a JSONL file.
+/// Returns `(first, last)` as ISO 8601 strings, or empty strings if unavailable.
+#[cfg(test)]
+fn extract_timestamps(path: &Path) -> (String, String) {
+    let file = match fs::File::open(path) {
+        Ok(f) => f,
+        Err(_) => return (String::new(), String::new()),
+    };
+    let reader = BufReader::new(file);
+    let mut first: Option<String> = None;
+    let mut last: Option<String> = None;
+
+    for line in reader.lines().map_while(Result::ok) {
+        if line.trim().is_empty() {
+            continue;
+        }
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&line) {
+            if let Some(ts) = val.get("timestamp").and_then(serde_json::Value::as_str) {
+                if first.is_none() {
+                    first = Some(ts.to_string());
+                }
+                last = Some(ts.to_string());
+            }
+        }
+    }
+
+    (first.unwrap_or_default(), last.unwrap_or_default())
+}
+
+/// Extracts the summary from a JSONL file (last `type: "summary"` entry).
+#[cfg(test)]
+fn extract_summary(path: &Path) -> Option<String> {
+    let file = fs::File::open(path).ok()?;
+    let reader = BufReader::new(file);
+    let mut summary: Option<String> = None;
+    for line in reader.lines().map_while(Result::ok) {
+        if line.trim().is_empty() {
+            continue;
+        }
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&line) {
+            let msg_type = val
+                .get("type")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            if msg_type == "summary" {
+                if let Some(s) = val.get("summary").and_then(serde_json::Value::as_str) {
+                    summary = Some(s.to_string());
+                }
+            }
+        }
+    }
+    summary
+}
+
+/// Extracts message count, timestamps, and summary in a single pass through the JSONL file.
+/// Returns `(message_count, first_timestamp, last_timestamp, summary)`.
+fn extract_session_metadata(path: &Path) -> (usize, String, String, Option<String>) {
+    let file = match fs::File::open(path) {
+        Ok(f) => f,
+        Err(_) => return (0, String::new(), String::new(), None),
+    };
+    let reader = BufReader::new(file);
+    let mut count = 0usize;
+    let mut first_ts: Option<String> = None;
+    let mut last_ts: Option<String> = None;
+    let mut summary: Option<String> = None;
+
+    for line in reader.lines().map_while(Result::ok) {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let val: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        // Count non-sidechain messages
+        let is_sidechain = val
+            .get("isSidechain")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        if !is_sidechain {
+            count += 1;
+        }
+
+        // Track timestamps
+        if let Some(ts) = val.get("timestamp").and_then(serde_json::Value::as_str) {
+            if first_ts.is_none() {
+                first_ts = Some(ts.to_string());
+            }
+            last_ts = Some(ts.to_string());
+        }
+
+        // Track summary (last one wins)
+        let msg_type = val
+            .get("type")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("");
+        if msg_type == "summary" {
+            if let Some(s) = val.get("summary").and_then(serde_json::Value::as_str) {
+                summary = Some(s.to_string());
+            }
+        }
+    }
+
+    (
+        count,
+        first_ts.unwrap_or_default(),
+        last_ts.unwrap_or_default(),
+        summary,
+    )
+}
+
+/// Computes the total byte-size of a directory tree (best effort; ignores errors).
+fn dir_size(path: &Path) -> u64 {
+    let mut total = 0u64;
+    if let Ok(rd) = fs::read_dir(path) {
+        for entry in rd.flatten() {
+            let entry_path = entry.path();
+            match fs::symlink_metadata(&entry_path) {
+                Ok(meta) if meta.file_type().is_symlink() => {}
+                Ok(meta) if meta.is_dir() => total += dir_size(&entry_path),
+                Ok(meta) => total += meta.len(),
+                Err(_) => {}
+            }
+        }
+    }
+    total
+}
+
+/// Returns the number of JSONL files in a directory (non-recursive).
+fn count_jsonl_files(dir: &Path) -> u32 {
+    if !dir.exists() || !dir.is_dir() {
+        return 0;
+    }
+    let Ok(rd) = fs::read_dir(dir) else {
+        return 0;
+    };
+    rd.flatten()
+        .filter(|e| {
+            e.path()
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| ext == "jsonl")
+                .unwrap_or(false)
+        })
+        .count() as u32
+}
+
+/// Looks for subagent JSONL files adjacent to a session file.
+///
+/// The convention is: subagents live in a directory named `subagents/` relative to
+/// the session file's parent directory, inside a subdirectory named after the
+/// session stem (without extension).
+///
+/// e.g. for `/path/to/sessions/abc123.jsonl`:
+///   subagents would be under `/path/to/subagents/abc123/`
+fn find_subagent_files(session_file_path: &Path) -> Vec<PathBuf> {
+    let parent = match session_file_path.parent() {
+        Some(p) => p,
+        None => return Vec::new(),
+    };
+    let stem = match session_file_path.file_stem().and_then(|s| s.to_str()) {
+        Some(s) => s,
+        None => return Vec::new(),
+    };
+
+    // Subagent files could be relative to the session directory's parent
+    // (i.e., sibling `subagents/` directory) or relative to the session directory itself.
+    let mut candidate_dirs = vec![parent.join("subagents").join(stem)];
+    if let Some(gp) = parent.parent() {
+        candidate_dirs.push(gp.join("subagents").join(stem));
+    }
+
+    let mut files = Vec::new();
+    for dir in &candidate_dirs {
+        if dir.exists() && dir.is_dir() {
+            if let Ok(rd) = fs::read_dir(dir) {
+                for entry in rd.flatten() {
+                    let p = entry.path();
+                    // Skip symlinks for security
+                    if let Ok(meta) = fs::symlink_metadata(&p) {
+                        if meta.file_type().is_symlink() {
+                            continue;
+                        }
+                    }
+                    if p.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                        files.push(p);
+                    }
+                }
+            }
+        }
+    }
+    files
+}
+
+/// Converts a JSONL file to a Markdown string.
+///
+/// Format:
+/// ```markdown
+/// # Session
+///
+/// ## User
+/// <content>
+///
+/// ## Assistant
+/// <content>
+///
+/// ### Tool Use: <name>
+/// ```json
+/// <input>
+/// ```
+///
+/// <details><summary>Thinking</summary>
+/// <content>
+/// </details>
+/// ```
+fn jsonl_to_markdown(path: &Path) -> Result<String, String> {
+    let file = fs::File::open(path).map_err(|e| format!("Failed to read session file: {e}"))?;
+    let reader = BufReader::new(file);
+    let mut output = String::from("# Session\n\n");
+
+    for line_result in reader.lines() {
+        let line = line_result.map_err(|e| format!("Failed to read line: {e}"))?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let val: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        let msg_type = val
+            .get("type")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("");
+
+        match msg_type {
+            "user" => {
+                let content_val = val
+                    .get("message")
+                    .and_then(|m| m.get("content"))
+                    .or_else(|| val.get("message"));
+
+                if let Some(cv) = content_val {
+                    output.push_str("## User\n\n");
+                    append_content_value(cv, &mut output);
+                    output.push('\n');
+                }
+            }
+            "assistant" => {
+                let message = val.get("message");
+                if let Some(msg) = message {
+                    if let Some(content_arr) = msg.get("content").and_then(|c| c.as_array()) {
+                        for item in content_arr {
+                            let item_type = item
+                                .get("type")
+                                .and_then(serde_json::Value::as_str)
+                                .unwrap_or("");
+                            match item_type {
+                                "text" => {
+                                    output.push_str("## Assistant\n\n");
+                                    let text = item
+                                        .get("text")
+                                        .and_then(serde_json::Value::as_str)
+                                        .unwrap_or("");
+                                    output.push_str(text);
+                                    output.push_str("\n\n");
+                                }
+                                "tool_use" => {
+                                    let name = item
+                                        .get("name")
+                                        .and_then(serde_json::Value::as_str)
+                                        .unwrap_or("unknown");
+                                    output.push_str(&format!("### Tool Use: {name}\n\n"));
+                                    if let Some(input) = item.get("input") {
+                                        let input_str =
+                                            serde_json::to_string_pretty(input).unwrap_or_default();
+                                        output.push_str("```json\n");
+                                        output.push_str(&input_str);
+                                        output.push_str("\n```\n\n");
+                                    }
+                                }
+                                "thinking" => {
+                                    let thinking = item
+                                        .get("thinking")
+                                        .and_then(serde_json::Value::as_str)
+                                        .unwrap_or("");
+                                    output.push_str("<details><summary>Thinking</summary>\n\n");
+                                    output.push_str(thinking);
+                                    output.push_str("\n\n</details>\n\n");
+                                }
+                                _ => {
+                                    // Other content types: serialize as JSON block
+                                    let raw =
+                                        serde_json::to_string_pretty(item).unwrap_or_default();
+                                    output.push_str("```json\n");
+                                    output.push_str(&raw);
+                                    output.push_str("\n```\n\n");
+                                }
+                            }
+                        }
+                    } else if let Some(content_str) =
+                        msg.get("content").and_then(serde_json::Value::as_str)
+                    {
+                        output.push_str("## Assistant\n\n");
+                        output.push_str(content_str);
+                        output.push_str("\n\n");
+                    }
+                }
+            }
+            "summary" => {
+                if let Some(s) = val.get("summary").and_then(serde_json::Value::as_str) {
+                    output.push_str("## Summary\n\n");
+                    output.push_str(s);
+                    output.push_str("\n\n");
+                }
+            }
+            _ => {
+                // system, progress, file-history-snapshot etc. — skip
+            }
+        }
+    }
+
+    Ok(output)
+}
+
+/// Appends a content value (string or array) to the output buffer.
+fn append_content_value(val: &serde_json::Value, output: &mut String) {
+    if let Some(s) = val.as_str() {
+        output.push_str(s);
+        output.push_str("\n\n");
+    } else if let Some(arr) = val.as_array() {
+        for item in arr {
+            let item_type = item
+                .get("type")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            match item_type {
+                "text" => {
+                    let text = item
+                        .get("text")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("");
+                    output.push_str(text);
+                    output.push_str("\n\n");
+                }
+                "tool_result" => {
+                    let content = item
+                        .get("content")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("");
+                    let is_error = item
+                        .get("is_error")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(false);
+                    if is_error {
+                        output.push_str("**Error:**\n\n");
+                    }
+                    output.push_str("```\n");
+                    output.push_str(content);
+                    output.push_str("\n```\n\n");
+                }
+                _ => {
+                    let raw = serde_json::to_string_pretty(item).unwrap_or_default();
+                    output.push_str("```json\n");
+                    output.push_str(&raw);
+                    output.push_str("\n```\n\n");
+                }
+            }
+        }
+    }
+}
+
+/// Converts a JSONL file to a pretty-printed JSON array string.
+fn jsonl_to_json_array(path: &Path) -> Result<String, String> {
+    let file = fs::File::open(path).map_err(|e| format!("Failed to read session file: {e}"))?;
+    let reader = BufReader::new(file);
+    let mut entries: Vec<serde_json::Value> = Vec::new();
+    for line_result in reader.lines() {
+        let line = line_result.map_err(|e| format!("Failed to read line: {e}"))?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&line) {
+            entries.push(val);
+        }
+    }
+    serde_json::to_string_pretty(&entries)
+        .map_err(|e| format!("Failed to serialize JSON array: {e}"))
+}
+
+// ---------------------------------------------------------------------------
+// Tauri commands
+// ---------------------------------------------------------------------------
+
+/// Returns the base path for archive storage: `~/.claude-history-viewer/archives/`
+#[tauri::command]
+#[allow(clippy::unused_async)]
+pub async fn get_archive_base_path() -> Result<String, String> {
+    let path = get_archives_dir()?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+/// Reads and returns the global archive manifest.
+///
+/// Returns an empty manifest (version 1, no archives) if the manifest file does not exist yet.
+#[tauri::command]
+pub async fn list_archives() -> Result<ArchiveManifest, String> {
+    tauri::async_runtime::spawn_blocking(load_manifest)
+        .await
+        .map_err(|e| format!("Task join error: {e}"))?
+}
+
+/// Creates a new archive by copying the given JSONL session files.
+///
+/// # Arguments
+/// * `name` - Human-readable name for the archive
+/// * `description` - Optional description
+/// * `session_file_paths` - Absolute paths to the JSONL session files to archive
+/// * `source_provider` - Provider identifier (e.g. "claude", "codex", "opencode")
+/// * `source_project_path` - Filesystem path of the originating project
+/// * `source_project_name` - Display name of the originating project
+/// * `include_subagents` - Whether to also copy subagent JSONL files
+#[tauri::command]
+pub async fn create_archive(
+    name: String,
+    description: Option<String>,
+    session_file_paths: Vec<String>,
+    source_provider: String,
+    source_project_path: String,
+    source_project_name: String,
+    include_subagents: bool,
+) -> Result<ArchiveEntry, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if name.trim().is_empty() {
+            return Err("Archive name is required".to_string());
+        }
+
+        ensure_archives_dir()?;
+
+        let archive_id = Uuid::new_v4().to_string();
+        let archive_dir = get_archives_dir()?.join(&archive_id);
+        let sessions_dir = archive_dir.join("sessions");
+        let subagents_dir = archive_dir.join("subagents");
+
+        fs::create_dir_all(&sessions_dir)
+            .map_err(|e| format!("Failed to create sessions directory: {e}"))?;
+
+        // Wrap inner logic so we can clean up on failure
+        let result: Result<ArchiveEntry, String> = (|| {
+            let mut total_size: u64 = 0;
+            let mut session_count: u32 = 0;
+            let mut per_session_info: Vec<serde_json::Value> = Vec::new();
+
+            for session_path_str in &session_file_paths {
+                let session_path = Path::new(session_path_str);
+
+                // Security: reject path traversal
+                if session_path
+                    .components()
+                    .any(|c| matches!(c, std::path::Component::ParentDir))
+                {
+                    return Err(format!(
+                        "Session path contains '..' components: {session_path_str}"
+                    ));
+                }
+
+                // Security: reject symlinks and verify file exists
+                match fs::symlink_metadata(session_path) {
+                    Ok(meta) if meta.file_type().is_symlink() => {
+                        return Err(format!(
+                            "Session path is a symlink (rejected for security): {session_path_str}"
+                        ));
+                    }
+                    Ok(_) => {}
+                    Err(_) => {
+                        return Err(format!("Session file not found: {session_path_str}"));
+                    }
+                }
+
+                let file_name = session_path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .ok_or_else(|| format!("Invalid session file name: {session_path_str}"))?;
+
+                let mut dest = sessions_dir.join(file_name);
+                // Handle filename collision: append numeric suffix
+                if dest.exists() {
+                    let stem = session_path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("session");
+                    let mut suffix = 1u32;
+                    loop {
+                        dest = sessions_dir.join(format!("{stem}_{suffix}.jsonl"));
+                        if !dest.exists() {
+                            break;
+                        }
+                        suffix += 1;
+                    }
+                }
+                fs::copy(session_path, &dest).map_err(|e| {
+                    format!("Failed to copy session file '{session_path_str}': {e}")
+                })?;
+
+                let file_size = dest.metadata().map(|m| m.len()).unwrap_or(0);
+                total_size += file_size;
+                session_count += 1;
+
+                // Copy subagent files if requested
+                let mut subagent_count: u32 = 0;
+                let mut subagent_size: u64 = 0;
+
+                if include_subagents {
+                    let subagent_files = find_subagent_files(session_path);
+                    if !subagent_files.is_empty() {
+                        let stem = session_path
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("unknown");
+                        let dest_subagent_dir = subagents_dir.join(stem);
+                        fs::create_dir_all(&dest_subagent_dir)
+                            .map_err(|e| format!("Failed to create subagents directory: {e}"))?;
+
+                        for subagent_file in &subagent_files {
+                            let sa_name = subagent_file
+                                .file_name()
+                                .and_then(|n| n.to_str())
+                                .unwrap_or("agent.jsonl");
+                            let sa_dest = dest_subagent_dir.join(sa_name);
+                            if fs::copy(subagent_file, &sa_dest).is_ok() {
+                                subagent_size += sa_dest.metadata().map(|m| m.len()).unwrap_or(0);
+                                subagent_count += 1;
+                            }
+                        }
+                        total_size += subagent_size;
+                    }
+                }
+
+                // Extract per-session metadata for the archive manifest
+                let stem = session_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("");
+                let (msg_count, first_ts, last_ts, summary) = extract_session_metadata(&dest);
+
+                let dest_file_name = dest
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or(file_name);
+                per_session_info.push(serde_json::json!({
+                    "sessionId": stem,
+                    "fileName": dest_file_name,
+                    "originalFilePath": session_path_str,
+                    "messageCount": msg_count,
+                    "firstMessageTime": first_ts,
+                    "lastMessageTime": last_ts,
+                    "summary": summary,
+                    "sizeBytes": file_size,
+                    "subagentCount": subagent_count,
+                    "subagentSizeBytes": subagent_size,
+                }));
+            }
+
+            // Write per-archive manifest
+            let created_at = Utc::now().to_rfc3339();
+            let archive_manifest_path = archive_dir.join("manifest.json");
+            let archive_manifest = serde_json::json!({
+                "version": 1,
+                "archiveId": archive_id,
+                "name": name,
+                "description": description,
+                "createdAt": &created_at,
+                "sourceProvider": source_provider,
+                "sourceProjectPath": source_project_path,
+                "sourceProjectName": source_project_name,
+                "includeSubagents": include_subagents,
+                "sessions": per_session_info,
+            });
+            let manifest_content = serde_json::to_string_pretty(&archive_manifest)
+                .map_err(|e| format!("Failed to serialize per-archive manifest: {e}"))?;
+
+            let tmp_path =
+                archive_manifest_path.with_extension(format!("json.{}.tmp", Uuid::new_v4()));
+            let mut f = fs::File::create(&tmp_path)
+                .map_err(|e| format!("Failed to create manifest temp file: {e}"))?;
+            f.write_all(manifest_content.as_bytes())
+                .map_err(|e| format!("Failed to write manifest temp file: {e}"))?;
+            f.sync_all()
+                .map_err(|e| format!("Failed to sync manifest temp file: {e}"))?;
+            drop(f);
+            super::fs_utils::atomic_rename(&tmp_path, &archive_manifest_path)?;
+
+            // Update global manifest
+            let entry = ArchiveEntry {
+                id: archive_id.clone(),
+                name: name.clone(),
+                description: description.clone(),
+                created_at: created_at.clone(),
+                source_provider,
+                source_project_path,
+                source_project_name,
+                session_count,
+                total_size_bytes: total_size,
+                include_subagents,
+            };
+
+            let mut global = load_manifest()?;
+            global.archives.push(entry.clone());
+            save_manifest(&global)?;
+
+            Ok(entry)
+        })(); // end inner closure
+
+        if result.is_err() {
+            let _ = fs::remove_dir_all(&archive_dir);
+        }
+
+        result
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+/// Deletes an archive directory and removes it from the global manifest.
+///
+/// # Arguments
+/// * `archive_id` - UUID of the archive to delete
+#[tauri::command]
+pub async fn delete_archive(archive_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        validate_archive_id(&archive_id)?;
+
+        // Update manifest first, then delete directory.
+        // An orphan directory is recoverable; a dangling manifest entry is not.
+        let mut manifest = load_manifest()?;
+        let initial_len = manifest.archives.len();
+        manifest.archives.retain(|a| a.id != archive_id);
+
+        if manifest.archives.len() == initial_len {
+            return Err(format!("Archive not found in manifest: {archive_id}"));
+        }
+
+        save_manifest(&manifest)?;
+
+        let archive_dir = get_archive_dir(&archive_id)?;
+        if archive_dir.exists() {
+            fs::remove_dir_all(&archive_dir)
+                .map_err(|e| format!("Failed to delete archive directory: {e}"))?;
+        }
+
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+/// Renames an archive (updates the name in the global manifest).
+///
+/// # Arguments
+/// * `archive_id` - UUID of the archive to rename
+/// * `new_name` - New human-readable name
+#[tauri::command]
+pub async fn rename_archive(archive_id: String, new_name: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        validate_archive_id(&archive_id)?;
+
+        if new_name.trim().is_empty() {
+            return Err("Archive name must not be empty".to_string());
+        }
+
+        let mut manifest = load_manifest()?;
+        let entry = manifest
+            .archives
+            .iter_mut()
+            .find(|a| a.id == archive_id)
+            .ok_or_else(|| format!("Archive not found: {archive_id}"))?;
+
+        entry.name.clone_from(&new_name);
+
+        // Also update the per-archive manifest.json if it exists
+        let archive_dir = get_archives_dir()?.join(&archive_id);
+        let per_manifest_path = archive_dir.join("manifest.json");
+        if per_manifest_path.exists() {
+            let content = fs::read_to_string(&per_manifest_path)
+                .map_err(|e| format!("Failed to read per-archive manifest: {e}"))?;
+            let mut val: serde_json::Value = serde_json::from_str(&content)
+                .map_err(|e| format!("Failed to parse per-archive manifest: {e}"))?;
+            val["name"] = serde_json::Value::String(new_name);
+            let updated = serde_json::to_string_pretty(&val)
+                .map_err(|e| format!("Failed to serialize per-archive manifest: {e}"))?;
+            let tmp = per_manifest_path.with_extension(format!("json.{}.tmp", Uuid::new_v4()));
+            let mut f = fs::File::create(&tmp)
+                .map_err(|e| format!("Failed to create temp manifest file: {e}"))?;
+            f.write_all(updated.as_bytes())
+                .map_err(|e| format!("Failed to write temp manifest file: {e}"))?;
+            f.sync_all()
+                .map_err(|e| format!("Failed to sync temp manifest file: {e}"))?;
+            drop(f);
+            super::fs_utils::atomic_rename(&tmp, &per_manifest_path)?;
+        }
+
+        save_manifest(&manifest)?;
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+/// Lists all sessions stored within a specific archive.
+///
+/// # Arguments
+/// * `archive_id` - UUID of the archive
+#[tauri::command]
+pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessionInfo>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        validate_archive_id(&archive_id)?;
+
+        let archive_dir = get_archives_dir()?.join(&archive_id);
+        if !archive_dir.exists() {
+            return Err(format!("Archive not found: {archive_id}"));
+        }
+
+        let sessions_dir = archive_dir.join("sessions");
+        let subagents_dir = archive_dir.join("subagents");
+
+        if !sessions_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        // Try to load metadata from the per-archive manifest for richer information
+        let per_manifest: Option<serde_json::Value> = {
+            let path = archive_dir.join("manifest.json");
+            fs::read_to_string(&path)
+                .ok()
+                .and_then(|c| serde_json::from_str(&c).ok())
+        };
+
+        let session_meta_map: std::collections::HashMap<String, serde_json::Value> =
+            if let Some(ref pm) = per_manifest {
+                pm.get("sessions")
+                    .and_then(serde_json::Value::as_array)
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|s| {
+                                s.get("fileName")
+                                    .and_then(serde_json::Value::as_str)
+                                    .map(|k| (k.to_string(), s.clone()))
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            } else {
+                std::collections::HashMap::new()
+            };
+
+        let mut sessions = Vec::new();
+
+        let rd = fs::read_dir(&sessions_dir)
+            .map_err(|e| format!("Failed to read sessions directory: {e}"))?;
+
+        for entry in rd.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+                continue;
+            }
+
+            let file_name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
+            let stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_string();
+            let size_bytes = path.metadata().map(|m| m.len()).unwrap_or(0);
+
+            // Prefer cached metadata from manifest, fall back to live parsing
+            let (message_count, first_message_time, last_message_time, summary) =
+                if let Some(meta) = session_meta_map.get(&file_name) {
+                    (
+                        meta.get("messageCount")
+                            .and_then(serde_json::Value::as_u64)
+                            .map(|n| n as usize)
+                            .unwrap_or_else(|| count_messages(&path)),
+                        meta.get("firstMessageTime")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("")
+                            .to_string(),
+                        meta.get("lastMessageTime")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("")
+                            .to_string(),
+                        meta.get("summary")
+                            .and_then(serde_json::Value::as_str)
+                            .map(str::to_string),
+                    )
+                } else {
+                    let (mc, first, last, sum) = extract_session_metadata(&path);
+                    (mc, first, last, sum)
+                };
+
+            // Count subagent files for this session
+            let (subagent_count, subagent_size_bytes) = {
+                let sa_dir = subagents_dir.join(&stem);
+                let count = count_jsonl_files(&sa_dir);
+                let size = dir_size(&sa_dir);
+                (count, size)
+            };
+
+            // Try to get the original file path from metadata
+            let original_file_path = if let Some(meta) = session_meta_map.get(&file_name) {
+                meta.get("originalFilePath")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("")
+                    .to_string()
+            } else {
+                String::new()
+            };
+
+            sessions.push(ArchiveSessionInfo {
+                session_id: stem,
+                file_name,
+                original_file_path,
+                message_count,
+                first_message_time,
+                last_message_time,
+                summary,
+                size_bytes,
+                subagent_count,
+                subagent_size_bytes,
+            });
+        }
+
+        // Sort by first message time descending (newest first), falling back to file name
+        sessions.sort_by(|a, b| {
+            b.first_message_time
+                .cmp(&a.first_message_time)
+                .then_with(|| b.file_name.cmp(&a.file_name))
+        });
+
+        Ok(sessions)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+/// Loads all messages from a specific session file within an archive.
+///
+/// Constructs the full path from `archive_id` and `session_file_name`, then
+/// delegates to the existing session loader.
+///
+/// # Arguments
+/// * `archive_id` - UUID of the archive
+/// * `session_file_name` - File name (e.g. `"abc123.jsonl"`) within the archive's sessions/ dir
+#[tauri::command]
+pub async fn load_archive_session_messages(
+    archive_id: String,
+    session_file_name: String,
+) -> Result<Vec<crate::models::ClaudeMessage>, String> {
+    // Validate archive ID
+    validate_archive_id(&archive_id).map_err(|e| format!("Invalid archive ID: {e}"))?;
+
+    // Validate session file name for path traversal
+    if session_file_name.contains('/')
+        || session_file_name.contains('\\')
+        || session_file_name.contains("..")
+    {
+        return Err(format!(
+            "Invalid session file name '{session_file_name}': must not contain path separators or '..'"
+        ));
+    }
+    if !Path::new(&session_file_name)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("jsonl"))
+    {
+        return Err(format!(
+            "Invalid session file name '{session_file_name}': must end with .jsonl"
+        ));
+    }
+
+    let session_path = {
+        let archives_dir = get_archives_dir()?;
+        archives_dir
+            .join(&archive_id)
+            .join("sessions")
+            .join(&session_file_name)
+    };
+
+    if !session_path.exists() {
+        return Err(format!(
+            "Session file not found in archive: {}",
+            session_path.display()
+        ));
+    }
+
+    let path_str = session_path.to_string_lossy().to_string();
+
+    // Delegate to the existing session message loader
+    crate::commands::session::load_session_messages(path_str).await
+}
+
+/// Calculates the total disk usage of all archives.
+#[tauri::command]
+pub async fn get_archive_disk_usage() -> Result<ArchiveDiskUsage, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let archives_dir = get_archives_dir()?;
+
+        if !archives_dir.exists() {
+            return Ok(ArchiveDiskUsage {
+                total_bytes: 0,
+                archive_count: 0,
+                session_count: 0,
+                per_archive: Vec::new(),
+            });
+        }
+
+        let manifest = load_manifest()?;
+        let mut total_bytes: u64 = 0;
+        let mut total_sessions: usize = 0;
+        let mut per_archive: Vec<ArchiveDiskEntry> = Vec::new();
+
+        for entry in &manifest.archives {
+            let archive_dir = archives_dir.join(&entry.id);
+            let size = dir_size(&archive_dir);
+            let session_count = entry.session_count;
+
+            total_bytes += size;
+            total_sessions += session_count as usize;
+
+            per_archive.push(ArchiveDiskEntry {
+                archive_id: entry.id.clone(),
+                archive_name: entry.name.clone(),
+                size_bytes: size,
+                session_count,
+            });
+        }
+
+        Ok(ArchiveDiskUsage {
+            total_bytes,
+            archive_count: manifest.archives.len(),
+            session_count: total_sessions,
+            per_archive,
+        })
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+/// Finds sessions within `project_path` that are close to expiring.
+///
+/// Reads `~/.claude/settings.json` to determine `cleanupPeriodDays` (default: 30).
+/// A session is "expiring" when its file modification time is within
+/// `threshold_days` days of the cleanup boundary.
+///
+/// # Arguments
+/// * `project_path` - Absolute path to the Claude project directory (containing JSONL files)
+/// * `threshold_days` - Number of days before expiry to consider "expiring"
+#[tauri::command]
+pub async fn get_expiring_sessions(
+    project_path: String,
+    threshold_days: i64,
+) -> Result<Vec<ExpiringSession>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        // Security: reject path traversal
+        let project_pb = PathBuf::from(&project_path);
+        if !project_pb.is_absolute() {
+            return Err("project_path must be absolute".to_string());
+        }
+        if project_pb
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+        {
+            return Err("project_path cannot contain '..' components".to_string());
+        }
+        if !project_pb.exists() {
+            return Err(format!("project_path does not exist: {project_path}"));
+        }
+
+        // Read cleanupPeriodDays from ~/.claude/settings.json
+        let cleanup_period_days: i64 = {
+            let home = dirs::home_dir().ok_or("Could not find home directory")?;
+            let settings_path = home.join(".claude").join("settings.json");
+            if settings_path.exists() {
+                fs::read_to_string(&settings_path)
+                    .ok()
+                    .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
+                    .and_then(|v| {
+                        v.get("cleanupPeriodDays")
+                            .and_then(serde_json::Value::as_i64)
+                    })
+                    .unwrap_or(30)
+            } else {
+                30
+            }
+        };
+
+        // Expiry boundary: files older than cleanup_period_days are expired.
+        // "expiring" means they are within threshold_days of that boundary.
+        // i.e. file mtime is older than (cleanup_period_days - threshold_days) days.
+        let expiry_cutoff_days = (cleanup_period_days - threshold_days).max(0);
+
+        let now = SystemTime::now();
+
+        let rd = fs::read_dir(&project_pb)
+            .map_err(|e| format!("Failed to read project directory: {e}"))?;
+
+        let mut expiring = Vec::new();
+
+        for entry in rd.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+                continue;
+            }
+
+            let metadata = match path.metadata() {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+            let file_size = metadata.len();
+            let mtime = match metadata.modified() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+
+            let age_secs = now.duration_since(mtime).map(|d| d.as_secs()).unwrap_or(0);
+            #[allow(clippy::cast_possible_wrap)]
+            let age_days = (age_secs / 86400) as i64;
+
+            // If the file is already past the expiry_cutoff_days, it qualifies
+            if age_days >= expiry_cutoff_days {
+                let days_remaining = (cleanup_period_days - age_days).max(0);
+
+                // Load the session info for this file
+                let file_path_str = path.to_string_lossy().to_string();
+
+                // Build a minimal ClaudeSession from file metadata + light parsing
+                let (msg_count, first_ts, last_ts, summary) = extract_session_metadata(&path);
+                let stem = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                // Extract project name from path
+                let project_name = project_pb
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+
+                let session = ClaudeSession {
+                    session_id: file_path_str.clone(),
+                    actual_session_id: stem,
+                    file_path: file_path_str,
+                    project_name,
+                    message_count: msg_count,
+                    first_message_time: first_ts,
+                    last_message_time: last_ts,
+                    last_modified: mtime
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .ok()
+                        .map(|d| {
+                            chrono::DateTime::<Utc>::from(
+                                SystemTime::UNIX_EPOCH
+                                    + std::time::Duration::from_secs(d.as_secs()),
+                            )
+                            .to_rfc3339()
+                        })
+                        .unwrap_or_default(),
+                    has_tool_use: false,
+                    has_errors: false,
+                    summary,
+                    provider: None,
+                };
+
+                let subagent_count = find_subagent_files(&path).len() as u32;
+
+                expiring.push(ExpiringSession {
+                    session,
+                    days_remaining,
+                    file_size_bytes: file_size,
+                    subagent_count,
+                });
+            }
+        }
+
+        // Sort by days_remaining ascending (most urgent first)
+        expiring.sort_by_key(|e| e.days_remaining);
+
+        Ok(expiring)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+/// Exports a session file to either Markdown or JSON format.
+///
+/// # Arguments
+/// * `session_file_path` - Absolute path to the JSONL session file
+/// * `format` - Either `"markdown"` or `"json"`
+#[tauri::command]
+pub async fn export_session(
+    session_file_path: String,
+    format: String,
+) -> Result<ExportResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(&session_file_path);
+
+        // Security checks
+        if !path.is_absolute() {
+            return Err("session_file_path must be absolute".to_string());
+        }
+        if path
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+        {
+            return Err("session_file_path cannot contain '..' components".to_string());
+        }
+        if !path.exists() {
+            return Err(format!("Session file not found: {session_file_path}"));
+        }
+
+        let session_id = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        let content = match format.as_str() {
+            "markdown" => jsonl_to_markdown(&path)?,
+            "json" => jsonl_to_json_array(&path)?,
+            other => {
+                return Err(format!(
+                    "Unsupported export format '{other}': must be 'markdown' or 'json'"
+                ))
+            }
+        };
+
+        Ok(ExportResult {
+            content,
+            format,
+            session_id,
+        })
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use tempfile::TempDir;
+
+    /// Sets up an isolated HOME directory for testing.
+    /// NOTE: Must run with `--test-threads=1` because `env::set_var` is process-global.
+    fn setup_test_env() -> TempDir {
+        let dir = TempDir::new().unwrap();
+        env::set_var("HOME", dir.path());
+        dir
+    }
+
+    #[test]
+    fn test_validate_archive_id_valid_uuid() {
+        let id = Uuid::new_v4().to_string();
+        assert!(validate_archive_id(&id).is_ok());
+    }
+
+    #[test]
+    fn test_validate_archive_id_empty() {
+        assert!(validate_archive_id("").is_err());
+    }
+
+    #[test]
+    fn test_validate_archive_id_path_traversal() {
+        assert!(validate_archive_id("../etc/passwd").is_err());
+        assert!(validate_archive_id("abc/../def").is_err());
+    }
+
+    #[test]
+    fn test_validate_archive_id_uppercase_rejected() {
+        // The regex only allows lowercase hex
+        assert!(validate_archive_id("UPPERCASE-UUID").is_err());
+    }
+
+    #[test]
+    fn test_validate_archive_id_special_chars_rejected() {
+        assert!(validate_archive_id("abc!def").is_err());
+        assert!(validate_archive_id("abc/def").is_err());
+        assert!(validate_archive_id("abc def").is_err());
+    }
+
+    #[test]
+    fn test_load_manifest_default_when_missing() {
+        let _temp = setup_test_env();
+        let manifest = load_manifest().unwrap();
+        assert_eq!(manifest.version, 1);
+        assert!(manifest.archives.is_empty());
+    }
+
+    #[test]
+    fn test_save_and_load_manifest() {
+        let _temp = setup_test_env();
+
+        let manifest = ArchiveManifest {
+            version: 1,
+            archives: vec![ArchiveEntry {
+                id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890".to_string(),
+                name: "Test Archive".to_string(),
+                description: Some("A test".to_string()),
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                source_provider: "claude".to_string(),
+                source_project_path: "/home/user/project".to_string(),
+                source_project_name: "my-project".to_string(),
+                session_count: 3,
+                total_size_bytes: 12345,
+                include_subagents: false,
+            }],
+        };
+
+        save_manifest(&manifest).unwrap();
+        let loaded = load_manifest().unwrap();
+
+        assert_eq!(loaded.archives.len(), 1);
+        assert_eq!(loaded.archives[0].name, "Test Archive");
+        assert_eq!(loaded.archives[0].session_count, 3);
+    }
+
+    #[test]
+    fn test_count_messages_empty_file() {
+        let _temp = setup_test_env();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("empty.jsonl");
+        fs::write(&path, "").unwrap();
+        assert_eq!(count_messages(&path), 0);
+    }
+
+    #[test]
+    fn test_count_messages_skips_sidechain() {
+        let _temp = setup_test_env();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("session.jsonl");
+        let content = r#"{"type":"user","isSidechain":false,"timestamp":"2026-01-01T00:00:00Z"}
+{"type":"assistant","isSidechain":true,"timestamp":"2026-01-01T00:01:00Z"}
+{"type":"assistant","isSidechain":false,"timestamp":"2026-01-01T00:02:00Z"}
+"#;
+        fs::write(&path, content).unwrap();
+        // 2 non-sidechain messages
+        assert_eq!(count_messages(&path), 2);
+    }
+
+    #[test]
+    fn test_extract_timestamps() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("session.jsonl");
+        let content = r#"{"type":"user","timestamp":"2026-01-01T10:00:00Z"}
+{"type":"assistant","timestamp":"2026-01-01T10:05:00Z"}
+{"type":"user","timestamp":"2026-01-01T10:10:00Z"}
+"#;
+        fs::write(&path, content).unwrap();
+        let (first, last) = extract_timestamps(&path);
+        assert_eq!(first, "2026-01-01T10:00:00Z");
+        assert_eq!(last, "2026-01-01T10:10:00Z");
+    }
+
+    #[test]
+    fn test_extract_summary() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("session.jsonl");
+        let content = r#"{"type":"user","timestamp":"2026-01-01T10:00:00Z"}
+{"type":"summary","summary":"A great conversation"}
+"#;
+        fs::write(&path, content).unwrap();
+        let summary = extract_summary(&path);
+        assert_eq!(summary, Some("A great conversation".to_string()));
+    }
+
+    #[test]
+    fn test_extract_summary_none() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("no_summary.jsonl");
+        let content = r#"{"type":"user","timestamp":"2026-01-01T10:00:00Z"}
+"#;
+        fs::write(&path, content).unwrap();
+        assert_eq!(extract_summary(&path), None);
+    }
+
+    #[test]
+    fn test_jsonl_to_json_array() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("session.jsonl");
+        let content = r#"{"type":"user","message":{"role":"user","content":"hello"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"world"}]}}
+"#;
+        fs::write(&path, content).unwrap();
+        let result = jsonl_to_json_array(&path).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        assert!(parsed.is_array());
+        assert_eq!(parsed.as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_jsonl_to_markdown_user_and_assistant() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("session.jsonl");
+        let content = r#"{"type":"user","message":{"role":"user","content":"hello world"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"hi there"}]}}
+"#;
+        fs::write(&path, content).unwrap();
+        let md = jsonl_to_markdown(&path).unwrap();
+        assert!(md.contains("# Session"));
+        assert!(md.contains("## User"));
+        assert!(md.contains("hello world"));
+        assert!(md.contains("## Assistant"));
+        assert!(md.contains("hi there"));
+    }
+
+    #[test]
+    fn test_jsonl_to_markdown_tool_use() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("session.jsonl");
+        let content = r#"{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","name":"Read","input":{"path":"/tmp/f.txt"}}]}}
+"#;
+        fs::write(&path, content).unwrap();
+        let md = jsonl_to_markdown(&path).unwrap();
+        assert!(md.contains("### Tool Use: Read"));
+        assert!(md.contains("```json"));
+    }
+
+    #[test]
+    fn test_jsonl_to_markdown_thinking() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("session.jsonl");
+        let content = r#"{"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"deep thoughts"}]}}
+"#;
+        fs::write(&path, content).unwrap();
+        let md = jsonl_to_markdown(&path).unwrap();
+        assert!(md.contains("<details><summary>Thinking</summary>"));
+        assert!(md.contains("deep thoughts"));
+        assert!(md.contains("</details>"));
+    }
+
+    #[tokio::test]
+    async fn test_get_archive_base_path() {
+        let _temp = setup_test_env();
+        let path = get_archive_base_path().await.unwrap();
+        assert!(path.contains(".claude-history-viewer"));
+        assert!(path.contains("archives"));
+    }
+
+    #[tokio::test]
+    async fn test_list_archives_empty() {
+        let _temp = setup_test_env();
+        let manifest = list_archives().await.unwrap();
+        assert!(manifest.archives.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_create_and_list_archive() {
+        let _temp = setup_test_env();
+
+        // Create a temporary session file
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("session123.jsonl");
+        let content = r#"{"type":"user","timestamp":"2026-01-01T10:00:00Z","message":{"role":"user","content":"hello"}}
+{"type":"assistant","timestamp":"2026-01-01T10:01:00Z","message":{"role":"assistant","content":[{"type":"text","text":"hi"}]}}
+"#;
+        fs::write(&session_path, content).unwrap();
+
+        let result = create_archive(
+            "Test Archive".to_string(),
+            Some("A test archive".to_string()),
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/home/user/project".to_string(),
+            "my-project".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.name, "Test Archive");
+        assert_eq!(result.session_count, 1);
+        assert_eq!(result.source_provider, "claude");
+
+        // Verify it appears in the list
+        let manifest = list_archives().await.unwrap();
+        assert_eq!(manifest.archives.len(), 1);
+        assert_eq!(manifest.archives[0].name, "Test Archive");
+    }
+
+    #[tokio::test]
+    async fn test_delete_archive() {
+        let _temp = setup_test_env();
+
+        // Create a session file
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("del_session.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"bye"}}"#).unwrap();
+
+        let entry = create_archive(
+            "To Delete".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let id = entry.id.clone();
+        delete_archive(id.clone()).await.unwrap();
+
+        let manifest = list_archives().await.unwrap();
+        assert!(!manifest.archives.iter().any(|a| a.id == id));
+    }
+
+    #[tokio::test]
+    async fn test_rename_archive() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("rename_session.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"hello"}}"#).unwrap();
+
+        let entry = create_archive(
+            "Old Name".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        rename_archive(entry.id.clone(), "New Name".to_string())
+            .await
+            .unwrap();
+
+        let manifest = list_archives().await.unwrap();
+        let updated = manifest.archives.iter().find(|a| a.id == entry.id).unwrap();
+        assert_eq!(updated.name, "New Name");
+    }
+
+    #[tokio::test]
+    async fn test_rename_archive_empty_name_rejected() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("ren2.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"x"}}"#).unwrap();
+
+        let entry = create_archive(
+            "Valid".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let result = rename_archive(entry.id, "   ".to_string()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_archive_sessions() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("sess_abc.jsonl");
+        let content = r#"{"type":"user","timestamp":"2026-02-01T08:00:00Z","message":{"role":"user","content":"question"}}
+{"type":"summary","summary":"A good talk"}
+"#;
+        fs::write(&session_path, content).unwrap();
+
+        let entry = create_archive(
+            "Session List Test".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/project".to_string(),
+            "test-project".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let sessions = get_archive_sessions(entry.id).await.unwrap();
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].file_name, "sess_abc.jsonl");
+        assert_eq!(sessions[0].first_message_time, "2026-02-01T08:00:00Z");
+        assert_eq!(sessions[0].summary, Some("A good talk".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_export_session_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("export.jsonl");
+        let content = r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"hi"}}
+"#;
+        fs::write(&path, content).unwrap();
+
+        let result = export_session(path.to_string_lossy().to_string(), "json".to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(result.format, "json");
+        assert_eq!(result.session_id, "export");
+        let parsed: serde_json::Value = serde_json::from_str(&result.content).unwrap();
+        assert!(parsed.is_array());
+        assert_eq!(parsed.as_array().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_export_session_markdown() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("export_md.jsonl");
+        let content = r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"hello"}}
+"#;
+        fs::write(&path, content).unwrap();
+
+        let result = export_session(path.to_string_lossy().to_string(), "markdown".to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(result.format, "markdown");
+        assert!(result.content.contains("# Session"));
+        assert!(result.content.contains("hello"));
+    }
+
+    #[tokio::test]
+    async fn test_export_session_invalid_format() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("bad_fmt.jsonl");
+        fs::write(&path, "").unwrap();
+
+        let result = export_session(path.to_string_lossy().to_string(), "pdf".to_string()).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unsupported export format"));
+    }
+
+    #[tokio::test]
+    async fn test_export_session_relative_path_rejected() {
+        let result =
+            export_session("relative/path/file.jsonl".to_string(), "json".to_string()).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("absolute"));
+    }
+
+    #[tokio::test]
+    async fn test_get_archive_disk_usage_empty() {
+        let _temp = setup_test_env();
+        let usage = get_archive_disk_usage().await.unwrap();
+        assert_eq!(usage.archive_count, 0);
+        assert_eq!(usage.total_bytes, 0);
+        assert_eq!(usage.session_count, 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_archive_disk_usage_with_archive() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("disk_usage.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"content here for size"}}"#).unwrap();
+
+        create_archive(
+            "Disk Usage Test".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let usage = get_archive_disk_usage().await.unwrap();
+        assert_eq!(usage.archive_count, 1);
+        assert!(usage.total_bytes > 0);
+        assert_eq!(usage.session_count, 1);
+        assert_eq!(usage.per_archive.len(), 1);
+    }
+
+    #[test]
+    fn test_dir_size_nonexistent() {
+        assert_eq!(dir_size(Path::new("/nonexistent/path/xyz")), 0);
+    }
+
+    #[test]
+    fn test_count_jsonl_files_empty_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(count_jsonl_files(dir.path()), 0);
+    }
+
+    #[test]
+    fn test_count_jsonl_files_mixed() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("a.jsonl"), "").unwrap();
+        fs::write(dir.path().join("b.jsonl"), "").unwrap();
+        fs::write(dir.path().join("c.json"), "").unwrap();
+        fs::write(dir.path().join("d.txt"), "").unwrap();
+        assert_eq!(count_jsonl_files(dir.path()), 2);
+    }
+
+    #[test]
+    fn test_archive_manifest_default() {
+        let m = ArchiveManifest::default();
+        assert_eq!(m.version, 1);
+        assert!(m.archives.is_empty());
+    }
+}

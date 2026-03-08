@@ -49,21 +49,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `rehypeSanitize` added to markdown rendering pipeline
 - Archive ID validation hardened against path traversal
 
-## [Unreleased]
+## [1.5.3] - 2026-02-22
 
-### Technical Refactor & Type Safety
+### Added
+- Deep linking from Token Stats view to detailed session conversation
+- Brushing UI refinement with single-select brushing and translucent pixel view
 
-- **Comprehensive Type Safety**: Fixed 24+ TypeScript errors by implementing proper type guards for the `ClaudeMessage` union type across the entire project.
-- **Architecture Cleanup**: Extracted `toolIconUtils.ts` and refactored `toolSummaries.ts` to reduce complexity and improve maintainability.
-- **Performance Optimization**: Memoized tool frequency calculations and streamlined `InteractionCard` semantics to prevent unnecessary re-renders during interactions.
-- **Internal Bug Fixes**:
-  - Resolved a React "Rule of Hooks" violation in `App.tsx`.
-  - Fixed production build failures caused by missing Aptabase environment variables.
-  - Corrected syntax errors and missing return statements in message rendering logic.
-- **Documentation**: Added `BRUSHING_SPEC.md` documenting the ongoing attribute brushing feature and architectural cleanup plan.
-- **Brushing UI Refinement**: Improved visual feedback with single-select brushing, cleaner controls, and translucent pixel view for better data exploration.
-- **Deep Linking**: Added ability to navigate from Token Stats view directly to detailed session conversation.
-- **Navigation Improvements**: Fixed infinite loading when switching sessions from the Board view by implementing optimistic store updates.
+### Changed
+- Comprehensive type safety improvements with proper type guards for `ClaudeMessage` union type
+- Extracted `toolIconUtils.ts` and refactored `toolSummaries.ts` for reduced complexity
+- Memoized tool frequency calculations to prevent unnecessary re-renders
+
+### Fixed
+- React "Rule of Hooks" violation in `App.tsx`
+- Production build failures caused by missing Aptabase environment variables
+- Infinite loading when switching sessions from Board view via optimistic store updates
 
 ## [1.5.2] - 2026-02-21
 

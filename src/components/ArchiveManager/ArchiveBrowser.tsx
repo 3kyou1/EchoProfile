@@ -56,7 +56,6 @@ export const ArchiveBrowser: React.FC = () => {
     renameArchive,
     loadArchiveSessions,
     loadDiskUsage,
-    clearArchiveError,
     exportSession,
   } = useAppStore();
 
@@ -103,10 +102,9 @@ export const ArchiveBrowser: React.FC = () => {
         return;
       }
       setExpandedArchiveId(archiveId);
-      clearArchiveError();
       await loadArchiveSessions(archiveId);
     },
-    [loadArchiveSessions, clearArchiveError]
+    [loadArchiveSessions]
   );
 
   const handleDelete = async () => {
@@ -335,7 +333,8 @@ export const ArchiveBrowser: React.FC = () => {
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
                       <p className="text-xs text-muted-foreground">{t('common.loading')}</p>
                     </div>
-                  ) : archive.error && archive.currentArchiveId === entry.id ? (
+                  ) : archive.currentArchiveSessionsError &&
+                    archive.currentArchiveId === entry.id ? (
                     <p className="text-xs text-destructive py-3 text-center">
                       {t('archive.error.loadSessionsFailed')}
                     </p>

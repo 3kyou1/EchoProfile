@@ -234,11 +234,11 @@ export const ArchiveOverview: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Error display */}
-      {archive.error && (
+      {archive.expiringError && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>{t('archive.error.loadFailed')}</AlertTitle>
-          <AlertDescription>{archive.error}</AlertDescription>
+          <AlertTitle>{t('archive.error.loadExpiringFailed')}</AlertTitle>
+          <AlertDescription>{archive.expiringError}</AlertDescription>
         </Alert>
       )}
 

@@ -44,6 +44,16 @@ export function useAnalyticsNavigation() {
     clearAnalyticsErrors();
   }, [setAnalyticsCurrentView, clearAnalyticsErrors]);
 
+  const switchToArchive = useCallback(() => {
+    setAnalyticsCurrentView("archive");
+    clearAnalyticsErrors();
+    // Load archives list when switching to archive view.
+    const store = useAppStore.getState();
+    if (!store.archive.isLoadingArchives) {
+      void store.loadArchives();
+    }
+  }, [setAnalyticsCurrentView, clearAnalyticsErrors]);
+
   const switchToTokenStats = useCallback(async () => {
     const project = useAppStore.getState().selectedProject;
     if (!project) {
@@ -414,6 +424,11 @@ export function useAnalyticsNavigation() {
         break;
       case "messages":
         break;
+      case "archive":
+        if (!useAppStore.getState().archive.isLoadingArchives) {
+          await useAppStore.getState().loadArchives();
+        }
+        break;
       default:
         console.warn("Unknown analytics view:", analytics.currentView);
     }
@@ -443,6 +458,7 @@ export function useAnalyticsNavigation() {
     switchToRecentEdits,
     switchToSettings,
     switchToBoard,
+    switchToArchive,
     setStatsMode,
     setMetricMode,
     refreshAnalytics,

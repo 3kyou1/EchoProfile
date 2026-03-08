@@ -15,9 +15,13 @@ use std::time::SystemTime;
 use uuid::Uuid;
 
 lazy_static! {
-    /// Regex for validating archive ID (strict UUID format: lowercase hex and hyphens)
+    /// Regex used only to detect legacy UUID-based archive IDs during migration.
     static ref ARCHIVE_ID_REGEX: Regex =
         Regex::new(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$").unwrap();
+    /// Allowed characters for archive IDs used as directory names.
+    /// Supports ASCII letters/numbers plus `_` and `-`.
+    static ref ARCHIVE_ID_SAFE_CHARS_REGEX: Regex =
+        Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
 }
 
 // ---------------------------------------------------------------------------
@@ -71,6 +75,16 @@ pub struct ArchiveSessionInfo {
     pub size_bytes: u64,
     pub subagent_count: u32,
     pub subagent_size_bytes: u64,
+    pub subagents: Vec<SubagentFileInfo>,
+}
+
+/// Metadata for a single subagent JSONL file
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubagentFileInfo {
+    pub file_name: String,
+    pub size_bytes: u64,
+    pub message_count: usize,
 }
 
 /// Disk usage summary for all archives
@@ -144,23 +158,118 @@ fn get_manifest_path() -> Result<PathBuf, String> {
     Ok(get_archives_dir()?.join("archive-manifest.json"))
 }
 
-/// Validates an archive ID against the allowed pattern `^[a-f0-9-]+$`.
+/// Validates an archive ID for filesystem safety.
+///
+/// Accepts both legacy UUID format (`3f8a1b2c-...`) and new name-based format
+/// (`my-project_3f8a1b2c`). Rejects path traversal, separators, and null bytes.
 fn validate_archive_id(id: &str) -> Result<(), String> {
     if id.is_empty() {
         return Err("Archive ID must not be empty".to_string());
     }
-    if !ARCHIVE_ID_REGEX.is_match(id) {
+    if id.len() > 120 {
         return Err(format!(
-            "Invalid archive ID '{id}': only lowercase hex characters and hyphens are allowed"
+            "Invalid archive ID '{id}': exceeds maximum length of 120 characters"
+        ));
+    }
+    if id.trim() != id {
+        return Err(format!(
+            "Invalid archive ID '{id}': must not have leading or trailing whitespace"
+        ));
+    }
+    // Reject path traversal and separators
+    if id.contains('/') || id.contains('\\') || id.contains("..") || id.contains('\0') {
+        return Err(format!(
+            "Invalid archive ID '{id}': contains forbidden characters"
+        ));
+    }
+    // Must not start or end with dots (Windows-sensitive)
+    if id.starts_with('.') || id.ends_with('.') {
+        return Err(format!(
+            "Invalid archive ID '{id}': must not start or end with a dot"
+        ));
+    }
+    if !ARCHIVE_ID_SAFE_CHARS_REGEX.is_match(id) {
+        return Err(format!(
+            "Invalid archive ID '{id}': only letters, numbers, underscores, and hyphens are allowed"
         ));
     }
     Ok(())
+}
+
+/// Sanitizes a human-readable name into a filesystem-safe directory name.
+///
+/// - Trims whitespace
+/// - Replaces whitespace with hyphens
+/// - Replaces non-ASCII-safe characters with hyphens
+/// - Collapses consecutive hyphens
+/// - Truncates to 50 characters
+fn sanitize_for_dirname(name: &str) -> String {
+    let sanitized: String = name
+        .trim()
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' | '<' | '>' | ':' | '"' | '|' | '?' | '*' | '\0' => '-',
+            c if c.is_whitespace() => '-',
+            c if c.is_ascii_alphanumeric() || c == '_' || c == '-' => c,
+            _ => '-',
+        })
+        .collect();
+
+    // Collapse consecutive hyphens
+    let mut result = String::new();
+    let mut prev_hyphen = false;
+    for c in sanitized.chars() {
+        if c == '-' {
+            if !prev_hyphen {
+                result.push('-');
+            }
+            prev_hyphen = true;
+        } else {
+            result.push(c);
+            prev_hyphen = false;
+        }
+    }
+
+    // Trim leading/trailing hyphens and dots, truncate
+    let result = result
+        .trim_matches(|c: char| c == '-' || c == '.')
+        .to_string();
+    let truncated: String = result.chars().take(50).collect();
+    truncated.trim_end_matches('-').to_string()
 }
 
 /// Returns the directory path for an individual archive.
 fn get_archive_dir(archive_id: &str) -> Result<PathBuf, String> {
     validate_archive_id(archive_id)?;
     Ok(get_archives_dir()?.join(archive_id))
+}
+
+/// Ensures a directory exists and is not a symlink.
+fn ensure_real_directory(path: &Path, label: &str) -> Result<bool, String> {
+    match fs::symlink_metadata(path) {
+        Ok(meta) if meta.file_type().is_symlink() => {
+            Err(format!("{label} must not be a symlink: {}", path.display()))
+        }
+        Ok(meta) if meta.is_dir() => Ok(true),
+        Ok(_) => Err(format!("{label} is not a directory: {}", path.display())),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(format!("Failed to inspect {label}: {e}")),
+    }
+}
+
+/// Ensures a file exists and is not a symlink.
+fn ensure_real_file(path: &Path, label: &str) -> Result<(), String> {
+    match fs::symlink_metadata(path) {
+        Ok(meta) if meta.file_type().is_symlink() => {
+            Err(format!("{label} must not be a symlink: {}", path.display()))
+        }
+        Ok(meta) if meta.is_file() => Ok(()),
+        Ok(_) => Err(format!("{label} is not a file: {}", path.display())),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            Err(format!("{label} not found: {}", path.display()))
+        }
+        Err(e) => Err(format!("Failed to inspect {label}: {e}")),
+    }
 }
 
 /// Loads the global archive manifest from disk (returns default if missing).
@@ -194,6 +303,54 @@ fn save_manifest(manifest: &ArchiveManifest) -> Result<(), String> {
 
     super::fs_utils::atomic_rename(&tmp_path, &path)?;
     Ok(())
+}
+
+/// Atomically writes string content to a file.
+fn atomic_write_string(path: &Path, content: &str) -> Result<(), String> {
+    let tmp_path = path.with_extension(format!("json.{}.tmp", Uuid::new_v4()));
+    let mut file = fs::File::create(&tmp_path)
+        .map_err(|e| format!("Failed to create temp file '{}': {e}", tmp_path.display()))?;
+    file.write_all(content.as_bytes())
+        .map_err(|e| format!("Failed to write temp file '{}': {e}", tmp_path.display()))?;
+    file.sync_all()
+        .map_err(|e| format!("Failed to sync temp file '{}': {e}", tmp_path.display()))?;
+    drop(file);
+    super::fs_utils::atomic_rename(&tmp_path, path)?;
+    Ok(())
+}
+
+/// Updates archive metadata in a per-archive manifest.json file.
+fn update_per_archive_manifest(
+    per_manifest_path: &Path,
+    archive_id: &str,
+    archive_name: Option<&str>,
+) -> Result<(), String> {
+    if !per_manifest_path.exists() {
+        return Ok(());
+    }
+    let content = fs::read_to_string(per_manifest_path).map_err(|e| {
+        format!(
+            "Failed to read per-archive manifest '{}': {e}",
+            per_manifest_path.display()
+        )
+    })?;
+    let mut val: serde_json::Value = serde_json::from_str(&content).map_err(|e| {
+        format!(
+            "Failed to parse per-archive manifest '{}': {e}",
+            per_manifest_path.display()
+        )
+    })?;
+    val["archiveId"] = serde_json::Value::String(archive_id.to_string());
+    if let Some(name) = archive_name {
+        val["name"] = serde_json::Value::String(name.to_string());
+    }
+    let updated = serde_json::to_string_pretty(&val).map_err(|e| {
+        format!(
+            "Failed to serialize per-archive manifest '{}': {e}",
+            per_manifest_path.display()
+        )
+    })?;
+    atomic_write_string(per_manifest_path, &updated)
 }
 
 /// Counts the number of non-sidechain messages in a JSONL file.
@@ -351,25 +508,6 @@ fn dir_size(path: &Path) -> u64 {
     total
 }
 
-/// Returns the number of JSONL files in a directory (non-recursive).
-fn count_jsonl_files(dir: &Path) -> u32 {
-    if !dir.exists() || !dir.is_dir() {
-        return 0;
-    }
-    let Ok(rd) = fs::read_dir(dir) else {
-        return 0;
-    };
-    rd.flatten()
-        .filter(|e| {
-            e.path()
-                .extension()
-                .and_then(|ext| ext.to_str())
-                .map(|ext| ext == "jsonl")
-                .unwrap_or(false)
-        })
-        .count() as u32
-}
-
 /// Looks for subagent JSONL files adjacent to a session file.
 ///
 /// The convention is: subagents live in a directory named `subagents/` relative to
@@ -397,19 +535,24 @@ fn find_subagent_files(session_file_path: &Path) -> Vec<PathBuf> {
 
     let mut files = Vec::new();
     for dir in &candidate_dirs {
-        if dir.exists() && dir.is_dir() {
-            if let Ok(rd) = fs::read_dir(dir) {
-                for entry in rd.flatten() {
-                    let p = entry.path();
-                    // Skip symlinks for security
-                    if let Ok(meta) = fs::symlink_metadata(&p) {
-                        if meta.file_type().is_symlink() {
-                            continue;
-                        }
+        let Ok(dir_meta) = fs::symlink_metadata(dir) else {
+            continue;
+        };
+        if dir_meta.file_type().is_symlink() || !dir_meta.is_dir() {
+            continue;
+        }
+
+        if let Ok(rd) = fs::read_dir(dir) {
+            for entry in rd.flatten() {
+                let p = entry.path();
+                // Skip symlinks for security
+                if let Ok(meta) = fs::symlink_metadata(&p) {
+                    if meta.file_type().is_symlink() {
+                        continue;
                     }
-                    if p.extension().and_then(|e| e.to_str()) == Some("jsonl") {
-                        files.push(p);
-                    }
+                }
+                if p.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                    files.push(p);
                 }
             }
         }
@@ -450,11 +593,78 @@ pub async fn get_archive_base_path() -> Result<String, String> {
 /// Reads and returns the global archive manifest.
 ///
 /// Returns an empty manifest (version 1, no archives) if the manifest file does not exist yet.
+///
+/// On first load, automatically migrates any legacy UUID-based archive directories
+/// to the new name-based format (e.g., `3f8a1b2c-...` → `My-Archive_3f8a1b2c`).
 #[tauri::command]
 pub async fn list_archives() -> Result<ArchiveManifest, String> {
-    tauri::async_runtime::spawn_blocking(load_manifest)
-        .await
-        .map_err(|e| format!("Task join error: {e}"))?
+    tauri::async_runtime::spawn_blocking(|| {
+        let mut manifest = load_manifest()?;
+        let mut changed = false;
+        let mut migrated_pairs: Vec<(String, String)> = Vec::new();
+
+        for entry in &mut manifest.archives {
+            // Detect legacy UUID-based IDs
+            if !ARCHIVE_ID_REGEX.is_match(&entry.id) {
+                continue;
+            }
+
+            let short_uuid = &entry.id[..8];
+            let sanitized = sanitize_for_dirname(&entry.name);
+            let new_id = if sanitized.is_empty() {
+                continue; // Can't generate name-based ID without a name
+            } else {
+                format!("{sanitized}_{short_uuid}")
+            };
+            if validate_archive_id(&new_id).is_err() {
+                continue;
+            }
+            let old_id = entry.id.clone();
+
+            // Rename the directory
+            let archives_dir = match get_archives_dir() {
+                Ok(d) => d,
+                Err(_) => continue,
+            };
+            let old_dir = archives_dir.join(&old_id);
+            let new_dir = archives_dir.join(&new_id);
+
+            if old_dir.exists() && !new_dir.exists() && fs::rename(&old_dir, &new_dir).is_ok() {
+                // Update per-archive manifest.json if it exists
+                let per_manifest = new_dir.join("manifest.json");
+                let _ = update_per_archive_manifest(&per_manifest, &new_id, None);
+
+                entry.id.clone_from(&new_id);
+                migrated_pairs.push((old_id, new_id));
+                changed = true;
+            }
+        }
+
+        if changed {
+            if let Err(e) = save_manifest(&manifest) {
+                // Best-effort rollback of migrated directories when global manifest save fails.
+                let archives_dir = get_archives_dir()?;
+                for (old_id, new_id) in migrated_pairs.iter().rev() {
+                    let old_dir = archives_dir.join(old_id);
+                    let new_dir = archives_dir.join(new_id);
+                    if new_dir.exists()
+                        && !old_dir.exists()
+                        && fs::rename(&new_dir, &old_dir).is_ok()
+                    {
+                        let per_manifest = old_dir.join("manifest.json");
+                        let _ = update_per_archive_manifest(&per_manifest, old_id, None);
+                    }
+                }
+                return Err(format!(
+                    "Failed to save migrated archive manifest (rollback attempted): {e}"
+                ));
+            }
+        }
+
+        Ok(manifest)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
 }
 
 /// Creates a new archive by copying the given JSONL session files.
@@ -484,7 +694,17 @@ pub async fn create_archive(
 
         ensure_archives_dir()?;
 
-        let archive_id = Uuid::new_v4().to_string();
+        let uuid = Uuid::new_v4().to_string();
+        let short_uuid = &uuid[..8];
+        let sanitized_name = sanitize_for_dirname(&name);
+        let mut archive_id = if sanitized_name.is_empty() {
+            uuid.clone()
+        } else {
+            format!("{sanitized_name}_{short_uuid}")
+        };
+        if validate_archive_id(&archive_id).is_err() {
+            archive_id.clone_from(&uuid);
+        }
         let archive_dir = get_archives_dir()?.join(&archive_id);
         let sessions_dir = archive_dir.join("sessions");
         let subagents_dir = archive_dir.join("subagents");
@@ -549,6 +769,16 @@ pub async fn create_archive(
                     format!("Failed to copy session file '{session_path_str}': {e}")
                 })?;
 
+                let dest_file_name = dest
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or(file_name)
+                    .to_string();
+                let dest_stem = dest
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("session")
+                    .to_string();
                 let file_size = dest.metadata().map(|m| m.len()).unwrap_or(0);
                 total_size += file_size;
                 session_count += 1;
@@ -560,42 +790,53 @@ pub async fn create_archive(
                 if include_subagents {
                     let subagent_files = find_subagent_files(session_path);
                     if !subagent_files.is_empty() {
-                        let stem = session_path
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("unknown");
-                        let dest_subagent_dir = subagents_dir.join(stem);
+                        let dest_subagent_dir = subagents_dir.join(&dest_stem);
                         fs::create_dir_all(&dest_subagent_dir)
                             .map_err(|e| format!("Failed to create subagents directory: {e}"))?;
 
                         for subagent_file in &subagent_files {
+                            let subagent_meta =
+                                fs::symlink_metadata(subagent_file).map_err(|e| {
+                                    format!(
+                                        "Failed to inspect subagent file '{}': {e}",
+                                        subagent_file.display()
+                                    )
+                                })?;
+                            if !subagent_meta.is_file() {
+                                return Err(format!(
+                                    "Subagent path is not a file: {}",
+                                    subagent_file.display()
+                                ));
+                            }
+
                             let sa_name = subagent_file
                                 .file_name()
                                 .and_then(|n| n.to_str())
                                 .unwrap_or("agent.jsonl");
                             let sa_dest = dest_subagent_dir.join(sa_name);
-                            if fs::copy(subagent_file, &sa_dest).is_ok() {
-                                subagent_size += sa_dest.metadata().map(|m| m.len()).unwrap_or(0);
-                                subagent_count += 1;
-                            }
+                            fs::copy(subagent_file, &sa_dest).map_err(|e| {
+                                format!(
+                                    "Failed to copy subagent file '{}': {e}",
+                                    subagent_file.display()
+                                )
+                            })?;
+                            let copied_meta = sa_dest.metadata().map_err(|e| {
+                                format!(
+                                    "Failed to read copied subagent file '{}': {e}",
+                                    sa_dest.display()
+                                )
+                            })?;
+                            subagent_size += copied_meta.len();
+                            subagent_count += 1;
                         }
                         total_size += subagent_size;
                     }
                 }
 
                 // Extract per-session metadata for the archive manifest
-                let stem = session_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("");
                 let (msg_count, first_ts, last_ts, summary) = extract_session_metadata(&dest);
-
-                let dest_file_name = dest
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or(file_name);
                 per_session_info.push(serde_json::json!({
-                    "sessionId": stem,
+                    "sessionId": dest_stem,
                     "fileName": dest_file_name,
                     "originalFilePath": session_path_str,
                     "messageCount": msg_count,
@@ -701,13 +942,15 @@ pub async fn delete_archive(archive_id: String) -> Result<(), String> {
     .map_err(|e| format!("Task join error: {e}"))?
 }
 
-/// Renames an archive (updates the name in the global manifest).
+/// Renames an archive (updates name in manifest and renames the directory).
 ///
 /// # Arguments
-/// * `archive_id` - UUID of the archive to rename
+/// * `archive_id` - Current archive ID (directory name)
 /// * `new_name` - New human-readable name
+///
+/// Returns the new archive ID (new directory name) so the frontend can update references.
 #[tauri::command]
-pub async fn rename_archive(archive_id: String, new_name: String) -> Result<(), String> {
+pub async fn rename_archive(archive_id: String, new_name: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         validate_archive_id(&archive_id)?;
 
@@ -716,38 +959,85 @@ pub async fn rename_archive(archive_id: String, new_name: String) -> Result<(), 
         }
 
         let mut manifest = load_manifest()?;
-        let entry = manifest
+        let entry_index = manifest
             .archives
-            .iter_mut()
-            .find(|a| a.id == archive_id)
+            .iter()
+            .position(|a| a.id == archive_id)
             .ok_or_else(|| format!("Archive not found: {archive_id}"))?;
 
-        entry.name.clone_from(&new_name);
+        // Generate new directory name from the new name
+        // Extract short UUID from old ID (last 8 chars after final underscore, or first 8 of UUID)
+        let short_uuid = archive_id
+            .rsplit('_')
+            .next()
+            .filter(|s| s.len() == 8 && s.chars().all(|c| c.is_ascii_hexdigit()))
+            .unwrap_or(&archive_id[..8.min(archive_id.len())]);
 
-        // Also update the per-archive manifest.json if it exists
-        let archive_dir = get_archives_dir()?.join(&archive_id);
-        let per_manifest_path = archive_dir.join("manifest.json");
-        if per_manifest_path.exists() {
-            let content = fs::read_to_string(&per_manifest_path)
-                .map_err(|e| format!("Failed to read per-archive manifest: {e}"))?;
-            let mut val: serde_json::Value = serde_json::from_str(&content)
-                .map_err(|e| format!("Failed to parse per-archive manifest: {e}"))?;
-            val["name"] = serde_json::Value::String(new_name);
-            let updated = serde_json::to_string_pretty(&val)
-                .map_err(|e| format!("Failed to serialize per-archive manifest: {e}"))?;
-            let tmp = per_manifest_path.with_extension(format!("json.{}.tmp", Uuid::new_v4()));
-            let mut f = fs::File::create(&tmp)
-                .map_err(|e| format!("Failed to create temp manifest file: {e}"))?;
-            f.write_all(updated.as_bytes())
-                .map_err(|e| format!("Failed to write temp manifest file: {e}"))?;
-            f.sync_all()
-                .map_err(|e| format!("Failed to sync temp manifest file: {e}"))?;
-            drop(f);
-            super::fs_utils::atomic_rename(&tmp, &per_manifest_path)?;
+        let sanitized = sanitize_for_dirname(&new_name);
+        let new_id = if sanitized.is_empty() {
+            archive_id.clone()
+        } else {
+            format!("{sanitized}_{short_uuid}")
+        };
+        validate_archive_id(&new_id)?;
+
+        // Rename the directory if the ID changed
+        let archives_dir = get_archives_dir()?;
+        let old_dir = archives_dir.join(&archive_id);
+        let new_dir = archives_dir.join(&new_id);
+
+        if !ensure_real_directory(&old_dir, "Archive directory")? {
+            return Err(format!("Archive not found: {archive_id}"));
         }
 
-        save_manifest(&manifest)?;
-        Ok(())
+        if archive_id != new_id {
+            if new_dir.exists() {
+                return Err(format!(
+                    "Target directory already exists: {}",
+                    new_dir.display()
+                ));
+            }
+            fs::rename(&old_dir, &new_dir)
+                .map_err(|e| format!("Failed to rename archive directory: {e}"))?;
+        }
+
+        let target_dir = if archive_id == new_id {
+            &old_dir
+        } else {
+            &new_dir
+        };
+
+        // Update the per-archive manifest.json if it exists
+        let per_manifest_path = target_dir.join("manifest.json");
+        let previous_per_manifest = if per_manifest_path.exists() {
+            Some(
+                fs::read_to_string(&per_manifest_path)
+                    .map_err(|e| format!("Failed to read per-archive manifest: {e}"))?,
+            )
+        } else {
+            None
+        };
+        if let Err(e) = update_per_archive_manifest(&per_manifest_path, &new_id, Some(&new_name)) {
+            if archive_id != new_id && new_dir.exists() && !old_dir.exists() {
+                let _ = fs::rename(&new_dir, &old_dir);
+            }
+            return Err(e);
+        }
+
+        manifest.archives[entry_index].name.clone_from(&new_name);
+        manifest.archives[entry_index].id.clone_from(&new_id);
+
+        if let Err(e) = save_manifest(&manifest) {
+            if let Some(prev) = previous_per_manifest.as_deref() {
+                let _ = atomic_write_string(&per_manifest_path, prev);
+            }
+            if archive_id != new_id && new_dir.exists() && !old_dir.exists() {
+                let _ = fs::rename(&new_dir, &old_dir);
+            }
+            return Err(format!("Failed to save archive manifest after rename: {e}"));
+        }
+
+        Ok(new_id)
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
@@ -762,15 +1052,15 @@ pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessi
     tauri::async_runtime::spawn_blocking(move || {
         validate_archive_id(&archive_id)?;
 
-        let archive_dir = get_archives_dir()?.join(&archive_id);
-        if !archive_dir.exists() {
+        let archive_dir = get_archive_dir(&archive_id)?;
+        if !ensure_real_directory(&archive_dir, "Archive directory")? {
             return Err(format!("Archive not found: {archive_id}"));
         }
 
         let sessions_dir = archive_dir.join("sessions");
         let subagents_dir = archive_dir.join("subagents");
 
-        if !sessions_dir.exists() {
+        if !ensure_real_directory(&sessions_dir, "Archive sessions directory")? {
             return Ok(Vec::new());
         }
 
@@ -807,6 +1097,12 @@ pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessi
 
         for entry in rd.flatten() {
             let path = entry.path();
+            let Ok(path_meta) = fs::symlink_metadata(&path) else {
+                continue;
+            };
+            if path_meta.file_type().is_symlink() || !path_meta.is_file() {
+                continue;
+            }
             if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
                 continue;
             }
@@ -821,7 +1117,7 @@ pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessi
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_string();
-            let size_bytes = path.metadata().map(|m| m.len()).unwrap_or(0);
+            let size_bytes = path_meta.len();
 
             // Prefer cached metadata from manifest, fall back to live parsing
             let (message_count, first_message_time, last_message_time, summary) =
@@ -848,12 +1144,52 @@ pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessi
                     (mc, first, last, sum)
                 };
 
-            // Count subagent files for this session
-            let (subagent_count, subagent_size_bytes) = {
+            // Collect subagent file info for this session
+            let (subagent_count, subagent_size_bytes, subagents) = {
                 let sa_dir = subagents_dir.join(&stem);
-                let count = count_jsonl_files(&sa_dir);
-                let size = dir_size(&sa_dir);
-                (count, size)
+                let mut sa_list: Vec<SubagentFileInfo> = Vec::new();
+                let mut total_sa_size: u64 = 0;
+
+                if sa_dir.exists() {
+                    if let Ok(dir_meta) = fs::symlink_metadata(&sa_dir) {
+                        if !dir_meta.file_type().is_symlink() {
+                            if let Ok(rd) = fs::read_dir(&sa_dir) {
+                                for sa_entry in rd.flatten() {
+                                    let sa_path = sa_entry.path();
+                                    let Ok(sa_meta) = fs::symlink_metadata(&sa_path) else {
+                                        continue;
+                                    };
+                                    if sa_meta.file_type().is_symlink() {
+                                        continue;
+                                    }
+                                    if !sa_meta.is_file() {
+                                        continue;
+                                    }
+                                    if sa_path.extension().and_then(|e| e.to_str()) != Some("jsonl")
+                                    {
+                                        continue;
+                                    }
+                                    let sa_file_name = sa_path
+                                        .file_name()
+                                        .and_then(|n| n.to_str())
+                                        .unwrap_or("")
+                                        .to_string();
+                                    let sa_size = sa_meta.len();
+                                    let sa_msg_count = count_messages(&sa_path);
+                                    total_sa_size += sa_size;
+                                    sa_list.push(SubagentFileInfo {
+                                        file_name: sa_file_name,
+                                        size_bytes: sa_size,
+                                        message_count: sa_msg_count,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+                sa_list.sort_by(|a, b| a.file_name.cmp(&b.file_name));
+
+                (sa_list.len() as u32, total_sa_size, sa_list)
             };
 
             // Try to get the original file path from metadata
@@ -877,6 +1213,7 @@ pub async fn get_archive_sessions(archive_id: String) -> Result<Vec<ArchiveSessi
                 size_bytes,
                 subagent_count,
                 subagent_size_bytes,
+                subagents,
             });
         }
 
@@ -927,20 +1264,20 @@ pub async fn load_archive_session_messages(
         ));
     }
 
-    let session_path = {
-        let archives_dir = get_archives_dir()?;
-        archives_dir
-            .join(&archive_id)
-            .join("sessions")
-            .join(&session_file_name)
-    };
-
-    if !session_path.exists() {
+    let archive_dir = get_archive_dir(&archive_id)?;
+    if !ensure_real_directory(&archive_dir, "Archive directory")? {
+        return Err(format!("Archive not found: {archive_id}"));
+    }
+    let sessions_dir = archive_dir.join("sessions");
+    if !ensure_real_directory(&sessions_dir, "Archive sessions directory")? {
         return Err(format!(
-            "Session file not found in archive: {}",
-            session_path.display()
+            "Archive sessions directory not found: {}",
+            sessions_dir.display()
         ));
     }
+
+    let session_path = sessions_dir.join(&session_file_name);
+    ensure_real_file(&session_path, "Archive session file")?;
 
     let path_str = session_path.to_string_lossy().to_string();
 
@@ -1202,6 +1539,8 @@ pub async fn export_session(
 mod tests {
     use super::*;
     use std::env;
+    #[cfg(unix)]
+    use std::os::unix::fs as unix_fs;
     use tempfile::TempDir;
 
     /// Sets up an isolated HOME directory for testing.
@@ -1230,16 +1569,65 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_archive_id_uppercase_rejected() {
-        // The regex only allows lowercase hex
-        assert!(validate_archive_id("UPPERCASE-UUID").is_err());
+    fn test_validate_archive_id_uppercase_accepted() {
+        // Name-based IDs may contain mixed case
+        assert!(validate_archive_id("UPPERCASE-UUID").is_ok());
     }
 
     #[test]
-    fn test_validate_archive_id_special_chars_rejected() {
+    fn test_validate_archive_id_invalid_chars() {
         assert!(validate_archive_id("abc!def").is_err());
-        assert!(validate_archive_id("abc/def").is_err());
         assert!(validate_archive_id("abc def").is_err());
+        assert!(validate_archive_id("abc:def").is_err());
+        assert!(validate_archive_id("abc*def").is_err());
+        assert!(validate_archive_id("abc.def").is_err());
+        assert!(validate_archive_id("abc/def").is_err());
+        assert!(validate_archive_id("abc..def").is_err());
+        assert!(validate_archive_id("abc\0def").is_err());
+    }
+
+    #[test]
+    fn test_validate_archive_id_unicode_rejected() {
+        assert!(validate_archive_id("프로젝트-백업_3f8a1b2c").is_err());
+    }
+
+    #[test]
+    fn test_sanitize_for_dirname() {
+        assert_eq!(sanitize_for_dirname("Project Backup"), "Project-Backup");
+        assert_eq!(sanitize_for_dirname("  spaces  "), "spaces");
+        assert_eq!(sanitize_for_dirname("a/b\\c"), "a-b-c");
+        assert_eq!(sanitize_for_dirname("a--b"), "a-b");
+        assert_eq!(sanitize_for_dirname("v1.2 release!"), "v1-2-release");
+        assert_eq!(sanitize_for_dirname("프로젝트 백업 2026년 3월"), "2026-3");
+        assert_eq!(sanitize_for_dirname("...dots..."), "dots");
+        assert_eq!(sanitize_for_dirname(""), "");
+    }
+
+    #[test]
+    fn test_create_archive_uses_name_based_id() {
+        let _temp = setup_test_env();
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("name_id.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"hi"}}"#).unwrap();
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let entry = rt
+            .block_on(create_archive(
+                "My Project Backup".to_string(),
+                None,
+                vec![session_path.to_string_lossy().to_string()],
+                "claude".to_string(),
+                "/p".to_string(),
+                "p".to_string(),
+                false,
+            ))
+            .unwrap();
+
+        assert!(entry.id.starts_with("My-Project-Backup_"));
+        // 8-char hex suffix
+        let suffix = entry.id.rsplit('_').next().unwrap();
+        assert_eq!(suffix.len(), 8);
+        assert!(suffix.chars().all(|c| c.is_ascii_hexdigit()));
     }
 
     #[test]
@@ -1448,13 +1836,22 @@ mod tests {
         .await
         .unwrap();
 
-        rename_archive(entry.id.clone(), "New Name".to_string())
+        let new_id = rename_archive(entry.id.clone(), "New Name".to_string())
             .await
             .unwrap();
 
+        // ID changes to name-based format
+        assert!(new_id.starts_with("New-Name_"));
+        assert_ne!(new_id, entry.id);
+
         let manifest = list_archives().await.unwrap();
-        let updated = manifest.archives.iter().find(|a| a.id == entry.id).unwrap();
+        let updated = manifest.archives.iter().find(|a| a.id == new_id).unwrap();
         assert_eq!(updated.name, "New Name");
+
+        // Old directory should not exist, new one should
+        let archives_dir = get_archives_dir().unwrap();
+        assert!(!archives_dir.join(&entry.id).exists());
+        assert!(archives_dir.join(&new_id).exists());
     }
 
     #[tokio::test]
@@ -1479,6 +1876,39 @@ mod tests {
 
         let result = rename_archive(entry.id, "   ".to_string()).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_rename_archive_missing_source_dir_rejected() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("rename_missing.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"hello"}}"#).unwrap();
+
+        let entry = create_archive(
+            "Original Name".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let archive_dir = get_archives_dir().unwrap().join(&entry.id);
+        fs::remove_dir_all(&archive_dir).unwrap();
+
+        let err = rename_archive(entry.id.clone(), "Renamed".to_string())
+            .await
+            .unwrap_err();
+        assert!(err.contains("Archive not found"));
+
+        let manifest = load_manifest().unwrap();
+        let stored = manifest.archives.iter().find(|a| a.id == entry.id).unwrap();
+        assert_eq!(stored.name, "Original Name");
     }
 
     #[tokio::test]
@@ -1509,6 +1939,185 @@ mod tests {
         assert_eq!(sessions[0].file_name, "sess_abc.jsonl");
         assert_eq!(sessions[0].first_message_time, "2026-02-01T08:00:00Z");
         assert_eq!(sessions[0].summary, Some("A good talk".to_string()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_find_subagent_files_skips_symlinked_candidate_dir() {
+        let project_dir = tempfile::tempdir().unwrap();
+        let sessions_dir = project_dir.path().join("sessions");
+        fs::create_dir_all(&sessions_dir).unwrap();
+
+        let session_path = sessions_dir.join("agent_run.jsonl");
+        fs::write(&session_path, "{}\n").unwrap();
+
+        let external_dir = tempfile::tempdir().unwrap();
+        let external_subagents = external_dir.path().join("agent_run");
+        fs::create_dir_all(&external_subagents).unwrap();
+        fs::write(external_subagents.join("linked.jsonl"), "{}\n").unwrap();
+
+        let project_subagents = sessions_dir.join("subagents");
+        fs::create_dir_all(&project_subagents).unwrap();
+        unix_fs::symlink(&external_subagents, project_subagents.join("agent_run")).unwrap();
+
+        let files = find_subagent_files(&session_path);
+        assert!(files.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_create_archive_uses_destination_stem_for_duplicate_file_names() {
+        let _temp = setup_test_env();
+
+        let dir_a = tempfile::tempdir().unwrap();
+        let session_a = dir_a.path().join("duplicate.jsonl");
+        fs::write(&session_a, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"a"}}"#).unwrap();
+        let subagent_a_dir = dir_a.path().join("subagents").join("duplicate");
+        fs::create_dir_all(&subagent_a_dir).unwrap();
+        fs::write(
+            subagent_a_dir.join("alpha.jsonl"),
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:01:00Z","message":{"role":"assistant","content":"alpha"}}"#,
+        )
+        .unwrap();
+
+        let dir_b = tempfile::tempdir().unwrap();
+        let session_b = dir_b.path().join("duplicate.jsonl");
+        fs::write(&session_b, r#"{"type":"user","timestamp":"2026-01-02T00:00:00Z","message":{"role":"user","content":"b"}}"#).unwrap();
+        let subagent_b_dir = dir_b.path().join("subagents").join("duplicate");
+        fs::create_dir_all(&subagent_b_dir).unwrap();
+        fs::write(
+            subagent_b_dir.join("beta.jsonl"),
+            r#"{"type":"assistant","timestamp":"2026-01-02T00:01:00Z","message":{"role":"assistant","content":"beta"}}"#,
+        )
+        .unwrap();
+
+        let entry = create_archive(
+            "Duplicate Names".to_string(),
+            None,
+            vec![
+                session_a.to_string_lossy().to_string(),
+                session_b.to_string_lossy().to_string(),
+            ],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            true,
+        )
+        .await
+        .unwrap();
+
+        let mut sessions = get_archive_sessions(entry.id).await.unwrap();
+        sessions.sort_by(|a, b| a.file_name.cmp(&b.file_name));
+
+        assert_eq!(sessions.len(), 2);
+        assert_eq!(sessions[0].file_name, "duplicate.jsonl");
+        assert_eq!(sessions[0].session_id, "duplicate");
+        assert_eq!(sessions[0].subagents.len(), 1);
+        assert_eq!(sessions[0].subagents[0].file_name, "alpha.jsonl");
+
+        assert_eq!(sessions[1].file_name, "duplicate_1.jsonl");
+        assert_eq!(sessions[1].session_id, "duplicate_1");
+        assert_eq!(sessions[1].subagents.len(), 1);
+        assert_eq!(sessions[1].subagents[0].file_name, "beta.jsonl");
+    }
+
+    #[tokio::test]
+    async fn test_create_archive_fails_when_subagent_copy_fails() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("with_subagent.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"hello"}}"#).unwrap();
+
+        let invalid_subagent = session_dir
+            .path()
+            .join("subagents")
+            .join("with_subagent")
+            .join("broken.jsonl");
+        fs::create_dir_all(&invalid_subagent).unwrap();
+
+        let result = create_archive(
+            "Broken Archive".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            true,
+        )
+        .await;
+
+        let err = result.unwrap_err();
+        assert!(err.contains("Subagent path is not a file"));
+
+        let manifest = list_archives().await.unwrap();
+        assert!(manifest.archives.is_empty());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_get_archive_sessions_skips_symlinked_session_files() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("primary.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"safe"}}"#).unwrap();
+
+        let entry = create_archive(
+            "Symlink Guard".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let outside_dir = tempfile::tempdir().unwrap();
+        let outside_file = outside_dir.path().join("linked.jsonl");
+        fs::write(&outside_file, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"outside"}}"#).unwrap();
+
+        let archive_sessions_dir = get_archives_dir().unwrap().join(&entry.id).join("sessions");
+        unix_fs::symlink(&outside_file, archive_sessions_dir.join("linked.jsonl")).unwrap();
+
+        let sessions = get_archive_sessions(entry.id).await.unwrap();
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].file_name, "primary.jsonl");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_load_archive_session_messages_rejects_symlinked_session_file() {
+        let _temp = setup_test_env();
+
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("primary.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"safe"}}"#).unwrap();
+
+        let entry = create_archive(
+            "Symlink Load Guard".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let outside_dir = tempfile::tempdir().unwrap();
+        let outside_file = outside_dir.path().join("linked.jsonl");
+        fs::write(&outside_file, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"outside"}}"#).unwrap();
+
+        let archive_sessions_dir = get_archives_dir().unwrap().join(&entry.id).join("sessions");
+        unix_fs::symlink(&outside_file, archive_sessions_dir.join("linked.jsonl")).unwrap();
+
+        let err = load_archive_session_messages(entry.id, "linked.jsonl".to_string())
+            .await
+            .unwrap_err();
+        assert!(err.contains("must not be a symlink"));
     }
 
     #[tokio::test]
@@ -1591,25 +2200,56 @@ mod tests {
     }
 
     #[test]
-    fn test_count_jsonl_files_empty_dir() {
-        let dir = tempfile::tempdir().unwrap();
-        assert_eq!(count_jsonl_files(dir.path()), 0);
-    }
-
-    #[test]
-    fn test_count_jsonl_files_mixed() {
-        let dir = tempfile::tempdir().unwrap();
-        fs::write(dir.path().join("a.jsonl"), "").unwrap();
-        fs::write(dir.path().join("b.jsonl"), "").unwrap();
-        fs::write(dir.path().join("c.json"), "").unwrap();
-        fs::write(dir.path().join("d.txt"), "").unwrap();
-        assert_eq!(count_jsonl_files(dir.path()), 2);
-    }
-
-    #[test]
     fn test_archive_manifest_default() {
         let m = ArchiveManifest::default();
         assert_eq!(m.version, 1);
         assert!(m.archives.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_migration_uuid_to_name_based() {
+        let _temp = setup_test_env();
+
+        // Create an archive with a UUID-based ID (simulating legacy)
+        let session_dir = tempfile::tempdir().unwrap();
+        let session_path = session_dir.path().join("migrate.jsonl");
+        fs::write(&session_path, r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"hi"}}"#).unwrap();
+
+        let entry = create_archive(
+            "Legacy Archive".to_string(),
+            None,
+            vec![session_path.to_string_lossy().to_string()],
+            "claude".to_string(),
+            "/p".to_string(),
+            "p".to_string(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        // Manually revert the ID to a UUID to simulate a legacy archive
+        let archives_dir = get_archives_dir().unwrap();
+        let current_dir = archives_dir.join(&entry.id);
+        let legacy_uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+        let legacy_dir = archives_dir.join(legacy_uuid);
+        fs::rename(&current_dir, &legacy_dir).unwrap();
+
+        // Update manifest to use legacy UUID
+        let mut manifest = load_manifest().unwrap();
+        manifest.archives[0].id = legacy_uuid.to_string();
+        save_manifest(&manifest).unwrap();
+
+        // Now list_archives should trigger migration
+        let migrated = list_archives().await.unwrap();
+        let migrated_entry = &migrated.archives[0];
+
+        // Should have name-based ID now
+        assert!(migrated_entry.id.starts_with("Legacy-Archive_"));
+        assert!(migrated_entry.id.ends_with("_aaaaaaaa"));
+        assert_eq!(migrated_entry.name, "Legacy Archive");
+
+        // Old directory should not exist, new one should
+        assert!(!legacy_dir.exists());
+        assert!(archives_dir.join(&migrated_entry.id).exists());
     }
 }

@@ -53,11 +53,11 @@ export interface ArchiveSliceActions {
     includeSubagents?: boolean;
   }) => Promise<ArchiveEntry>;
   deleteArchive: (id: string) => Promise<void>;
-  renameArchive: (id: string, name: string) => Promise<void>;
+  renameArchive: (id: string, name: string) => Promise<string>;
   loadArchiveSessions: (id: string) => Promise<void>;
   loadDiskUsage: () => Promise<void>;
   loadExpiringSessions: (projectPath: string, thresholdDays?: number) => Promise<void>;
-  exportSession: (path: string, format: 'markdown' | 'json') => Promise<string>;
+  exportSession: (path: string, format: 'json') => Promise<string>;
   setArchiveActiveTab: (tab: ArchiveViewTab) => void;
   clearArchiveError: () => void;
   resetArchive: () => void;
@@ -96,10 +96,13 @@ export const createArchiveSlice: StateCreator<
   [],
   [],
   ArchiveSlice
-> = (set) => ({
+> = (set, get) => ({
   archive: { ...initialArchiveState },
 
   loadArchives: async () => {
+    if (get().archive.isLoadingArchives) {
+      return;
+    }
     set((s) => ({ archive: { ...s.archive, isLoadingArchives: true, error: null } }));
     try {
       const manifest = await archiveApi.listArchives();
@@ -151,9 +154,17 @@ export const createArchiveSlice: StateCreator<
   renameArchive: async (id, name) => {
     set((s) => ({ archive: { ...s.archive, isRenamingArchive: true, error: null } }));
     try {
-      await archiveApi.renameArchive(id, name);
+      const newId = await archiveApi.renameArchive(id, name);
       const manifest = await archiveApi.listArchives();
-      set((s) => ({ archive: { ...s.archive, manifest, isRenamingArchive: false } }));
+      set((s) => ({
+        archive: {
+          ...s.archive,
+          manifest,
+          isRenamingArchive: false,
+          currentArchiveId: s.archive.currentArchiveId === id ? newId : s.archive.currentArchiveId,
+        },
+      }));
+      return newId;
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       set((s) => ({ archive: { ...s.archive, isRenamingArchive: false, error: msg } }));

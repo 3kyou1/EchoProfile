@@ -5,7 +5,7 @@
  * Used by ArchiveCreateDialog to avoid coupling to sidebar selection.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { api } from '@/services/api';
 import { useAppStore } from '@/store/useAppStore';
 import { toast } from 'sonner';
@@ -17,6 +17,7 @@ const isSubagentSession = (s: ClaudeSession) =>
 export function useProjectSessions() {
   const [sessions, setSessions] = useState<ClaudeSession[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const activeRequestIdRef = useRef(0);
 
   const mainSessions = useMemo(
     () => sessions.filter((s) => !isSubagentSession(s)),
@@ -28,6 +29,8 @@ export function useProjectSessions() {
   );
 
   const loadSessions = useCallback(async (project: ClaudeProject) => {
+    const requestId = activeRequestIdRef.current + 1;
+    activeRequestIdRef.current = requestId;
     setIsLoading(true);
     setSessions([]);
     try {
@@ -44,18 +47,28 @@ export function useProjectSessions() {
               projectPath: project.path,
               excludeSidechain,
             });
+      if (requestId !== activeRequestIdRef.current) {
+        return;
+      }
       setSessions(result);
     } catch (error) {
+      if (requestId !== activeRequestIdRef.current) {
+        return;
+      }
       console.error('Failed to load project sessions:', error);
       toast.error(error instanceof Error ? error.message : String(error));
       setSessions([]);
     } finally {
-      setIsLoading(false);
+      if (requestId === activeRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   const clearSessions = useCallback(() => {
+    activeRequestIdRef.current += 1;
     setSessions([]);
+    setIsLoading(false);
   }, []);
 
   return { sessions, mainSessions, subagentSessions, isLoading, loadSessions, clearSessions };

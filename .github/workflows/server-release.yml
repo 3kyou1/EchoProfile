@@ -51,8 +51,8 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
+      - name: Install dependencies (ubuntu x64)
+        if: matrix.platform == 'ubuntu-22.04' && !matrix.cross
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -60,9 +60,18 @@ jobs:
       - name: Install cross-compilation tools (linux-arm64)
         if: matrix.cross
         run: |
+          sudo dpkg --add-architecture arm64
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ jammy main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ jammy-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+          sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install -y libwebkit2gtk-4.1-dev:arm64 libssl-dev:arm64 libglib2.0-dev:arm64 libappindicator3-dev:arm64 librsvg2-dev:arm64 patchelf
           echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config.toml
           echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config.toml
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_SYSROOT_DIR=/" >> $GITHUB_ENV
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -93,10 +102,23 @@ jobs:
           cp src-tauri/target/${{ matrix.target }}/release/claude-code-history-viewer release/cchv-server
           cd release && tar czf ../${{ matrix.artifact }}.tar.gz cchv-server
 
+      - name: Wait for release to be created
+        run: |
+          for i in $(seq 1 30); do
+            if gh release view "${GITHUB_REF_NAME}" > /dev/null 2>&1; then
+              echo "Release ${GITHUB_REF_NAME} found"
+              break
+            fi
+            echo "Waiting for release... (attempt $i/30)"
+            sleep 10
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ matrix.artifact }}.tar.gz
+        run: gh release upload "${GITHUB_REF_NAME}" "${{ matrix.artifact }}.tar.gz" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   # Update Homebrew formula SHA256 hashes after all builds complete
   update-homebrew:

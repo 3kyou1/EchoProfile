@@ -19,7 +19,8 @@ export const LanguageMenuGroup = () => {
       <DropdownMenuSubTrigger>
         <Globe className="mr-2 h-4 w-4 text-foreground" />
         <span>
-          {t("common.settings.language.title")} · {supportedLanguages[language]}
+          {t("common.settings.language.title")} ·{" "}
+          {supportedLanguages[language] ?? supportedLanguages.en}
         </span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>

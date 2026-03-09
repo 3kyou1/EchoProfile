@@ -2,11 +2,10 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "react-i18next";
-import { Sun, Moon, Laptop } from "lucide-react";
+import { Sun, Moon, Laptop, Check } from "lucide-react";
 import { useTheme } from "@/contexts/theme";
 
 const THEME_ITEMS = [
@@ -32,21 +31,22 @@ export const ThemeMenuGroup = () => {
         </span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
-        <DropdownMenuRadioGroup
-          value={theme}
-          onValueChange={(value) => {
-            if (value === "light" || value === "dark" || value === "system") {
-              void setTheme(value);
-            }
-          }}
-        >
-          {THEME_ITEMS.map(({ icon: Icon, labelKey, value }) => (
-            <DropdownMenuRadioItem key={value} value={value}>
-              <Icon className="mr-2 h-4 w-4 text-foreground" />
-              <span>{t(labelKey)}</span>
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+        {THEME_ITEMS.map(({ icon: Icon, labelKey, value }) => (
+          <DropdownMenuItem
+            key={value}
+            onClick={() => {
+              if (value === "light" || value === "dark" || value === "system") {
+                void setTheme(value);
+              }
+            }}
+          >
+            <Icon className="mr-2 h-4 w-4 text-foreground" />
+            <span className="flex-1">{t(labelKey)}</span>
+            {theme === value && (
+              <Check className="ml-auto h-4 w-4 text-foreground" />
+            )}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
   );

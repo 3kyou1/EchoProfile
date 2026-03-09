@@ -5,7 +5,8 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "react-i18next";
-import { Sun, Moon, Laptop, Check } from "lucide-react";
+import { Sun, Moon, Laptop } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/theme";
 
 const THEME_ITEMS = [
@@ -34,17 +35,17 @@ export const ThemeMenuGroup = () => {
         {THEME_ITEMS.map(({ icon: Icon, labelKey, value }) => (
           <DropdownMenuItem
             key={value}
+            className={cn(
+              theme === value && "bg-accent text-accent-foreground"
+            )}
             onClick={() => {
               if (value === "light" || value === "dark" || value === "system") {
                 void setTheme(value);
               }
             }}
           >
-            <Icon className="mr-2 h-4 w-4 text-foreground" />
-            <span className="flex-1">{t(labelKey)}</span>
-            {theme === value && (
-              <Check className="ml-auto h-4 w-4 text-foreground" />
-            )}
+            <Icon className="mr-2 h-4 w-4" />
+            <span>{t(labelKey)}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuSubContent>

@@ -7,7 +7,8 @@ import {
 import { supportedLanguages, type SupportedLanguage } from "@/i18n";
 import { useLanguageStore } from "@/store/useLanguageStore";
 import { useTranslation } from "react-i18next";
-import { Globe, Check } from "lucide-react";
+import { Globe } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const LanguageMenuGroup = () => {
   const { language, setLanguage } = useLanguageStore();
@@ -25,16 +26,16 @@ export const LanguageMenuGroup = () => {
         {Object.entries(supportedLanguages).map(([code, name]) => (
           <DropdownMenuItem
             key={code}
+            className={cn(
+              language === code && "bg-accent text-accent-foreground"
+            )}
             onClick={() => {
               if (code in supportedLanguages) {
                 setLanguage(code as SupportedLanguage);
               }
             }}
           >
-            <span className="flex-1">{name}</span>
-            {language === code && (
-              <Check className="ml-auto h-4 w-4 text-foreground" />
-            )}
+            <span>{name}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuSubContent>

@@ -177,57 +177,9 @@ Check for Updates           ← 1줄
 
 ---
 
-## Issue #167 — 좁은 창 패널 겹침
+## ~~Issue #167 — 좁은 창 패널 겹침~~ ✅ 완료
 
-### 현재 문제
-
-좌우 패널 리사이즈 시 중앙 MessageViewer 영역이 극단적으로 줄어들어 툴바 요소가 겹침.
-
-### 현재 레이아웃 구조
-
-```
-┌──────────┬────────────────────┬──────────┐
-│ Left     │  Main (flex-1      │  Right   │
-│ Sidebar  │  min-w-0)          │  Nav     │
-│ 200-480px│  ← 0까지 줄어듦    │ 200-400px│
-└──────────┴────────────────────┴──────────┘
-```
-
-### 근본 원인
-
-- `useResizablePanel`의 `maxWidth`가 **고정값** (좌: 480px, 우: 400px)
-- 양쪽 패널의 최대값 합(880px)이 창 너비를 초과할 수 있음
-- 중앙 영역이 `flex-1 min-w-0`이라 0까지 줄어듦
-- 창 크기 + 패널 리사이즈 **둘 다** 원인이므로 window min-width만으로 해결 불가
-
-### 해결 방안: 패널 리사이즈 동적 제약
-
-`useResizablePanel` 훅 수정 — 리사이즈 시 `maxWidth`를 동적으로 계산:
-
-```
-effectiveMaxWidth = windowWidth - otherPanelWidth - MIN_CENTER_WIDTH(400px)
-```
-
-| 시나리오 | 창 너비 | 좌 패널 | 우 패널 | 중앙 |
-|---------|---------|---------|---------|------|
-| 현재 (문제) | 1000px | 400px | 400px | **200px** (겹침) |
-| 수정 후 | 1000px | 400px | 200px | **400px** (보장) |
-| 수정 후 | 1000px | 300px | 300px | **400px** (보장) |
-
-### 수정 대상
-
-| 파일 | 변경 내용 |
-|------|----------|
-| `src/hooks/useResizablePanel.ts` | `maxWidth`를 동적 계산 (콜백 또는 ref로 상대 패널 폭 참조) |
-| `src/layouts/AppLayout.tsx` | 양쪽 패널 훅에 상대 패널 참조 전달 |
-| `src/layouts/AppLayout.tsx` | `window.resize` 이벤트 시에도 동적 제약 재계산 |
-
-### 주의사항
-
-- `useResizablePanel` 인터페이스 변경 시 기존 사용처 호환성 유지
-- `resize` 이벤트 리스너는 throttle/debounce 적용
-- 패널 collapse(접기) 상태일 때는 해당 패널 폭을 0으로 간주
-- localStorage에 저장된 패널 폭이 새 제약을 초과하면 clamp 처리
+> PR #171로 해결됨 (`fix/167-panel-overlap` → `main` 머지 완료)
 
 ---
 
@@ -235,11 +187,9 @@ effectiveMaxWidth = windowWidth - otherPanelWidth - MIN_CENTER_WIDTH(400px)
 
 각 이슈를 별도 브랜치에서 작업 후 `feature/ui-improvements-167-170`으로 병합:
 
-| 순서 | 이슈 | 브랜치 | 난이도 |
-|------|------|--------|--------|
-| 1 | #167 패널 겹침 | `feature/ui-improvements-167-170/fix-167-panel-overlap` | 중 |
-| 2 | #168 설정 컴팩트 | `feature/ui-improvements-167-170/fix-168-settings-compact` | 중 |
-| 3 | #169 캡처 모드 | `feature/ui-improvements-167-170/fix-169-capture-theme` | 중 |
-| 4 | #170 날짜 표시 | `feature/ui-improvements-167-170/fix-170-date-display` | 중 |
-
-#167을 먼저 작업하는 이유: 레이아웃 기반 문제로 다른 이슈 작업 시 테스트 환경에 영향.
+| 순서 | 이슈 | 브랜치 | 난이도 | 상태 |
+|------|------|--------|--------|------|
+| ~~1~~ | ~~#167 패널 겹침~~ | ~~`fix/167-panel-overlap`~~ | ~~중~~ | ✅ 완료 (PR #171) |
+| 2 | #168 설정 컴팩트 | `feature/ui-improvements-167-170/fix-168-settings-compact` | 중 | 대기 |
+| 3 | #169 캡처 모드 | `feature/ui-improvements-167-170/fix-169-capture-theme` | 중 | 대기 |
+| 4 | #170 날짜 표시 | `feature/ui-improvements-167-170/fix-170-date-display` | 중 | 대기 |

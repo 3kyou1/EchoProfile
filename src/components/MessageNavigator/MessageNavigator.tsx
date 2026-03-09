@@ -160,7 +160,7 @@ export const MessageNavigator: React.FC<MessageNavigatorProps> = ({
         aria-label={t("navigator.title")}
         tabIndex={-1}
         className={cn(
-          "flex-shrink-0 bg-sidebar border-l border-border/50 flex h-full",
+          "shrink bg-sidebar border-l border-border/50 flex h-full overflow-hidden",
           isResizing && "select-none"
         )}
         style={{ width: "48px" }}
@@ -203,11 +203,11 @@ export const MessageNavigator: React.FC<MessageNavigatorProps> = ({
       aria-describedby={keyboardHelpId}
       tabIndex={-1}
       className={cn(
-        "relative flex flex-col bg-sidebar border-l border-border/50 h-full",
+        "relative flex flex-col bg-sidebar border-l border-border/50 h-full overflow-hidden",
         isResizing && "select-none",
         width == null && "w-full"
       )}
-      style={width != null ? { width, minWidth: width, maxWidth: width } : undefined}
+      style={width != null ? { width, maxWidth: width } : undefined}
     >
       {/* Resize handle (left edge) */}
       <div

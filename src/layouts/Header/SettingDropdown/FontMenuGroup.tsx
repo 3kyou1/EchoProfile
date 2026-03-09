@@ -6,7 +6,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAppStore } from "@/store/useAppStore";
 import { useTranslation } from "react-i18next";
-import { Type, Check } from "lucide-react";
+import { Type } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const FONT_SCALE_OPTIONS = [
   { value: 90, labelKey: "common.settings.font.90" as const },
@@ -32,18 +33,18 @@ export const FontMenuGroup = () => {
         {FONT_SCALE_OPTIONS.map(({ value, labelKey }) => (
           <DropdownMenuItem
             key={value}
+            className={cn(
+              fontScale === value && "bg-accent text-accent-foreground"
+            )}
             onClick={() => {
               if (Number.isFinite(value)) {
                 void setFontScale(value);
               }
             }}
           >
-            <span className="flex-1">
+            <span>
               {t(labelKey)} ({value}%)
             </span>
-            {fontScale === value && (
-              <Check className="ml-auto h-4 w-4 text-foreground" />
-            )}
           </DropdownMenuItem>
         ))}
       </DropdownMenuSubContent>

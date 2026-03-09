@@ -591,7 +591,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
         id={asideId}
         aria-label={t("project.explorer")}
         tabIndex={-1}
-        className={cn("flex-shrink-0 bg-sidebar border-r-0 flex h-full", isResizing && "select-none")}
+        className={cn("shrink bg-sidebar border-r-0 flex h-full overflow-hidden", isResizing && "select-none")}
         style={sidebarStyle}
       >
         <div className="flex-1 flex flex-col items-center py-3 gap-2 relative">
@@ -645,7 +645,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
       id={asideId}
       aria-label={t("project.explorer")}
       tabIndex={-1}
-      className={cn("flex-shrink-0 bg-sidebar border-r-0 flex h-full", !width && (!onToggleCollapse && onClose ? "w-full" : "w-64"), isResizing && "select-none")}
+      className={cn("shrink bg-sidebar border-r-0 flex h-full overflow-hidden", !width && (!onToggleCollapse && onClose ? "w-full" : "w-64"), isResizing && "select-none")}
       style={sidebarStyle}
     >
       {/* Content Area */}

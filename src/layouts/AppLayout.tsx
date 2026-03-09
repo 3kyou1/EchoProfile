@@ -354,7 +354,7 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
           <main
             id="main-content"
             tabIndex={-1}
-            className="flex-1 flex flex-col min-w-0 bg-background pb-14 md:pb-0"
+            className="flex-1 flex flex-col min-w-0 md:min-w-[400px] bg-background pb-14 md:pb-0"
           >
             {/* Content Header for non-message views */}
             {(computed.isTokenStatsView ||

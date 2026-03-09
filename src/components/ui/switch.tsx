@@ -14,7 +14,7 @@ const Switch = React.forwardRef<
       "data-[state=checked]:border-transparent data-[state=unchecked]:border-border",
       "focus-visible:outline-none",
       "disabled:cursor-not-allowed disabled:opacity-50",
-      "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
+      "data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted-foreground/30",
       className
     )}
     {...props}

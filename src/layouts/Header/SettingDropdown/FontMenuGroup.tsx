@@ -1,5 +1,7 @@
 import {
-  DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
@@ -20,26 +22,30 @@ export const FontMenuGroup = () => {
   const { fontScale, setFontScale } = useAppStore();
 
   return (
-    <>
-      <DropdownMenuLabel>{t("common.settings.font.title")}</DropdownMenuLabel>
-      <DropdownMenuRadioGroup
-        value={String(fontScale)}
-        onValueChange={(value) => {
-          const nextScale = Number(value);
-          if (Number.isFinite(nextScale)) {
-            void setFontScale(nextScale);
-          }
-        }}
-      >
-        {FONT_SCALE_OPTIONS.map(({ value, labelKey }) => (
-          <DropdownMenuRadioItem key={value} value={String(value)}>
-            <Type className="mr-2 h-4 w-4 text-foreground" />
-            <span>
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <Type className="mr-2 h-4 w-4 text-foreground" />
+        <span>
+          {t("common.settings.font.title")} · {fontScale}%
+        </span>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        <DropdownMenuRadioGroup
+          value={String(fontScale)}
+          onValueChange={(value) => {
+            const nextScale = Number(value);
+            if (Number.isFinite(nextScale)) {
+              void setFontScale(nextScale);
+            }
+          }}
+        >
+          {FONT_SCALE_OPTIONS.map(({ value, labelKey }) => (
+            <DropdownMenuRadioItem key={value} value={String(value)}>
               {t(labelKey)} ({value}%)
-            </span>
-          </DropdownMenuRadioItem>
-        ))}
-      </DropdownMenuRadioGroup>
-    </>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 };

@@ -1,13 +1,11 @@
 import {
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { useAppStore } from "@/store/useAppStore";
 import { useTranslation } from "react-i18next";
 import { Type } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const FONT_SCALE_OPTIONS = [
   { value: 90, labelKey: "common.settings.font.90" as const },
@@ -22,32 +20,26 @@ export const FontMenuGroup = () => {
   const { fontScale, setFontScale } = useAppStore();
 
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <Type className="mr-2 h-4 w-4 text-foreground" />
-        <span>
-          {t("common.settings.font.title")} · {fontScale}%
-        </span>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
+    <>
+      <DropdownMenuLabel>{t("common.settings.font.title")}</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={String(fontScale)}
+        onValueChange={(value) => {
+          const nextScale = Number(value);
+          if (Number.isFinite(nextScale)) {
+            void setFontScale(nextScale);
+          }
+        }}
+      >
         {FONT_SCALE_OPTIONS.map(({ value, labelKey }) => (
-          <DropdownMenuItem
-            key={value}
-            className={cn(
-              fontScale === value && "bg-accent text-accent-foreground"
-            )}
-            onClick={() => {
-              if (Number.isFinite(value)) {
-                void setFontScale(value);
-              }
-            }}
-          >
+          <DropdownMenuRadioItem key={value} value={String(value)}>
+            <Type className="mr-2 h-4 w-4 text-foreground" />
             <span>
               {t(labelKey)} ({value}%)
             </span>
-          </DropdownMenuItem>
+          </DropdownMenuRadioItem>
         ))}
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
+      </DropdownMenuRadioGroup>
+    </>
   );
 };

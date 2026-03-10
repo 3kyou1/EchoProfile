@@ -514,7 +514,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         role="search"
         className={cn(
           "flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-2.5 border-b sticky top-0 z-10",
-          "flex-wrap",
+          "flex-wrap lg:flex-nowrap",
           "bg-gradient-to-r from-zinc-900/95 via-zinc-800/95 to-zinc-900/95",
           "backdrop-blur-sm border-zinc-700/50"
         )}
@@ -566,7 +566,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         </div>
 
         {/* Search Input - Glass morphism */}
-        <div className="relative flex-1 min-w-[200px] group order-1 lg:order-none w-full lg:w-auto">
+        <div className="relative flex-1 min-w-0 group order-1 lg:order-none w-full lg:w-auto">
           <Search className={cn(
             "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
             "text-zinc-500 group-focus-within:text-zinc-300 transition-colors"

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { toast } from "sonner";
 import { storageAdapter } from "@/services/storage";
 import { isTauri } from "@/utils/platform";
 import i18n from "../i18n";
@@ -40,15 +41,15 @@ export const useLanguageStore = create<LanguageStore>((set, get) => ({
   isLoading: true,
 
   setLanguage: async (language) => {
-    try {
-      await i18n.changeLanguage(language);
-      set({ language });
+    await i18n.changeLanguage(language);
+    set({ language });
 
+    try {
       const store = await storageAdapter.load("settings.json", { defaults: {}, autoSave: true });
       await store.set("language", language);
       await store.save();
-    } catch (e) {
-      console.log("Tauri Store not available or failed to save:", e);
+    } catch {
+      toast.error(i18n.t("common.settings.language.saveFailed"));
     }
   },
 

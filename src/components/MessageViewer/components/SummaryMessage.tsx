@@ -13,7 +13,7 @@ import { formatTimeShort } from "../../../utils/time";
 import type { SummaryMessageProps } from "../types";
 
 export const SummaryMessage: React.FC<SummaryMessageProps> = ({ content, timestamp }) => {
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState("summary", false);
   const { t } = useTranslation();
 
   return (

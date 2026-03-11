@@ -20,7 +20,7 @@ export const ThinkingRenderer = memo(function ThinkingRenderer({
   currentMatchIndex = 0,
 }: Props) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState("thinking", false);
 
   // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
   useEffect(() => {

@@ -29,8 +29,8 @@ export const MCPRenderer = ({
   const result = mcpData.result || {};
   const error = mcpData.error;
 
-  const [showParams, setShowParams] = useCaptureExpandState(false);
-  const [showResult, setShowResult] = useCaptureExpandState(false);
+  const [showParams, setShowParams] = useCaptureExpandState("mcp-params", false);
+  const [showResult, setShowResult] = useCaptureExpandState("mcp-result", false);
 
   return (
     <Renderer className="bg-tool-mcp/10 border-tool-mcp/30">

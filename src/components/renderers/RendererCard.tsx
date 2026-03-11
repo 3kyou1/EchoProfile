@@ -105,7 +105,7 @@ const CardRoot = memo(function CardRoot({
   defaultExpanded = false,
   hasError = false,
 }: CardProps) {
-  const { isExpanded, toggle } = useExpandableContent({ defaultExpanded });
+  const { isExpanded, toggle } = useExpandableContent("card", { defaultExpanded });
   const styles = getVariantStyles(variant);
 
   // Context value for child components

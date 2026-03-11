@@ -154,7 +154,7 @@ export const FileContent = ({
   };
 
   // 접기/펼치기 상태 관리
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(`file:${filePath}`, false);
   const MAX_LINES = 20; // 최대 표시 줄 수
 
   // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기

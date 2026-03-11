@@ -1,6 +1,5 @@
 import { memo } from "react";
 import { Server, Wrench } from "lucide-react";
-import { useForceExpanded } from "@/contexts/CaptureExpandContext";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { layout } from "@/components/renderers";
@@ -21,7 +20,6 @@ export const MCPToolUseRenderer = memo(function MCPToolUseRenderer({
   input,
 }: Props) {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
 
   return (
     <ToolUseCard
@@ -41,7 +39,7 @@ export const MCPToolUseRenderer = memo(function MCPToolUseRenderer({
       </div>
 
       {Object.keys(input).length > 0 && (
-        <details open={forceExpanded || undefined} className="mt-2">
+        <details className="mt-2">
           <summary className={cn(layout.smallText, "text-tool-mcp cursor-pointer hover:text-tool-mcp/80")}>
             {t("mcpToolUseRenderer.showInput")}
           </summary>

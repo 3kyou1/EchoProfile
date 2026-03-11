@@ -21,7 +21,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { layout, getVariantStyles } from "@/components/renderers";
-import { useCaptureExpandState, useForceExpanded } from "@/contexts/CaptureExpandContext";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 
 type Props = {
   text: string;
@@ -211,10 +211,9 @@ const getPreviewLines = (text: string, lineCount: number = 3): string => {
 
 export const TaskNotificationRenderer = memo(function TaskNotificationRenderer({ text }: Props) {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
-  const [isGroupExpanded, setIsGroupExpanded] = useCaptureExpandState(true);
+  const [isGroupExpanded, setIsGroupExpanded] = useCaptureExpandState("task-group", true);
   const [expandedTaskIndices, setExpandedTaskIndices] = useState<Set<number>>(new Set());
-  const [isDetailsExpanded, setIsDetailsExpanded] = useCaptureExpandState(false);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useCaptureExpandState("task-details", false);
 
   // Get task variant styles
   const styles = getVariantStyles("task");
@@ -397,7 +396,7 @@ export const TaskNotificationRenderer = memo(function TaskNotificationRenderer({
                 key={`${notification.taskId || index}-${index}`}
                 notification={notification}
                 index={index}
-                isExpanded={forceExpanded || expandedTaskIndices.has(index)}
+                isExpanded={expandedTaskIndices.has(index)}
                 onToggle={() => toggleTaskExpanded(index)}
               />
             ))}

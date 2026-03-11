@@ -19,7 +19,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getVariantStyles, layout } from "@/components/renderers";
-import { useCaptureExpandState, useForceExpanded } from "@/contexts/CaptureExpandContext";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 
 export interface AgentTask {
   agentId: string;
@@ -171,8 +171,7 @@ export const AgentTaskGroupRenderer = memo(function AgentTaskGroupRenderer({
   tasks,
 }: AgentTaskGroupRendererProps) {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState("agent-tasks", false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const styles = getVariantStyles("task");
 
@@ -333,7 +332,7 @@ export const AgentTaskGroupRenderer = memo(function AgentTaskGroupRenderer({
             <AgentTaskItem
               key={task.agentId}
               task={task}
-              isExpanded={forceExpanded || expandedTasks.has(task.agentId)}
+              isExpanded={expandedTasks.has(task.agentId)}
               onToggle={() => toggleTask(task.agentId)}
             />
           ))}

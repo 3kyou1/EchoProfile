@@ -30,6 +30,7 @@ import {
   groupTaskOperations,
 } from "./helpers";
 import { useAppStore } from "../../store/useAppStore";
+import { useExpandRegistry } from "../../store/expandRegistryStore";
 
 export const MessageViewer: React.FC<MessageViewerProps> = ({
   messages,
@@ -67,6 +68,12 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     shouldHighlightTarget,
     clearTargetMessage,
   } = useAppStore();
+
+  // Clear expand registry on session change
+  const clearExpandStates = useExpandRegistry((s) => s.clearAll);
+  useEffect(() => {
+    clearExpandStates();
+  }, [selectedSession?.session_id, clearExpandStates]);
 
   // Screenshot preview hook
   const {

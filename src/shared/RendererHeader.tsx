@@ -28,7 +28,7 @@ const ContentProvider = ({
   hasError,
   enableToggle,
 }: ContentProviderProps) => {
-  const [isOpen, toggle] = useToggle();
+  const [isOpen, toggle] = useToggle("renderer");
 
   return (
     <ContentContext.Provider value={{ isOpen, toggle, hasError, enableToggle }}>

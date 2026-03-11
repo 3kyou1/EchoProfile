@@ -120,7 +120,7 @@ export const AgentProgressGroupRenderer = memo(function AgentProgressGroupRender
   agentId,
 }: AgentProgressGroupRendererProps) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState("progress", false);
   const styles = getVariantStyles("info");
 
   // Get the latest entry for summary

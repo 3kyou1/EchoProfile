@@ -1,5 +1,4 @@
 import { MessageCircle, User, Bot, Wrench, X } from "lucide-react";
-import { useForceExpanded } from "@/contexts/CaptureExpandContext";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
@@ -13,7 +12,6 @@ type Props = {
 
 export const ClaudeSessionHistoryRenderer = ({ content }: Props) => {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
   try {
     // Split by lines and filter out empty lines
     const lines = content.split("\n").filter((line) => line.trim());
@@ -172,7 +170,7 @@ export const ClaudeSessionHistoryRenderer = ({ content }: Props) => {
         <p className={cn(layout.bodyText, "text-red-600")}>
           {t('claudeSessionHistoryRenderer.parsingErrorDescription')}
         </p>
-        <details open={forceExpanded || undefined} className="mt-2">
+        <details className="mt-2">
           <summary className={cn(layout.bodyText, "cursor-pointer")}>{t('claudeSessionHistoryRenderer.viewOriginalData')}</summary>
           <pre className={cn("mt-2 bg-gray-100 overflow-x-auto", layout.containerPadding, layout.rounded, layout.smallText)}>
             {content}

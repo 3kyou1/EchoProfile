@@ -7,7 +7,6 @@
  */
 
 import { memo } from "react";
-import { useForceExpanded } from "@/contexts/CaptureExpandContext";
 import { Markdown } from "../common";
 import { Globe, FileText, Clock, AlertCircle, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -65,7 +64,6 @@ export const WebFetchToolResultRenderer = memo(function WebFetchToolResultRender
   content,
 }: Props) {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
   const errorMessages: Record<string, string> = {
     ...getCommonToolErrorMessages(t),
     invalid_input: t("toolError.invalidUrlFormat"),
@@ -179,7 +177,7 @@ export const WebFetchToolResultRenderer = memo(function WebFetchToolResultRender
       )}
 
       {preview && (
-        <details open={forceExpanded || undefined} className="mt-2">
+        <details className="mt-2">
           <summary className={cn(layout.smallText, "cursor-pointer hover:opacity-80", webStyles.accent)}>
             {t("webFetchToolResultRenderer.showContent")}
           </summary>

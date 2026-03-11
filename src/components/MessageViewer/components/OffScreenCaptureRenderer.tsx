@@ -11,7 +11,6 @@ import { forwardRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { CaptureExpandProvider } from "@/contexts/CaptureExpandContext";
 import type { FlattenedMessage, FlattenedMessageItem } from "../types";
 import { ClaudeMessageNode } from "./ClaudeMessageNode";
 
@@ -66,37 +65,35 @@ export const OffScreenCaptureRenderer = forwardRef<
     <>
       {/* Layer 1: Capture target — on-screen so browser computes layout,
           but behind the backdrop (z-index: 99997) */}
-      <CaptureExpandProvider value={{ forceExpanded: false }}>
-        <div
-          ref={ref}
-          className="bg-background text-foreground"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            zIndex: 99997,
-            width: "800px",
-            fontFamily:
-              'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          }}
-        >
-          {messagesToRender.map((item) => (
-            <ClaudeMessageNode
-              key={item.message.uuid}
-              message={item.message}
-              depth={item.depth}
-              agentTaskGroup={item.agentTaskGroup}
-              isAgentTaskGroupMember={false}
-              agentProgressGroup={item.agentProgressGroup}
-              isAgentProgressGroupMember={false}
-              taskOperationGroup={item.taskOperationGroup}
-              taskRegistry={item.taskRegistry}
-              isTaskOperationGroupMember={false}
-              isCaptureMode={false}
-            />
-          ))}
-        </div>
-      </CaptureExpandProvider>
+      <div
+        ref={ref}
+        className="bg-background text-foreground"
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          zIndex: 99997,
+          width: "800px",
+          fontFamily:
+            'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        }}
+      >
+        {messagesToRender.map((item) => (
+          <ClaudeMessageNode
+            key={item.message.uuid}
+            message={item.message}
+            depth={item.depth}
+            agentTaskGroup={item.agentTaskGroup}
+            isAgentTaskGroupMember={false}
+            agentProgressGroup={item.agentProgressGroup}
+            isAgentProgressGroupMember={false}
+            taskOperationGroup={item.taskOperationGroup}
+            taskRegistry={item.taskRegistry}
+            isTaskOperationGroupMember={false}
+            isCaptureMode={false}
+          />
+        ))}
+      </div>
 
       {/* Layer 2: Backdrop covers the capture target (z-index: 99998) */}
       <div

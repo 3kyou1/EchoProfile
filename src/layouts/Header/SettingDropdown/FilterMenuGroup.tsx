@@ -17,8 +17,12 @@ export const FilterMenuGroup = () => {
         {t("common.settings.filter.title", { defaultValue: "필터" })}
       </DropdownMenuLabel>
       <DropdownMenuItem
-        onSelect={(e) => e.preventDefault()}
-        onClick={() => setShowSystemMessages(!showSystemMessages)}
+        role="menuitemcheckbox"
+        aria-checked={showSystemMessages}
+        onSelect={(e) => {
+          e.preventDefault();
+          setShowSystemMessages(!showSystemMessages);
+        }}
       >
         <Eye className="mr-2 h-4 w-4 text-foreground" />
         <span className="flex-1">

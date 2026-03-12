@@ -2,12 +2,12 @@ name: Rust Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "src-tauri/**"
       - ".github/workflows/rust-tests.yml"
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "src-tauri/**"
       - ".github/workflows/rust-tests.yml"

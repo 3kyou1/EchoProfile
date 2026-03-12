@@ -48,6 +48,28 @@ pnpm build                                      # Build frontend with TypeScript
 pnpm lint                                       # Run ESLint
 ```
 
+## Branch Strategy
+
+```
+main     ← 릴리즈 전용 (사용자가 GitHub에서 보는 기본 브랜치)
+develop  ← 개발 통합 (feature/* 브랜치의 머지 대상)
+feature/* ← 개별 기능 (develop에서 분기, develop으로 PR)
+```
+
+### 규칙
+
+| 브랜치 | 역할 | PR 대상 |
+|--------|------|---------|
+| `main` | 릴리즈된 코드만. README/docs는 현재 릴리즈 기준 | - |
+| `develop` | 다음 릴리즈 작업 통합 | `main` (릴리즈 시에만) |
+| `feature/*`, `fix/*` | 개별 작업 | `develop` |
+
+### 주의사항
+
+- **feature/fix PR은 반드시 `develop`을 base로 생성** (`main` 아님)
+- `main`에 직접 머지하지 않음 — 릴리즈 시에만 `develop` → `main` 머지
+- README, 스크린샷 등 사용자 문서는 릴리즈 커밋에서만 `main`에 반영
+
 ## Version Management
 
 This is a **Tauri desktop application** distributed via GitHub Releases (not npm).
@@ -121,24 +143,38 @@ git log $(git tag --sort=-version:refname | head -1)..HEAD --oneline
 | 새 기능 추가 | minor (x.Y.0) | 1.3.0 → 1.4.0 |
 | 호환성 깨지는 변경 | major (X.0.0) | 1.3.0 → 2.0.0 |
 
-#### Phase 3: 버전 범프 및 커밋
+#### Phase 3: 버전 범프 및 커밋 (develop → main)
 
 ```bash
-# 1. 버전 업데이트
+# 1. develop에서 최종 확인
+git checkout develop
+pnpm tsc --build . && pnpm vitest run
+
+# 2. main으로 머지
+git checkout main
+git pull origin main
+git merge develop
+
+# 3. 버전 업데이트
 npm version <version> --no-git-tag-version
 # 예: npm version 1.3.1 --no-git-tag-version
 
-# 2. 버전 동기화 (package.json → Cargo.toml + tauri.conf.json)
+# 4. 버전 동기화 (package.json → Cargo.toml + tauri.conf.json)
 just sync-version
 
-# 3. 최종 빌드 확인 (동기화 후 Cargo.toml 변경 반영)
+# 5. 최종 빌드 확인 (동기화 후 Cargo.toml 변경 반영)
 pnpm tsc --build . && pnpm vitest run
 
-# 4. 커밋 및 태그
+# 6. 커밋 및 태그 (main 브랜치에서)
 git add -A
 git commit -m "chore: release v1.3.1"
 git tag v1.3.1
 git push && git push --tags
+
+# 7. develop에 릴리즈 커밋 역머지
+git checkout develop
+git merge main
+git push
 ```
 
 #### Phase 4: 릴리즈 발행 확인

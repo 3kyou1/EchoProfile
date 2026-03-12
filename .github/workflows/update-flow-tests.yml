@@ -2,7 +2,7 @@ name: Update Flow Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths: &update_flow_paths
       - "src/components/SimpleUpdateManager.tsx"
       - "src/components/SimpleUpdateModal.tsx"
@@ -25,7 +25,7 @@ on:
       - ".github/workflows/update-flow-tests.yml"
 
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths: *update_flow_paths
 
   workflow_dispatch:

@@ -357,11 +357,41 @@ describe('useUpdater', () => {
       expect(result.current.state.error).toBe(UPDATE_DOWNLOAD_COMPLETE_RESTART_CODE);
     });
 
-    it('should ask for manual restart on generic download failure after progress events', async () => {
+    it('should treat partial download failure as real error, not manual restart', async () => {
       const mockDownloadAndInstall = vi.fn().mockImplementation((callback) => {
         callback({ event: 'Started', data: { contentLength: 1000 } });
         callback({ event: 'Progress', data: { chunkLength: 700 } });
         return Promise.reject(new Error('Download failed'));
+      });
+
+      const mockUpdate = {
+        version: '2.0.0',
+        downloadAndInstall: mockDownloadAndInstall,
+      };
+      mockCheck.mockResolvedValue(mockUpdate);
+
+      const { result } = renderHook(() => useUpdater());
+
+      await act(async () => {
+        await result.current.checkForUpdates();
+      });
+
+      await act(async () => {
+        await result.current.downloadAndInstall();
+      });
+
+      expect(mockRelaunch).not.toHaveBeenCalled();
+      expect(result.current.state.isDownloading).toBe(false);
+      expect(result.current.state.isRestarting).toBe(false);
+      expect(result.current.state.requiresManualRestart).toBe(false);
+      expect(result.current.state.error).toBe('Download failed');
+    });
+
+    it('should guide manual restart when all bytes downloaded but install fails', async () => {
+      const mockDownloadAndInstall = vi.fn().mockImplementation((callback) => {
+        callback({ event: 'Started', data: { contentLength: 1000 } });
+        callback({ event: 'Progress', data: { chunkLength: 1000 } });
+        return Promise.reject(new Error('Install failed'));
       });
 
       const mockUpdate = {

@@ -118,7 +118,7 @@ describe("SimpleUpdateModal", () => {
   });
 
   it("shows failure guide and report issue button when update fails", () => {
-    const updater = createUpdater({ error: "update.install_failed" });
+    const updater = createUpdater({ error: "Download failed" });
 
     render(
       <SimpleUpdateModal
@@ -150,7 +150,7 @@ describe("SimpleUpdateModal", () => {
     );
 
     expect(
-      screen.getByText("common.error.updateManualRestartRequired")
+      screen.getByText("common.error.updateDownloadCompleteRestart")
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "simpleUpdateModal.reportIssue" })
@@ -216,7 +216,7 @@ describe("SimpleUpdateModal", () => {
   });
 
   it("opens feedback modal with diagnostics prefilled when reporting issue", async () => {
-    const updater = createUpdater({ error: "update.install_failed" });
+    const updater = createUpdater({ error: "Download failed" });
     const onClose = vi.fn();
 
     render(
@@ -251,7 +251,7 @@ describe("SimpleUpdateModal", () => {
       feedbackPrefill?: { body?: string };
     };
     expect(openArgs.feedbackPrefill?.body).toContain("[Updater Diagnostics]");
-    expect(openArgs.feedbackPrefill?.body).toContain("error=update.install_failed");
+    expect(openArgs.feedbackPrefill?.body).toContain("error=Download failed");
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

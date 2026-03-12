@@ -22,12 +22,12 @@ function createState(overrides: Partial<UpdateState> = {}): UpdateState {
 describe('buildUpdateDiagnostics', () => {
   it('includes key updater diagnostics fields', () => {
     const text = buildUpdateDiagnostics({
-      error: 'update.manual_restart_required',
+      error: 'update.download_complete_restart',
       state: createState({ isRestarting: true }),
     });
 
     expect(text).toContain('[Updater Diagnostics]');
-    expect(text).toContain('error=update.manual_restart_required');
+    expect(text).toContain('error=update.download_complete_restart');
     expect(text).toContain('currentVersion=1.5.0');
     expect(text).toContain('newVersion=1.5.1');
     expect(text).toContain('isRestarting=true');

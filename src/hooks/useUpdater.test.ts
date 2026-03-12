@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import {
-  UPDATE_INSTALL_FAILED_ERROR_CODE,
+  UPDATE_DOWNLOAD_COMPLETE_RESTART_CODE,
 } from '@/utils/updateError';
 
 // Simulate Tauri environment so isTauri() returns true
@@ -324,7 +324,7 @@ describe('useUpdater', () => {
       expect(result.current.state.isDownloading).toBe(false);
       expect(result.current.state.isRestarting).toBe(false);
       expect(result.current.state.requiresManualRestart).toBe(true);
-      expect(result.current.state.error).toBeNull();
+      expect(result.current.state.error).toBe(UPDATE_DOWNLOAD_COMPLETE_RESTART_CODE);
     });
 
     it('should ask for manual restart when updater fails after finished event', async () => {
@@ -354,7 +354,7 @@ describe('useUpdater', () => {
       expect(result.current.state.isDownloading).toBe(false);
       expect(result.current.state.isRestarting).toBe(false);
       expect(result.current.state.requiresManualRestart).toBe(true);
-      expect(result.current.state.error).toBeNull();
+      expect(result.current.state.error).toBe(UPDATE_DOWNLOAD_COMPLETE_RESTART_CODE);
     });
 
     it('should ask for manual restart on generic download failure after progress events', async () => {
@@ -384,10 +384,10 @@ describe('useUpdater', () => {
       expect(result.current.state.isDownloading).toBe(false);
       expect(result.current.state.isRestarting).toBe(false);
       expect(result.current.state.requiresManualRestart).toBe(true);
-      expect(result.current.state.error).toBeNull();
+      expect(result.current.state.error).toBe(UPDATE_DOWNLOAD_COMPLETE_RESTART_CODE);
     });
 
-    it('should map generic install-stage failure to install failed code in separated flow', async () => {
+    it('should guide manual restart when install fails in separated flow (Tauri v2 macOS known issue)', async () => {
       const mockDownload = vi.fn().mockImplementation((callback) => {
         callback({ event: 'Started', data: { contentLength: 1000 } });
         callback({ event: 'Progress', data: { chunkLength: 1000 } });
@@ -418,7 +418,8 @@ describe('useUpdater', () => {
       expect(mockRelaunch).not.toHaveBeenCalled();
       expect(result.current.state.isInstalling).toBe(false);
       expect(result.current.state.isRestarting).toBe(false);
-      expect(result.current.state.error).toBe(UPDATE_INSTALL_FAILED_ERROR_CODE);
+      expect(result.current.state.requiresManualRestart).toBe(true);
+      expect(result.current.state.error).toBe(UPDATE_DOWNLOAD_COMPLETE_RESTART_CODE);
     });
 
     it('should ask for manual restart when relaunch fails in separated flow', async () => {
@@ -454,7 +455,7 @@ describe('useUpdater', () => {
       expect(result.current.state.isInstalling).toBe(false);
       expect(result.current.state.isRestarting).toBe(false);
       expect(result.current.state.requiresManualRestart).toBe(true);
-      expect(result.current.state.error).toBeNull();
+      expect(result.current.state.error).toBe(UPDATE_DOWNLOAD_COMPLETE_RESTART_CODE);
     });
   });
 

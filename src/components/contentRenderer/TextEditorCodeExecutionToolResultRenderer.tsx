@@ -6,12 +6,12 @@
  */
 
 import { memo } from "react";
-import { useForceExpanded } from "@/contexts/CaptureExpandContext";
-import { FileEdit, CheckCircle, AlertCircle, Eye, FilePlus, Trash2 } from "lucide-react";
+import { FileEdit, CheckCircle, AlertCircle, Eye, FilePlus, Trash2, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { TextEditorResult, TextEditorError } from "../../types";
 import { getVariantStyles, layout } from "../renderers";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { ToolResultCard } from "./ToolResultCard";
 import { getCommonToolErrorMessages } from "./toolResultErrorMessages";
 
@@ -34,7 +34,7 @@ export const TextEditorCodeExecutionToolResultRenderer = memo(
     content,
   }: Props) {
     const { t } = useTranslation();
-    const forceExpanded = useForceExpanded();
+    const [showContent, setShowContent] = useCaptureExpandState(`text-editor-${toolUseId}`, false);
     const errorMessages: Record<string, string> = {
       ...getCommonToolErrorMessages(t),
       file_not_found: t("toolError.fileNotFound"),
@@ -126,25 +126,32 @@ export const TextEditorCodeExecutionToolResultRenderer = memo(
 
           {/* File content preview */}
           {fileContent && (
-            <details open={forceExpanded || undefined} className="mt-2">
-              <summary className={cn(
-                layout.smallText,
-                "cursor-pointer hover:opacity-80",
-                warningStyles.accent
-              )}>
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => setShowContent(prev => !prev)}
+                className={cn(
+                  layout.smallText,
+                  "flex items-center gap-1 cursor-pointer hover:opacity-80",
+                  warningStyles.accent
+                )}
+              >
+                <ChevronRight className={cn("w-3 h-3 transition-transform", showContent && "rotate-90")} />
                 {t("textEditorCodeExecutionToolResultRenderer.showContent")}
-              </summary>
-              <pre className={cn(
-                "mt-2 p-2 overflow-x-auto whitespace-pre-wrap",
-                layout.monoText,
-                layout.rounded,
-                layout.codeMaxHeight,
-                "bg-warning/20",
-                warningStyles.accent
-              )}>
-                {truncateContent(fileContent)}
-              </pre>
-            </details>
+              </button>
+              {showContent && (
+                <pre className={cn(
+                  "mt-2 p-2 overflow-x-auto whitespace-pre-wrap",
+                  layout.monoText,
+                  layout.rounded,
+                  layout.codeMaxHeight,
+                  "bg-warning/20",
+                  warningStyles.accent
+                )}>
+                  {truncateContent(fileContent)}
+                </pre>
+              )}
+            </div>
           )}
       </ToolResultCard>
     );

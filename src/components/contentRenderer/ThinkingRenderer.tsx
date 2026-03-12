@@ -11,6 +11,8 @@ type Props = {
   searchQuery?: string;
   isCurrentMatch?: boolean;
   currentMatchIndex?: number;
+  /** Content index within a message to prevent key collisions */
+  index?: number;
 };
 
 export const ThinkingRenderer = memo(function ThinkingRenderer({
@@ -18,9 +20,10 @@ export const ThinkingRenderer = memo(function ThinkingRenderer({
   searchQuery,
   isCurrentMatch = false,
   currentMatchIndex = 0,
+  index = 0,
 }: Props) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(`thinking-${index}`, false);
 
   // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
   useEffect(() => {

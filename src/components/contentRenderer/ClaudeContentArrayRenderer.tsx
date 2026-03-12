@@ -225,6 +225,7 @@ export const ClaudeContentArrayRenderer = memo(({
                 <ThinkingRenderer
                   key={entry.key}
                   thinking={item.thinking}
+                  index={index}
                   searchQuery={searchQuery}
                   isCurrentMatch={isCurrentMatch}
                   currentMatchIndex={currentMatchIndex}

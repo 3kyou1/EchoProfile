@@ -25,7 +25,7 @@ export const StringRenderer = memo(function StringRenderer({ result, searchQuery
     (result.includes("- ") || result.includes("├") || result.includes("└"));
 
   // 접기/펼치기 상태 관리
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState("string-output", false);
 
   // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
   useEffect(() => {

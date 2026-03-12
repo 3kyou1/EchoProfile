@@ -107,7 +107,7 @@ const TaskRow = memo(function TaskRow({
   const StatusIcon = statusInfo?.icon ?? TASK_STATUS_CONFIG["pending"]!.icon;
   const statusColor = statusInfo?.color ?? "text-muted-foreground";
   const hasDescription = task.isCreate && !!task.description;
-  const [expanded, setExpanded] = useCaptureExpandState(false);
+  const [expanded, setExpanded] = useCaptureExpandState(`task-item-${task.id}`, false);
 
   return (
     <div className="border-b border-border/50 last:border-b-0">
@@ -188,7 +188,10 @@ export const TaskOperationGroupRenderer = memo(function TaskOperationGroupRender
   taskRegistry,
 }: Props) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(true);
+  // Use first operation's task ID for unique group key
+  const firstTaskId = operations[0]?.task?.id ?? (operations[0]?.input.taskId as string | undefined);
+  const groupKey = firstTaskId ? `task-ops-${firstTaskId}` : "task-ops";
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(groupKey, true);
   const styles = getVariantStyles("task");
 
   const { tasks, otherOps } = useMemo(() => mergeOperations(operations, taskRegistry), [operations, taskRegistry]);

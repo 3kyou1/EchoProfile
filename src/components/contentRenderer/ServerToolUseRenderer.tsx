@@ -1,10 +1,10 @@
 import { memo } from "react";
-import { Globe, Wrench } from "lucide-react";
-import { useForceExpanded } from "@/contexts/CaptureExpandContext";
+import { ChevronRight, Globe, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { safeStringify } from "../../utils/jsonUtils";
 import { getVariantStyles, layout } from "@/components/renderers";
 import { cn } from "@/lib/utils";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { ToolUseCard } from "./toolUseRenderers/ToolUseCard";
 
 type Props = {
@@ -19,9 +19,9 @@ export const ServerToolUseRenderer = memo(function ServerToolUseRenderer({
   input,
 }: Props) {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
   const variant = name === "web_search" ? "web" : "mcp";
   const styles = getVariantStyles(variant);
+  const [showInput, setShowInput] = useCaptureExpandState(`server-input-${id}`, false);
 
   const getIcon = () => {
     switch (name) {
@@ -59,14 +59,21 @@ export const ServerToolUseRenderer = memo(function ServerToolUseRenderer({
       )}
       {Object.keys(input).length > 0 &&
         !(name === "web_search" && Object.keys(input).length === 1) && (
-          <details open={forceExpanded || undefined} className="mt-2">
-            <summary className={cn(layout.monoText, styles.accent, "cursor-pointer hover:opacity-80")}>
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => setShowInput(prev => !prev)}
+              className={cn(layout.monoText, styles.accent, "flex items-center gap-1 cursor-pointer hover:opacity-80")}
+            >
+              <ChevronRight className={cn("w-3 h-3 transition-transform", showInput && "rotate-90")} />
               {t("serverToolUseRenderer.showInput")}
-            </summary>
-            <pre className={cn(layout.monoText, "mt-2 text-foreground bg-muted rounded p-2 overflow-x-auto")}>
-              {safeStringify(input)}
-            </pre>
-          </details>
+            </button>
+            {showInput && (
+              <pre className={cn(layout.monoText, "mt-2 text-foreground bg-muted rounded p-2 overflow-x-auto")}>
+                {safeStringify(input)}
+              </pre>
+            )}
+          </div>
         )}
     </ToolUseCard>
   );

@@ -5,7 +5,7 @@
  * Displays parallel agent tasks with clear visual hierarchy and status indicators.
  * Design: Industrial/Utilitarian - inspired by mission control dashboards
  */
-import { useState, useMemo, memo, useCallback } from "react";
+import { useMemo, memo, useCallback } from "react";
 import {
   CheckCircle2,
   XCircle,
@@ -21,7 +21,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { layout, getVariantStyles } from "@/components/renderers";
-import { useCaptureExpandState, useForceExpanded } from "@/contexts/CaptureExpandContext";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 
 type Props = {
   text: string;
@@ -70,14 +70,18 @@ const formatTaskId = (id: string | undefined): string => {
 const TaskRow = memo(function TaskRow({
   notification,
   index,
-  isExpanded,
-  onToggle,
 }: {
   notification: TaskNotification;
   index: number;
-  isExpanded: boolean;
-  onToggle: () => void;
 }) {
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(
+    `notification-${notification.taskId ?? index}`,
+    false,
+  );
+  const onToggle = useCallback(
+    () => setIsExpanded((prev) => !prev),
+    [setIsExpanded],
+  );
   const statusKey = (notification.status || "completed") as keyof typeof STATUS_CONFIG;
   const config = STATUS_CONFIG[statusKey] || STATUS_CONFIG.completed;
   const hasExpandableContent = notification.result || notification.summary;
@@ -211,10 +215,16 @@ const getPreviewLines = (text: string, lineCount: number = 3): string => {
 
 export const TaskNotificationRenderer = memo(function TaskNotificationRenderer({ text }: Props) {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
-  const [isGroupExpanded, setIsGroupExpanded] = useCaptureExpandState(true);
-  const [expandedTaskIndices, setExpandedTaskIndices] = useState<Set<number>>(new Set());
-  const [isDetailsExpanded, setIsDetailsExpanded] = useCaptureExpandState(false);
+
+  // Extract first task ID for unique group keys (stable across renders since text is immutable)
+  const firstTaskId = useMemo(() => {
+    const match = text.match(/<task-id>([\s\S]*?)<\/task-id>/);
+    return match?.[1]?.trim();
+  }, [text]);
+  const groupSuffix = firstTaskId ? `-${firstTaskId}` : "";
+
+  const [isGroupExpanded, setIsGroupExpanded] = useCaptureExpandState(`task-group${groupSuffix}`, true);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useCaptureExpandState(`task-details${groupSuffix}`, false);
 
   // Get task variant styles
   const styles = getVariantStyles("task");
@@ -254,15 +264,6 @@ export const TaskNotificationRenderer = memo(function TaskNotificationRenderer({
     });
     return counts;
   }, [notifications]);
-
-  const toggleTaskExpanded = useCallback((index: number) => {
-    setExpandedTaskIndices(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  }, []);
 
   if (notifications.length === 0) {
     return null;
@@ -397,8 +398,6 @@ export const TaskNotificationRenderer = memo(function TaskNotificationRenderer({
                 key={`${notification.taskId || index}-${index}`}
                 notification={notification}
                 index={index}
-                isExpanded={forceExpanded || expandedTaskIndices.has(index)}
-                onToggle={() => toggleTaskExpanded(index)}
               />
             ))}
           </div>

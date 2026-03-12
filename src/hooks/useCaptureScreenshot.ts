@@ -26,9 +26,16 @@ export function useCaptureScreenshot() {
     async (containerEl: HTMLElement, sessionId?: string) => {
       try {
         const { toPng } = await import("html-to-image");
+        const resolvedBackground = getComputedStyle(containerEl).backgroundColor;
+        const backgroundColor =
+          resolvedBackground &&
+          resolvedBackground !== "transparent" &&
+          resolvedBackground !== "rgba(0, 0, 0, 0)"
+            ? resolvedBackground
+            : "#09090b";
         const dataUrl = await toPng(containerEl, {
           pixelRatio: 2,
-          backgroundColor: "#09090b", // zinc-950
+          backgroundColor,
         });
 
         const bytes = dataUrlToUint8Array(dataUrl);

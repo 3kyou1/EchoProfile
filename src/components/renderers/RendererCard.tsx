@@ -43,6 +43,8 @@ interface CardProps {
   defaultExpanded?: boolean;
   /** Whether this renderer has an error */
   hasError?: boolean;
+  /** Unique expand key suffix for capture registry (prevents key collisions) */
+  expandKey?: string;
 }
 
 /**
@@ -104,8 +106,9 @@ const CardRoot = memo(function CardRoot({
   enableToggle = true,
   defaultExpanded = false,
   hasError = false,
+  expandKey,
 }: CardProps) {
-  const { isExpanded, toggle } = useExpandableContent({ defaultExpanded });
+  const { isExpanded, toggle } = useExpandableContent(expandKey ?? "card", { defaultExpanded });
   const styles = getVariantStyles(variant);
 
   // Context value for child components

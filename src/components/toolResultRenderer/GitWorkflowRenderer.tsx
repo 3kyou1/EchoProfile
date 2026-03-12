@@ -27,8 +27,8 @@ export const GitWorkflowRenderer = ({
   const files = gitData.files || [];
   const diff = gitData.diff || "";
 
-  const [showFiles, setShowFiles] = useCaptureExpandState(false);
-  const [showDiff, setShowDiff] = useCaptureExpandState(false);
+  const [showFiles, setShowFiles] = useCaptureExpandState("git-files", false);
+  const [showDiff, setShowDiff] = useCaptureExpandState("git-diff", false);
 
   return (
     <Renderer className="bg-tool-git/10 border-tool-git/30">

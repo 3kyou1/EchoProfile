@@ -43,7 +43,7 @@ const getTextInfo = (text: string) => {
 // Collapsible table component for markdown
 const CollapsibleTable = ({ children, ...props }: React.HTMLAttributes<HTMLTableElement>) => {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState("table", false);
 
   // Extract thead and tbody from children
   const childArray = Children.toArray(children);
@@ -124,7 +124,7 @@ export const MessageContentDisplay: React.FC<MessageContentDisplayProps> = ({
   currentMatchIndex = 0,
 }) => {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState("content", false);
 
   // Check if content needs expand (for both user and assistant)
   const textInfo = useMemo(() => {

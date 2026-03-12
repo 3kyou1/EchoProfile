@@ -81,9 +81,11 @@
   "common.settings.filter.title": "Filter",
   "common.settings.language.description": "Select your preferred language",
   "common.settings.language.title": "Language",
+  "common.settings.language.saveFailed": "Failed to save language preference",
   "common.settings.theme.dark": "Dark",
   "common.settings.theme.light": "Light",
   "common.settings.theme.system": "System",
+  "common.settings.theme.saveFailed": "Failed to save theme preference",
   "common.settings.theme.title": "Theme",
   "common.settings.title": "Settings",
   "common.settings.updateSettings": "Update Settings",
@@ -146,5 +148,7 @@
   "time.minute": "minute",
   "time.minutes": "minutes",
   "time.start": "Start:",
-  "time.secondShort": "s"
+  "time.secondShort": "s",
+  "time.today": "Today",
+  "time.yesterday": "Yesterday"
 }

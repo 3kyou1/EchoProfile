@@ -81,9 +81,11 @@
   "common.settings.filter.title": "フィルター",
   "common.settings.language.description": "お好みの言語を選択してください",
   "common.settings.language.title": "言語",
+  "common.settings.language.saveFailed": "言語設定の保存に失敗しました",
   "common.settings.theme.dark": "ダーク",
   "common.settings.theme.light": "ライト",
   "common.settings.theme.system": "システム",
+  "common.settings.theme.saveFailed": "テーマ設定の保存に失敗しました",
   "common.settings.theme.title": "テーマ",
   "common.settings.title": "設定",
   "common.settings.updateSettings": "アップデート設定",
@@ -146,5 +148,7 @@
   "time.minute": "分",
   "time.minutes": "分",
   "time.start": "開始:",
-  "time.secondShort": "秒"
+  "time.secondShort": "秒",
+  "time.today": "今日",
+  "time.yesterday": "昨日"
 }

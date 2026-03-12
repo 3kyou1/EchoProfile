@@ -8,6 +8,7 @@ import React from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { ExpandKeyProvider } from "@/contexts/CaptureExpandContext";
 import type { ProgressData } from "../../../types";
 import { ClaudeContentArrayRenderer } from "../../contentRenderer";
 import {
@@ -149,66 +150,72 @@ export const ClaudeMessageNode = React.memo(({
   // Render grouped agent tasks
   if (agentTaskGroup && agentTaskGroup.length > 0) {
     return (
-      <div
-        data-message-uuid={message.uuid}
-        onClick={handleSelectionClick}
-        className={cn(
-          "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
-          selectionHighlight,
-          selectionCursor
-        )}
-      >
-        {CaptureHideButton}
-        <div className="max-w-4xl mx-auto">
-          <AgentTaskGroupRenderer tasks={agentTaskGroup} timestamp={message.timestamp} />
+      <ExpandKeyProvider value={message.uuid}>
+        <div
+          data-message-uuid={message.uuid}
+          onClick={handleSelectionClick}
+          className={cn(
+            "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
+            isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+            selectionHighlight,
+            selectionCursor
+          )}
+        >
+          {CaptureHideButton}
+          <div className="max-w-4xl mx-auto">
+            <AgentTaskGroupRenderer tasks={agentTaskGroup} timestamp={message.timestamp} />
+          </div>
         </div>
-      </div>
+      </ExpandKeyProvider>
     );
   }
 
   // Render grouped agent progress
   if (agentProgressGroup && agentProgressGroup.entries.length > 0) {
     return (
-      <div
-        data-message-uuid={message.uuid}
-        onClick={handleSelectionClick}
-        className={cn(
-          "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
-          selectionHighlight,
-          selectionCursor
-        )}
-      >
-        {CaptureHideButton}
-        <div className="max-w-4xl mx-auto">
-          <AgentProgressGroupRenderer
-            entries={agentProgressGroup.entries}
-            agentId={agentProgressGroup.agentId}
-          />
+      <ExpandKeyProvider value={message.uuid}>
+        <div
+          data-message-uuid={message.uuid}
+          onClick={handleSelectionClick}
+          className={cn(
+            "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
+            isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+            selectionHighlight,
+            selectionCursor
+          )}
+        >
+          {CaptureHideButton}
+          <div className="max-w-4xl mx-auto">
+            <AgentProgressGroupRenderer
+              entries={agentProgressGroup.entries}
+              agentId={agentProgressGroup.agentId}
+            />
+          </div>
         </div>
-      </div>
+      </ExpandKeyProvider>
     );
   }
 
   // Render grouped task operations
   if (taskOperationGroup && taskOperationGroup.length > 0) {
     return (
-      <div
-        data-message-uuid={message.uuid}
-        onClick={handleSelectionClick}
-        className={cn(
-          "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
-          selectionHighlight,
-          selectionCursor
-        )}
-      >
-        {CaptureHideButton}
-        <div className="max-w-4xl mx-auto">
-          <TaskOperationGroupRenderer operations={taskOperationGroup} taskRegistry={taskRegistry} />
+      <ExpandKeyProvider value={message.uuid}>
+        <div
+          data-message-uuid={message.uuid}
+          onClick={handleSelectionClick}
+          className={cn(
+            "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
+            isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+            selectionHighlight,
+            selectionCursor
+          )}
+        >
+          {CaptureHideButton}
+          <div className="max-w-4xl mx-auto">
+            <TaskOperationGroupRenderer operations={taskOperationGroup} taskRegistry={taskRegistry} />
+          </div>
         </div>
-      </div>
+      </ExpandKeyProvider>
     );
   }
 
@@ -218,19 +225,21 @@ export const ClaudeMessageNode = React.memo(({
       ? message.content
       : "";
     return (
-      <div
-        data-message-uuid={message.uuid}
-        onClick={handleSelectionClick}
-        className={cn(
-          "relative max-w-4xl mx-auto transition-all duration-200",
-          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
-          selectionHighlight,
-          selectionCursor
-        )}
-      >
-        {CaptureHideButton}
-        <SummaryMessage content={summaryContent} timestamp={message.timestamp} />
-      </div>
+      <ExpandKeyProvider value={message.uuid}>
+        <div
+          data-message-uuid={message.uuid}
+          onClick={handleSelectionClick}
+          className={cn(
+            "relative max-w-4xl mx-auto transition-all duration-200",
+            isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+            selectionHighlight,
+            selectionCursor
+          )}
+        >
+          {CaptureHideButton}
+          <SummaryMessage content={summaryContent} timestamp={message.timestamp} />
+        </div>
+      </ExpandKeyProvider>
     );
   }
 
@@ -241,50 +250,54 @@ export const ClaudeMessageNode = React.memo(({
     }
 
     return (
-      <div
-        data-message-uuid={message.uuid}
-        onClick={handleSelectionClick}
-        className={cn(
-          "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
-          selectionHighlight,
-          selectionCursor
-        )}
-      >
-        {CaptureHideButton}
-        <div className="max-w-4xl mx-auto">
-          <FileHistorySnapshotRenderer
-            messageId={message.messageId ?? message.uuid}
-            snapshot={message.snapshot}
-            isSnapshotUpdate={Boolean(message.isSnapshotUpdate)}
-          />
+      <ExpandKeyProvider value={message.uuid}>
+        <div
+          data-message-uuid={message.uuid}
+          onClick={handleSelectionClick}
+          className={cn(
+            "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
+            isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+            selectionHighlight,
+            selectionCursor
+          )}
+        >
+          {CaptureHideButton}
+          <div className="max-w-4xl mx-auto">
+            <FileHistorySnapshotRenderer
+              messageId={message.messageId ?? message.uuid}
+              snapshot={message.snapshot}
+              isSnapshotUpdate={Boolean(message.isSnapshotUpdate)}
+            />
+          </div>
         </div>
-      </div>
+      </ExpandKeyProvider>
     );
   }
 
   // Progress messages
   if (message.type === "progress" && message.data) {
     return (
-      <div
-        data-message-uuid={message.uuid}
-        onClick={handleSelectionClick}
-        className={cn(
-          "relative w-full px-2 md:px-4 py-1 transition-all duration-200",
-          isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
-          selectionHighlight,
-          selectionCursor
-        )}
-      >
-        {CaptureHideButton}
-        <div className="max-w-4xl mx-auto">
-          <ProgressRenderer
-            data={message.data as ProgressData}
-            toolUseID={message.toolUseID}
-            parentToolUseID={message.parentToolUseID}
-          />
+      <ExpandKeyProvider value={message.uuid}>
+        <div
+          data-message-uuid={message.uuid}
+          onClick={handleSelectionClick}
+          className={cn(
+            "relative w-full px-2 md:px-4 py-1 transition-all duration-200",
+            isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+            selectionHighlight,
+            selectionCursor
+          )}
+        >
+          {CaptureHideButton}
+          <div className="max-w-4xl mx-auto">
+            <ProgressRenderer
+              data={message.data as ProgressData}
+              toolUseID={message.toolUseID}
+              parentToolUseID={message.parentToolUseID}
+            />
+          </div>
         </div>
-      </div>
+      </ExpandKeyProvider>
     );
   }
 
@@ -297,71 +310,73 @@ export const ClaudeMessageNode = React.memo(({
 
   // Default message rendering
   return (
-    <div
-      data-message-uuid={message.uuid}
-      onClick={handleSelectionClick}
-      className={cn(
-        "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
-        message.isSidechain && "bg-muted",
-        // Search highlight
-        isCurrentMatch && "bg-highlight-current ring-2 ring-warning",
-        isMatch && !isCurrentMatch && "bg-highlight",
-        // Capture mode hover effect
-        isCaptureMode && !isCurrentMatch && !isMatch && !isSelected && CAPTURE_HOVER_BG,
-        // Range selection highlight
-        selectionHighlight,
-        selectionCursor
-      )}
-    >
-      {CaptureHideButton}
-      <div className="max-w-4xl mx-auto">
-        <MessageHeader message={message} />
+    <ExpandKeyProvider value={message.uuid}>
+      <div
+        data-message-uuid={message.uuid}
+        onClick={handleSelectionClick}
+        className={cn(
+          "relative w-full px-2 md:px-4 py-2 transition-all duration-200",
+          message.isSidechain && "bg-muted",
+          // Search highlight
+          isCurrentMatch && "bg-highlight-current ring-2 ring-warning",
+          isMatch && !isCurrentMatch && "bg-highlight",
+          // Capture mode hover effect
+          isCaptureMode && !isCurrentMatch && !isMatch && !isSelected && CAPTURE_HOVER_BG,
+          // Range selection highlight
+          selectionHighlight,
+          selectionCursor
+        )}
+      >
+        {CaptureHideButton}
+        <div className="max-w-4xl mx-auto">
+          <MessageHeader message={message} />
 
-        <div className="w-full">
-          <MessageContentDisplay
-            content={extractClaudeMessageContent(message)}
-            messageType={message.type}
-            searchQuery={searchQuery}
-            isCurrentMatch={isCurrentMatch}
-            currentMatchIndex={currentMatchIndex}
-          />
+          <div className="w-full">
+            <MessageContentDisplay
+              content={extractClaudeMessageContent(message)}
+              messageType={message.type}
+              searchQuery={searchQuery}
+              isCurrentMatch={isCurrentMatch}
+              currentMatchIndex={currentMatchIndex}
+            />
 
-          {message.content &&
-            Array.isArray(message.content) && (
-              <div className="mb-2">
-                <ClaudeContentArrayRenderer
-                  content={message.content}
+            {message.content &&
+              Array.isArray(message.content) && (
+                <div className="mb-2">
+                  <ClaudeContentArrayRenderer
+                    content={message.content}
+                    searchQuery={searchQuery}
+                    filterType={filterType}
+                    isCurrentMatch={isCurrentMatch}
+                    currentMatchIndex={currentMatchIndex}
+                    skipToolResults={shouldRenderLegacyToolResult}
+                    skipText={
+                      message.type === "assistant" &&
+                      !!extractClaudeMessageContent(message)
+                    }
+                  />
+                </div>
+              )}
+
+            {message.type === "assistant" &&
+              message.toolUse &&
+              !(
+                Array.isArray(message.content) &&
+                message.content.some(isToolUseContent)
+              ) && <ClaudeToolUseDisplay toolUse={message.toolUse} />}
+
+            {shouldRenderLegacyToolResult && (
+                <ToolExecutionResultRouter
+                  toolResult={message.toolUseResult!}
                   searchQuery={searchQuery}
-                  filterType={filterType}
                   isCurrentMatch={isCurrentMatch}
                   currentMatchIndex={currentMatchIndex}
-                  skipToolResults={shouldRenderLegacyToolResult}
-                  skipText={
-                    message.type === "assistant" &&
-                    !!extractClaudeMessageContent(message)
-                  }
                 />
-              </div>
-            )}
-
-          {message.type === "assistant" &&
-            message.toolUse &&
-            !(
-              Array.isArray(message.content) &&
-              message.content.some(isToolUseContent)
-            ) && <ClaudeToolUseDisplay toolUse={message.toolUse} />}
-
-          {shouldRenderLegacyToolResult && (
-              <ToolExecutionResultRouter
-                toolResult={message.toolUseResult!}
-                searchQuery={searchQuery}
-                isCurrentMatch={isCurrentMatch}
-                currentMatchIndex={currentMatchIndex}
-              />
-            )}
+              )}
+          </div>
         </div>
       </div>
-    </div>
+    </ExpandKeyProvider>
   );
 });
 

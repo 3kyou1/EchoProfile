@@ -30,7 +30,7 @@ export const AdvancedTextDiff = ({
 }: Props) => {
   const { t } = useTranslation();
   const [currentMode, setCurrentMode] = useState<DiffMode>(diffMode);
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState("diff", false);
 
   const defaultTitle = title || t("advancedTextDiff.textChanges");
 

@@ -29,7 +29,7 @@ export const CodebaseContextRenderer = ({
   const relevantFiles =
     contextData.relevant_files || contextData.relevantFiles || [];
 
-  const [showFiles, setShowFiles] = useCaptureExpandState(false);
+  const [showFiles, setShowFiles] = useCaptureExpandState("codebase-files", false);
 
   return (
     <Renderer className="bg-accent/10 border-accent/30">

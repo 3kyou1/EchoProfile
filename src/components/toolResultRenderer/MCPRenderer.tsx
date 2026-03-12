@@ -29,11 +29,14 @@ export const MCPRenderer = ({
   const result = mcpData.result || {};
   const error = mcpData.error;
 
-  const [showParams, setShowParams] = useCaptureExpandState(false);
-  const [showResult, setShowResult] = useCaptureExpandState(false);
+  // Build a stable unique suffix from MCP data (server.method or function name)
+  const mcpId = `${String(server)}.${String(method)}`;
+
+  const [showParams, setShowParams] = useCaptureExpandState(`mcp-${mcpId}:params`, false);
+  const [showResult, setShowResult] = useCaptureExpandState(`mcp-${mcpId}:result`, false);
 
   return (
-    <Renderer className="bg-tool-mcp/10 border-tool-mcp/30">
+    <Renderer className="bg-tool-mcp/10 border-tool-mcp/30" expandKey={`mcp-renderer-${mcpId}`}>
       <Renderer.Header
         title={t('mcpRenderer.mcpToolCall')}
         icon={<Globe className={cn(layout.iconSize, "text-tool-mcp")} />}

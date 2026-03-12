@@ -8,7 +8,7 @@ import {
   Button,
 } from "@/components/ui";
 import { LoadingSpinner, LoadingProgress } from "@/components/ui/loading";
-import { Download, AlertTriangle, X, RotateCw } from 'lucide-react';
+import { Download, AlertTriangle, CheckCircle, X, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from "sonner";
 import type { UseUpdaterReturn } from '@/hooks/useUpdater';
@@ -231,13 +231,16 @@ export function SimpleUpdateModal({
             </div>
           )}
 
-          {/* Manual restart guidance after successful payload download */}
+          {/* Download complete — guide user to quit and reopen */}
           {shouldShowManualRestartNotice && (
-            <div className="p-2.5 bg-info/10 border border-info/20 rounded-md">
-              <div className="flex items-center gap-2 text-xs text-info">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>{t('common.error.updateManualRestartRequired')}</span>
+            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
+              <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{t('common.error.updateDownloadCompleteRestart')}</span>
               </div>
+              <p className="mt-1.5 text-[11px] text-muted-foreground ml-5.5">
+                {t('common.error.updateDownloadCompleteRestartHint')}
+              </p>
             </div>
           )}
 

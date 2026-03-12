@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-03-04T14:15:16.046Z
- * 총 키 개수: 1655
+ * 생성 시간: 2026-03-12T17:17:54.531Z
+ * 총 키 개수: 1659
  * Namespace 수: 11
  */
 
@@ -40,7 +40,7 @@ export type I18nNamespace =
   | 'recentEdits';
 
 /**
- * common namespace의 번역 키 (148개)
+ * common namespace의 번역 키 (152개)
  * 파일: locales/{lang}/common.json
  */
 export type CommonKeys =
@@ -73,8 +73,8 @@ export type CommonKeys =
   | 'common.error.sorry'
   | 'common.error.unexpected'
   | 'common.error.updateCheckFailed'
-  | 'common.error.updateInstallFailed'
-  | 'common.error.updateManualRestartRequired'
+  | 'common.error.updateDownloadCompleteRestart'
+  | 'common.error.updateDownloadCompleteRestartHint'
   | 'common.errorOccurred'
   | 'common.expand'
   | 'common.help'
@@ -89,7 +89,7 @@ export type CommonKeys =
   | 'common.hooks.sessionComparisonLoadFailed'
   | 'common.hooks.timeoutError'
   | 'common.hooks.updateCheckFailed'
-  | 'common.hooks.updateInstallFailed'
+  | 'common.hooks.updateDownloadComplete'
   | 'common.id'
   | 'common.input'
   | 'common.loading'
@@ -130,9 +130,11 @@ export type CommonKeys =
   | 'common.settings.font.90'
   | 'common.settings.font.title'
   | 'common.settings.language.description'
+  | 'common.settings.language.saveFailed'
   | 'common.settings.language.title'
   | 'common.settings.theme.dark'
   | 'common.settings.theme.light'
+  | 'common.settings.theme.saveFailed'
   | 'common.settings.theme.system'
   | 'common.settings.theme.title'
   | 'common.settings.title'
@@ -191,7 +193,9 @@ export type CommonKeys =
   | 'time.minute'
   | 'time.minutes'
   | 'time.secondShort'
-  | 'time.start';
+  | 'time.start'
+  | 'time.today'
+  | 'time.yesterday';
 
 /**
  * analytics namespace의 번역 키 (179개)
@@ -2088,8 +2092,8 @@ export type TranslationKey =
   | 'common.error.sorry'
   | 'common.error.unexpected'
   | 'common.error.updateCheckFailed'
-  | 'common.error.updateInstallFailed'
-  | 'common.error.updateManualRestartRequired'
+  | 'common.error.updateDownloadCompleteRestart'
+  | 'common.error.updateDownloadCompleteRestartHint'
   | 'common.errorOccurred'
   | 'common.expand'
   | 'common.help'
@@ -2104,7 +2108,7 @@ export type TranslationKey =
   | 'common.hooks.sessionComparisonLoadFailed'
   | 'common.hooks.timeoutError'
   | 'common.hooks.updateCheckFailed'
-  | 'common.hooks.updateInstallFailed'
+  | 'common.hooks.updateDownloadComplete'
   | 'common.id'
   | 'common.input'
   | 'common.loading'
@@ -2145,9 +2149,11 @@ export type TranslationKey =
   | 'common.settings.font.90'
   | 'common.settings.font.title'
   | 'common.settings.language.description'
+  | 'common.settings.language.saveFailed'
   | 'common.settings.language.title'
   | 'common.settings.theme.dark'
   | 'common.settings.theme.light'
+  | 'common.settings.theme.saveFailed'
   | 'common.settings.theme.system'
   | 'common.settings.theme.title'
   | 'common.settings.title'
@@ -3276,6 +3282,8 @@ export type TranslationKey =
   | 'time.minutes'
   | 'time.secondShort'
   | 'time.start'
+  | 'time.today'
+  | 'time.yesterday'
   | 'toolError.executionTimeExceeded'
   | 'toolError.fileNotFound'
   | 'toolError.invalidToolInput'

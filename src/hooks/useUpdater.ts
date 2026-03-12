@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { isTauri } from '@/utils/platform';
 import {
-  UPDATE_INSTALL_FAILED_ERROR_CODE,
+  UPDATE_DOWNLOAD_COMPLETE_RESTART_CODE,
 } from '@/utils/updateError';
 
 const CHECK_TIMEOUT_MS = 20_000; // 20 seconds
@@ -171,10 +171,7 @@ export function useUpdater(): UseUpdaterReturn {
     let startedEventSeen = false;
     let progressEventSeen = false;
     let finishedEventSeen = false;
-    let usedSeparateInstallFlow = false;
     let downloadStepCompleted = false;
-    let installStepCompleted = false;
-    let restartAttempted = false;
 
     try {
       const onDownloadEvent = (event: unknown) => {
@@ -224,7 +221,6 @@ export function useUpdater(): UseUpdaterReturn {
         typeof state.updateInfo.install === 'function';
 
       if (hasSeparateInstallApi) {
-        usedSeparateInstallFlow = true;
         await state.updateInfo.download(onDownloadEvent);
         downloadStepCompleted = true;
         setState((prev) => ({
@@ -234,10 +230,8 @@ export function useUpdater(): UseUpdaterReturn {
           downloadProgress: 100,
         }));
         await state.updateInfo.install();
-        installStepCompleted = true;
       } else {
         await state.updateInfo.downloadAndInstall(onDownloadEvent);
-        installStepCompleted = true;
       }
 
       // Show restarting state before relaunch
@@ -250,32 +244,25 @@ export function useUpdater(): UseUpdaterReturn {
 
       // Brief delay to let the UI update before relaunch
       await new Promise((resolve) => setTimeout(resolve, 500));
-      restartAttempted = true;
       const { relaunch } = await import('@tauri-apps/plugin-process');
       await relaunch();
     } catch (error) {
       const rawErrorMessage = getErrorMessage(error, 'Download failed');
-      const isGenericDownloadFailed = /^download failed$/i.test(
-        rawErrorMessage.trim()
-      );
-      const shouldSuggestManualRestart = usedSeparateInstallFlow
-        ? installStepCompleted || restartAttempted
-        : installStepCompleted ||
-          finishedEventSeen ||
-          (isGenericDownloadFailed && (progressEventSeen || downloaded > 0));
-      const shouldMapToInstallFailed =
-        usedSeparateInstallFlow &&
-        downloadStepCompleted &&
-        !installStepCompleted &&
-        isGenericDownloadFailed;
 
-      if (shouldSuggestManualRestart) {
+      // Tauri v2: install() and relaunch() can fail due to upstream bugs
+      // (known on macOS: tauri-apps/tauri#13923, #11392, #8472).
+      // However, the downloaded payload IS applied on next manual app launch.
+      // So if the download completed, guide the user to quit and reopen.
+      const downloadCompleted = downloadStepCompleted || finishedEventSeen ||
+        (contentLength > 0 && downloaded >= contentLength);
+
+      if (downloadCompleted) {
         console.warn(
-          '[Updater] Update payload downloaded but automatic restart failed. Falling back to manual restart.',
+          '[Updater] Download completed but install/relaunch failed (known Tauri v2 macOS issue). Guiding user to restart manually.',
           error
         );
       } else {
-        console.warn('[Updater] downloadAndInstall failed before completion.', {
+        console.warn('[Updater] Download failed before completion.', {
           rawErrorMessage,
           startedEventSeen,
           progressEventSeen,
@@ -290,12 +277,10 @@ export function useUpdater(): UseUpdaterReturn {
         isDownloading: false,
         isInstalling: false,
         isRestarting: false,
-        requiresManualRestart: shouldSuggestManualRestart,
-        error: shouldSuggestManualRestart
-          ? null
-          : shouldMapToInstallFailed
-            ? UPDATE_INSTALL_FAILED_ERROR_CODE
-            : rawErrorMessage,
+        requiresManualRestart: downloadCompleted,
+        error: downloadCompleted
+          ? UPDATE_DOWNLOAD_COMPLETE_RESTART_CODE
+          : rawErrorMessage,
       }));
     }
   }, [tauriMode, state.updateInfo]);

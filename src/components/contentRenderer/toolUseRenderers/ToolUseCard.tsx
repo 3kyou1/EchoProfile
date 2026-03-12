@@ -25,7 +25,7 @@ export const ToolUseCard = memo(function ToolUseCard({
   const styles = getVariantStyles(variant);
 
   return (
-    <Renderer className={styles.container}>
+    <Renderer className={styles.container} expandKey={toolId ? `tooluse-${toolId}` : undefined}>
       <Renderer.Header
         title={title}
         icon={icon}

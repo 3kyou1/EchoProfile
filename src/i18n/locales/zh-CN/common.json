@@ -81,9 +81,11 @@
   "common.settings.filter.title": "筛选",
   "common.settings.language.description": "选择您偏好的语言",
   "common.settings.language.title": "语言",
+  "common.settings.language.saveFailed": "语言偏好保存失败",
   "common.settings.theme.dark": "深色",
   "common.settings.theme.light": "浅色",
   "common.settings.theme.system": "系统",
+  "common.settings.theme.saveFailed": "主题偏好保存失败",
   "common.settings.theme.title": "主题",
   "common.settings.title": "设置",
   "common.settings.updateSettings": "更新设置",
@@ -146,5 +148,7 @@
   "time.minute": "分钟",
   "time.minutes": "分钟",
   "time.start": "开始：",
-  "time.secondShort": "秒"
+  "time.secondShort": "秒",
+  "time.today": "今天",
+  "time.yesterday": "昨天"
 }

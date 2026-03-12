@@ -19,7 +19,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getVariantStyles, layout } from "@/components/renderers";
-import { useCaptureExpandState, useForceExpanded } from "@/contexts/CaptureExpandContext";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 
 export interface AgentTask {
   agentId: string;
@@ -63,14 +63,11 @@ const STATUS_CONFIG = {
 
 const AgentTaskItem = memo(function AgentTaskItem({
   task,
-  isExpanded,
-  onToggle,
 }: {
   task: AgentTask;
-  isExpanded: boolean;
-  onToggle: () => void;
 }) {
   const { t } = useTranslation();
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(`agent-task-${task.agentId}`, false);
   const [copied, setCopied] = useState(false);
   const config = STATUS_CONFIG[task.status] || STATUS_CONFIG.async_launched;
   const StatusIcon = config.icon;
@@ -88,7 +85,7 @@ const AgentTaskItem = memo(function AgentTaskItem({
     <div className="border-b border-border/50 last:border-b-0">
       <button
         type="button"
-        onClick={onToggle}
+        onClick={() => setIsExpanded(prev => !prev)}
         className={cn(
           "w-full flex items-center gap-2 px-2 py-1.5 text-left",
           "hover:bg-muted/50 transition-colors"
@@ -171,9 +168,9 @@ export const AgentTaskGroupRenderer = memo(function AgentTaskGroupRenderer({
   tasks,
 }: AgentTaskGroupRendererProps) {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  // Use first task's agentId for unique group key
+  const groupKey = tasks[0]?.agentId ? `agent-tasks-${tasks[0].agentId}` : "agent-tasks";
+  const [isExpanded, setIsExpanded] = useCaptureExpandState(groupKey, false);
   const styles = getVariantStyles("task");
 
   const completedCount = tasks.filter(
@@ -184,18 +181,6 @@ export const AgentTaskGroupRenderer = memo(function AgentTaskGroupRenderer({
   const isRunning = tasks.some(
     (t) => t.status === "async_launched" || t.status === "running"
   );
-
-  const toggleTask = (agentId: string) => {
-    setExpandedTasks((prev) => {
-      const next = new Set(prev);
-      if (next.has(agentId)) {
-        next.delete(agentId);
-      } else {
-        next.add(agentId);
-      }
-      return next;
-    });
-  };
 
   // Single task - render inline
   if (tasks.length === 1 && tasks[0]) {
@@ -333,8 +318,6 @@ export const AgentTaskGroupRenderer = memo(function AgentTaskGroupRenderer({
             <AgentTaskItem
               key={task.agentId}
               task={task}
-              isExpanded={forceExpanded || expandedTasks.has(task.agentId)}
-              onToggle={() => toggleTask(task.agentId)}
             />
           ))}
         </div>

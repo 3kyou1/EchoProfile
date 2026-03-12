@@ -8,8 +8,8 @@
  *   - StringRenderer (generic string tool result)
  *   - ToolExecutionResultRouter (fallback stderr)
  */
-import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render as rtlRender, fireEvent } from "@testing-library/react";
 import { act } from "react";
 
 // ── Mocks ────────────────────────────────────────────────────────────
@@ -30,6 +30,22 @@ import { CommandRenderer } from "@/components/contentRenderer/CommandRenderer";
 import { TerminalExecutionResultRenderer } from "@/components/contentRenderer/TerminalExecutionResultRenderer";
 import { StringRenderer } from "@/components/toolResultRenderer/StringRenderer";
 import { ToolExecutionResultRouter } from "@/components/messageRenderer/ToolExecutionResultRouter";
+import { ExpandKeyProvider } from "@/contexts/CaptureExpandContext";
+import { useExpandRegistry } from "@/store/expandRegistryStore";
+import type { ReactNode } from "react";
+
+/** Wrapper that provides ExpandKeyProvider for components that need it */
+const WithExpandKey = ({ children }: { children: ReactNode }) => (
+  <ExpandKeyProvider value="test-message">{children}</ExpandKeyProvider>
+);
+
+/** Render with ExpandKeyProvider wrapper */
+const render = (ui: ReactNode) => rtlRender(ui, { wrapper: WithExpandKey });
+
+// ── Store cleanup ───────────────────────────────────────────────────
+beforeEach(() => {
+  useExpandRegistry.getState().clearAll();
+});
 
 // ── Helpers ──────────────────────────────────────────────────────────
 const DIM = "\x1b[2m";

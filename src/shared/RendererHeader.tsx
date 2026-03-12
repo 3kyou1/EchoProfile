@@ -21,14 +21,16 @@ type ContentProviderProps = {
   children: React.ReactNode;
   hasError?: boolean;
   enableToggle?: boolean;
+  expandKey?: string;
 };
 
 const ContentProvider = ({
   children,
   hasError,
   enableToggle,
+  expandKey,
 }: ContentProviderProps) => {
-  const [isOpen, toggle] = useToggle();
+  const [isOpen, toggle] = useToggle(expandKey ?? "renderer");
 
   return (
     <ContentContext.Provider value={{ isOpen, toggle, hasError, enableToggle }}>
@@ -42,6 +44,7 @@ type RendererWrapperProps = {
   className?: string;
   hasError?: boolean;
   enableToggle?: boolean;
+  expandKey?: string;
 };
 
 const RendererWrapper = ({
@@ -49,9 +52,10 @@ const RendererWrapper = ({
   className,
   hasError = false,
   enableToggle = true,
+  expandKey,
 }: RendererWrapperProps) => {
   return (
-    <ContentProvider hasError={hasError} enableToggle={enableToggle}>
+    <ContentProvider hasError={hasError} enableToggle={enableToggle} expandKey={expandKey}>
       <div
         className={cn(
           "mt-1.5 border border-border overflow-hidden",

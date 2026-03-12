@@ -1,10 +1,10 @@
 import { memo } from "react";
-import { Server, Wrench } from "lucide-react";
-import { useForceExpanded } from "@/contexts/CaptureExpandContext";
+import { ChevronRight, Server, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { layout } from "@/components/renderers";
 import { safeStringify } from "../../utils/jsonUtils";
+import { useCaptureExpandState } from "@/contexts/CaptureExpandContext";
 import { ToolUseCard } from "./toolUseRenderers/ToolUseCard";
 
 type Props = {
@@ -21,7 +21,7 @@ export const MCPToolUseRenderer = memo(function MCPToolUseRenderer({
   input,
 }: Props) {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
+  const [showInput, setShowInput] = useCaptureExpandState(`mcp-input-${id}`, false);
 
   return (
     <ToolUseCard
@@ -41,14 +41,21 @@ export const MCPToolUseRenderer = memo(function MCPToolUseRenderer({
       </div>
 
       {Object.keys(input).length > 0 && (
-        <details open={forceExpanded || undefined} className="mt-2">
-          <summary className={cn(layout.smallText, "text-tool-mcp cursor-pointer hover:text-tool-mcp/80")}>
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setShowInput(prev => !prev)}
+            className={cn(layout.smallText, "flex items-center gap-1 text-tool-mcp cursor-pointer hover:text-tool-mcp/80")}
+          >
+            <ChevronRight className={cn("w-3 h-3 transition-transform", showInput && "rotate-90")} />
             {t("mcpToolUseRenderer.showInput")}
-          </summary>
-          <pre className={cn("mt-2 text-foreground bg-muted p-2 overflow-x-auto", layout.monoText, layout.rounded)}>
-            {safeStringify(input)}
-          </pre>
-        </details>
+          </button>
+          {showInput && (
+            <pre className={cn("mt-2 text-foreground bg-muted p-2 overflow-x-auto", layout.monoText, layout.rounded)}>
+              {safeStringify(input)}
+            </pre>
+          )}
+        </div>
       )}
     </ToolUseCard>
   );

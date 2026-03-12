@@ -23,7 +23,7 @@ export const ToolResultCard = memo(function ToolResultCard({
   const styles = getVariantStyles(variant);
 
   return (
-    <Renderer className={styles.container} enableToggle={false}>
+    <Renderer className={styles.container} enableToggle={false} expandKey={toolUseId ? `result-${toolUseId}` : undefined}>
       <Renderer.Header
         title={title}
         icon={icon}

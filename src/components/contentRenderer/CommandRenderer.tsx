@@ -40,7 +40,7 @@ export const CommandRenderer = ({
   currentMatchIndex = 0,
 }: Props) => {
   const { t } = useTranslation();
-  const [isCommandExpanded, setIsCommandExpanded] = useCaptureExpandState(false);
+  const [isCommandExpanded, setIsCommandExpanded] = useCaptureExpandState("command", false);
 
   // Auto-expand on search query match
   useEffect(() => {
@@ -388,7 +388,7 @@ const CaveatRenderer = ({
   isCurrentMatch = false,
   currentMatchIndex = 0,
 }: CaveatRendererProps) => {
-  const [isExpanded, setIsExpanded] = useCaptureExpandState(false);
+  const [isExpanded, setIsExpanded] = useCaptureExpandState("caveat", false);
   const { t } = useTranslation();
 
   // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기

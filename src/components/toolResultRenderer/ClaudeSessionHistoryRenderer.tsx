@@ -1,5 +1,5 @@
-import { MessageCircle, User, Bot, Wrench, X } from "lucide-react";
-import { useForceExpanded } from "@/contexts/CaptureExpandContext";
+import { useState } from "react";
+import { MessageCircle, User, Bot, Wrench, X, ChevronRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
@@ -7,13 +7,35 @@ import { formatTime } from "../../utils/time";
 import { layout } from "@/components/renderers";
 import { cn } from "@/lib/utils";
 
+/** Controlled alternative to <details> for error fallback — uses local state
+ *  since this only renders in the catch path where ExpandKeyProvider may be absent */
+const ErrorFallbackDetails = ({ label, content }: { label: string; content: string }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        className={cn(layout.bodyText, "flex items-center gap-1 cursor-pointer")}
+      >
+        <ChevronRight className={cn("w-3 h-3 transition-transform", open && "rotate-90")} />
+        {label}
+      </button>
+      {open && (
+        <pre className={cn("mt-2 bg-gray-100 overflow-x-auto", layout.containerPadding, layout.rounded, layout.smallText)}>
+          {content}
+        </pre>
+      )}
+    </div>
+  );
+};
+
 type Props = {
   content: string;
 };
 
 export const ClaudeSessionHistoryRenderer = ({ content }: Props) => {
   const { t } = useTranslation();
-  const forceExpanded = useForceExpanded();
   try {
     // Split by lines and filter out empty lines
     const lines = content.split("\n").filter((line) => line.trim());
@@ -172,12 +194,7 @@ export const ClaudeSessionHistoryRenderer = ({ content }: Props) => {
         <p className={cn(layout.bodyText, "text-red-600")}>
           {t('claudeSessionHistoryRenderer.parsingErrorDescription')}
         </p>
-        <details open={forceExpanded || undefined} className="mt-2">
-          <summary className={cn(layout.bodyText, "cursor-pointer")}>{t('claudeSessionHistoryRenderer.viewOriginalData')}</summary>
-          <pre className={cn("mt-2 bg-gray-100 overflow-x-auto", layout.containerPadding, layout.rounded, layout.smallText)}>
-            {content}
-          </pre>
-        </details>
+        <ErrorFallbackDetails label={t('claudeSessionHistoryRenderer.viewOriginalData')} content={content} />
       </div>
     );
   }

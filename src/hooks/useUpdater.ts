@@ -249,12 +249,12 @@ export function useUpdater(): UseUpdaterReturn {
     } catch (error) {
       const rawErrorMessage = getErrorMessage(error, 'Download failed');
 
-      // Tauri v2 on macOS: install() and relaunch() consistently fail due to
-      // upstream bugs (tauri-apps/tauri#13923, #11392, #8472).
+      // Tauri v2: install() and relaunch() can fail due to upstream bugs
+      // (known on macOS: tauri-apps/tauri#13923, #11392, #8472).
       // However, the downloaded payload IS applied on next manual app launch.
       // So if the download completed, guide the user to quit and reopen.
       const downloadCompleted = downloadStepCompleted || finishedEventSeen ||
-        (progressEventSeen && downloaded > 0);
+        (contentLength > 0 && downloaded >= contentLength);
 
       if (downloadCompleted) {
         console.warn(

@@ -10,6 +10,7 @@ import { isTauri } from "@/utils/platform";
 interface SaveDialogOptions {
   filters?: { name: string; extensions: string[] }[];
   defaultPath?: string;
+  mimeType?: string;
 }
 
 interface OpenDialogOptions {
@@ -52,7 +53,7 @@ export async function saveFileDialog(
 
   // Web fallback: Blob download
   const filename = options?.defaultPath ?? "download.json";
-  const blob = new Blob([content], { type: "application/json" });
+  const blob = new Blob([content], { type: options?.mimeType ?? "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

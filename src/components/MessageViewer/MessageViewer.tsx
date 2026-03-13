@@ -7,7 +7,7 @@
 
 import { useRef, useCallback, useMemo, useState, useEffect } from "react";
 import { OverlayScrollbarsComponent, type OverlayScrollbarsComponentRef } from "overlayscrollbars-react";
-import { MessageCircle, ChevronDown, ChevronUp, Search, X, Camera } from "lucide-react";
+import { MessageCircle, ChevronDown, ChevronUp, Search, X, Camera, Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner, LoadingState } from "@/components/ui/loading";
@@ -31,6 +31,14 @@ import {
 } from "./helpers";
 import { useAppStore } from "../../store/useAppStore";
 import { useExpandRegistry } from "../../store/expandRegistryStore";
+import { useExport } from "../../hooks/useExport";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { ExportFormat } from "@/types/export";
 
 export const MessageViewer: React.FC<MessageViewerProps> = ({
   messages,
@@ -68,6 +76,16 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     shouldHighlightTarget,
     clearTargetMessage,
   } = useAppStore();
+
+  // Export hook
+  const { isExporting, exportConversation } = useExport(
+    messages,
+    selectedSession?.project_name ?? selectedSession?.session_id ?? "conversation",
+  );
+  const handleExport = useCallback((format: ExportFormat) => {
+    if (isExporting || messages.length === 0) return;
+    void exportConversation(format);
+  }, [isExporting, messages.length, exportConversation]);
 
   // Clear expand registry on session change
   const clearExpandStates = useExpandRegistry((s) => s.clearAll);
@@ -657,42 +675,64 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* Capture Mode Button - Wide desktop only */}
+        {/* Capture & Export Buttons */}
         {!isCaptureMode && (
-          <button
-            type="button"
-            onClick={enterCaptureMode}
-            className={cn(
-              "hidden lg:flex shrink-0 items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap",
-              "transition-all duration-200",
-              "bg-zinc-700/60 hover:bg-zinc-600/70",
-              "text-zinc-300 hover:text-zinc-100",
-              "border border-zinc-600/50 hover:border-zinc-500/50",
-              "shadow-sm hover:shadow-md"
-            )}
-            title={t("captureMode.tooltip")}
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span className="font-medium">{t("captureMode.enter")}</span>
-          </button>
-        )}
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={enterCaptureMode}
+              className={cn(
+                "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap",
+                "transition-all duration-200",
+                "bg-zinc-700/60 hover:bg-zinc-600/70",
+                "text-zinc-300 hover:text-zinc-100",
+                "border border-zinc-600/50 hover:border-zinc-500/50",
+                "shadow-sm hover:shadow-md"
+              )}
+              title={t("captureMode.tooltip")}
+              aria-label={t("captureMode.enter")}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline font-medium">{t("captureMode.enter")}</span>
+            </button>
 
-        {/* Meta Info - Wide desktop only */}
-        <div className="hidden lg:flex shrink-0 items-center gap-1.5 text-xs text-zinc-400">
-          <span className="whitespace-nowrap bg-zinc-800/40 px-2 py-0.5 rounded-full">
-            {messages.length} {t("messageViewer.messagesShort")}
-          </span>
-          {selectedSession?.has_tool_use && (
-            <span className="whitespace-nowrap bg-zinc-800/40 px-2 py-0.5 rounded-full">
-              {t("messageViewer.toolsUsed")}
-            </span>
-          )}
-          {selectedSession?.has_errors && (
-            <span className="whitespace-nowrap bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
-              {t("messageViewer.hasErrors")}
-            </span>
-          )}
-        </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isExporting || messages.length === 0}
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap",
+                    "transition-all duration-200",
+                    "bg-zinc-700/60 hover:bg-zinc-600/70",
+                    "text-zinc-300 hover:text-zinc-100",
+                    "border border-zinc-600/50 hover:border-zinc-500/50",
+                    "shadow-sm hover:shadow-md",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                  title={t("session.export.button")}
+                  aria-label={t("session.export.button")}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden lg:inline font-medium">
+                    {isExporting ? t("session.export.exporting") : t("session.export.button")}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport("markdown")}>
+                  {t("session.export.markdown")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("json")}>
+                  {t("session.export.json")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("html")}>
+                  {t("session.export.html")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
 
       {/* Capture Mode Toolbar */}
@@ -833,8 +873,11 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* Floating scroll buttons */}
-        <div className="fixed bottom-[8.5rem] md:bottom-10 right-3 md:right-2 flex flex-col gap-2 z-50">
+        </OverlayScrollbarsComponent>
+
+        {/* Floating scroll buttons — bottom-right of message area */}
+        <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-30">
+          {/* Scroll to top */}
           {showScrollToTop && (
             <button
               type="button"
@@ -850,6 +893,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               <ChevronUp className="w-3 h-3" />
             </button>
           )}
+          {/* Scroll to bottom */}
           {showScrollToBottom && (
             <button
               type="button"
@@ -866,7 +910,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
             </button>
           )}
         </div>
-        </OverlayScrollbarsComponent>
       </div>
 
       {/* Capture renderer — only mounted during active capture */}

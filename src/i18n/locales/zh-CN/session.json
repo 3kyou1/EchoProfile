@@ -167,5 +167,12 @@
   "session.selectDescription": "从左侧选择项目和会话以查看对话内容",
   "session.summaryNotFound": "未找到会话摘要。",
   "session.syncError": "同步元数据失败",
-  "session.title": "会话："
+  "session.title": "会话：",
+  "session.export.button": "导出",
+  "session.export.markdown": "Markdown (.md)",
+  "session.export.json": "JSON (.json)",
+  "session.export.html": "HTML (.html)",
+  "session.export.success": "导出成功",
+  "session.export.error": "导出失败",
+  "session.export.exporting": "正在导出..."
 }

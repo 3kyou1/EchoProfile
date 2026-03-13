@@ -12,7 +12,11 @@ function formatTime(timestamp: string): string {
 }
 
 function formatDate(timestamp: string): string {
-  return new Date(timestamp).toISOString().split("T")[0] ?? timestamp;
+  const d = new Date(timestamp);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function isExportable(m: ClaudeMessage): boolean {

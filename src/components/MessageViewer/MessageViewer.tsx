@@ -674,9 +674,9 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* Export & Capture Buttons - Wide desktop only */}
+        {/* Export & Capture Buttons */}
         {!isCaptureMode && (
-          <div className="hidden lg:flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
             {/* Export DropdownMenu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -695,7 +695,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
                   aria-label={t("session.export.button")}
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span className="font-medium">
+                  <span className="hidden lg:inline font-medium">
                     {isExporting ? t("session.export.exporting") : t("session.export.button")}
                   </span>
                 </button>
@@ -728,7 +728,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               title={t("captureMode.tooltip")}
             >
               <Camera className="w-3.5 h-3.5" />
-              <span className="font-medium">{t("captureMode.enter")}</span>
+              <span className="hidden lg:inline font-medium">{t("captureMode.enter")}</span>
             </button>
           </div>
         )}

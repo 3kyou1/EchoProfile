@@ -65,7 +65,11 @@ function formatTime(timestamp: string): string {
 }
 
 function formatDate(timestamp: string): string {
-  return new Date(timestamp).toISOString().split("T")[0] ?? timestamp;
+  const d = new Date(timestamp);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function isExportable(m: ClaudeMessage): boolean {
@@ -82,8 +86,11 @@ function isSafeUrl(url: string): boolean {
   return /^(https?:|mailto:|#|\/)/i.test(trimmed);
 }
 
-// Configure marked to escape raw HTML and sanitize URLs (XSS prevention)
-// while still rendering Markdown syntax (headings, bold, code, etc.)
+// XSS prevention strategy (no DOMPurify needed):
+// 1. renderer.html() escapes all raw HTML tokens
+// 2. renderer.link()/image() reject non-http/mailto protocols via isSafeUrl()
+// 3. All non-text blocks use escapeHtml() before insertion
+// Input is trusted conversation data, not user-submitted HTML.
 const safeMarked = new Marked({ breaks: true });
 safeMarked.use({
   renderer: {

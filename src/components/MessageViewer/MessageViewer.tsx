@@ -7,7 +7,7 @@
 
 import { useRef, useCallback, useMemo, useState, useEffect } from "react";
 import { OverlayScrollbarsComponent, type OverlayScrollbarsComponentRef } from "overlayscrollbars-react";
-import { MessageCircle, ChevronDown, ChevronUp, Search, X, Camera } from "lucide-react";
+import { MessageCircle, ChevronDown, ChevronUp, Search, X, Camera, Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner, LoadingState } from "@/components/ui/loading";
@@ -31,6 +31,14 @@ import {
 } from "./helpers";
 import { useAppStore } from "../../store/useAppStore";
 import { useExpandRegistry } from "../../store/expandRegistryStore";
+import { useExport } from "../../hooks/useExport";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { ExportFormat } from "@/types/export";
 
 export const MessageViewer: React.FC<MessageViewerProps> = ({
   messages,
@@ -68,6 +76,15 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     shouldHighlightTarget,
     clearTargetMessage,
   } = useAppStore();
+
+  // Export hook
+  const { isExporting, exportConversation } = useExport(
+    messages,
+    selectedSession?.project_name ?? selectedSession?.session_id ?? "conversation",
+  );
+  const handleExport = useCallback((format: ExportFormat) => {
+    void exportConversation(format);
+  }, [exportConversation]);
 
   // Clear expand registry on session change
   const clearExpandStates = useExpandRegistry((s) => s.clearAll);
@@ -657,24 +674,63 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* Capture Mode Button - Wide desktop only */}
+        {/* Export & Capture Buttons - Wide desktop only */}
         {!isCaptureMode && (
-          <button
-            type="button"
-            onClick={enterCaptureMode}
-            className={cn(
-              "hidden lg:flex shrink-0 items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap",
-              "transition-all duration-200",
-              "bg-zinc-700/60 hover:bg-zinc-600/70",
-              "text-zinc-300 hover:text-zinc-100",
-              "border border-zinc-600/50 hover:border-zinc-500/50",
-              "shadow-sm hover:shadow-md"
-            )}
-            title={t("captureMode.tooltip")}
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span className="font-medium">{t("captureMode.enter")}</span>
-          </button>
+          <div className="hidden lg:flex shrink-0 items-center gap-1.5">
+            {/* Export DropdownMenu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isExporting || messages.length === 0}
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap",
+                    "transition-all duration-200",
+                    "bg-zinc-700/60 hover:bg-zinc-600/70",
+                    "text-zinc-300 hover:text-zinc-100",
+                    "border border-zinc-600/50 hover:border-zinc-500/50",
+                    "shadow-sm hover:shadow-md",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                  aria-label={t("session.export.button")}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="font-medium">
+                    {isExporting ? t("session.export.exporting") : t("session.export.button")}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport("markdown")}>
+                  {t("session.export.markdown")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("json")}>
+                  {t("session.export.json")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("html")}>
+                  {t("session.export.html")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Capture Mode Button */}
+            <button
+              type="button"
+              onClick={enterCaptureMode}
+              className={cn(
+                "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap",
+                "transition-all duration-200",
+                "bg-zinc-700/60 hover:bg-zinc-600/70",
+                "text-zinc-300 hover:text-zinc-100",
+                "border border-zinc-600/50 hover:border-zinc-500/50",
+                "shadow-sm hover:shadow-md"
+              )}
+              title={t("captureMode.tooltip")}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span className="font-medium">{t("captureMode.enter")}</span>
+            </button>
+          </div>
         )}
 
         {/* Meta Info - Wide desktop only */}

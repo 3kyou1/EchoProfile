@@ -167,5 +167,12 @@
   "session.selectDescription": "좌측에서 프로젝트와 세션을 선택하면 대화 내용을 볼 수 있습니다",
   "session.summaryNotFound": "세션 요약을 찾을 수 없습니다.",
   "session.syncError": "메타데이터 동기화 실패",
-  "session.title": "세션:"
+  "session.title": "세션:",
+  "session.export.button": "내보내기",
+  "session.export.markdown": "Markdown (.md)",
+  "session.export.json": "JSON (.json)",
+  "session.export.html": "HTML (.html)",
+  "session.export.success": "내보내기 완료",
+  "session.export.error": "내보내기 실패",
+  "session.export.exporting": "내보내는 중..."
 }

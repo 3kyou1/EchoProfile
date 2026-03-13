@@ -167,5 +167,12 @@
   "session.selectDescription": "從左側選擇專案和會話以查看對話內容",
   "session.summaryNotFound": "未找到會話摘要。",
   "session.syncError": "同步中繼資料失敗",
-  "session.title": "會話："
+  "session.title": "會話：",
+  "session.export.button": "匯出",
+  "session.export.markdown": "Markdown (.md)",
+  "session.export.json": "JSON (.json)",
+  "session.export.html": "HTML (.html)",
+  "session.export.success": "匯出成功",
+  "session.export.error": "匯出失敗",
+  "session.export.exporting": "正在匯出..."
 }

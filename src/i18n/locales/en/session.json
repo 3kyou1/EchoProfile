@@ -167,5 +167,12 @@
   "session.selectDescription": "Select a project and session from the left to view conversation history",
   "session.summaryNotFound": "Session summary not found.",
   "session.syncError": "Failed to sync metadata",
-  "session.title": "Session:"
+  "session.title": "Session:",
+  "session.export.button": "Export",
+  "session.export.markdown": "Markdown (.md)",
+  "session.export.json": "JSON (.json)",
+  "session.export.html": "HTML (.html)",
+  "session.export.success": "Exported successfully",
+  "session.export.error": "Export failed",
+  "session.export.exporting": "Exporting..."
 }

@@ -167,5 +167,12 @@
   "session.selectDescription": "左側からプロジェクトとセッションを選択すると、会話内容を表示できます",
   "session.summaryNotFound": "セッションの概要が見つかりません。",
   "session.syncError": "メタデータの同期に失敗しました",
-  "session.title": "セッション："
+  "session.title": "セッション：",
+  "session.export.button": "エクスポート",
+  "session.export.markdown": "Markdown (.md)",
+  "session.export.json": "JSON (.json)",
+  "session.export.html": "HTML (.html)",
+  "session.export.success": "エクスポートが完了しました",
+  "session.export.error": "エクスポートに失敗しました",
+  "session.export.exporting": "エクスポート中..."
 }

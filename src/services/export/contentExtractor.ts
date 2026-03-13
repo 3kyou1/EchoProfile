@@ -46,7 +46,7 @@ export function extractBlocks(content: string | ContentItem[] | Record<string, u
   const blocks: ExtractedBlock[] = [];
 
   for (const item of content) {
-    if (!("type" in item)) continue;
+    if (item == null || typeof item !== "object" || !("type" in item)) continue;
     // Cast for flexible field access across the wide ContentItem union
     const raw = item as unknown as Record<string, unknown>;
 

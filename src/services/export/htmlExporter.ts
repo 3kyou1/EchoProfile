@@ -66,6 +66,7 @@ function formatTime(timestamp: string): string {
 
 function formatDate(timestamp: string): string {
   const d = new Date(timestamp);
+  if (Number.isNaN(d.getTime())) return timestamp;
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");

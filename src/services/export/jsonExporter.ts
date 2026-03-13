@@ -5,7 +5,7 @@
  */
 
 import type { ClaudeMessage } from "@/types";
-import { extractBlocks, blocksToPlainText } from "./contentExtractor";
+import { extractBlocks, blocksToPlainText, isExportable } from "./contentExtractor";
 
 interface ExportedMessage {
   role: "user" | "assistant";
@@ -19,14 +19,6 @@ interface ExportedMessage {
   costUSD?: number;
 }
 
-function isExportable(m: ClaudeMessage): boolean {
-  return !m.isSidechain
-    && m.type !== "system"
-    && m.type !== "summary"
-    && m.type !== "progress"
-    && m.type !== "queue-operation"
-    && m.type !== "file-history-snapshot";
-}
 
 export function exportToJson(messages: ClaudeMessage[], sessionName: string): string {
   const filtered = messages.filter(isExportable);

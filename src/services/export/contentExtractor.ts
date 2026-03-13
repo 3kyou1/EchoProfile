@@ -6,6 +6,7 @@
  */
 
 import type { ContentItem } from "@/types/core/tool";
+import type { ClaudeMessage } from "@/types";
 
 export interface ExtractedBlock {
   kind: "text" | "thinking" | "tool" | "result" | "media" | "search" | "code";
@@ -212,6 +213,18 @@ export function extractBlocks(content: string | ContentItem[] | Record<string, u
   }
 
   return blocks;
+}
+
+/**
+ * Filter messages to only exportable types (shared across all exporters).
+ */
+export function isExportable(m: ClaudeMessage): boolean {
+  return !m.isSidechain
+    && m.type !== "system"
+    && m.type !== "summary"
+    && m.type !== "progress"
+    && m.type !== "queue-operation"
+    && m.type !== "file-history-snapshot";
 }
 
 /**

@@ -5,28 +5,18 @@
  */
 
 import type { ClaudeMessage } from "@/types";
-import { extractBlocks, type ExtractedBlock } from "./contentExtractor";
+import { extractBlocks, isExportable, type ExtractedBlock } from "./contentExtractor";
 
-function formatTime(timestamp: string): string {
-  return new Date(timestamp).toLocaleTimeString("en-US", { hour12: false });
-}
-
-function formatDate(timestamp: string): string {
+function formatTimestamp(timestamp: string): { date: string; time: string } {
   const d = new Date(timestamp);
-  if (Number.isNaN(d.getTime())) return timestamp;
+  if (Number.isNaN(d.getTime())) return { date: timestamp, time: timestamp };
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function isExportable(m: ClaudeMessage): boolean {
-  return !m.isSidechain
-    && m.type !== "system"
-    && m.type !== "summary"
-    && m.type !== "progress"
-    && m.type !== "queue-operation"
-    && m.type !== "file-history-snapshot";
+  return {
+    date: `${y}-${m}-${day}`,
+    time: d.toLocaleTimeString("en-US", { hour12: false }),
+  };
 }
 
 function blockToMarkdown(block: ExtractedBlock): string {
@@ -53,14 +43,20 @@ export function exportToMarkdown(messages: ClaudeMessage[], sessionName: string)
 
   const firstTimestamp = filtered[0]?.timestamp;
   const lastTimestamp = filtered[filtered.length - 1]?.timestamp;
-  const dateStr = firstTimestamp ? formatDate(firstTimestamp) : "";
+  const start = firstTimestamp ? formatTimestamp(firstTimestamp) : null;
+  const end = lastTimestamp ? formatTimestamp(lastTimestamp) : null;
+  const dateRange = start
+    ? end && end.date !== start.date
+      ? `${start.date} ${start.time} ~ ${end.date} ${end.time}`
+      : `${start.date}${end ? ` ~ ${end.time}` : ""}`
+    : "";
   const userCount = filtered.filter((m) => m.type === "user").length;
   const assistantCount = filtered.filter((m) => m.type === "assistant").length;
 
   const lines: string[] = [
     `# Session: ${sessionName}`,
     "",
-    `- **Date**: ${dateStr}${lastTimestamp ? ` ~ ${formatTime(lastTimestamp)}` : ""}`,
+    `- **Date**: ${dateRange}`,
     `- **Messages**: ${userCount} user / ${assistantCount} assistant`,
     "",
   ];
@@ -69,7 +65,7 @@ export function exportToMarkdown(messages: ClaudeMessage[], sessionName: string)
     lines.push("---", "");
 
     const role = msg.type === "user" ? "User" : "Assistant";
-    const time = formatTime(msg.timestamp);
+    const time = formatTimestamp(msg.timestamp).time;
     const model = msg.type === "assistant" && "model" in msg && msg.model
       ? ` (${msg.model})`
       : "";

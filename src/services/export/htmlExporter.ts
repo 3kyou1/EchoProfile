@@ -6,7 +6,7 @@
 
 import { Marked } from "marked";
 import type { ClaudeMessage } from "@/types";
-import { extractBlocks, type ExtractedBlock } from "./contentExtractor";
+import { extractBlocks, isExportable, type ExtractedBlock } from "./contentExtractor";
 
 const CSS = `
 body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; background: #fff; color: #1a1a1a; line-height: 1.6; }
@@ -39,9 +39,8 @@ h1 { border-bottom: 2px solid #e5e5e5; padding-bottom: 0.5rem; }
 .content tr:nth-child(even) { background: #f9fafb; }
 .tool { background: #f3f4f6; border-left: 3px solid #6366f1; padding: 0.5rem 0.75rem; margin: 0.5rem 0; font-size: 0.9em; font-family: ui-monospace, SFMono-Regular, monospace; }
 .result { background: #f0fdf4; border-left: 3px solid #22c55e; padding: 0.5rem 0.75rem; margin: 0.5rem 0; font-size: 0.9em; white-space: pre-wrap; }
-.result.error { background: #fef2f2; border-left-color: #ef4444; }
 .thinking { color: #6b7280; font-style: italic; }
-.code-block { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 4px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.9em; margin: 0.5rem 0; }
+.code-block { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 4px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.9em; margin: 0.5rem 0; white-space: pre-wrap; }
 .search { color: #6366f1; font-size: 0.9em; }
 .media { color: #9ca3af; font-style: italic; }
 .usage { color: #9ca3af; font-size: 0.8em; margin-top: 0.5rem; }
@@ -60,26 +59,16 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function formatTime(timestamp: string): string {
-  return new Date(timestamp).toLocaleTimeString("en-US", { hour12: false });
-}
-
-function formatDate(timestamp: string): string {
+function formatTimestamp(timestamp: string): { date: string; time: string } {
   const d = new Date(timestamp);
-  if (Number.isNaN(d.getTime())) return timestamp;
+  if (Number.isNaN(d.getTime())) return { date: timestamp, time: timestamp };
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function isExportable(m: ClaudeMessage): boolean {
-  return !m.isSidechain
-    && m.type !== "system"
-    && m.type !== "summary"
-    && m.type !== "progress"
-    && m.type !== "queue-operation"
-    && m.type !== "file-history-snapshot";
+  return {
+    date: `${y}-${m}-${day}`,
+    time: d.toLocaleTimeString("en-US", { hour12: false }),
+  };
 }
 
 function isSafeUrl(url: string): boolean {
@@ -100,7 +89,7 @@ safeMarked.use({
     },
     link({ href, text }: { href: string; text: string }) {
       if (!isSafeUrl(href)) return escapeHtml(text);
-      return `<a href="${escapeHtml(href)}">${text}</a>`;
+      return `<a href="${escapeHtml(href)}">${escapeHtml(text)}</a>`;
     },
     image({ href, text }: { href: string; text: string }) {
       if (!isSafeUrl(href)) return escapeHtml(text ?? "");
@@ -140,14 +129,20 @@ export function exportToHtml(messages: ClaudeMessage[], sessionName: string): st
 
   const firstTimestamp = filtered[0]?.timestamp;
   const lastTimestamp = filtered[filtered.length - 1]?.timestamp;
-  const dateStr = firstTimestamp ? formatDate(firstTimestamp) : "";
+  const start = firstTimestamp ? formatTimestamp(firstTimestamp) : null;
+  const end = lastTimestamp ? formatTimestamp(lastTimestamp) : null;
+  const dateRange = start
+    ? end && end.date !== start.date
+      ? `${start.date} ${start.time} ~ ${end.date} ${end.time}`
+      : `${start.date}${end ? ` ~ ${end.time}` : ""}`
+    : "";
   const userCount = filtered.filter((m) => m.type === "user").length;
   const assistantCount = filtered.filter((m) => m.type === "assistant").length;
 
   const messageBlocks = filtered.map((msg) => {
     const role = msg.type === "user" ? "user" : "assistant";
     const roleLabel = msg.type === "user" ? "User" : "Assistant";
-    const time = formatTime(msg.timestamp);
+    const time = formatTimestamp(msg.timestamp).time;
     const model = msg.type === "assistant" && "model" in msg && msg.model
       ? `<span class="model">${escapeHtml(msg.model)}</span>`
       : "";
@@ -178,8 +173,6 @@ ${usageHtml}
 </div>`;
   });
 
-  const timeRange = lastTimestamp ? ` ~ ${formatTime(lastTimestamp)}` : "";
-
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -191,7 +184,7 @@ ${usageHtml}
 <body>
 <h1>Session: ${escapeHtml(sessionName)}</h1>
 <div class="meta">
-<span>${escapeHtml(dateStr)}${timeRange}</span>
+<span>${escapeHtml(dateRange)}</span>
 <span>${userCount} user / ${assistantCount} assistant messages</span>
 </div>
 ${messageBlocks.join("\n")}

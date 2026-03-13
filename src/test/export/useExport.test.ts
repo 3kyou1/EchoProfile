@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useExport } from "@/hooks/useExport";
 import type { ClaudeMessage } from "@/types";
@@ -6,6 +6,10 @@ import type { ClaudeMessage } from "@/types";
 // Mock Tauri environment
 beforeAll(() => {
   (window as Record<string, unknown>).__TAURI_INTERNALS__ = {};
+});
+
+afterAll(() => {
+  delete (window as Record<string, unknown>).__TAURI_INTERNALS__;
 });
 
 // Mock modules

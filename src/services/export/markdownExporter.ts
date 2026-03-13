@@ -84,8 +84,8 @@ export function exportToMarkdown(messages: ClaudeMessage[], sessionName: string)
     if (msg.type === "assistant" && "usage" in msg && msg.usage) {
       const u = msg.usage;
       const parts: string[] = [];
-      if (u.input_tokens) parts.push(`in: ${u.input_tokens.toLocaleString()}`);
-      if (u.output_tokens) parts.push(`out: ${u.output_tokens.toLocaleString()}`);
+      if (u.input_tokens != null) parts.push(`in: ${u.input_tokens.toLocaleString()}`);
+      if (u.output_tokens != null) parts.push(`out: ${u.output_tokens.toLocaleString()}`);
       if (parts.length > 0) {
         const cost = "costUSD" in msg && msg.costUSD != null
           ? ` · $${msg.costUSD.toFixed(4)}`

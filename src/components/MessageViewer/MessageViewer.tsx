@@ -83,8 +83,9 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     selectedSession?.project_name ?? selectedSession?.session_id ?? "conversation",
   );
   const handleExport = useCallback((format: ExportFormat) => {
+    if (isExporting || messages.length === 0) return;
     void exportConversation(format);
-  }, [exportConversation]);
+  }, [isExporting, messages.length, exportConversation]);
 
   // Clear expand registry on session change
   const clearExpandStates = useExpandRegistry((s) => s.clearAll);
@@ -689,6 +690,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
                 "shadow-sm hover:shadow-md"
               )}
               title={t("captureMode.tooltip")}
+              aria-label={t("captureMode.enter")}
             >
               <Camera className="w-3.5 h-3.5" />
               <span className="hidden lg:inline font-medium">{t("captureMode.enter")}</span>

@@ -38,7 +38,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ExportFormat } from "@/types/export";
 
 export const MessageViewer: React.FC<MessageViewerProps> = ({
@@ -675,7 +674,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* Capture Mode Button */}
+        {/* Capture & Export Buttons */}
         {!isCaptureMode && (
           <div className="flex shrink-0 items-center gap-1.5">
             <button
@@ -694,25 +693,44 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               <Camera className="w-3.5 h-3.5" />
               <span className="hidden lg:inline font-medium">{t("captureMode.enter")}</span>
             </button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isExporting || messages.length === 0}
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap",
+                    "transition-all duration-200",
+                    "bg-zinc-700/60 hover:bg-zinc-600/70",
+                    "text-zinc-300 hover:text-zinc-100",
+                    "border border-zinc-600/50 hover:border-zinc-500/50",
+                    "shadow-sm hover:shadow-md",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                  title={t("session.export.button")}
+                  aria-label={t("session.export.button")}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden lg:inline font-medium">
+                    {isExporting ? t("session.export.exporting") : t("session.export.button")}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport("markdown")}>
+                  {t("session.export.markdown")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("json")}>
+                  {t("session.export.json")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("html")}>
+                  {t("session.export.html")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
-
-        {/* Meta Info - Wide desktop only */}
-        <div className="hidden lg:flex shrink-0 items-center gap-1.5 text-xs text-zinc-400">
-          <span className="whitespace-nowrap bg-zinc-800/40 px-2 py-0.5 rounded-full">
-            {messages.length} {t("messageViewer.messagesShort")}
-          </span>
-          {selectedSession?.has_tool_use && (
-            <span className="whitespace-nowrap bg-zinc-800/40 px-2 py-0.5 rounded-full">
-              {t("messageViewer.toolsUsed")}
-            </span>
-          )}
-          {selectedSession?.has_errors && (
-            <span className="whitespace-nowrap bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
-              {t("messageViewer.hasErrors")}
-            </span>
-          )}
-        </div>
       </div>
 
       {/* Capture Mode Toolbar */}
@@ -854,47 +872,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
         )}
 
         </OverlayScrollbarsComponent>
-
-        {/* Floating export button — top-right of message area */}
-        {!isCaptureMode && messages.length > 0 && (
-          <div className="absolute top-2 right-4 z-30">
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      disabled={isExporting}
-                      className={cn(
-                        "p-2.5 rounded-full shadow-lg transition-all duration-300",
-                        "bg-accent/60 hover:bg-accent text-accent-foreground",
-                        "hover:scale-110 focus:outline-none focus:ring-4 focus:ring-accent/30",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
-                      )}
-                      aria-label={t("session.export.button")}
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  {isExporting ? t("session.export.exporting") : t("session.export.button")}
-                </TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent side="bottom" align="end">
-                <DropdownMenuItem onClick={() => handleExport("markdown")}>
-                  {t("session.export.markdown")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("json")}>
-                  {t("session.export.json")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("html")}>
-                  {t("session.export.html")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
 
         {/* Floating scroll buttons — bottom-right of message area */}
         <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-30">

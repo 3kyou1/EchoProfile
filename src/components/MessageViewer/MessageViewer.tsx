@@ -38,6 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ExportFormat } from "@/types/export";
 
 export const MessageViewer: React.FC<MessageViewerProps> = ({
@@ -674,46 +675,9 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* Export & Capture Buttons */}
+        {/* Capture Mode Button */}
         {!isCaptureMode && (
           <div className="flex shrink-0 items-center gap-1.5">
-            {/* Export DropdownMenu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  disabled={isExporting || messages.length === 0}
-                  className={cn(
-                    "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap",
-                    "transition-all duration-200",
-                    "bg-zinc-700/60 hover:bg-zinc-600/70",
-                    "text-zinc-300 hover:text-zinc-100",
-                    "border border-zinc-600/50 hover:border-zinc-500/50",
-                    "shadow-sm hover:shadow-md",
-                    "disabled:opacity-50 disabled:cursor-not-allowed"
-                  )}
-                  aria-label={t("session.export.button")}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline font-medium">
-                    {isExporting ? t("session.export.exporting") : t("session.export.button")}
-                  </span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport("markdown")}>
-                  {t("session.export.markdown")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("json")}>
-                  {t("session.export.json")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("html")}>
-                  {t("session.export.html")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Capture Mode Button */}
             <button
               type="button"
               onClick={enterCaptureMode}
@@ -889,8 +853,47 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* Floating scroll buttons */}
+        {/* Floating action buttons */}
         <div className="fixed bottom-[8.5rem] md:bottom-10 right-3 md:right-2 flex flex-col gap-2 z-50">
+          {/* Export */}
+          {!isCaptureMode && messages.length > 0 && (
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={isExporting}
+                      className={cn(
+                        "p-3 rounded-full shadow-lg transition-all duration-300",
+                        "bg-accent/60 hover:bg-accent text-accent-foreground",
+                        "hover:scale-110 focus:outline-none focus:ring-4 focus:ring-accent/30",
+                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                      )}
+                      aria-label={t("session.export.button")}
+                    >
+                      <Download className="w-3 h-3" />
+                    </button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  {isExporting ? t("session.export.exporting") : t("session.export.button")}
+                </TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent side="top" align="end">
+                <DropdownMenuItem onClick={() => handleExport("markdown")}>
+                  {t("session.export.markdown")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("json")}>
+                  {t("session.export.json")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("html")}>
+                  {t("session.export.html")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {/* Scroll to top */}
           {showScrollToTop && (
             <button
               type="button"
@@ -906,6 +909,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               <ChevronUp className="w-3 h-3" />
             </button>
           )}
+          {/* Scroll to bottom */}
           {showScrollToBottom && (
             <button
               type="button"

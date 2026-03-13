@@ -853,7 +853,9 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* Floating action buttons */}
+        </OverlayScrollbarsComponent>
+
+        {/* Floating action buttons — outside scroll container to avoid clipping */}
         <div className="fixed bottom-[8.5rem] md:bottom-10 right-3 md:right-2 flex flex-col gap-2 z-50">
           {/* Export */}
           {!isCaptureMode && messages.length > 0 && (
@@ -926,7 +928,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
             </button>
           )}
         </div>
-        </OverlayScrollbarsComponent>
       </div>
 
       {/* Capture renderer — only mounted during active capture */}

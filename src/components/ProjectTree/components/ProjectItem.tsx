@@ -140,7 +140,7 @@ export const ProjectItem: React.FC<ProjectItemProps> = ({
       </span>
 
       {/* Provider Badge */}
-      {showProviderBadge ? (
+      {showProviderBadge && (
         <span
           className={cn(
             "px-1.5 py-0.5 text-2xs font-medium rounded-full flex-shrink-0 leading-none",
@@ -150,15 +150,8 @@ export const ProjectItem: React.FC<ProjectItemProps> = ({
           )}
         >
           {providerLabel}
-          {project.storage_type && (
-            <span className="opacity-60"> · {project.storage_type.toUpperCase()}</span>
-          )}
         </span>
-      ) : project.storage_type ? (
-        <span className="px-1.5 py-0.5 text-2xs font-medium rounded-full flex-shrink-0 leading-none bg-blue-500/15 text-blue-600 dark:text-blue-400">
-          {project.storage_type.toUpperCase()}
-        </span>
-      ) : null}
+      )}
 
       {/* Session Count */}
       {(!isGrouped && project.session_count > 0) || isGrouped ? (

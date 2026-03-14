@@ -35,6 +35,18 @@ export const SessionMeta: React.FC<SessionMetaProps> = ({
         </span>
         {session.message_count}
       </span>
+      {session.storage_type && (
+        <span
+          className={cn(
+            "px-1 py-0.5 rounded font-medium uppercase",
+            isSelected
+              ? "text-accent/80 bg-accent/10"
+              : "text-muted-foreground bg-muted/50"
+          )}
+        >
+          {session.storage_type}
+        </span>
+      )}
       {session.has_tool_use && (
         <span title={t("session.item.containsToolUse")}>
           <Wrench

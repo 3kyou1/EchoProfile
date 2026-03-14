@@ -2,7 +2,9 @@ use super::ProviderInfo;
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession, TokenUsage};
 use crate::utils::{is_safe_storage_id, search_json_value_case_insensitive};
 use chrono::{DateTime, Utc};
+use rusqlite::{Connection, OpenFlags};
 use serde_json::Value;
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -21,12 +23,13 @@ fn epoch_ms_to_rfc3339(ms: u64) -> String {
 pub fn detect() -> Option<ProviderInfo> {
     let base_path = get_base_path()?;
     let storage_path = Path::new(&base_path).join("storage");
+    let db_path = Path::new(&base_path).join("opencode.db");
 
     Some(ProviderInfo {
         id: "opencode".to_string(),
         display_name: "OpenCode".to_string(),
         base_path: base_path.clone(),
-        is_available: storage_path.exists() && storage_path.is_dir(),
+        is_available: (storage_path.exists() && storage_path.is_dir()) || db_path.exists(),
     })
 }
 
@@ -62,92 +65,113 @@ pub fn get_base_path() -> Option<String> {
 pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
     let base_path = get_base_path().ok_or_else(|| "OpenCode not found".to_string())?;
     let storage_path = Path::new(&base_path).join("storage");
-    let projects_dir = storage_path.join("project");
-
-    if !projects_dir.exists() {
-        return Ok(vec![]);
-    }
 
     let mut projects = Vec::new();
+    let mut seen_ids: HashSet<String> = HashSet::new();
 
-    let entries = fs::read_dir(&projects_dir).map_err(|e| e.to_string())?;
-
-    for entry in entries.flatten() {
-        if entry.file_type().map_or(true, |ft| ft.is_symlink()) {
-            continue;
+    // 1. Read from SQLite (preferred, newer source)
+    if let Some(db_projects) = scan_projects_from_db(&base_path) {
+        for mut p in db_projects {
+            let id = p
+                .path
+                .strip_prefix("opencode://")
+                .unwrap_or(&p.path)
+                .to_string();
+            // Supplement session count with JSON-only sessions
+            let sessions_dir = storage_path.join("session").join(&id);
+            if sessions_dir.exists() {
+                let json_count = count_json_sessions_not_in_db(&base_path, &sessions_dir, &id);
+                p.session_count += json_count;
+            }
+            seen_ids.insert(id);
+            projects.push(p);
         }
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("json") {
-            continue;
+    }
+
+    // 2. Read from JSON files (fallback / merge)
+    let projects_dir = storage_path.join("project");
+    if projects_dir.exists() {
+        let entries = fs::read_dir(&projects_dir).map_err(|e| e.to_string())?;
+
+        for entry in entries.flatten() {
+            if entry.file_type().map_or(true, |ft| ft.is_symlink()) {
+                continue;
+            }
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
+
+            let content = match fs::read_to_string(&path) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+
+            let val: Value = match serde_json::from_str(&content) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+
+            let project_id = val
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            if project_id.is_empty() || !is_safe_storage_id(&project_id) {
+                continue;
+            }
+
+            // Skip if already loaded from SQLite
+            if seen_ids.contains(&project_id) {
+                continue;
+            }
+
+            let project_path = val
+                .get("worktree")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let project_name = Path::new(&project_path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+
+            let sessions_dir = storage_path.join("session").join(&project_id);
+            let session_count = if sessions_dir.exists() {
+                fs::read_dir(&sessions_dir)
+                    .map(|entries| {
+                        entries
+                            .flatten()
+                            .filter(|e| {
+                                if e.file_type().map_or(true, |ft| ft.is_symlink()) {
+                                    return false;
+                                }
+                                e.path().extension().and_then(|ext| ext.to_str()) == Some("json")
+                            })
+                            .count()
+                    })
+                    .unwrap_or(0)
+            } else {
+                0
+            };
+
+            let last_modified =
+                get_latest_session_time(&sessions_dir).unwrap_or_else(|| Utc::now().to_rfc3339());
+
+            projects.push(ClaudeProject {
+                name: project_name,
+                path: format!("opencode://{project_id}"),
+                actual_path: project_path,
+                session_count,
+                message_count: 0,
+                last_modified,
+                git_info: None,
+                provider: Some("opencode".to_string()),
+            });
         }
-
-        let content = match fs::read_to_string(&path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-
-        let val: Value = match serde_json::from_str(&content) {
-            Ok(v) => v,
-            Err(_) => continue,
-        };
-
-        let project_id = val
-            .get("id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-
-        // Real field is "worktree", not "path"
-        let project_path = val
-            .get("worktree")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-
-        // No "name" field — derive from last segment of "worktree"
-        let project_name = Path::new(&project_path)
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown")
-            .to_string();
-
-        if project_id.is_empty() || !is_safe_storage_id(&project_id) {
-            continue;
-        }
-
-        // Count sessions
-        let sessions_dir = storage_path.join("session").join(&project_id);
-        let session_count = if sessions_dir.exists() {
-            fs::read_dir(&sessions_dir)
-                .map(|entries| {
-                    entries
-                        .flatten()
-                        .filter(|e| {
-                            if e.file_type().map_or(true, |ft| ft.is_symlink()) {
-                                return false;
-                            }
-                            e.path().extension().and_then(|ext| ext.to_str()) == Some("json")
-                        })
-                        .count()
-                })
-                .unwrap_or(0)
-        } else {
-            0
-        };
-
-        let last_modified =
-            get_latest_session_time(&sessions_dir).unwrap_or_else(|| Utc::now().to_rfc3339());
-
-        projects.push(ClaudeProject {
-            name: project_name,
-            path: format!("opencode://{project_id}"),
-            actual_path: project_path,
-            session_count,
-            message_count: 0,
-            last_modified,
-            git_info: None,
-            provider: Some("opencode".to_string()),
-        });
     }
 
     projects.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
@@ -169,96 +193,107 @@ pub fn load_sessions(
         return Err(format!("Invalid OpenCode project path: {project_path}"));
     }
 
-    let sessions_dir = storage_path.join("session").join(project_id);
-    if !sessions_dir.exists() {
-        return Ok(vec![]);
+    let mut sessions = Vec::new();
+    let mut seen_ids: HashSet<String> = HashSet::new();
+
+    // 1. Read from SQLite
+    if let Some(db_sessions) = load_sessions_from_db(&base_path, project_id) {
+        for s in db_sessions {
+            seen_ids.insert(s.actual_session_id.clone());
+            sessions.push(s);
+        }
     }
 
-    let mut sessions = Vec::new();
+    // 2. Read from JSON files
+    let sessions_dir = storage_path.join("session").join(project_id);
+    if sessions_dir.exists() {
+        for entry in fs::read_dir(&sessions_dir)
+            .map_err(|e| e.to_string())?
+            .flatten()
+        {
+            if entry.file_type().map_or(true, |ft| ft.is_symlink()) {
+                continue;
+            }
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
 
-    for entry in fs::read_dir(&sessions_dir)
-        .map_err(|e| e.to_string())?
-        .flatten()
-    {
-        if entry.file_type().map_or(true, |ft| ft.is_symlink()) {
-            continue;
+            let content = match fs::read_to_string(&path) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+
+            let val: Value = match serde_json::from_str(&content) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+
+            let session_id = val
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            if session_id.is_empty() || !is_safe_storage_id(&session_id) {
+                continue;
+            }
+
+            if seen_ids.contains(&session_id) {
+                continue;
+            }
+
+            let title = val.get("title").and_then(|v| v.as_str()).map(String::from);
+
+            let time_obj = val.get("time");
+            let created_at = time_obj
+                .and_then(|t| t.get("created"))
+                .and_then(Value::as_u64)
+                .map(epoch_ms_to_rfc3339)
+                .unwrap_or_default();
+            let updated_at = time_obj
+                .and_then(|t| t.get("updated"))
+                .and_then(Value::as_u64)
+                .map(epoch_ms_to_rfc3339)
+                .unwrap_or_else(|| created_at.clone());
+
+            let messages_dir = storage_path.join("message").join(&session_id);
+            let message_count = if messages_dir.exists() {
+                fs::read_dir(&messages_dir)
+                    .map(|entries| {
+                        entries
+                            .flatten()
+                            .filter(|e| {
+                                if e.file_type().map_or(true, |ft| ft.is_symlink()) {
+                                    return false;
+                                }
+                                e.path().extension().and_then(|ext| ext.to_str()) == Some("json")
+                            })
+                            .count()
+                    })
+                    .unwrap_or(0)
+            } else {
+                0
+            };
+
+            sessions.push(ClaudeSession {
+                session_id: format!("opencode://{session_id}"),
+                actual_session_id: session_id,
+                file_path: format!(
+                    "opencode://{project_id}/{}",
+                    path.file_stem().unwrap_or_default().to_string_lossy()
+                ),
+                project_name: String::new(),
+                message_count,
+                first_message_time: created_at.clone(),
+                last_message_time: updated_at.clone(),
+                last_modified: updated_at,
+                has_tool_use: false,
+                has_errors: false,
+                summary: title,
+                provider: Some("opencode".to_string()),
+            });
         }
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("json") {
-            continue;
-        }
-
-        let content = match fs::read_to_string(&path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-
-        let val: Value = match serde_json::from_str(&content) {
-            Ok(v) => v,
-            Err(_) => continue,
-        };
-
-        let session_id = val
-            .get("id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        let title = val.get("title").and_then(|v| v.as_str()).map(String::from);
-
-        // Timestamps are epoch milliseconds under val["time"]["created"] / val["time"]["updated"]
-        let time_obj = val.get("time");
-        let created_at = time_obj
-            .and_then(|t| t.get("created"))
-            .and_then(Value::as_u64)
-            .map(epoch_ms_to_rfc3339)
-            .unwrap_or_default();
-        let updated_at = time_obj
-            .and_then(|t| t.get("updated"))
-            .and_then(Value::as_u64)
-            .map(epoch_ms_to_rfc3339)
-            .unwrap_or_else(|| created_at.clone());
-
-        if session_id.is_empty() || !is_safe_storage_id(&session_id) {
-            continue;
-        }
-
-        // Count messages
-        let messages_dir = storage_path.join("message").join(&session_id);
-        let message_count = if messages_dir.exists() {
-            fs::read_dir(&messages_dir)
-                .map(|entries| {
-                    entries
-                        .flatten()
-                        .filter(|e| {
-                            if e.file_type().map_or(true, |ft| ft.is_symlink()) {
-                                return false;
-                            }
-                            e.path().extension().and_then(|ext| ext.to_str()) == Some("json")
-                        })
-                        .count()
-                })
-                .unwrap_or(0)
-        } else {
-            0
-        };
-
-        sessions.push(ClaudeSession {
-            session_id: format!("opencode://{session_id}"),
-            actual_session_id: session_id,
-            file_path: format!(
-                "opencode://{project_id}/{}",
-                path.file_stem().unwrap_or_default().to_string_lossy()
-            ),
-            project_name: String::new(),
-            message_count,
-            first_message_time: created_at.clone(),
-            last_message_time: updated_at.clone(),
-            last_modified: updated_at,
-            has_tool_use: false,
-            has_errors: false,
-            summary: title,
-            provider: Some("opencode".to_string()),
-        });
     }
 
     sessions.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
@@ -287,7 +322,14 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
         return Err(format!("Invalid session_id in path: {session_path}"));
     }
 
-    // Read message files
+    // Try SQLite first
+    if let Some(db_messages) = load_messages_from_db(&base_path, session_id) {
+        if !db_messages.is_empty() {
+            return Ok(db_messages);
+        }
+    }
+
+    // Fall back to JSON files
     let messages_dir = storage_path.join("message").join(session_id);
     if !messages_dir.exists() {
         return Ok(vec![]);
@@ -431,12 +473,24 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
     let storage_path = Path::new(&base_path).join("storage");
     let session_root = storage_path.join("session");
 
-    if !session_root.exists() {
-        return Ok(vec![]);
-    }
-
     let query_lower = query.to_lowercase();
     let mut results = Vec::new();
+    let mut searched_sessions: HashSet<String> = HashSet::new();
+
+    // 1. Search SQLite
+    if let Some((db_results, db_session_ids)) = search_from_db(&base_path, &query_lower, limit) {
+        searched_sessions.extend(db_session_ids);
+        results.extend(db_results);
+        if results.len() >= limit {
+            results.truncate(limit);
+            return Ok(results);
+        }
+    }
+
+    // 2. Search JSON files (skip sessions already covered by SQLite)
+    if !session_root.exists() {
+        return Ok(results);
+    }
 
     for project_entry in fs::read_dir(&session_root)
         .map_err(|e| e.to_string())?
@@ -468,6 +522,11 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_default();
 
+            // Skip sessions already searched from SQLite
+            if searched_sessions.contains(&session_id) {
+                continue;
+            }
+
             let virtual_path = format!("opencode://{project_id}/{session_id}");
 
             if let Ok(messages) = load_messages(&virtual_path) {
@@ -487,6 +546,353 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
     }
 
     Ok(results)
+}
+
+// ============================================================================
+// SQLite helpers
+// ============================================================================
+
+/// Count JSON session files that do NOT exist in the `SQLite` database.
+fn count_json_sessions_not_in_db(base_path: &str, sessions_dir: &Path, project_id: &str) -> usize {
+    let db_session_ids: HashSet<String> = open_db(base_path)
+        .and_then(|conn| {
+            let mut stmt = conn
+                .prepare("SELECT id FROM session WHERE project_id = ?1")
+                .ok()?;
+            let ids: Vec<String> = stmt
+                .query_map([project_id], |row| row.get(0))
+                .ok()?
+                .filter_map(std::result::Result::ok)
+                .collect();
+            Some(ids.into_iter().collect())
+        })
+        .unwrap_or_default();
+
+    if db_session_ids.is_empty() {
+        return 0;
+    }
+
+    fs::read_dir(sessions_dir)
+        .map(|entries| {
+            entries
+                .flatten()
+                .filter(|e| {
+                    if e.file_type().map_or(true, |ft| ft.is_symlink()) {
+                        return false;
+                    }
+                    let path = e.path();
+                    if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                        return false;
+                    }
+                    let session_id = path
+                        .file_stem()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    !db_session_ids.contains(&session_id)
+                })
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+/// Open the `OpenCode` `SQLite` database in read-only mode.
+fn open_db(base_path: &str) -> Option<Connection> {
+    let db_path = Path::new(base_path).join("opencode.db");
+    if !db_path.exists() {
+        return None;
+    }
+    let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    let conn = Connection::open_with_flags(&db_path, flags).ok()?;
+    conn.busy_timeout(std::time::Duration::from_secs(1)).ok()?;
+    Some(conn)
+}
+
+fn scan_projects_from_db(base_path: &str) -> Option<Vec<ClaudeProject>> {
+    let conn = open_db(base_path)?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT p.id, p.worktree, p.name, p.time_created, p.time_updated,
+                    (SELECT COUNT(*) FROM session s WHERE s.project_id = p.id) AS session_count
+             FROM project p",
+        )
+        .ok()?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let id: String = row.get(0)?;
+            let worktree: String = row.get(1)?;
+            let name: Option<String> = row.get(2)?;
+            let time_created: u64 = row.get(3)?;
+            let time_updated: u64 = row.get(4)?;
+            let session_count: usize = row.get(5)?;
+
+            let project_name = name.filter(|n| !n.is_empty()).unwrap_or_else(|| {
+                Path::new(&worktree)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string()
+            });
+
+            let last_modified = epoch_ms_to_rfc3339(time_updated.max(time_created));
+
+            Ok(ClaudeProject {
+                name: project_name,
+                path: format!("opencode://{id}"),
+                actual_path: worktree,
+                session_count,
+                message_count: 0,
+                last_modified,
+                git_info: None,
+                provider: Some("opencode".to_string()),
+            })
+        })
+        .ok()?;
+
+    let projects: Vec<ClaudeProject> = rows.filter_map(std::result::Result::ok).collect();
+    if projects.is_empty() {
+        None
+    } else {
+        Some(projects)
+    }
+}
+
+fn load_sessions_from_db(base_path: &str, project_id: &str) -> Option<Vec<ClaudeSession>> {
+    let conn = open_db(base_path)?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT s.id, s.title, s.time_created, s.time_updated,
+                    (SELECT COUNT(*) FROM message m WHERE m.session_id = s.id) AS message_count
+             FROM session s
+             WHERE s.project_id = ?1",
+        )
+        .ok()?;
+
+    let rows = stmt
+        .query_map([project_id], |row| {
+            let session_id: String = row.get(0)?;
+            let title: String = row.get(1)?;
+            let time_created: u64 = row.get(2)?;
+            let time_updated: u64 = row.get(3)?;
+            let message_count: usize = row.get(4)?;
+
+            let created_at = epoch_ms_to_rfc3339(time_created);
+            let updated_at = epoch_ms_to_rfc3339(time_updated);
+
+            Ok(ClaudeSession {
+                session_id: format!("opencode://{session_id}"),
+                actual_session_id: session_id.clone(),
+                file_path: format!("opencode://{project_id}/{session_id}"),
+                project_name: String::new(),
+                message_count,
+                first_message_time: created_at.clone(),
+                last_message_time: updated_at.clone(),
+                last_modified: updated_at,
+                has_tool_use: false,
+                has_errors: false,
+                summary: if title.is_empty() { None } else { Some(title) },
+                provider: Some("opencode".to_string()),
+            })
+        })
+        .ok()?;
+
+    let sessions: Vec<ClaudeSession> = rows.filter_map(std::result::Result::ok).collect();
+    if sessions.is_empty() {
+        None
+    } else {
+        Some(sessions)
+    }
+}
+
+fn load_messages_from_db(base_path: &str, session_id: &str) -> Option<Vec<ClaudeMessage>> {
+    let conn = open_db(base_path)?;
+    load_messages_with_conn(&conn, session_id)
+}
+
+fn load_messages_with_conn(conn: &Connection, session_id: &str) -> Option<Vec<ClaudeMessage>> {
+    let mut msg_stmt = conn
+        .prepare(
+            "SELECT id, data FROM message
+             WHERE session_id = ?1
+             ORDER BY time_created, id",
+        )
+        .ok()?;
+
+    let mut part_stmt = conn
+        .prepare(
+            "SELECT data FROM part
+             WHERE message_id = ?1
+             ORDER BY id",
+        )
+        .ok()?;
+
+    let msg_rows = msg_stmt
+        .query_map([session_id], |row| {
+            let msg_id: String = row.get(0)?;
+            let data_json: String = row.get(1)?;
+            Ok((msg_id, data_json))
+        })
+        .ok()?;
+
+    let mut messages = Vec::new();
+
+    for msg_row in msg_rows.flatten() {
+        let (msg_id, data_json) = msg_row;
+
+        let val: Value = match serde_json::from_str(&data_json) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        let role = val.get("role").and_then(|v| v.as_str()).unwrap_or("user");
+
+        let created_at = val
+            .get("time")
+            .and_then(|t| t.get("created"))
+            .and_then(Value::as_u64)
+            .map(epoch_ms_to_rfc3339)
+            .unwrap_or_default();
+
+        let model = val
+            .get("modelID")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
+        let parent_uuid = val
+            .get("parentID")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
+        let usage = val.get("tokens").map(|t| TokenUsage {
+            input_tokens: t.get("input").and_then(Value::as_u64).map(|v| v as u32),
+            output_tokens: t.get("output").and_then(Value::as_u64).map(|v| v as u32),
+            cache_creation_input_tokens: None,
+            cache_read_input_tokens: None,
+            service_tier: None,
+        });
+
+        let cost_usd = val.get("cost").and_then(Value::as_f64);
+
+        let part_rows = part_stmt.query_map([&msg_id], |row| {
+            let part_data: String = row.get(0)?;
+            Ok(part_data)
+        });
+
+        let part_values: Vec<Value> = match part_rows {
+            Ok(rows) => rows
+                .flatten()
+                .filter_map(|data| serde_json::from_str(&data).ok())
+                .collect(),
+            Err(_) => Vec::new(),
+        };
+
+        let (content_value, parts_usage, parts_cost) = process_parts(&part_values);
+
+        let final_usage = usage.or(parts_usage);
+        let final_cost = cost_usd.or(parts_cost);
+
+        let message_type = match role {
+            "assistant" => "assistant",
+            "system" => "system",
+            _ => "user",
+        };
+
+        messages.push(ClaudeMessage {
+            uuid: msg_id,
+            parent_uuid,
+            session_id: session_id.to_string(),
+            timestamp: created_at,
+            message_type: message_type.to_string(),
+            content: content_value,
+            project_name: None,
+            tool_use: None,
+            tool_use_result: None,
+            is_sidechain: None,
+            usage: final_usage,
+            role: Some(role.to_string()),
+            model,
+            stop_reason: None,
+            cost_usd: final_cost,
+            duration_ms: None,
+            message_id: None,
+            snapshot: None,
+            is_snapshot_update: None,
+            data: None,
+            tool_use_id: None,
+            parent_tool_use_id: None,
+            operation: None,
+            subtype: None,
+            level: None,
+            hook_count: None,
+            hook_infos: None,
+            stop_reason_system: None,
+            prevented_continuation: None,
+            compact_metadata: None,
+            microcompact_metadata: None,
+            provider: Some("opencode".to_string()),
+        });
+    }
+
+    if messages.is_empty() {
+        None
+    } else {
+        Some(messages)
+    }
+}
+
+/// Returns `(matching_messages, searched_session_ids)` for dedup with JSON search.
+fn search_from_db(
+    base_path: &str,
+    query_lower: &str,
+    limit: usize,
+) -> Option<(Vec<ClaudeMessage>, HashSet<String>)> {
+    let conn = open_db(base_path)?;
+
+    let search_pattern = format!("%{query_lower}%");
+    let mut stmt = conn
+        .prepare(
+            "SELECT DISTINCT p.session_id FROM part p
+             WHERE LOWER(p.data) LIKE ?1
+             LIMIT ?2",
+        )
+        .ok()?;
+
+    let session_ids: Vec<String> = stmt
+        .query_map(rusqlite::params![&search_pattern, limit * 2], |row| {
+            row.get(0)
+        })
+        .ok()?
+        .filter_map(std::result::Result::ok)
+        .collect();
+
+    if session_ids.is_empty() {
+        return None;
+    }
+
+    let searched_set: HashSet<String> = session_ids.iter().cloned().collect();
+
+    // Reuse the same connection for loading messages
+    let mut results = Vec::new();
+    for sid in &session_ids {
+        if let Some(messages) = load_messages_with_conn(&conn, sid) {
+            for msg in messages {
+                if results.len() >= limit {
+                    return Some((results, searched_set));
+                }
+                if let Some(content) = &msg.content {
+                    if search_json_value_case_insensitive(content, query_lower) {
+                        results.push(msg);
+                    }
+                }
+            }
+        }
+    }
+
+    if results.is_empty() {
+        None
+    } else {
+        Some((results, searched_set))
+    }
 }
 
 // ============================================================================

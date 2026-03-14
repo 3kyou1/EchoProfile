@@ -162,8 +162,7 @@ jobs:
           echo "Removing conflicting EGL/Mesa/Wayland libs..."
           pushd squashfs-root/usr/lib/ > /dev/null
           rm -fv libEGL.so* libEGL_mesa.so* libGLESv2.so* libgbm.so* \
-                 libwayland-client.so* libwayland-server.so* libwayland-egl.so* \
-                 || true
+                 libwayland-client.so* libwayland-server.so* libwayland-egl.so*
           popd > /dev/null
 
           # Inject WEBKIT_DISABLE_DMABUF_RENDERER into GTK apprun hook as defense-in-depth
@@ -178,7 +177,9 @@ jobs:
           fi
 
           # Download appimagetool for repackaging (pinned to stable release 1.9.1)
+          APPIMAGETOOL_SHA256="a2d716dcf358bcef63173cd8e9d15efbe7cd227724276a9dad5fc1ba2181ae77"
           wget -q "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage"
+          echo "${APPIMAGETOOL_SHA256}  appimagetool-x86_64.AppImage" | sha256sum -c -
           chmod +x appimagetool-x86_64.AppImage
 
           # Repackage (APPIMAGE_EXTRACT_AND_RUN bypasses FUSE requirement on CI)

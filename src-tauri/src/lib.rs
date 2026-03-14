@@ -83,7 +83,10 @@ fn run_tauri() {
         .map(|v| !v.is_empty())
         .unwrap_or(false)
     {
-        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        // Only set if not already configured by the user
+        if std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
     }
 
     use std::sync::{Arc, Mutex};

@@ -174,6 +174,7 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
                 last_modified,
                 git_info: None,
                 provider: Some("codex".to_string()),
+                storage_type: None,
             }
         })
         .collect();
@@ -232,6 +233,7 @@ pub fn load_sessions(
                     has_errors: false,
                     summary: info.summary,
                     provider: Some("codex".to_string()),
+                    storage_type: None,
                 });
             }
         }

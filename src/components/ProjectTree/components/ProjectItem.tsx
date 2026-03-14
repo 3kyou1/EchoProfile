@@ -150,6 +150,9 @@ export const ProjectItem: React.FC<ProjectItemProps> = ({
           )}
         >
           {providerLabel}
+          {project.storage_type && (
+            <span className="opacity-60"> · {project.storage_type.toUpperCase()}</span>
+          )}
         </span>
       )}
 

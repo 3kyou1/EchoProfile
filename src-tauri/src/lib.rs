@@ -65,6 +65,27 @@ pub fn run() {
 
 /// Run the normal Tauri desktop application.
 fn run_tauri() {
+    // Workaround for WebKitGTK GPU process crash in AppImage environments.
+    //
+    // AppImage bundles Ubuntu-compiled EGL/Mesa libs, but the system's
+    // WebKitGPUProcess (not bundled) inherits LD_LIBRARY_PATH and loads them,
+    // causing EGL_BAD_ALLOC on distros with newer Mesa (e.g. Arch Linux).
+    //
+    // The CI pipeline removes conflicting EGL libs from the AppImage (primary fix).
+    // This env var is defense-in-depth for edge cases (NVIDIA driver quirks, etc.).
+    //
+    // See: https://github.com/jhlee0409/claude-code-history-viewer/issues/186
+    // See: https://github.com/tauri-apps/tauri/issues/11988
+    // Note: std::env::set_var becomes unsafe in Rust edition 2024.
+    // This is safe here because no threads exist yet at this point in startup.
+    #[cfg(target_os = "linux")]
+    if std::env::var("APPIMAGE")
+        .map(|v| !v.is_empty())
+        .unwrap_or(false)
+    {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+
     use std::sync::{Arc, Mutex};
 
     #[allow(unused_mut)]

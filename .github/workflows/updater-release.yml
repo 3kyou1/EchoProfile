@@ -110,6 +110,7 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - uses: tauri-apps/tauri-action@v0
+        id: tauri-build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -121,10 +122,125 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
+          # Linux: skip auto-upload so we can post-process the AppImage first
+          releaseId: ${{ matrix.platform != 'ubuntu-22.04' && needs.create-release.outputs.release_id || '' }}
           args: ${{ matrix.args }}
           updaterJsonPreferNsis: false
           includeUpdaterJson: false
+
+      # Fix AppImage EGL crash on Arch Linux and other rolling-release distros.
+      #
+      # The AppImage bundles Ubuntu-compiled EGL/Mesa/Wayland libs, but does NOT
+      # bundle WebKitGPUProcess. The system's WebKitGPUProcess inherits AppRun's
+      # LD_LIBRARY_PATH, loads the bundled (incompatible) EGL, and crashes with
+      # EGL_BAD_ALLOC. Removing these GPU-driver-dependent libs forces the system's
+      # native EGL stack to be used, which is compatible with the system's WebKitGPUProcess.
+      #
+      # See: https://github.com/jhlee0409/claude-code-history-viewer/issues/186
+      # See: https://github.com/tauri-apps/tauri/issues/11988
+      - name: Post-process AppImage (fix EGL crash on Arch Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          set -euo pipefail
+
+          # Find the built AppImage
+          APPIMAGE=$(find src-tauri/target/release/bundle/appimage -name '*.AppImage' -not -name '*.sig' | head -1)
+          if [ -z "$APPIMAGE" ]; then
+            echo "::error::No AppImage found in bundle output"
+            exit 1
+          fi
+          echo "Found AppImage: $APPIMAGE"
+
+          # Extract AppImage contents
+          rm -rf squashfs-root
+          chmod +x "$APPIMAGE"
+          "$APPIMAGE" --appimage-extract
+
+          # Remove GPU-driver-dependent libs that cause ABI mismatch with host system.
+          # These Ubuntu-compiled libs conflict with the host's Mesa/GPU drivers when
+          # the system's WebKitGPUProcess loads them via inherited LD_LIBRARY_PATH.
+          echo "Removing conflicting EGL/Mesa/Wayland libs..."
+          pushd squashfs-root/usr/lib/ > /dev/null
+          rm -fv libEGL.so* libEGL_mesa.so* libGLESv2.so* libgbm.so* \
+                 libwayland-client.so* libwayland-server.so* libwayland-egl.so* \
+                 || true
+          popd > /dev/null
+
+          # Inject WEBKIT_DISABLE_DMABUF_RENDERER into GTK apprun hook as defense-in-depth
+          HOOK_FILE="squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh"
+          if [ -f "$HOOK_FILE" ]; then
+            echo '' >> "$HOOK_FILE"
+            echo '# Fix WebKitGTK EGL crash on rolling-release distros (issue #186)' >> "$HOOK_FILE"
+            echo 'export WEBKIT_DISABLE_DMABUF_RENDERER=1' >> "$HOOK_FILE"
+            echo "Injected WEBKIT_DISABLE_DMABUF_RENDERER into apprun hook"
+          else
+            echo "::warning::GTK apprun hook not found at $HOOK_FILE"
+          fi
+
+          # Download appimagetool for repackaging (pinned to stable release 1.9.1)
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage"
+          chmod +x appimagetool-x86_64.AppImage
+
+          # Repackage (APPIMAGE_EXTRACT_AND_RUN bypasses FUSE requirement on CI)
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 ./appimagetool-x86_64.AppImage squashfs-root "$APPIMAGE"
+
+          # Cleanup
+          rm -rf squashfs-root appimagetool-x86_64.AppImage
+
+          echo "AppImage post-processing complete: $APPIMAGE"
+
+      - name: Sign and upload post-processed Linux artifacts
+        if: matrix.platform == 'ubuntu-22.04'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          # Find all Linux bundle artifacts
+          BUNDLE_DIR="src-tauri/target/release/bundle"
+          RELEASE_TAG="${GITHUB_REF_NAME}"
+
+          # Upload AppImage + re-sign
+          APPIMAGE=$(find "$BUNDLE_DIR/appimage" -name '*.AppImage' -not -name '*.sig' | head -1)
+          if [ -n "$APPIMAGE" ]; then
+            # Re-sign for Tauri updater (the post-processed AppImage has a different checksum)
+            # tauri signer sign auto-creates ${APPIMAGE}.sig on disk — no stdout redirect
+            pnpm tauri signer sign \
+              --private-key "$TAURI_SIGNING_PRIVATE_KEY" \
+              --password "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}" \
+              "$APPIMAGE"
+            [ -s "${APPIMAGE}.sig" ] || { echo "::error::Signature file missing or empty"; exit 1; }
+            echo "Re-signed: ${APPIMAGE}.sig"
+
+            # Upload AppImage and signature to release
+            gh release upload "$RELEASE_TAG" \
+              "$APPIMAGE" "${APPIMAGE}.sig" \
+              --repo "${{ github.repository }}" \
+              --clobber
+            echo "Uploaded AppImage to release $RELEASE_TAG"
+          fi
+
+          # Upload deb package (not post-processed, upload as-is)
+          for DEB in "$BUNDLE_DIR"/deb/*.deb; do
+            if [ -f "$DEB" ]; then
+              gh release upload "$RELEASE_TAG" "$DEB" \
+                --repo "${{ github.repository }}" \
+                --clobber
+              echo "Uploaded: $(basename "$DEB")"
+            fi
+          done
+
+          # Upload rpm package if present
+          for RPM in "$BUNDLE_DIR"/rpm/*.rpm; do
+            if [ -f "$RPM" ]; then
+              gh release upload "$RELEASE_TAG" "$RPM" \
+                --repo "${{ github.repository }}" \
+                --clobber
+              echo "Uploaded: $(basename "$RPM")"
+            fi
+          done
 
   generate-updater-metadata:
     needs: [create-release, build-tauri]

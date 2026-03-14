@@ -206,6 +206,7 @@ mod project_snapshots {
             last_modified: "2025-01-15T10:30:00Z".to_string(),
             git_info: None,
             provider: None,
+            storage_type: None,
         };
 
         assert_json_snapshot!("claude_project", project);
@@ -231,6 +232,7 @@ mod session_snapshots {
             has_errors: false,
             summary: Some("Test conversation summary".to_string()),
             provider: None,
+            storage_type: None,
         };
 
         assert_json_snapshot!("claude_session", session);

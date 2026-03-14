@@ -39,6 +39,9 @@ pub struct ClaudeProject {
     /// Provider identifier (claude, codex, opencode)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
+    /// Storage type (json, sqlite)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,6 +60,9 @@ pub struct ClaudeSession {
     /// Provider identifier (claude, codex, opencode)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
+    /// Storage type (json, sqlite)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -87,6 +93,7 @@ mod tests {
             has_errors: false,
             summary: Some("Test conversation".to_string()),
             provider: None,
+            storage_type: None,
         };
 
         let serialized = serde_json::to_string(&session).unwrap();

@@ -504,6 +504,7 @@ fn extract_session_metadata_internal(
             has_errors,
             summary: final_summary,
             provider: None,
+            storage_type: None,
         },
         sidechain_count,
         final_byte_offset: file_size,

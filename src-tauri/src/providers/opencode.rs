@@ -170,6 +170,7 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
                 last_modified,
                 git_info: None,
                 provider: Some("opencode".to_string()),
+                storage_type: Some("json".to_string()),
             });
         }
     }
@@ -292,6 +293,7 @@ pub fn load_sessions(
                 has_errors: false,
                 summary: title,
                 provider: Some("opencode".to_string()),
+                storage_type: Some("json".to_string()),
             });
         }
     }
@@ -645,6 +647,7 @@ fn scan_projects_from_db(base_path: &str) -> Option<Vec<ClaudeProject>> {
                 last_modified,
                 git_info: None,
                 provider: Some("opencode".to_string()),
+                storage_type: Some("sqlite".to_string()),
             })
         })
         .ok()?;
@@ -692,6 +695,7 @@ fn load_sessions_from_db(base_path: &str, project_id: &str) -> Option<Vec<Claude
                 has_errors: false,
                 summary: if title.is_empty() { None } else { Some(title) },
                 provider: Some("opencode".to_string()),
+                storage_type: Some("sqlite".to_string()),
             })
         })
         .ok()?;

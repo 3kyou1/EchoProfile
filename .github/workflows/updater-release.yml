@@ -177,7 +177,7 @@ jobs:
           fi
 
           # Download appimagetool for repackaging (pinned to stable release 1.9.1)
-          APPIMAGETOOL_SHA256="a2d716dcf358bcef63173cd8e9d15efbe7cd227724276a9dad5fc1ba2181ae77"
+          APPIMAGETOOL_SHA256="ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
           wget -q "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage"
           echo "${APPIMAGETOOL_SHA256}  appimagetool-x86_64.AppImage" | sha256sum -c -
           chmod +x appimagetool-x86_64.AppImage

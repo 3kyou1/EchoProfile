@@ -29,7 +29,7 @@ pub fn detect() -> Option<ProviderInfo> {
         id: "opencode".to_string(),
         display_name: "OpenCode".to_string(),
         base_path: base_path.clone(),
-        is_available: (storage_path.exists() && storage_path.is_dir()) || db_path.exists(),
+        is_available: (storage_path.exists() && storage_path.is_dir()) || db_path.is_file(),
     })
 }
 

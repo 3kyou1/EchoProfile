@@ -132,6 +132,8 @@
   "session.item.archived": "보관된 세션",
   "session.item.archivedDescription": "Codex archived_sessions에 저장되어 있습니다.",
   "session.item.containsErrors": "오류 포함",
+  "session.item.storageType.json": "JSON",
+  "session.item.storageType.sqlite": "SQLite",
   "session.item.containsToolUse": "도구 사용 포함",
   "session.item.lastModified": "마지막 수정",
   "session.item.messageCount": "메시지 수",

@@ -132,6 +132,8 @@
   "session.item.archived": "Archived session",
   "session.item.archivedDescription": "Stored under Codex archived_sessions.",
   "session.item.containsErrors": "Contains Errors",
+  "session.item.storageType.json": "JSON",
+  "session.item.storageType.sqlite": "SQLite",
   "session.item.containsToolUse": "Contains Tool Use",
   "session.item.lastModified": "Last Modified",
   "session.item.messageCount": "Message Count",

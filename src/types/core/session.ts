@@ -55,6 +55,8 @@ export interface ClaudeProject {
   git_info?: GitInfo;
   /** Provider identifier (claude, codex, opencode) */
   provider?: ProviderId;
+  /** Storage type (json, sqlite) — OpenCode only */
+  storage_type?: "json" | "sqlite";
 }
 
 export interface ClaudeSession {
@@ -72,6 +74,8 @@ export interface ClaudeSession {
   relevance?: number;
   /** Provider identifier (claude, codex, opencode) */
   provider?: ProviderId;
+  /** Storage type (json, sqlite) — OpenCode only */
+  storage_type?: "json" | "sqlite";
 }
 
 // ============================================================================

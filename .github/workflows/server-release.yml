@@ -154,8 +154,8 @@ jobs:
       - name: Update Homebrew formula
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
 
           # Fetch current formula
           gh api repos/jhlee0409/homebrew-tap/contents/Formula/cchv-server.rb \

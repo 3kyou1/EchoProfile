@@ -132,6 +132,8 @@
   "session.item.archived": "アーカイブされたセッション",
   "session.item.archivedDescription": "Codex archived_sessionsに保存されています。",
   "session.item.containsErrors": "エラーを含む",
+  "session.item.storageType.json": "JSON",
+  "session.item.storageType.sqlite": "SQLite",
   "session.item.containsToolUse": "ツール使用を含む",
   "session.item.lastModified": "最終更新",
   "session.item.messageCount": "メッセージ数",

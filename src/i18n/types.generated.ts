@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-03-12T17:17:54.531Z
- * 총 키 개수: 1659
+ * 생성 시간: 2026-03-15T08:08:32.015Z
+ * 총 키 개수: 1668
  * Namespace 수: 11
  */
 
@@ -383,7 +383,7 @@ export type AnalyticsKeys =
   | 'analytics.weeklyActivity';
 
 /**
- * session namespace의 번역 키 (169개)
+ * session namespace의 번역 키 (178개)
  * 파일: locales/{lang}/session.json
  */
 export type SessionKeys =
@@ -481,6 +481,13 @@ export type SessionKeys =
   | 'session.copyResumeCommand'
   | 'session.copySessionId'
   | 'session.count'
+  | 'session.export.button'
+  | 'session.export.error'
+  | 'session.export.exporting'
+  | 'session.export.html'
+  | 'session.export.json'
+  | 'session.export.markdown'
+  | 'session.export.success'
   | 'session.filter.clearSearch'
   | 'session.filter.noResults'
   | 'session.filter.searchPlaceholder'
@@ -524,6 +531,8 @@ export type SessionKeys =
   | 'session.item.lastModified'
   | 'session.item.messageCount'
   | 'session.item.session'
+  | 'session.item.storageType.json'
+  | 'session.item.storageType.sqlite'
   | 'session.loading'
   | 'session.nativeRename.currentName'
   | 'session.nativeRename.description'
@@ -2619,6 +2628,13 @@ export type TranslationKey =
   | 'session.copyResumeCommand'
   | 'session.copySessionId'
   | 'session.count'
+  | 'session.export.button'
+  | 'session.export.error'
+  | 'session.export.exporting'
+  | 'session.export.html'
+  | 'session.export.json'
+  | 'session.export.markdown'
+  | 'session.export.success'
   | 'session.filter.clearSearch'
   | 'session.filter.noResults'
   | 'session.filter.searchPlaceholder'
@@ -2662,6 +2678,8 @@ export type TranslationKey =
   | 'session.item.lastModified'
   | 'session.item.messageCount'
   | 'session.item.session'
+  | 'session.item.storageType.json'
+  | 'session.item.storageType.sqlite'
   | 'session.loading'
   | 'session.nativeRename.currentName'
   | 'session.nativeRename.description'

@@ -44,7 +44,7 @@ export const SessionMeta: React.FC<SessionMetaProps> = ({
               : "text-muted-foreground bg-muted/50"
           )}
         >
-          {session.storage_type}
+          {t(`session.item.storageType.${session.storage_type}`)}
         </span>
       )}
       {session.has_tool_use && (

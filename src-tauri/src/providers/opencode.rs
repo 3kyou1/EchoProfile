@@ -69,6 +69,10 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
     let mut projects = Vec::new();
     let mut seen_ids: HashSet<String> = HashSet::new();
 
+    // Pre-build DB session ID set per project (single connection, reused for all projects)
+    let db_sessions_by_project: std::collections::HashMap<String, HashSet<String>> =
+        build_db_session_map(&base_path).unwrap_or_default();
+
     // 1. Read from SQLite (preferred, newer source)
     if let Some(db_projects) = scan_projects_from_db(&base_path) {
         for mut p in db_projects {
@@ -77,11 +81,18 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
                 .strip_prefix("opencode://")
                 .unwrap_or(&p.path)
                 .to_string();
+            if !is_safe_storage_id(&id) {
+                continue;
+            }
             // Supplement session count with JSON-only sessions
             let sessions_dir = storage_path.join("session").join(&id);
             if sessions_dir.exists() {
-                let json_count = count_json_sessions_not_in_db(&base_path, &sessions_dir, &id);
-                p.session_count += json_count;
+                let db_ids = db_sessions_by_project.get(&id);
+                let json_only = count_json_sessions_excluding(
+                    &sessions_dir,
+                    db_ids.map(|s| s as &HashSet<String>),
+                );
+                p.session_count += json_only;
             }
             seen_ids.insert(id);
             projects.push(p);
@@ -554,26 +565,35 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
 // SQLite helpers
 // ============================================================================
 
-/// Count JSON session files that do NOT exist in the `SQLite` database.
-fn count_json_sessions_not_in_db(base_path: &str, sessions_dir: &Path, project_id: &str) -> usize {
-    let db_session_ids: HashSet<String> = open_db(base_path)
-        .and_then(|conn| {
-            let mut stmt = conn
-                .prepare("SELECT id FROM session WHERE project_id = ?1")
-                .ok()?;
-            let ids: Vec<String> = stmt
-                .query_map([project_id], |row| row.get(0))
-                .ok()?
-                .filter_map(std::result::Result::ok)
-                .collect();
-            Some(ids.into_iter().collect())
+/// Build a map of `project_id -> HashSet<session_id>` from the `SQLite` DB.
+/// Opens a single connection and queries all sessions at once.
+fn build_db_session_map(
+    base_path: &str,
+) -> Option<std::collections::HashMap<String, HashSet<String>>> {
+    let conn = open_db(base_path)?;
+    let mut stmt = conn.prepare("SELECT project_id, id FROM session").ok()?;
+    let rows = stmt
+        .query_map([], |row| {
+            let project_id: String = row.get(0)?;
+            let session_id: String = row.get(1)?;
+            Ok((project_id, session_id))
         })
-        .unwrap_or_default();
+        .ok()?;
 
-    if db_session_ids.is_empty() {
-        return 0;
+    let mut map: std::collections::HashMap<String, HashSet<String>> =
+        std::collections::HashMap::new();
+    for row in rows.flatten() {
+        map.entry(row.0).or_default().insert(row.1);
     }
+    Some(map)
+}
 
+/// Count JSON session files, excluding those present in `exclude_ids`.
+/// If `exclude_ids` is `None`, counts all JSON sessions.
+fn count_json_sessions_excluding(
+    sessions_dir: &Path,
+    exclude_ids: Option<&HashSet<String>>,
+) -> usize {
     fs::read_dir(sessions_dir)
         .map(|entries| {
             entries
@@ -586,11 +606,15 @@ fn count_json_sessions_not_in_db(base_path: &str, sessions_dir: &Path, project_i
                     if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
                         return false;
                     }
-                    let session_id = path
-                        .file_stem()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
-                    !db_session_ids.contains(&session_id)
+                    if let Some(ids) = exclude_ids {
+                        let session_id = path
+                            .file_stem()
+                            .map(|n| n.to_string_lossy().to_string())
+                            .unwrap_or_default();
+                        !ids.contains(&session_id)
+                    } else {
+                        true
+                    }
                 })
                 .count()
         })
@@ -1321,5 +1345,267 @@ mod tests {
             extract_tool_result_from_state(&part, "error").expect("error result should exist");
         assert_eq!(result.as_str(), Some("failure"));
         assert!(is_error);
+    }
+
+    // ========================================================================
+    // SQLite integration tests
+    // ========================================================================
+
+    fn create_test_db(dir: &std::path::Path) -> Connection {
+        let db_path = dir.join("opencode.db");
+        let conn = Connection::open(&db_path).expect("create test db");
+        conn.execute_batch(
+            "CREATE TABLE project (
+                id TEXT PRIMARY KEY, worktree TEXT NOT NULL, name TEXT,
+                time_created INTEGER NOT NULL, time_updated INTEGER NOT NULL,
+                sandboxes TEXT NOT NULL DEFAULT '[]', vcs TEXT, icon_url TEXT,
+                icon_color TEXT, time_initialized INTEGER, commands TEXT
+            );
+            CREATE TABLE session (
+                id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL,
+                slug TEXT NOT NULL DEFAULT '', directory TEXT NOT NULL DEFAULT '',
+                version TEXT NOT NULL DEFAULT '1.0', time_created INTEGER NOT NULL,
+                time_updated INTEGER NOT NULL, parent_id TEXT, share_url TEXT,
+                summary_additions INTEGER, summary_deletions INTEGER, summary_files INTEGER,
+                summary_diffs TEXT, revert TEXT, permission TEXT, time_compacting INTEGER,
+                time_archived INTEGER, workspace_id TEXT
+            );
+            CREATE TABLE message (
+                id TEXT PRIMARY KEY, session_id TEXT NOT NULL, time_created INTEGER NOT NULL,
+                time_updated INTEGER NOT NULL, data TEXT NOT NULL
+            );
+            CREATE TABLE part (
+                id TEXT PRIMARY KEY, message_id TEXT NOT NULL, session_id TEXT NOT NULL,
+                time_created INTEGER NOT NULL, time_updated INTEGER NOT NULL, data TEXT NOT NULL
+            );",
+        )
+        .expect("create tables");
+        conn
+    }
+
+    fn seed_test_data(conn: &Connection) {
+        conn.execute(
+            "INSERT INTO project (id, worktree, name, time_created, time_updated)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![
+                "proj1",
+                "/tmp/my-project",
+                "my-project",
+                1700000000000_i64,
+                1700000100000_i64
+            ],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO session (id, project_id, title, time_created, time_updated)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![
+                "ses_001",
+                "proj1",
+                "Test session",
+                1700000000000_i64,
+                1700000050000_i64
+            ],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO message (id, session_id, time_created, time_updated, data)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![
+                "msg_001",
+                "ses_001",
+                1700000010000_i64,
+                1700000010000_i64,
+                r#"{"role":"user","time":{"created":1700000010000}}"#
+            ],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO message (id, session_id, time_created, time_updated, data)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![
+                "msg_002", "ses_001", 1700000020000_i64, 1700000020000_i64,
+                r#"{"role":"assistant","time":{"created":1700000020000},"parentID":"msg_001","modelID":"test-model","tokens":{"input":100,"output":50},"cost":0.01}"#
+            ],
+        ).unwrap();
+
+        conn.execute(
+            "INSERT INTO part (id, message_id, session_id, time_created, time_updated, data)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            rusqlite::params![
+                "prt_001",
+                "msg_001",
+                "ses_001",
+                1700000010000_i64,
+                1700000010000_i64,
+                r#"{"type":"text","text":"Hello from user"}"#
+            ],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO part (id, message_id, session_id, time_created, time_updated, data)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            rusqlite::params![
+                "prt_002",
+                "msg_002",
+                "ses_001",
+                1700000020000_i64,
+                1700000020000_i64,
+                r#"{"type":"text","text":"Hello from assistant"}"#
+            ],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn sqlite_scan_projects_reads_from_db() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = create_test_db(tmp.path());
+        seed_test_data(&conn);
+        drop(conn);
+
+        let projects = scan_projects_from_db(&tmp.path().to_string_lossy()).unwrap();
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].name, "my-project");
+        assert_eq!(projects[0].path, "opencode://proj1");
+        assert_eq!(projects[0].session_count, 1);
+        assert_eq!(projects[0].storage_type, Some("sqlite".to_string()));
+    }
+
+    #[test]
+    fn sqlite_load_sessions_reads_from_db() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = create_test_db(tmp.path());
+        seed_test_data(&conn);
+        drop(conn);
+
+        let sessions = load_sessions_from_db(&tmp.path().to_string_lossy(), "proj1").unwrap();
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].actual_session_id, "ses_001");
+        assert_eq!(sessions[0].summary, Some("Test session".to_string()));
+        assert_eq!(sessions[0].message_count, 2);
+        assert_eq!(sessions[0].storage_type, Some("sqlite".to_string()));
+    }
+
+    #[test]
+    fn sqlite_load_messages_reads_from_db() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = create_test_db(tmp.path());
+        seed_test_data(&conn);
+        drop(conn);
+
+        let messages = load_messages_from_db(&tmp.path().to_string_lossy(), "ses_001").unwrap();
+        assert_eq!(messages.len(), 2);
+
+        // First message: user
+        assert_eq!(messages[0].uuid, "msg_001");
+        assert_eq!(messages[0].role, Some("user".to_string()));
+        let content = messages[0].content.as_ref().unwrap();
+        let text = content[0].get("text").unwrap().as_str().unwrap();
+        assert_eq!(text, "Hello from user");
+
+        // Second message: assistant
+        assert_eq!(messages[1].uuid, "msg_002");
+        assert_eq!(messages[1].role, Some("assistant".to_string()));
+        assert_eq!(messages[1].model, Some("test-model".to_string()));
+        assert_eq!(messages[1].parent_uuid, Some("msg_001".to_string()));
+        assert!(messages[1].usage.is_some());
+        assert!(messages[1].cost_usd.is_some());
+    }
+
+    #[test]
+    fn sqlite_returns_none_when_no_db() {
+        let tmp = tempfile::tempdir().unwrap();
+        // No opencode.db created
+        assert!(open_db(&tmp.path().to_string_lossy()).is_none());
+        assert!(scan_projects_from_db(&tmp.path().to_string_lossy()).is_none());
+        assert!(load_sessions_from_db(&tmp.path().to_string_lossy(), "proj1").is_none());
+        assert!(load_messages_from_db(&tmp.path().to_string_lossy(), "ses_001").is_none());
+    }
+
+    #[test]
+    fn sqlite_search_finds_matching_parts() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = create_test_db(tmp.path());
+        seed_test_data(&conn);
+        drop(conn);
+
+        let (results, session_ids) =
+            search_from_db(&tmp.path().to_string_lossy(), "hello from user", 10).unwrap();
+        assert!(!results.is_empty());
+        assert!(session_ids.contains("ses_001"));
+
+        // Search for non-existent text
+        let none_result = search_from_db(&tmp.path().to_string_lossy(), "nonexistent_xyz", 10);
+        assert!(none_result.is_none());
+    }
+
+    #[test]
+    fn count_json_sessions_excluding_counts_correctly() {
+        let tmp = tempfile::tempdir().unwrap();
+        let sessions_dir = tmp.path().join("sessions");
+        fs::create_dir(&sessions_dir).unwrap();
+
+        // Create 3 JSON session files
+        fs::write(sessions_dir.join("ses_a.json"), "{}").unwrap();
+        fs::write(sessions_dir.join("ses_b.json"), "{}").unwrap();
+        fs::write(sessions_dir.join("ses_c.json"), "{}").unwrap();
+
+        // No exclusions → count all
+        assert_eq!(count_json_sessions_excluding(&sessions_dir, None), 3);
+
+        // Exclude ses_a → count 2
+        let exclude: HashSet<String> = ["ses_a".to_string()].into_iter().collect();
+        assert_eq!(
+            count_json_sessions_excluding(&sessions_dir, Some(&exclude)),
+            2
+        );
+
+        // Exclude all → count 0
+        let exclude_all: HashSet<String> = ["ses_a", "ses_b", "ses_c"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(
+            count_json_sessions_excluding(&sessions_dir, Some(&exclude_all)),
+            0
+        );
+
+        // Empty exclude set → count all
+        let empty: HashSet<String> = HashSet::new();
+        assert_eq!(
+            count_json_sessions_excluding(&sessions_dir, Some(&empty)),
+            3
+        );
+    }
+
+    #[test]
+    fn build_db_session_map_groups_by_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = create_test_db(tmp.path());
+        seed_test_data(&conn);
+        // Add another session to a different project
+        conn.execute(
+            "INSERT INTO project (id, worktree, time_created, time_updated)
+             VALUES ('proj2', '/tmp/other', 1700000000000, 1700000000000)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO session (id, project_id, title, time_created, time_updated)
+             VALUES ('ses_x', 'proj2', 'Other', 1700000000000, 1700000000000)",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+
+        let map = build_db_session_map(&tmp.path().to_string_lossy()).unwrap();
+        assert_eq!(map.len(), 2);
+        assert!(map["proj1"].contains("ses_001"));
+        assert!(map["proj2"].contains("ses_x"));
     }
 }

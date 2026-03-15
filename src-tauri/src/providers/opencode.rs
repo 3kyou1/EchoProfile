@@ -642,7 +642,8 @@ fn count_json_sessions_excluding(
 /// Open the `OpenCode` `SQLite` database in read-only mode.
 fn open_db(base_path: &str) -> Option<Connection> {
     let db_path = Path::new(base_path).join("opencode.db");
-    if !db_path.exists() {
+    let meta = fs::symlink_metadata(&db_path).ok()?;
+    if !meta.file_type().is_file() {
         return None;
     }
     let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
@@ -899,15 +900,12 @@ fn search_from_db(
     let mut stmt = conn
         .prepare(
             "SELECT DISTINCT p.session_id FROM part p
-             WHERE LOWER(p.data) LIKE ?1 ESCAPE '\\'
-             LIMIT ?2",
+             WHERE LOWER(p.data) LIKE ?1 ESCAPE '\\'",
         )
         .ok()?;
 
     let session_ids: Vec<String> = stmt
-        .query_map(rusqlite::params![&search_pattern, limit * 2], |row| {
-            row.get(0)
-        })
+        .query_map(rusqlite::params![&search_pattern], |row| row.get(0))
         .ok()?
         .filter_map(std::result::Result::ok)
         .collect();

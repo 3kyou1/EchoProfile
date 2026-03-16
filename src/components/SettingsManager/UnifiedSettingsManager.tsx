@@ -312,7 +312,7 @@ export const UnifiedSettingsManager: React.FC<UnifiedSettingsManagerProps> = ({
             <Card className="shrink-0">
               <CustomDirectoriesSection
                 isExpanded={isCustomDirsExpanded}
-                onToggle={() => setIsCustomDirsExpanded((prev) => !prev)}
+                onToggle={(open) => setIsCustomDirsExpanded(open)}
               />
             </Card>
 

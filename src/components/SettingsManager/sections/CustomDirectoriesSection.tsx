@@ -42,7 +42,7 @@ function normalizePath(p: string): string {
 
 interface CustomDirectoriesSectionProps {
   isExpanded: boolean;
-  onToggle: () => void;
+  onToggle: (open: boolean) => void;
 }
 
 // ============================================================================
@@ -73,6 +73,7 @@ export function CustomDirectoriesSection({
 
   const pathInputId = React.useId();
   const labelInputId = React.useId();
+  const editLabelInputId = React.useId();
 
   const handleSelectFolder = async () => {
     try {
@@ -107,9 +108,9 @@ export function CustomDirectoriesSection({
       return;
     }
 
-    // Validate path has projects/ subfolder
+    // Validate path: must be absolute, contain projects/, pass symlink checks
     try {
-      const isValid = await api<boolean>("validate_claude_folder", {
+      const isValid = await api<boolean>("validate_custom_claude_dir", {
         path: normalizedPath,
       });
       if (!isValid) {
@@ -130,7 +131,6 @@ export function CustomDirectoriesSection({
       // Auto-rescan to show projects from the new directory
       await useAppStore.getState().scanProjects();
     } catch (err) {
-      console.error("Failed to add custom directory:", err);
       setAddError(String(err));
     }
   };
@@ -142,7 +142,7 @@ export function CustomDirectoriesSection({
       // Auto-rescan to remove projects from the deleted directory
       await useAppStore.getState().scanProjects();
     } catch (err) {
-      console.error("Failed to remove custom directory:", err);
+      setAddError(String(err));
     }
   };
 
@@ -157,8 +157,10 @@ export function CustomDirectoriesSection({
       await updateCustomClaudePathLabel(editingPath, editLabel.trim());
       setEditingPath(null);
       setEditLabel("");
+      // Rescan to update ProjectTree badges
+      await useAppStore.getState().scanProjects();
     } catch (err) {
-      console.error("Failed to update label:", err);
+      setAddError(String(err));
     }
   };
 
@@ -212,7 +214,11 @@ export function CustomDirectoriesSection({
                 <div className="truncate font-mono text-xs">{cp.path}</div>
                 {editingPath === cp.path ? (
                   <div className="mt-1 flex items-center gap-1">
+                    <Label htmlFor={editLabelInputId} className="sr-only">
+                      {t("settings.customDirectories.label")}
+                    </Label>
                     <Input
+                      id={editLabelInputId}
                       value={editLabel}
                       onChange={(e) => setEditLabel(e.target.value)}
                       placeholder={t(
@@ -229,7 +235,7 @@ export function CustomDirectoriesSection({
                       size="icon"
                       className="h-6 w-6"
                       onClick={handleSaveEdit}
-                      aria-label="Save label"
+                      aria-label={t("common.save")}
                     >
                       <Check className="h-3 w-3" />
                     </Button>
@@ -238,7 +244,7 @@ export function CustomDirectoriesSection({
                       size="icon"
                       className="h-6 w-6"
                       onClick={handleCancelEdit}
-                      aria-label="Cancel edit"
+                      aria-label={t("common.cancel")}
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -280,6 +286,11 @@ export function CustomDirectoriesSection({
             <p className="text-xs text-muted-foreground italic">
               {t("settings.customDirectories.empty")}
             </p>
+          )}
+
+          {/* Error display */}
+          {addError && (
+            <p className="text-xs text-destructive">{addError}</p>
           )}
 
           {/* Add form */}
@@ -335,10 +346,6 @@ export function CustomDirectoriesSection({
                   className="h-8 text-xs"
                 />
               </div>
-
-              {addError && (
-                <p className="text-xs text-destructive">{addError}</p>
-              )}
 
               <div className="flex justify-end gap-1">
                 <Button

@@ -59,8 +59,8 @@ pub async fn scan_all_projects(
         if let Some(ref custom_paths) = custom_claude_paths {
             for custom in custom_paths {
                 let custom_base = std::path::PathBuf::from(&custom.path);
-                if !custom_base.is_absolute() || !custom_base.join("projects").is_dir() {
-                    log::warn!("Skipping invalid custom Claude path: {}", custom.path);
+                if let Err(e) = crate::utils::validate_custom_claude_path(&custom_base) {
+                    log::warn!("Skipping invalid custom Claude path: {e}");
                     continue;
                 }
                 match crate::commands::project::scan_projects(custom.path.clone()).await {
@@ -225,7 +225,7 @@ pub async fn search_all_providers(
         if let Some(ref custom_paths) = custom_claude_paths {
             for custom in custom_paths {
                 let custom_base = std::path::PathBuf::from(&custom.path);
-                if !custom_base.is_absolute() || !custom_base.join("projects").is_dir() {
+                if crate::utils::validate_custom_claude_path(&custom_base).is_err() {
                     continue;
                 }
                 match crate::commands::session::search_messages(

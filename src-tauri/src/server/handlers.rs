@@ -392,6 +392,12 @@ handler_json!(
 );
 
 handler_json!(
+    validate_custom_claude_dir,
+    PathParam,
+    |p: PathParam| async move { commands::project::validate_custom_claude_dir(p.path).await }
+);
+
+handler_json!(
     scan_projects,
     ClaudePathParam,
     |p: ClaudePathParam| async move { commands::project::scan_projects(p.claude_path).await }

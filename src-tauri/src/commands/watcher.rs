@@ -89,24 +89,22 @@ pub async fn start_file_watcher(
     // Also watch custom Claude directories if provided
     if let Some(custom_paths) = custom_claude_paths {
         for custom in &custom_paths {
-            let custom_projects = PathBuf::from(&custom.path).join("projects");
-            if !custom_projects.is_dir() {
-                continue;
-            }
-            // Validate no symlinks
-            if let Ok(meta) = std::fs::symlink_metadata(&custom_projects) {
-                if meta.file_type().is_symlink() {
-                    log::warn!("Skipping symlink custom path: {}", custom.path);
-                    continue;
+            let custom_base = PathBuf::from(&custom.path);
+            match crate::utils::validate_custom_claude_path(&custom_base) {
+                Ok(canonical_projects) => {
+                    if debouncer
+                        .watcher()
+                        .watch(&canonical_projects, RecursiveMode::Recursive)
+                        .is_ok()
+                    {
+                        log::info!(
+                            "File watcher added custom path: {}",
+                            canonical_projects.display()
+                        );
+                    }
                 }
-            }
-            if let Ok(canonical) = std::fs::canonicalize(&custom_projects) {
-                if debouncer
-                    .watcher()
-                    .watch(&canonical, RecursiveMode::Recursive)
-                    .is_ok()
-                {
-                    log::info!("File watcher added custom path: {}", canonical.display());
+                Err(e) => {
+                    log::warn!("Skipping invalid custom watch path: {e}");
                 }
             }
         }

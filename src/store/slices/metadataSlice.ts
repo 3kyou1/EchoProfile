@@ -195,7 +195,9 @@ export const createMetadataSlice: StateCreator<
       set({ userMetadata: updatedMetadata });
     } catch (error) {
       console.error("Failed to update user settings:", error);
-      set({ metadataError: String(error) });
+      const message = String(error);
+      set({ metadataError: message });
+      throw new Error(message);
     }
   },
 
@@ -272,17 +274,23 @@ export const createMetadataSlice: StateCreator<
   removeCustomClaudePath: async (path: string) => {
     const { userMetadata } = get();
     const currentPaths = userMetadata.settings.customClaudePaths ?? [];
+    const normalized = path.replace(/[\\/]+$/, "");
     await get().updateUserSettings({
-      customClaudePaths: currentPaths.filter((cp) => cp.path !== path),
+      customClaudePaths: currentPaths.filter(
+        (cp) => cp.path.replace(/[\\/]+$/, "") !== normalized
+      ),
     });
   },
 
   updateCustomClaudePathLabel: async (path: string, label: string) => {
     const { userMetadata } = get();
     const currentPaths = userMetadata.settings.customClaudePaths ?? [];
+    const normalized = path.replace(/[\\/]+$/, "");
     await get().updateUserSettings({
       customClaudePaths: currentPaths.map((cp) =>
-        cp.path === path ? { ...cp, label: label || undefined } : cp
+        cp.path.replace(/[\\/]+$/, "") === normalized
+          ? { ...cp, label: label || undefined }
+          : cp
       ),
     });
   },

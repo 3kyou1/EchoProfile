@@ -31,6 +31,11 @@ import { api } from "@/services/api";
 import { useAppStore } from "@/store/useAppStore";
 import type { CustomClaudePath } from "@/types";
 
+/** Normalize path: trim whitespace and remove trailing slashes */
+function normalizePath(p: string): string {
+  return p.trim().replace(/[\\/]+$/, "");
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -91,12 +96,12 @@ export function CustomDirectoriesSection({
   const handleAdd = async () => {
     if (!newPath.trim()) return;
 
-    const trimmedPath = newPath.trim();
+    const normalizedPath = normalizePath(newPath);
 
-    // Check duplicate
+    // Check duplicate (normalize stored paths too for comparison)
     if (
-      customPaths.some((cp) => cp.path === trimmedPath) ||
-      trimmedPath === claudePath
+      customPaths.some((cp) => normalizePath(cp.path) === normalizedPath) ||
+      normalizePath(claudePath ?? "") === normalizedPath
     ) {
       setAddError(t("settings.customDirectories.duplicatePath"));
       return;
@@ -105,7 +110,7 @@ export function CustomDirectoriesSection({
     // Validate path has projects/ subfolder
     try {
       const isValid = await api<boolean>("validate_claude_folder", {
-        path: trimmedPath,
+        path: normalizedPath,
       });
       if (!isValid) {
         setAddError(t("settings.customDirectories.invalidPath"));
@@ -117,11 +122,13 @@ export function CustomDirectoriesSection({
     }
 
     try {
-      await addCustomClaudePath(trimmedPath, newLabel.trim() || undefined);
+      await addCustomClaudePath(normalizedPath, newLabel.trim() || undefined);
       setNewPath("");
       setNewLabel("");
       setIsAdding(false);
       setAddError(null);
+      // Auto-rescan to show projects from the new directory
+      await useAppStore.getState().scanProjects();
     } catch (err) {
       console.error("Failed to add custom directory:", err);
       setAddError(String(err));
@@ -132,6 +139,8 @@ export function CustomDirectoriesSection({
     if (!window.confirm(t("settings.customDirectories.removeConfirm"))) return;
     try {
       await removeCustomClaudePath(path);
+      // Auto-rescan to remove projects from the deleted directory
+      await useAppStore.getState().scanProjects();
     } catch (err) {
       console.error("Failed to remove custom directory:", err);
     }

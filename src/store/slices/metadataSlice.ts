@@ -257,11 +257,13 @@ export const createMetadataSlice: StateCreator<
   addCustomClaudePath: async (path: string, label?: string) => {
     const { userMetadata } = get();
     const currentPaths = userMetadata.settings.customClaudePaths ?? [];
+    // Normalize: trim trailing slashes for consistent comparison
+    const normalized = path.replace(/[\\/]+$/, "");
     // Prevent duplicates
-    if (currentPaths.some((cp) => cp.path === path)) {
+    if (currentPaths.some((cp) => cp.path.replace(/[\\/]+$/, "") === normalized)) {
       return;
     }
-    const entry: CustomClaudePath = { path, label };
+    const entry: CustomClaudePath = { path: normalized, label };
     await get().updateUserSettings({
       customClaudePaths: [...currentPaths, entry],
     });

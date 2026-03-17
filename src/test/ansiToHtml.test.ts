@@ -217,5 +217,35 @@ describe("linkifyUrls", () => {
       expect(hrefMatch).not.toBeNull();
       expect(hrefMatch?.[1]).toBe("https://example.com/path");
     });
+
+    it("linkifies minimal single-char URL after scheme", () => {
+      const result = linkifyUrls("https://x");
+      expect(result).toContain('<a href="https://x" class="ansi-url">https://x</a>');
+    });
+  });
+
+  describe("HTML entity tail stripping", () => {
+    it("strips trailing &quot from URL", () => {
+      // After escapeXML: https://example.com&quot; (from original https://example.com")
+      const result = linkifyUrls("https://example.com&quot;rest");
+      expect(result).toContain('<a href="https://example.com" class="ansi-url">https://example.com</a>');
+      expect(result).toContain("&quot;rest");
+    });
+
+    it("strips trailing &lt from URL", () => {
+      const result = linkifyUrls("https://example.com&lt;tag");
+      expect(result).toContain('<a href="https://example.com" class="ansi-url">https://example.com</a>');
+      expect(result).toContain("&lt;tag");
+    });
+
+    it("strips trailing &amp from URL", () => {
+      const result = linkifyUrls("https://example.com&amp;");
+      expect(result).toContain('<a href="https://example.com" class="ansi-url">https://example.com</a>');
+    });
+
+    it("preserves &amp; in the middle of URL query params", () => {
+      const result = linkifyUrls("https://example.com?a=1&amp;b=2");
+      expect(result).toContain('href="https://example.com?a=1&amp;b=2"');
+    });
   });
 });

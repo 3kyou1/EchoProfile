@@ -48,9 +48,27 @@ export function stripAnsiCodes(text: string): string {
  * `)` are allowed by the regex and handled by balanced-paren trimming
  * in linkifyUrls() so that Wikipedia-style URLs are preserved while
  * parenthetical text like "(see https://example.com)" works correctly.
+ *
+ * The first character class uses `*` (not `+`) so that minimal URLs
+ * like `https://x` (single char after scheme) are also matched.
  */
 const URL_OR_TAG_REGEX =
-  /(<[^>]*>)|((?:https?:\/\/|mailto:)[^\s<>"'`]+[^\s<>"'`.,;:!?}\]])/gi;
+  /(<[^>]*>)|((?:https?:\/\/|mailto:)[^\s<>"'`]*[^\s<>"'`.,;:!?}\]])/gi;
+
+/**
+ * Matches the first HTML entity whose original character (`<`, `>`, `"`, `'`)
+ * should have terminated the URL. After escapeXML these become `&lt;`, `&gt;`,
+ * `&quot;`, `&apos;`/`&#39;` — the regex captures the entity without its
+ * closing `;` so we truncate the URL at that point.
+ *
+ * `&amp;` is intentionally excluded: `&` is a valid URL character (query
+ * params) and should not truncate. A trailing `&amp` at URL end is handled
+ * separately by TRAILING_AMP_ENTITY.
+ */
+const TERMINATOR_ENTITY = /&(?:lt|gt|quot|apos|#39|#x27)/i;
+
+/** Trailing `&amp` at the very end of a URL (from an escaped `&`). */
+const TRAILING_AMP_ENTITY = /&amp$/i;
 
 /**
  * Trim unbalanced trailing closing parentheses from a matched URL.
@@ -93,12 +111,25 @@ export function linkifyUrls(html: string): string {
   return html.replace(URL_OR_TAG_REGEX, (match, tag: string | undefined, url: string | undefined) => {
     // HTML tag — return unchanged
     if (tag) return tag;
-    // URL — trim unbalanced parens, sanitize href, wrap in <a>
+    // URL — trim unbalanced parens, strip escaped entities, sanitize href
     if (url) {
-      const trimmed = trimUnbalancedParens(url);
-      const trailing = url.slice(trimmed.length);
-      const safeHref = trimmed.replace(/"/g, "&quot;");
-      return `<a href="${safeHref}" class="ansi-url">${trimmed}</a>${trailing}`;
+      let cleaned = trimUnbalancedParens(url);
+      // Truncate at the first HTML entity whose original char terminates URLs
+      const terminator = cleaned.match(TERMINATOR_ENTITY);
+      if (terminator?.index != null) {
+        cleaned = cleaned.slice(0, terminator.index);
+      }
+      // Strip trailing &amp (from escaped & at URL end)
+      if (TRAILING_AMP_ENTITY.test(cleaned)) {
+        cleaned = cleaned.slice(0, -4);
+      }
+      // Skip if nothing useful remains after scheme
+      if (/^(?:https?:\/\/|mailto:)$/.test(cleaned)) {
+        return match;
+      }
+      const trailing = url.slice(cleaned.length);
+      const safeHref = cleaned.replace(/"/g, "&quot;");
+      return `<a href="${safeHref}" class="ansi-url">${cleaned}</a>${trailing}`;
     }
     return match;
   });

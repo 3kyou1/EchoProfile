@@ -43,11 +43,43 @@ export function stripAnsiCodes(text: string): string {
  * The alternation ensures URLs inside HTML attributes are never matched
  * because the tag branch `<[^>]*>` consumes the entire tag first.
  *
- * Trailing punctuation (.,;:!?) and matched closing parens/brackets
- * are excluded from the URL to avoid capturing sentence-ending characters.
+ * Trailing punctuation (.,;:!?) and closing brackets are excluded from
+ * the URL to avoid capturing sentence-ending characters. Closing parens
+ * `)` are allowed by the regex and handled by balanced-paren trimming
+ * in linkifyUrls() so that Wikipedia-style URLs are preserved while
+ * parenthetical text like "(see https://example.com)" works correctly.
  */
 const URL_OR_TAG_REGEX =
-  /(<[^>]*>)|((?:https?:\/\/|mailto:)[^\s<>"'`]+[^\s<>"'`.,;:!?)}\]])/gi;
+  /(<[^>]*>)|((?:https?:\/\/|mailto:)[^\s<>"'`]+[^\s<>"'`.,;:!?}\]])/gi;
+
+/**
+ * Trim unbalanced trailing closing parentheses from a matched URL.
+ *
+ * Preserves balanced parens in URLs (e.g. Wikipedia links) while
+ * stripping excess trailing `)` from surrounding prose.
+ *
+ * Examples:
+ *   "https://example.com)"           → "https://example.com"   (trimmed)
+ *   "https://wiki/Rust_(lang)"       → "https://wiki/Rust_(lang)"  (kept)
+ *   "https://wiki/Rust_(lang))"      → "https://wiki/Rust_(lang)"  (1 trimmed)
+ */
+function trimUnbalancedParens(url: string): string {
+  let opens = 0;
+  let closes = 0;
+  for (const ch of url) {
+    if (ch === "(") opens++;
+    else if (ch === ")") closes++;
+  }
+  if (closes <= opens) return url;
+
+  let excess = closes - opens;
+  let end = url.length;
+  while (excess > 0 && end > 0 && url[end - 1] === ")") {
+    end--;
+    excess--;
+  }
+  return url.slice(0, end);
+}
 
 /**
  * Wrap URLs in HTML string with `<a>` tags, skipping URLs inside HTML tags.
@@ -61,9 +93,12 @@ export function linkifyUrls(html: string): string {
   return html.replace(URL_OR_TAG_REGEX, (match, tag: string | undefined, url: string | undefined) => {
     // HTML tag — return unchanged
     if (tag) return tag;
-    // URL — wrap in <a>
+    // URL — trim unbalanced parens, sanitize href, wrap in <a>
     if (url) {
-      return `<a href="${url}" class="ansi-url">${url}</a>`;
+      const trimmed = trimUnbalancedParens(url);
+      const trailing = url.slice(trimmed.length);
+      const safeHref = trimmed.replace(/"/g, "&quot;");
+      return `<a href="${safeHref}" class="ansi-url">${trimmed}</a>${trailing}`;
     }
     return match;
   });

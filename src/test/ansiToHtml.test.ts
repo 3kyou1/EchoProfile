@@ -140,9 +140,23 @@ describe("linkifyUrls", () => {
       expect(result).toContain('<a href="https://example.com" class="ansi-url">https://example.com</a>,');
     });
 
-    it("excludes trailing parenthesis", () => {
+    it("excludes unbalanced trailing parenthesis", () => {
       const result = linkifyUrls("(see https://example.com)");
       expect(result).toContain('<a href="https://example.com" class="ansi-url">https://example.com</a>)');
+    });
+
+    it("preserves balanced parens in Wikipedia-style URLs", () => {
+      const result = linkifyUrls("https://en.wikipedia.org/wiki/Rust_(programming_language)");
+      expect(result).toContain(
+        '<a href="https://en.wikipedia.org/wiki/Rust_(programming_language)" class="ansi-url">https://en.wikipedia.org/wiki/Rust_(programming_language)</a>'
+      );
+    });
+
+    it("trims only excess trailing parens from URL with balanced inner parens", () => {
+      const result = linkifyUrls("(see https://en.wikipedia.org/wiki/Rust_(lang))");
+      expect(result).toContain(
+        '<a href="https://en.wikipedia.org/wiki/Rust_(lang)" class="ansi-url">https://en.wikipedia.org/wiki/Rust_(lang)</a>)'
+      );
     });
 
     it("excludes trailing exclamation mark", () => {
@@ -195,6 +209,13 @@ describe("linkifyUrls", () => {
 
     it("adds ansi-url class to generated links", () => {
       expect(linkifyUrls("https://example.com")).toContain('class="ansi-url"');
+    });
+
+    it("produces well-formed href without attribute breakout", () => {
+      const result = linkifyUrls("https://example.com/path");
+      const hrefMatch = result.match(/href="([^"]*)"/);
+      expect(hrefMatch).not.toBeNull();
+      expect(hrefMatch?.[1]).toBe("https://example.com/path");
     });
   });
 });

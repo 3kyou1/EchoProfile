@@ -55,7 +55,7 @@ export const isEmptyMessage = (message: ClaudeMessage): boolean => {
         return typeof typed.text === "string" && typed.text.trim().length > 0;
       }
       if (typed.type === "thinking") {
-        return typeof typed.thinking === "string" && (typed.thinking as string).length > 0;
+        return typeof typed.thinking === "string" && (typed.thinking as string).trim().length > 0;
       }
       return true;
     });

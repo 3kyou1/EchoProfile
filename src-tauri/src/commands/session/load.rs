@@ -516,8 +516,14 @@ fn extract_session_metadata_internal(
     })
 }
 
-/// System message types that should be excluded from the viewer
-/// These are internal system messages, not part of the conversation
+/// System message types that should be excluded from the viewer.
+/// These are internal system messages, not part of the conversation:
+/// - progress: streaming progress indicators
+/// - queue-operation: enqueue/remove events for queued prompts
+/// - file-history-snapshot: file state snapshots for diff tracking
+/// - system: internal system messages
+/// - last-prompt: metadata recording the last user prompt per session
+/// - pr-link: metadata linking a session to a GitHub pull request
 const SYSTEM_MESSAGE_TYPES: [&str; 6] = [
     "progress",
     "queue-operation",

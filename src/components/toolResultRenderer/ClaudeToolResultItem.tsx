@@ -311,13 +311,23 @@ export const ClaudeToolResultItem = memo(function ClaudeToolResultItem({
                     );
                   }
 
-                  // Image type (base64 or URL)
+                  // Image type (base64 or URL) with media type and URL scheme allowlists
                   if (contentItem.type === "image" && contentItem.source && typeof contentItem.source === "object") {
                     const source = contentItem.source as Record<string, unknown>;
-                    if (source.type === "base64" && typeof source.data === "string" && typeof source.media_type === "string") {
+                    const ALLOWED_MEDIA_TYPES = /^image\/(jpeg|png|gif|webp|bmp|svg\+xml)$/;
+                    if (
+                      source.type === "base64" &&
+                      typeof source.data === "string" &&
+                      typeof source.media_type === "string" &&
+                      ALLOWED_MEDIA_TYPES.test(source.media_type)
+                    ) {
                       return <ImageRenderer key={idx} imageUrl={`data:${source.media_type};base64,${source.data}`} />;
                     }
-                    if (source.type === "url" && typeof source.url === "string") {
+                    if (
+                      source.type === "url" &&
+                      typeof source.url === "string" &&
+                      /^https?:\/\//.test(source.url)
+                    ) {
                       return <ImageRenderer key={idx} imageUrl={source.url} />;
                     }
                   }

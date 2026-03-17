@@ -518,11 +518,13 @@ fn extract_session_metadata_internal(
 
 /// System message types that should be excluded from the viewer
 /// These are internal system messages, not part of the conversation
-const SYSTEM_MESSAGE_TYPES: [&str; 4] = [
+const SYSTEM_MESSAGE_TYPES: [&str; 6] = [
     "progress",
     "queue-operation",
     "file-history-snapshot",
     "system",
+    "last-prompt",
+    "pr-link",
 ];
 
 /// Check if a message type is a system type (should be excluded)

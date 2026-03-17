@@ -46,9 +46,20 @@ export const isEmptyMessage = (message: ClaudeMessage): boolean => {
   // Progress messages should be shown
   if (message.type === "progress" && (message as ClaudeMessage & { data?: unknown }).data) return false;
 
-  // Check for array content (tool results, etc.)
+  // Check for array content — but only if items have visible content
   if (message.content && Array.isArray(message.content) && message.content.length > 0) {
-    return false;
+    const hasVisibleContent = message.content.some((item: unknown) => {
+      if (!item || typeof item !== "object") return !!item;
+      const typed = item as Record<string, unknown>;
+      if (typed.type === "text") {
+        return typeof typed.text === "string" && typed.text.trim().length > 0;
+      }
+      if (typed.type === "thinking") {
+        return typeof typed.thinking === "string" && (typed.thinking as string).length > 0;
+      }
+      return true;
+    });
+    if (hasVisibleContent) return false;
   }
 
   const content = extractClaudeMessageContent(message);

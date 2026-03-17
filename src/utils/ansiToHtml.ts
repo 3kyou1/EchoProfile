@@ -35,9 +35,49 @@ export function stripAnsiCodes(text: string): string {
 }
 
 /**
- * Convert ANSI escape codes to HTML spans with inline styles.
+ * Regex that matches either an HTML tag or a URL in text content.
+ *
+ * Group 1: HTML tag (skipped — returned as-is)
+ * Group 2: URL with http(s) or mailto scheme (linkified)
+ *
+ * The alternation ensures URLs inside HTML attributes are never matched
+ * because the tag branch `<[^>]*>` consumes the entire tag first.
+ *
+ * Trailing punctuation (.,;:!?) and matched closing parens/brackets
+ * are excluded from the URL to avoid capturing sentence-ending characters.
+ */
+const URL_OR_TAG_REGEX =
+  /(<[^>]*>)|((?:https?:\/\/|mailto:)[^\s<>"'`]+[^\s<>"'`.,;:!?)}\]])/gi;
+
+/**
+ * Wrap URLs in HTML string with `<a>` tags, skipping URLs inside HTML tags.
+ *
+ * Only http://, https://, and mailto: schemes are linkified.
+ * The input is expected to be HTML-escaped already (via escapeXML: true),
+ * so injecting `<a>` tags here is safe — user content cannot produce
+ * unescaped HTML.
+ */
+export function linkifyUrls(html: string): string {
+  return html.replace(URL_OR_TAG_REGEX, (match, tag: string | undefined, url: string | undefined) => {
+    // HTML tag — return unchanged
+    if (tag) return tag;
+    // URL — wrap in <a>
+    if (url) {
+      return `<a href="${url}" class="ansi-url">${url}</a>`;
+    }
+    return match;
+  });
+}
+
+/**
+ * Convert ANSI escape codes to HTML spans with inline styles,
+ * then linkify URLs in the text content.
+ *
  * Always returns HTML-safe output (non-ANSI text is HTML-escaped).
+ * URLs are wrapped in `<a>` tags that the global useExternalLinks()
+ * hook intercepts to open in the system browser.
  */
 export function ansiToHtml(text: string): string {
-  return converter.toHtml(text);
+  const html = converter.toHtml(text);
+  return linkifyUrls(html);
 }

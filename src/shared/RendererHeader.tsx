@@ -113,17 +113,22 @@ const RendererHeader = ({
     );
   }
   return (
-    <button
-      type="button"
-      onClick={toggle}
+    <div
       className={cn(
-        "w-full flex flex-wrap items-center gap-y-0.5 text-left",
+        "w-full flex flex-wrap items-center gap-y-0.5",
         layout.headerPadding,
-        layout.headerHeight,
-        "hover:bg-muted/50 transition-colors"
+        layout.headerHeight
       )}
     >
-      <div className={cn("flex items-center flex-1 min-w-[10ch]", layout.iconGap)}>
+      <button
+        type="button"
+        onClick={toggle}
+        className={cn(
+          "flex items-center text-left flex-1 min-w-[10ch]",
+          layout.iconGap,
+          "hover:bg-muted/50 transition-colors rounded-sm -m-1 p-1"
+        )}
+      >
         <ChevronRight
           className={cn(
             layout.iconSize,
@@ -146,11 +151,16 @@ const RendererHeader = ({
         >
           {`${title} ${hasError ? t('common.errorOccurred') : ""}`}
         </span>
-      </div>
-      <div className={cn("flex items-center shrink-0 ml-auto", layout.iconGap, layout.smallText)}>
-        {rightContent}
-      </div>
-    </button>
+      </button>
+      {rightContent && (
+        <div
+          className={cn("flex items-center shrink-0 ml-auto", layout.iconGap, layout.smallText)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {rightContent}
+        </div>
+      )}
+    </div>
   );
 };
 

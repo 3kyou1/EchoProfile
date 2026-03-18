@@ -195,7 +195,7 @@ export function getVariantStyles(variant: RendererVariant): VariantStyles {
  * - iconSize: 16x16px (standard)
  * - iconSizeSmall: 12x12px (badges)
  * - titleText/bodyText/smallText: 12px
- * - headerHeight: 32px (fixed)
+ * - headerHeight: 32px minimum (grows when content wraps)
  * - rounded: 6px border radius
  * - codeMaxHeight: 256px
  * - contentMaxHeight: 384px

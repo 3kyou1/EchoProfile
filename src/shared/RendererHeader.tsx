@@ -123,6 +123,7 @@ const RendererHeader = ({
       <button
         type="button"
         onClick={toggle}
+        aria-expanded={isOpen}
         className={cn(
           "flex items-center text-left flex-1 min-w-[10ch]",
           layout.iconGap,

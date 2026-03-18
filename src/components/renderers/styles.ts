@@ -205,8 +205,8 @@ export const layout = {
   containerPadding: "p-2.5",
   /** Header padding (for collapsible headers) */
   headerPadding: "px-2.5 py-1.5",
-  /** Header fixed height (32px) */
-  headerHeight: "h-8",
+  /** Header minimum height (32px, grows when content wraps) */
+  headerHeight: "min-h-8",
   /** Content padding (inside expanded content) */
   contentPadding: "px-2.5 pb-2.5",
   /** Gap between icon and text */

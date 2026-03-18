@@ -88,8 +88,8 @@ const RendererHeader = ({
 
   if (!enableToggle) {
     return (
-      <div className={cn("flex items-center justify-between", layout.headerPadding, layout.headerHeight)}>
-        <div className={cn("flex items-center min-w-0 flex-1", layout.iconGap)}>
+      <div className={cn("flex flex-wrap items-center gap-y-0.5", layout.headerPadding, layout.headerHeight)}>
+        <div className={cn("flex items-center flex-1 min-w-[10ch]", layout.iconGap)}>
           {hasError ? (
             <X className={cn(layout.iconSize, "shrink-0 text-destructive")} />
           ) : (
@@ -98,6 +98,7 @@ const RendererHeader = ({
           <span
             className={cn(
               layout.titleText,
+              "truncate",
               titleClassName,
               hasError && "text-destructive"
             )}
@@ -105,7 +106,7 @@ const RendererHeader = ({
             {`${title} ${hasError ? t('common.errorOccurred') : ""}`}
           </span>
         </div>
-        <div className={cn("flex items-center min-w-0 overflow-hidden", layout.iconGap, layout.smallText)}>
+        <div className={cn("flex items-center shrink-0 ml-auto", layout.iconGap, layout.smallText)}>
           {rightContent}
         </div>
       </div>
@@ -116,13 +117,13 @@ const RendererHeader = ({
       type="button"
       onClick={toggle}
       className={cn(
-        "w-full flex items-center justify-between text-left",
+        "w-full flex flex-wrap items-center gap-y-0.5 text-left",
         layout.headerPadding,
         layout.headerHeight,
         "hover:bg-muted/50 transition-colors"
       )}
     >
-      <div className={cn("flex items-center min-w-0 flex-1", layout.iconGap)}>
+      <div className={cn("flex items-center flex-1 min-w-[10ch]", layout.iconGap)}>
         <ChevronRight
           className={cn(
             layout.iconSize,
@@ -138,6 +139,7 @@ const RendererHeader = ({
         <span
           className={cn(
             layout.titleText,
+            "truncate",
             titleClassName,
             hasError && "text-destructive"
           )}
@@ -145,7 +147,7 @@ const RendererHeader = ({
           {`${title} ${hasError ? t('common.errorOccurred') : ""}`}
         </span>
       </div>
-      <div className={cn("flex items-center min-w-0 overflow-hidden", layout.iconGap, layout.smallText)}>
+      <div className={cn("flex items-center shrink-0 ml-auto", layout.iconGap, layout.smallText)}>
         {rightContent}
       </div>
     </button>

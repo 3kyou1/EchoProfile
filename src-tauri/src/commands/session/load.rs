@@ -83,6 +83,13 @@ fn save_cache(project_path: &str, cache: &SessionMetadataCache) {
             .unwrap_or(0);
         let tmp_path = cache_path.with_extension(format!("json.{nonce}.tmp"));
         if fs::write(&tmp_path, content.as_bytes()).is_ok() {
+            // On Windows, fs::rename fails if the destination already exists
+            #[cfg(target_os = "windows")]
+            {
+                if cache_path.exists() {
+                    let _ = fs::remove_file(&cache_path);
+                }
+            }
             let _ = fs::rename(&tmp_path, &cache_path);
         }
     }

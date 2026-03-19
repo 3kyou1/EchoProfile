@@ -303,6 +303,7 @@ pub fn load_sessions(
                 has_tool_use: false,
                 has_errors: false,
                 summary: title,
+                is_renamed: false,
                 provider: Some("opencode".to_string()),
                 storage_type: Some("json".to_string()),
             });
@@ -737,6 +738,7 @@ fn load_sessions_from_db(base_path: &str, project_id: &str) -> Option<Vec<Claude
                 has_tool_use: false,
                 has_errors: false,
                 summary: if title.is_empty() { None } else { Some(title) },
+                is_renamed: false,
                 provider: Some("opencode".to_string()),
                 storage_type: Some("sqlite".to_string()),
             })

@@ -53,7 +53,7 @@ struct SessionMetadataCache {
     entries: HashMap<String, CachedSessionMetadata>,
 }
 
-const CACHE_VERSION: u32 = 7;
+const CACHE_VERSION: u32 = 8;
 
 /// Get the cache file path for a project
 fn get_cache_path(project_path: &str) -> PathBuf {
@@ -544,6 +544,7 @@ fn extract_session_metadata_internal(
             has_tool_use,
             has_errors,
             summary: final_summary,
+            is_renamed: rename_name.is_some(),
             provider: None,
             storage_type: None,
         },

@@ -618,34 +618,6 @@ fn try_extract_rename(entry: &SessionMetadataEntry) -> Option<String> {
     entry.content.as_ref().and_then(extract_rename_from_content)
 }
 
-/// Extract session rename name from a `system/local_command` message content.
-/// Matches the pattern: `<local-command-stdout>Session renamed to: {name}</local-command-stdout>`
-/// Returns None if the content doesn't match the rename pattern or the name is empty.
-fn extract_rename_from_content(content: &serde_json::Value) -> Option<String> {
-    let text = content.as_str()?;
-    const PREFIX: &str = "<local-command-stdout>Session renamed to: ";
-    const SUFFIX: &str = "</local-command-stdout>";
-    let rest = text.strip_prefix(PREFIX)?;
-    let name = rest.strip_suffix(SUFFIX)?;
-    let name = name.trim();
-    if name.is_empty() {
-        return None;
-    }
-    Some(name.to_string())
-}
-
-/// Try to extract a rename name from a `SessionMetadataEntry`.
-/// Returns `Some(name)` if the entry is a `system/local_command` rename message.
-fn try_extract_rename(entry: &SessionMetadataEntry) -> Option<String> {
-    if entry.message_type != "system" {
-        return None;
-    }
-    if entry.subtype.as_deref() != Some("local_command") {
-        return None;
-    }
-    entry.content.as_ref().and_then(extract_rename_from_content)
-}
-
 /// Fast classification of a line without full parsing
 /// Returns true if the line should be counted as a valid message
 #[inline]

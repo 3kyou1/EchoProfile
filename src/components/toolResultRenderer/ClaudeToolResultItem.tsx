@@ -290,7 +290,7 @@ export const ClaudeToolResultItem = memo(function ClaudeToolResultItem({
         <div className={layout.bodyText}>
           {typeof content === "string" ? (
             <div className={layout.prose}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
                 {content}
               </ReactMarkdown>
             </div>
@@ -304,7 +304,7 @@ export const ClaudeToolResultItem = memo(function ClaudeToolResultItem({
                   if (contentItem.type === "text" && typeof contentItem.text === "string") {
                     return (
                       <div key={idx} className={layout.prose}>
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
                           {contentItem.text}
                         </ReactMarkdown>
                       </div>

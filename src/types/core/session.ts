@@ -73,6 +73,8 @@ export interface ClaudeSession {
   has_tool_use: boolean;
   has_errors: boolean;
   summary?: string;
+  /** Whether this session was explicitly renamed via the /rename command */
+  is_renamed?: boolean;
   relevance?: number;
   /** Provider identifier (claude, codex, opencode) */
   provider?: ProviderId;

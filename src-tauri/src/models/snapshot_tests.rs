@@ -232,6 +232,7 @@ mod session_snapshots {
             has_tool_use: true,
             has_errors: false,
             summary: Some("Test conversation summary".to_string()),
+            is_renamed: false,
             provider: None,
             storage_type: None,
         };

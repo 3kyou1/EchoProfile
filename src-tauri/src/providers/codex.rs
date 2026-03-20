@@ -233,6 +233,7 @@ pub fn load_sessions(
                     has_tool_use: info.has_tool_use,
                     has_errors: false,
                     summary: info.summary,
+                    is_renamed: false,
                     provider: Some("codex".to_string()),
                     storage_type: None,
                 });

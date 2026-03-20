@@ -18,6 +18,7 @@ import {
   ProgressRenderer,
   AgentProgressGroupRenderer,
   FileHistorySnapshotRenderer,
+  SystemMessageRenderer,
 } from "../../messageRenderer";
 import { AgentTaskGroupRenderer, TaskOperationGroupRenderer } from "../../toolResultRenderer";
 import { extractClaudeMessageContent } from "../../../utils/messageUtils";
@@ -294,6 +295,41 @@ export const ClaudeMessageNode = React.memo(({
               data={message.data as ProgressData}
               toolUseID={message.toolUseID}
               parentToolUseID={message.parentToolUseID}
+            />
+          </div>
+        </div>
+      </ExpandKeyProvider>
+    );
+  }
+
+  // System messages (local_command, compact_boundary, api_error, etc.)
+  if (message.type === "system") {
+    const contentStr = typeof message.content === "string" ? message.content : undefined;
+    return (
+      <ExpandKeyProvider value={message.uuid}>
+        <div
+          data-message-uuid={message.uuid}
+          onClick={handleSelectionClick}
+          className={cn(
+            "relative w-full px-2 md:px-4 py-1 transition-all duration-200",
+            isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+            selectionHighlight,
+            selectionCursor
+          )}
+        >
+          {CaptureHideButton}
+          <div className="max-w-4xl mx-auto">
+            <SystemMessageRenderer
+              content={contentStr}
+              subtype={message.subtype}
+              level={message.level}
+              hookCount={message.hookCount}
+              hookInfos={message.hookInfos}
+              stopReason={message.stopReasonSystem}
+              preventedContinuation={message.preventedContinuation}
+              durationMs={message.durationMs}
+              compactMetadata={message.compactMetadata}
+              microcompactMetadata={message.microcompactMetadata}
             />
           </div>
         </div>

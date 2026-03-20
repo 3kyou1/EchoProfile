@@ -145,6 +145,7 @@ struct IncrementalParseState {
 struct LineClassifier {
     #[serde(rename = "type")]
     message_type: String,
+    subtype: Option<String>,
     #[serde(rename = "isSidechain")]
     is_sidechain: Option<bool>,
     #[serde(rename = "isMeta")]
@@ -558,27 +559,34 @@ fn extract_session_metadata_internal(
     })
 }
 
-/// System message types that should be excluded from the viewer.
-/// These are internal system messages, not part of the conversation:
-/// - progress: streaming progress indicators
-/// - queue-operation: enqueue/remove events for queued prompts
-/// - file-history-snapshot: file state snapshots for diff tracking
-/// - system: internal system messages
-/// - last-prompt: metadata recording the last user prompt per session
-/// - pr-link: metadata linking a session to a GitHub pull request
-const SYSTEM_MESSAGE_TYPES: [&str; 6] = [
+/// Message types that should always be excluded from the viewer
+const EXCLUDED_MESSAGE_TYPES: [&str; 5] = [
     "progress",
     "queue-operation",
     "file-history-snapshot",
-    "system",
     "last-prompt",
     "pr-link",
 ];
 
-/// Check if a message type is a system type (should be excluded)
+/// System subtypes that are internal metadata (excluded from the viewer).
+/// Subtypes NOT in this list (`local_command`, `compact_boundary`, `api_error`, etc.)
+/// are shown to the user via `SystemMessageRenderer`.
+const HIDDEN_SYSTEM_SUBTYPES: [&str; 2] = ["stop_hook_summary", "turn_duration"];
+
+/// Check if a message should be excluded from the viewer.
+/// For "system" type, only specific subtypes are hidden; others are shown.
 #[inline]
 fn is_system_message_type(message_type: &str) -> bool {
-    SYSTEM_MESSAGE_TYPES.contains(&message_type)
+    EXCLUDED_MESSAGE_TYPES.contains(&message_type)
+}
+
+/// Check if a system message should be hidden based on its subtype
+#[inline]
+fn is_hidden_system_subtype(subtype: Option<&str>) -> bool {
+    match subtype {
+        Some(st) => HIDDEN_SYSTEM_SUBTYPES.contains(&st),
+        None => true, // system messages without subtype are internal metadata
+    }
 }
 
 /// Extract session rename name from a `system/local_command` message content.
@@ -1323,7 +1331,15 @@ pub async fn load_session_messages(session_path: String) -> Result<Vec<ClaudeMes
             let mut line_bytes = mmap[start..end].to_vec();
 
             parse_line_simd(line_num, &mut line_bytes, false)
-                .filter(|msg| !is_system_message_type(&msg.message_type))
+                .filter(|msg| {
+                    if is_system_message_type(&msg.message_type) {
+                        return false;
+                    }
+                    if msg.message_type == "system" {
+                        return !is_hidden_system_subtype(msg.subtype.as_deref());
+                    }
+                    true
+                })
                 .map(|msg| (line_num, msg))
         })
         .collect();
@@ -1361,6 +1377,11 @@ fn classify_line_fast(line: &[u8], exclude_sidechain: bool) -> bool {
             return false;
         }
         if is_system_message_type(&classifier.message_type) {
+            return false;
+        }
+        if classifier.message_type == "system"
+            && is_hidden_system_subtype(classifier.subtype.as_deref())
+        {
             return false;
         }
         if classifier.is_meta.unwrap_or(false) {

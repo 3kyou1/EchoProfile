@@ -34,6 +34,12 @@ export const isEmptyMessage = (message: ClaudeMessage): boolean => {
     return false;
   }
 
+  // System messages rendered by SystemMessageRenderer are never empty
+  // (backend already filters hidden subtypes like stop_hook_summary, turn_duration)
+  if (message.type === "system") {
+    return false;
+  }
+
   // Messages with tool use or results should be shown
   if (
     (message.type === "assistant" && message.toolUse) ||

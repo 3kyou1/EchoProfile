@@ -11,7 +11,7 @@ import { memo } from "react";
  * - Generic tool results (text/array/object)
  */
 
-import { Check, FileText, AlertTriangle, Folder, File } from "lucide-react";
+import { Check, FileText, AlertTriangle, Folder, File, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -33,6 +33,7 @@ import {
   safeStringify,
   layout,
 } from "../renderers";
+import { ImageRenderer } from "../contentRenderer";
 import { getPreStyles, getLineStyles, getTokenStyles, getInlineLineNumberStyles } from "@/utils/prismStyles";
 
 interface ClaudeToolResultItemProps extends IndexedRendererProps {
@@ -306,6 +307,42 @@ export const ClaudeToolResultItem = memo(function ClaudeToolResultItem({
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {contentItem.text}
                         </ReactMarkdown>
+                      </div>
+                    );
+                  }
+
+                  // Image type (base64 or URL) with media type and URL scheme allowlists
+                  if (contentItem.type === "image" && contentItem.source != null && typeof contentItem.source === "object") {
+                    const source = contentItem.source as Record<string, unknown>;
+                    const ALLOWED_MEDIA_TYPES = /^image\/(jpeg|png|gif|webp|bmp|svg\+xml)$/;
+                    if (
+                      source.type === "base64" &&
+                      typeof source.data === "string" &&
+                      typeof source.media_type === "string" &&
+                      ALLOWED_MEDIA_TYPES.test(source.media_type)
+                    ) {
+                      return <ImageRenderer key={idx} imageUrl={`data:${source.media_type};base64,${source.data}`} />;
+                    }
+                    if (
+                      source.type === "url" &&
+                      typeof source.url === "string" &&
+                      /^https?:\/\//.test(source.url)
+                    ) {
+                      return <ImageRenderer key={idx} imageUrl={source.url} />;
+                    }
+                    // Avoid falling back to raw object rendering for image payloads
+                    return null;
+                  }
+
+                  // Tool reference type
+                  if (contentItem.type === "tool_reference" && typeof contentItem.tool_name === "string") {
+                    return (
+                      <div
+                        key={idx}
+                        className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 bg-secondary border border-border text-foreground/80", layout.rounded, layout.smallText)}
+                      >
+                        <Wrench className="w-3 h-3 text-muted-foreground" />
+                        <span className="font-mono">{contentItem.tool_name}</span>
                       </div>
                     );
                   }

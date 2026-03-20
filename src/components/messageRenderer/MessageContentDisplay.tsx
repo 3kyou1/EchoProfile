@@ -141,7 +141,8 @@ export const MessageContentDisplay: React.FC<MessageContentDisplayProps> = ({
     // so that tags mentioned inside code examples don't trigger special renderers
     const contentWithoutCode = content
       .replace(/```[\s\S]*?```/g, "")
-      .replace(/`[^`]*`/g, "");
+      .replace(/~~~[\s\S]*?~~~/g, "")
+      .replace(/`[^`\n]*`/g, "");
 
     // Check for task-notification tags (agent task results)
     if (hasTaskNotification(contentWithoutCode)) {

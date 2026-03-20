@@ -34,10 +34,12 @@ export const isEmptyMessage = (message: ClaudeMessage): boolean => {
     return false;
   }
 
-  // System messages rendered by SystemMessageRenderer are never empty
-  // (backend already filters hidden subtypes like stop_hook_summary, turn_duration)
+  // System messages with a known visible subtype or content are not empty.
+  // Backend already filters hidden subtypes (stop_hook_summary, turn_duration),
+  // but system messages without subtype or content may still arrive.
   if (message.type === "system") {
-    return false;
+    const sys = message as ClaudeMessage & { subtype?: string };
+    return !sys.subtype && !extractClaudeMessageContent(message);
   }
 
   // Messages with tool use or results should be shown

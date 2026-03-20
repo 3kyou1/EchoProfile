@@ -312,7 +312,9 @@ export const ClaudeMessageNode = React.memo(({
           onClick={handleSelectionClick}
           className={cn(
             "relative w-full px-2 md:px-4 py-1 transition-all duration-200",
-            isCaptureMode && !isSelected && CAPTURE_HOVER_BG,
+            isCurrentMatch && "bg-highlight-current ring-2 ring-warning",
+            isMatch && !isCurrentMatch && "bg-highlight",
+            isCaptureMode && !isCurrentMatch && !isMatch && !isSelected && CAPTURE_HOVER_BG,
             selectionHighlight,
             selectionCursor
           )}

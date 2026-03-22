@@ -59,7 +59,7 @@ export const ClaudeMessageNode = React.memo(({
   onRangeSelect,
 }: MessageNodeProps) => {
   const { t } = useTranslation();
-  const { messageFilter } = useAppStore();
+  const messageFilter = useAppStore((s) => s.messageFilter);
 
   const handleSelectionClick = isCaptureMode && onRangeSelect
     ? (e: React.MouseEvent) => {
@@ -397,9 +397,9 @@ export const ClaudeMessageNode = React.memo(({
                       (message.type === "assistant" &&
                       !!extractClaudeMessageContent(message))
                     }
-                    skipThinking={!messageFilter.contentTypes.thinking}
-                    skipCommands={!messageFilter.contentTypes.commands}
-                    skipToolCalls={!messageFilter.contentTypes.toolCalls}
+                    skipThinking={message.type === "assistant" && !messageFilter.contentTypes.thinking}
+                    skipCommands={message.type === "assistant" && !messageFilter.contentTypes.commands}
+                    skipToolCalls={message.type === "assistant" && !messageFilter.contentTypes.toolCalls}
                   />
                 </div>
               )}
@@ -412,7 +412,7 @@ export const ClaudeMessageNode = React.memo(({
                 message.content.some(isToolUseContent)
               ) && <ClaudeToolUseDisplay toolUse={message.toolUse} />}
 
-            {messageFilter.contentTypes.toolCalls && shouldRenderLegacyToolResult && (
+            {(message.type !== "assistant" || messageFilter.contentTypes.toolCalls) && shouldRenderLegacyToolResult && (
                 <ToolExecutionResultRouter
                   toolResult={message.toolUseResult!}
                   searchQuery={searchQuery}

@@ -7,6 +7,7 @@
 import React from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useAppStore } from "../../../store/useAppStore";
 import { cn } from "@/lib/utils";
 import { ExpandKeyProvider } from "@/contexts/CaptureExpandContext";
 import type { ProgressData } from "../../../types";
@@ -58,6 +59,7 @@ export const ClaudeMessageNode = React.memo(({
   onRangeSelect,
 }: MessageNodeProps) => {
   const { t } = useTranslation();
+  const { messageFilter } = useAppStore();
 
   const handleSelectionClick = isCaptureMode && onRangeSelect
     ? (e: React.MouseEvent) => {
@@ -370,13 +372,15 @@ export const ClaudeMessageNode = React.memo(({
           <MessageHeader message={message} />
 
           <div className="w-full">
-            <MessageContentDisplay
-              content={extractClaudeMessageContent(message)}
-              messageType={message.type}
-              searchQuery={searchQuery}
-              isCurrentMatch={isCurrentMatch}
-              currentMatchIndex={currentMatchIndex}
-            />
+            {messageFilter.contentTypes.text && (
+              <MessageContentDisplay
+                content={extractClaudeMessageContent(message)}
+                messageType={message.type}
+                searchQuery={searchQuery}
+                isCurrentMatch={isCurrentMatch}
+                currentMatchIndex={currentMatchIndex}
+              />
+            )}
 
             {message.content &&
               Array.isArray(message.content) && (
@@ -389,21 +393,26 @@ export const ClaudeMessageNode = React.memo(({
                     currentMatchIndex={currentMatchIndex}
                     skipToolResults={shouldRenderLegacyToolResult}
                     skipText={
-                      message.type === "assistant" &&
-                      !!extractClaudeMessageContent(message)
+                      (!messageFilter.contentTypes.text) ||
+                      (message.type === "assistant" &&
+                      !!extractClaudeMessageContent(message))
                     }
+                    skipThinking={!messageFilter.contentTypes.thinking}
+                    skipCommands={!messageFilter.contentTypes.commands}
+                    skipToolCalls={!messageFilter.contentTypes.toolCalls}
                   />
                 </div>
               )}
 
-            {message.type === "assistant" &&
+            {messageFilter.contentTypes.toolCalls &&
+              message.type === "assistant" &&
               message.toolUse &&
               !(
                 Array.isArray(message.content) &&
                 message.content.some(isToolUseContent)
               ) && <ClaudeToolUseDisplay toolUse={message.toolUse} />}
 
-            {shouldRenderLegacyToolResult && (
+            {messageFilter.contentTypes.toolCalls && shouldRenderLegacyToolResult && (
                 <ToolExecutionResultRouter
                   toolResult={message.toolUseResult!}
                   searchQuery={searchQuery}

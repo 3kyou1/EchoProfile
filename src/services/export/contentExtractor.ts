@@ -230,6 +230,10 @@ export function isExportable(m: ClaudeMessage): boolean {
 /**
  * Filter extracted blocks by content type toggles.
  * Maps MessageFilterContentTypes keys to ExtractedBlock kinds.
+ *
+ * Note: "commands" filter is handled at the renderer level (skipCommands prop)
+ * since extractBlocks() does not produce a dedicated "command" block kind —
+ * command XML content is either stripped or included as "text".
  */
 export function filterBlocksByContentType(
   blocks: ExtractedBlock[],

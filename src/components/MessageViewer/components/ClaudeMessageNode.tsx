@@ -372,7 +372,7 @@ export const ClaudeMessageNode = React.memo(({
           <MessageHeader message={message} />
 
           <div className="w-full">
-            {messageFilter.contentTypes.text && (
+            {(message.type !== "assistant" || messageFilter.contentTypes.text) && (
               <MessageContentDisplay
                 content={extractClaudeMessageContent(message)}
                 messageType={message.type}
@@ -393,7 +393,7 @@ export const ClaudeMessageNode = React.memo(({
                     currentMatchIndex={currentMatchIndex}
                     skipToolResults={shouldRenderLegacyToolResult}
                     skipText={
-                      (!messageFilter.contentTypes.text) ||
+                      (message.type === "assistant" && !messageFilter.contentTypes.text) ||
                       (message.type === "assistant" &&
                       !!extractClaudeMessageContent(message))
                     }

@@ -73,7 +73,7 @@ export function exportToMarkdown(messages: ClaudeMessage[], sessionName: string,
     lines.push(`**${role}** ${time}${model}`, "");
 
     let blocks = extractBlocks(msg.content);
-    if (contentTypeFilter) blocks = filterBlocksByContentType(blocks, contentTypeFilter);
+    if (contentTypeFilter && msg.type === "assistant") blocks = filterBlocksByContentType(blocks, contentTypeFilter);
     for (const block of blocks) {
       lines.push(blockToMarkdown(block), "");
     }

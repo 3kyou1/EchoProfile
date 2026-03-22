@@ -149,7 +149,7 @@ export function exportToHtml(messages: ClaudeMessage[], sessionName: string, con
       : "";
 
     let blocks = extractBlocks(msg.content);
-    if (contentTypeFilter) blocks = filterBlocksByContentType(blocks, contentTypeFilter);
+    if (contentTypeFilter && msg.type === "assistant") blocks = filterBlocksByContentType(blocks, contentTypeFilter);
     const contentHtml = blocks.map(blockToHtml).join("\n");
 
     // Token usage

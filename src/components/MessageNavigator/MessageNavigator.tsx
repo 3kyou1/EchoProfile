@@ -50,8 +50,8 @@ export const MessageNavigator: React.FC<MessageNavigatorProps> = ({
     if (userOnlyFilter) {
       filtered = filtered.filter((e) => e.role === "user");
     }
-    if (filterText.trim()) {
-      const lower = filterText.toLowerCase();
+    const lower = filterText.trim().toLowerCase();
+    if (lower) {
       filtered = filtered.filter(
         (e) =>
           e.preview.toLowerCase().includes(lower) ||

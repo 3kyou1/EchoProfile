@@ -168,6 +168,7 @@ export interface AppStoreState {
 
   // Filter state
   userOnlyFilter: boolean;
+  messageFilter: import('./filterSlice').MessageFilter;
 
   // Navigation state
   targetMessageUuid: string | null;
@@ -319,6 +320,10 @@ export interface AppStoreActions {
   // Filter actions
   setUserOnlyFilter: (enabled: boolean) => void;
   toggleUserOnlyFilter: () => void;
+  toggleRole: (role: keyof import('./filterSlice').MessageFilterRoles) => void;
+  toggleContentType: (contentType: keyof import('./filterSlice').MessageFilterContentTypes) => void;
+  resetMessageFilter: () => void;
+  isMessageFilterActive: () => boolean;
 
   // Watcher actions
   setWatcherEnabled: (enabled: boolean) => void;

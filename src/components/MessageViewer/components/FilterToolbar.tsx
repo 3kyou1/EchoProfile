@@ -15,10 +15,10 @@ function FilterToggle({ active, onClick, label, icon }: FilterToggleProps) {
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors",
+        "flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs border transition-colors",
         active
-          ? "bg-accent/15 text-accent border border-accent/30"
-          : "bg-zinc-800/50 text-zinc-500 border border-zinc-700/50 hover:text-zinc-300 hover:border-zinc-600"
+          ? "bg-accent/15 text-accent border-accent/30"
+          : "bg-transparent text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-zinc-800/50"
       )}
       aria-pressed={active}
       aria-label={label}
@@ -50,28 +50,24 @@ export function FilterToolbar({ totalCount, filteredCount }: FilterToolbarProps)
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-border/30 shrink-0",
+        "flex items-center gap-1.5 px-3 py-1 border-b border-border/30 shrink-0 min-h-[32px] overflow-x-auto",
         isActive && "bg-accent/5"
       )}
     >
       {/* Filter icon + count */}
-      <div className="flex items-center gap-1.5">
-        <Filter className={cn("w-3.5 h-3.5", isActive ? "text-accent" : "text-muted-foreground")} />
-        {isActive ? (
-          <span className="text-2xs text-accent font-medium tabular-nums">
-            {t("filter.showing", { filtered: filteredCount, total: totalCount })}
-          </span>
-        ) : (
-          <span className="text-2xs text-muted-foreground tabular-nums">{totalCount}</span>
-        )}
+      <div className="flex items-center gap-1 shrink-0">
+        <Filter className={cn("w-3.5 h-3.5 shrink-0", isActive ? "text-accent" : "text-muted-foreground")} />
+        <span className={cn("text-2xs tabular-nums whitespace-nowrap", isActive ? "text-accent font-medium" : "text-muted-foreground")}>
+          {isActive
+            ? t("filter.showing", { filtered: filteredCount, total: totalCount })
+            : totalCount}
+        </span>
       </div>
 
-      {/* Divider */}
-      <div className="h-4 w-px bg-border/50" />
+      <div className="h-3.5 w-px bg-border/40 shrink-0" />
 
       {/* Role filters */}
-      <div className="flex items-center gap-1">
-        <span className="text-2xs text-muted-foreground mr-0.5">{t("filter.roles")}:</span>
+      <div className="flex items-center gap-0.5 shrink-0">
         <FilterToggle
           active={messageFilter.roles.user}
           onClick={() => toggleRole("user")}
@@ -86,12 +82,10 @@ export function FilterToolbar({ totalCount, filteredCount }: FilterToolbarProps)
         />
       </div>
 
-      {/* Divider */}
-      <div className="h-4 w-px bg-border/50" />
+      <div className="h-3.5 w-px bg-border/40 shrink-0" />
 
       {/* Content type filters */}
-      <div className="flex items-center gap-1">
-        <span className="text-2xs text-muted-foreground mr-0.5">{t("filter.contentTypes")}:</span>
+      <div className="flex items-center gap-0.5 shrink-0">
         <FilterToggle
           active={messageFilter.contentTypes.text}
           onClick={() => toggleContentType("text")}
@@ -121,10 +115,10 @@ export function FilterToolbar({ totalCount, filteredCount }: FilterToolbarProps)
       {/* Reset button */}
       {isActive && (
         <>
-          <div className="h-4 w-px bg-border/50" />
+          <div className="h-3.5 w-px bg-border/40 shrink-0" />
           <button
             onClick={resetMessageFilter}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors"
+            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors shrink-0"
             aria-label={t("filter.reset")}
             title={t("filter.reset")}
           >

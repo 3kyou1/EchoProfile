@@ -1,6 +1,6 @@
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession, TokenUsage};
 use crate::providers::ProviderInfo;
-use crate::utils::search_json_value_case_insensitive;
+use crate::utils::{build_provider_message, search_json_value_case_insensitive};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -469,7 +469,8 @@ fn convert_gemini_message(msg: &Value, session_id: &str) -> Option<ClaudeMessage
 fn convert_user_message(msg: &Value, id: &str, session_id: &str, timestamp: &str) -> ClaudeMessage {
     let content = convert_gemini_content_to_claude(msg.get("content"));
 
-    build_gemini_message(
+    build_provider_message(
+        "gemini",
         id.to_string(),
         session_id,
         timestamp.to_string(),
@@ -593,7 +594,8 @@ fn convert_gemini_response(
         Some(Value::Array(content_blocks))
     };
 
-    let mut claude_msg = build_gemini_message(
+    let mut claude_msg = build_provider_message(
+        "gemini",
         id.to_string(),
         session_id,
         timestamp.to_string(),
@@ -615,7 +617,8 @@ fn convert_system_message(
 ) -> ClaudeMessage {
     let content = convert_gemini_content_to_claude(msg.get("content"));
 
-    let mut claude_msg = build_gemini_message(
+    let mut claude_msg = build_provider_message(
+        "gemini",
         id.to_string(),
         session_id,
         timestamp.to_string(),
@@ -872,53 +875,8 @@ fn map_gemini_tool_name(name: &str) -> &str {
     }
 }
 
-fn build_gemini_message(
-    uuid: String,
-    session_id: &str,
-    timestamp: String,
-    message_type: &str,
-    role: Option<&str>,
-    content: Option<Value>,
-    model: Option<String>,
-) -> ClaudeMessage {
-    ClaudeMessage {
-        uuid,
-        parent_uuid: None,
-        session_id: session_id.to_string(),
-        timestamp,
-        message_type: message_type.to_string(),
-        content,
-        project_name: None,
-        tool_use: None,
-        tool_use_result: None,
-        is_sidechain: None,
-        usage: None,
-        role: role.map(String::from),
-        model,
-        stop_reason: None,
-        cost_usd: None,
-        duration_ms: None,
-        message_id: None,
-        snapshot: None,
-        is_snapshot_update: None,
-        data: None,
-        tool_use_id: None,
-        parent_tool_use_id: None,
-        operation: None,
-        subtype: None,
-        level: None,
-        hook_count: None,
-        hook_infos: None,
-        stop_reason_system: None,
-        prevented_continuation: None,
-        compact_metadata: None,
-        microcompact_metadata: None,
-        provider: Some("gemini".to_string()),
-    }
-}
-
 // ============================================================================
-// Tests (I-3)
+// Tests
 // ============================================================================
 
 #[cfg(test)]

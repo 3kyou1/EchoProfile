@@ -1,5 +1,6 @@
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession, TokenUsage};
 use crate::providers::ProviderInfo;
+use crate::utils::search_json_value_case_insensitive;
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -67,7 +68,7 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
         let actual_path = read_project_root(&project_dir)
             .unwrap_or_else(|| project_dir.to_string_lossy().to_string());
 
-        // C-1: lightweight metadata extraction — only read file metadata + small header
+        // Gather stats from session files (reads full JSON, avoids per-message conversion)
         let mut session_count = 0usize;
         let mut message_count = 0usize;
         let mut last_modified = String::new();
@@ -210,15 +211,15 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
         .unwrap_or("unknown")
         .to_string();
 
+    let empty = Vec::new();
     let messages = record
         .get("messages")
         .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
+        .unwrap_or(&empty);
 
     let mut result = Vec::with_capacity(messages.len());
 
-    for msg in &messages {
+    for msg in messages {
         if let Some(claude_msg) = convert_gemini_message(msg, &session_id) {
             result.push(claude_msg);
         }
@@ -284,8 +285,7 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
 
             if let Some(msgs) = record.get("messages").and_then(Value::as_array) {
                 for msg in msgs {
-                    // I-1: removed search_message_matches wrapper
-                    if search_value_recursive(msg, &query_lower) {
+                    if search_json_value_case_insensitive(msg, &query_lower) {
                         if let Some(mut claude_msg) = convert_gemini_message(msg, &session_id) {
                             claude_msg.project_name = Some(project_name.clone());
                             results.push(claude_msg);
@@ -376,9 +376,10 @@ struct SessionMetadata {
     summary: Option<String>,
 }
 
-/// Extract only metadata fields from a session file without fully deserializing
-/// the messages array contents. Parses the full JSON but avoids deep inspection
-/// of each message body — only checks top-level fields.
+/// Extract metadata fields from a session file.
+/// Note: this reads and parses the full JSON file. The "lightweight" aspect is
+/// that it only inspects top-level fields and message-level `toolCalls` presence,
+/// avoiding per-message content conversion.
 fn extract_session_metadata(path: &Path) -> Option<SessionMetadata> {
     let data = fs::read_to_string(path).ok()?;
     let record: Value = serde_json::from_str(&data).ok()?;
@@ -458,10 +459,9 @@ fn convert_gemini_message(msg: &Value, session_id: &str) -> Option<ClaudeMessage
     match msg_type {
         "user" => Some(convert_user_message(msg, &id, session_id, &timestamp)),
         "gemini" => Some(convert_gemini_response(msg, &id, session_id, &timestamp)),
-        "info" | "warning" => Some(convert_system_message(
+        "info" | "warning" | "error" => Some(convert_system_message(
             msg, &id, session_id, &timestamp, msg_type,
         )),
-        "error" => Some(convert_error_message(msg, &id, session_id, &timestamp)),
         _ => None,
     }
 }
@@ -625,28 +625,9 @@ fn convert_system_message(
         None,
     );
     claude_msg.subtype = Some(subtype.to_string());
-    claude_msg
-}
-
-fn convert_error_message(
-    msg: &Value,
-    id: &str,
-    session_id: &str,
-    timestamp: &str,
-) -> ClaudeMessage {
-    let content = convert_gemini_content_to_claude(msg.get("content"));
-
-    let mut claude_msg = build_gemini_message(
-        id.to_string(),
-        session_id,
-        timestamp.to_string(),
-        "system",
-        None,
-        content,
-        None,
-    );
-    claude_msg.subtype = Some("error".to_string());
-    claude_msg.level = Some("error".to_string());
+    if subtype == "error" {
+        claude_msg.level = Some("error".to_string());
+    }
     claude_msg
 }
 
@@ -888,15 +869,6 @@ fn map_gemini_tool_name(name: &str) -> &str {
         "web_fetch" => "WebFetch",
         "cli_help" => "cli_help",
         _ => name,
-    }
-}
-
-fn search_value_recursive(val: &Value, query_lower: &str) -> bool {
-    match val {
-        Value::String(s) => s.to_lowercase().contains(query_lower),
-        Value::Array(arr) => arr.iter().any(|v| search_value_recursive(v, query_lower)),
-        Value::Object(map) => map.values().any(|v| search_value_recursive(v, query_lower)),
-        _ => false,
     }
 }
 
@@ -1162,16 +1134,6 @@ mod tests {
         let display = json!({"isSubagentProgress": true, "agentName": "helper"});
         let result = extract_result_display(&display).unwrap();
         assert!(result["text"].as_str().unwrap().contains("helper"));
-    }
-
-    #[test]
-    fn test_search_value_recursive() {
-        let val = json!({
-            "type": "user",
-            "content": [{"text": "Find this keyword"}]
-        });
-        assert!(search_value_recursive(&val, "keyword"));
-        assert!(!search_value_recursive(&val, "missing"));
     }
 
     #[test]

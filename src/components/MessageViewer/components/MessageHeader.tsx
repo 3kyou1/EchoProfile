@@ -63,11 +63,11 @@ export const MessageHeader: React.FC<MessageHeaderProps> = ({ message }) => {
                 ? t("messageViewer.user")
                 : message.type === "assistant"
                   ? (message.provider === "codex"
-                    ? "Codex"
+                    ? t("common.provider.codex", "Codex CLI")
                     : message.provider === "gemini"
-                      ? "Gemini"
+                      ? t("common.provider.gemini", "Gemini CLI")
                       : message.provider === "opencode"
-                        ? "OpenCode"
+                        ? t("common.provider.opencode", "OpenCode")
                         : t("messageViewer.claude"))
                   : t("messageViewer.system")}
         </span>

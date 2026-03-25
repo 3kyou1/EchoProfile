@@ -54,11 +54,10 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
         }
 
         let chats_dir = project_dir.join("chats");
-        if !chats_dir.is_dir() {
+        if is_symlink(&chats_dir) || !chats_dir.is_dir() {
             continue;
         }
 
-        // I-2: require .project_root or chats/ to confirm this is a real project
         let project_name = project_dir
             .file_name()
             .unwrap_or_default()
@@ -123,15 +122,14 @@ pub fn load_sessions(
         .unwrap_or(project_path);
 
     // Validate project path is inside Gemini data directory
-    validate_gemini_path(dir)?;
+    let project_dir = validate_gemini_path(dir)?;
+    let chats_dir = project_dir.join("chats");
 
-    let chats_dir = PathBuf::from(dir).join("chats");
-
-    if !chats_dir.is_dir() {
+    if is_symlink(&chats_dir) || !chats_dir.is_dir() {
         return Ok(Vec::new());
     }
 
-    let project_name = PathBuf::from(dir)
+    let project_name = project_dir
         .file_name()
         .unwrap_or_default()
         .to_string_lossy()
@@ -251,7 +249,7 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
         }
 
         let chats_dir = project_entry.path().join("chats");
-        if !chats_dir.is_dir() {
+        if is_symlink(&chats_dir) || !chats_dir.is_dir() {
             continue;
         }
 
@@ -354,8 +352,19 @@ fn is_session_file(entry: &fs::DirEntry) -> bool {
             .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
 }
 
+/// Check if a path is a symlink (without following it)
+fn is_symlink(path: &Path) -> bool {
+    fs::symlink_metadata(path)
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
+}
+
 fn read_project_root(project_dir: &Path) -> Option<String> {
     let root_file = project_dir.join(".project_root");
+    // Reject symlinked .project_root to prevent reading outside ~/.gemini/tmp
+    if is_symlink(&root_file) {
+        return None;
+    }
     fs::read_to_string(root_file)
         .ok()
         .map(|s| s.trim().to_string())
@@ -638,7 +647,8 @@ fn convert_system_message(
 // Content conversion helpers
 // ============================================================================
 
-/// Convert Gemini content (`PartListUnion`) to Claude-compatible content Value
+/// Convert Gemini content (`PartListUnion`) to Claude-compatible content Value.
+/// Tracks generated IDs so anonymous `functionResponse` can match its `functionCall`.
 fn convert_gemini_content_to_claude(content: Option<&Value>) -> Option<Value> {
     match content {
         Some(Value::String(s)) => Some(serde_json::json!([{
@@ -646,7 +656,56 @@ fn convert_gemini_content_to_claude(content: Option<&Value>) -> Option<Value> {
             "text": s
         }])),
         Some(Value::Array(parts)) => {
-            let blocks: Vec<Value> = parts.iter().filter_map(convert_gemini_part).collect();
+            let mut blocks = Vec::with_capacity(parts.len());
+            // Track generated call IDs per function name so anonymous
+            // functionResponse parts can reuse the same ID
+            let mut call_ids: std::collections::HashMap<String, String> =
+                std::collections::HashMap::new();
+
+            for part in parts {
+                // For functionCall: generate ID, record it, emit tool_use
+                if let Some(fc) = part.get("functionCall") {
+                    let block = convert_gemini_part(part);
+                    if let Some(ref b) = block {
+                        let name = fc.get("name").and_then(Value::as_str).unwrap_or("unknown");
+                        if let Some(id) = b.get("id").and_then(Value::as_str) {
+                            call_ids.insert(name.to_string(), id.to_string());
+                        }
+                    }
+                    if let Some(b) = block {
+                        blocks.push(b);
+                    }
+                    continue;
+                }
+
+                // For functionResponse: use tracked ID if no explicit id
+                if let Some(fr) = part.get("functionResponse") {
+                    let name = fr.get("name").and_then(Value::as_str).unwrap_or("unknown");
+                    let call_id = fr
+                        .get("id")
+                        .and_then(Value::as_str)
+                        .map(String::from)
+                        .or_else(|| call_ids.get(name).cloned())
+                        .unwrap_or_else(|| format!("fc_{name}"));
+                    let response_text = fr
+                        .get("response")
+                        .and_then(|r| r.get("output"))
+                        .and_then(Value::as_str)
+                        .unwrap_or("");
+                    blocks.push(serde_json::json!({
+                        "type": "tool_result",
+                        "tool_use_id": call_id,
+                        "content": response_text
+                    }));
+                    continue;
+                }
+
+                // All other Part types
+                if let Some(block) = convert_gemini_part(part) {
+                    blocks.push(block);
+                }
+            }
+
             if blocks.is_empty() {
                 None
             } else {
@@ -1050,6 +1109,33 @@ mod tests {
     #[test]
     fn test_convert_gemini_content_none() {
         assert!(convert_gemini_content_to_claude(None).is_none());
+    }
+
+    #[test]
+    fn test_anonymous_function_call_response_id_matching() {
+        // functionCall without id followed by functionResponse without id
+        let content = json!([
+            {
+                "functionCall": {
+                    "name": "read_file",
+                    "args": {"file_path": "/test.txt"}
+                }
+            },
+            {
+                "functionResponse": {
+                    "name": "read_file",
+                    "response": {"output": "file content"}
+                }
+            }
+        ]);
+        let result = convert_gemini_content_to_claude(Some(&content)).unwrap();
+        let arr = result.as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+
+        let call_id = arr[0]["id"].as_str().unwrap();
+        let result_id = arr[1]["tool_use_id"].as_str().unwrap();
+        // Anonymous response should use the same ID as the call
+        assert_eq!(call_id, result_id);
     }
 
     #[test]

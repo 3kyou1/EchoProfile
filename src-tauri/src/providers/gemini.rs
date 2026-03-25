@@ -64,7 +64,8 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
             .to_string_lossy()
             .to_string();
 
-        let actual_path = read_project_root(&project_dir).unwrap_or_else(|| project_name.clone());
+        let actual_path = read_project_root(&project_dir)
+            .unwrap_or_else(|| project_dir.to_string_lossy().to_string());
 
         // C-1: lightweight metadata extraction — only read file metadata + small header
         let mut session_count = 0usize;
@@ -698,7 +699,11 @@ fn convert_gemini_part(part: &Value) -> Option<Value> {
         if mime.starts_with("image/") {
             return Some(serde_json::json!({
                 "type": "image",
-                "source": inline
+                "source": {
+                    "type": "base64",
+                    "media_type": mime,
+                    "data": inline.get("data").and_then(Value::as_str).unwrap_or("")
+                }
             }));
         }
         // Non-image inline data → document block
@@ -731,9 +736,22 @@ fn convert_gemini_part(part: &Value) -> Option<Value> {
             .get("args")
             .cloned()
             .unwrap_or(Value::Object(serde_json::Map::new()));
+        // Use id field if present, otherwise generate from name + args hash
+        let call_id = fc
+            .get("id")
+            .and_then(Value::as_str)
+            .map(String::from)
+            .unwrap_or_else(|| {
+                use std::collections::hash_map::DefaultHasher;
+                use std::hash::{Hash, Hasher};
+                let mut hasher = DefaultHasher::new();
+                name.hash(&mut hasher);
+                args.to_string().hash(&mut hasher);
+                format!("fc_{}_{:x}", name, hasher.finish())
+            });
         return Some(serde_json::json!({
             "type": "tool_use",
-            "id": format!("fc_{}", name),
+            "id": call_id,
             "name": map_gemini_tool_name(name),
             "input": args
         }));
@@ -742,6 +760,11 @@ fn convert_gemini_part(part: &Value) -> Option<Value> {
     // functionResponse (Part-level tool result)
     if let Some(fr) = part.get("functionResponse") {
         let name = fr.get("name").and_then(Value::as_str).unwrap_or("unknown");
+        let call_id = fr
+            .get("id")
+            .and_then(Value::as_str)
+            .map(String::from)
+            .unwrap_or_else(|| format!("fc_{name}"));
         let response_text = fr
             .get("response")
             .and_then(|r| r.get("output"))
@@ -749,7 +772,7 @@ fn convert_gemini_part(part: &Value) -> Option<Value> {
             .unwrap_or("");
         return Some(serde_json::json!({
             "type": "tool_result",
-            "tool_use_id": format!("fc_{}", name),
+            "tool_use_id": call_id,
             "content": response_text
         }));
     }
@@ -1242,18 +1265,37 @@ mod tests {
         assert_eq!(result["type"], "tool_use");
         assert_eq!(result["name"], "Read"); // mapped
         assert_eq!(result["input"]["file_path"], "/test.txt");
+        // ID should be unique (hash-based since no explicit id)
+        let id = result["id"].as_str().unwrap();
+        assert!(id.starts_with("fc_read_file_"));
+    }
+
+    #[test]
+    fn test_part_function_call_with_explicit_id() {
+        let part = json!({
+            "functionCall": {
+                "id": "call_123",
+                "name": "shell",
+                "args": {"command": "ls"}
+            }
+        });
+        let result = convert_gemini_part(&part).unwrap();
+        assert_eq!(result["id"], "call_123");
+        assert_eq!(result["name"], "Bash");
     }
 
     #[test]
     fn test_part_function_response() {
         let part = json!({
             "functionResponse": {
+                "id": "call_123",
                 "name": "read_file",
                 "response": {"output": "file contents"}
             }
         });
         let result = convert_gemini_part(&part).unwrap();
         assert_eq!(result["type"], "tool_result");
+        assert_eq!(result["tool_use_id"], "call_123");
         assert_eq!(result["content"], "file contents");
     }
 
@@ -1288,7 +1330,7 @@ mod tests {
     }
 
     #[test]
-    fn test_part_inline_data() {
+    fn test_part_inline_data_image() {
         let part = json!({
             "inlineData": {
                 "mimeType": "image/png",
@@ -1297,7 +1339,23 @@ mod tests {
         });
         let result = convert_gemini_part(&part).unwrap();
         assert_eq!(result["type"], "image");
-        assert_eq!(result["source"]["mimeType"], "image/png");
+        assert_eq!(result["source"]["type"], "base64");
+        assert_eq!(result["source"]["media_type"], "image/png");
+        assert_eq!(result["source"]["data"], "base64data...");
+    }
+
+    #[test]
+    fn test_part_inline_data_non_image() {
+        let part = json!({
+            "inlineData": {
+                "mimeType": "application/pdf",
+                "data": "pdfbase64..."
+            }
+        });
+        let result = convert_gemini_part(&part).unwrap();
+        assert_eq!(result["type"], "document");
+        assert_eq!(result["source"]["type"], "base64");
+        assert_eq!(result["source"]["media_type"], "application/pdf");
     }
 
     #[test]

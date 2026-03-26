@@ -1,6 +1,8 @@
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession};
 use crate::providers::ProviderInfo;
-use crate::utils::{build_provider_message, search_json_value_case_insensitive};
+use crate::utils::{
+    build_provider_message, is_symlink, ms_to_iso, search_json_value_case_insensitive,
+};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
@@ -119,14 +121,12 @@ pub fn load_sessions(
                 .to_string();
             let model = item.get("modelId").and_then(Value::as_str);
 
-            let task_dir = base_path.join("tasks").join(id);
-            let ui_messages_path = task_dir.join("ui_messages.json");
-            let message_count = if ui_messages_path.is_file() {
-                fs::read_to_string(&ui_messages_path)
-                    .ok()
-                    .and_then(|c| serde_json::from_str::<Vec<Value>>(&c).ok())
-                    .map(|v| v.len())
-                    .unwrap_or(0)
+            let ui_messages_path = base_path.join("tasks").join(id).join("ui_messages.json");
+            // Use token counts as a proxy for message count to avoid reading full JSON
+            let tokens_in = item.get("tokensIn").and_then(Value::as_u64).unwrap_or(0);
+            let tokens_out = item.get("tokensOut").and_then(Value::as_u64).unwrap_or(0);
+            let message_count = if tokens_in > 0 || tokens_out > 0 {
+                2
             } else {
                 0
             };
@@ -299,12 +299,6 @@ fn get_all_base_paths() -> Vec<(PathBuf, String)> {
     paths
 }
 
-fn is_symlink(path: &Path) -> bool {
-    fs::symlink_metadata(path)
-        .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false)
-}
-
 fn load_task_history(base_path: &Path) -> Vec<Value> {
     // Cline format: state/taskHistory.json
     let cline_path = base_path.join("state/taskHistory.json");
@@ -353,12 +347,6 @@ fn parse_session_path(session_path: &str) -> Result<(PathBuf, String), String> {
         .ok_or_else(|| format!("Invalid session path: {session_path}"))?;
 
     Ok((PathBuf::from(base), task_id.to_string()))
-}
-
-fn ms_to_iso(ms: u64) -> String {
-    chrono::DateTime::from_timestamp_millis(i64::try_from(ms).unwrap_or(0))
-        .map(|dt| dt.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string())
-        .unwrap_or_default()
 }
 
 /// Convert a `ClineMessage` to `ClaudeMessage`

@@ -1,6 +1,6 @@
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession};
 use crate::providers::ProviderInfo;
-use crate::utils::{build_provider_message, search_json_value_case_insensitive};
+use crate::utils::{build_provider_message, ms_to_iso, search_json_value_case_insensitive};
 use rusqlite::{Connection, OpenFlags};
 use serde_json::Value;
 use std::fs;
@@ -199,8 +199,29 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
         .and_then(Value::as_array)
         .ok_or("No conversation headers found")?;
 
+    // Batch load all bubbles for this composer in a single query
+    let prefix = format!("bubbleId:{composer_id}:");
+    let mut stmt = conn
+        .prepare("SELECT key, value FROM cursorDiskKV WHERE key LIKE ?1")
+        .map_err(|e| format!("Query failed: {e}"))?;
+    let pattern = format!("{prefix}%");
+    let mut bubble_map: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+    let rows = stmt
+        .query_map([&pattern], |row| {
+            let key: String = row.get(0)?;
+            let value: String = row.get(1)?;
+            Ok((key, value))
+        })
+        .map_err(|e| format!("Query failed: {e}"))?;
+    for row in rows.flatten() {
+        let (key, value) = row;
+        if let Some(bid) = key.strip_prefix(&prefix) {
+            bubble_map.insert(bid.to_string(), value);
+        }
+    }
+
     let mut messages = Vec::with_capacity(headers.len());
-    let mut counter = 0u64;
 
     for header in headers {
         let bubble_id = match header.get("bubbleId").and_then(Value::as_str) {
@@ -209,25 +230,17 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
         };
         let bubble_type = header.get("type").and_then(Value::as_u64).unwrap_or(0);
 
-        let bubble_key = format!("bubbleId:{composer_id}:{bubble_id}");
-        let bubble_data: Result<String, _> = conn.query_row(
-            "SELECT value FROM cursorDiskKV WHERE key = ?1",
-            [&bubble_key],
-            |row| row.get(0),
-        );
-
-        let bubble_data = match bubble_data {
-            Ok(d) => d,
-            Err(_) => continue,
+        let bubble_data = match bubble_map.get(bubble_id) {
+            Some(d) => d,
+            None => continue,
         };
 
-        let bubble: Value = match parse_cursor_json(&bubble_data) {
+        let bubble: Value = match parse_cursor_json(bubble_data) {
             Ok(v) => v,
             Err(_) => continue,
         };
 
-        counter += 1;
-        if let Some(msg) = convert_cursor_bubble(&bubble, bubble_type, composer_id, &mut counter) {
+        if let Some(msg) = convert_cursor_bubble(&bubble, bubble_type, composer_id) {
             messages.push(msg);
         }
     }
@@ -266,7 +279,6 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
         })
         .map_err(|e| format!("Query failed: {e}"))?;
 
-    let mut counter = 0u64;
     for row in rows.flatten() {
         let (key, data) = row;
         let bubble: Value = match parse_cursor_json(&data) {
@@ -280,10 +292,7 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
 
         let bubble_type = bubble.get("type").and_then(Value::as_u64).unwrap_or(0);
 
-        counter += 1;
-        if let Some(mut msg) =
-            convert_cursor_bubble(&bubble, bubble_type, composer_id, &mut counter)
-        {
+        if let Some(mut msg) = convert_cursor_bubble(&bubble, bubble_type, composer_id) {
             if let Some(ref c) = msg.content {
                 if search_json_value_case_insensitive(c, &query_lower) {
                     msg.project_name = Some("Cursor".to_string());
@@ -366,18 +375,11 @@ fn parse_cursor_json(data: &str) -> Result<Value, String> {
     serde_json::from_str(&sanitized).map_err(|e| format!("JSON parse error: {e}"))
 }
 
-fn ms_to_iso(ms: u64) -> String {
-    chrono::DateTime::from_timestamp_millis(i64::try_from(ms).unwrap_or(0))
-        .map(|dt| dt.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string())
-        .unwrap_or_default()
-}
-
 /// Convert a Cursor bubble to `ClaudeMessage`
 fn convert_cursor_bubble(
     bubble: &Value,
     bubble_type: u64,
     session_id: &str,
-    counter: &mut u64,
 ) -> Option<ClaudeMessage> {
     let text = bubble.get("text").and_then(Value::as_str).unwrap_or("");
     let bubble_id = bubble
@@ -386,8 +388,8 @@ fn convert_cursor_bubble(
         .unwrap_or("unknown");
 
     match bubble_type {
-        1 => convert_user_bubble(bubble, text, bubble_id, session_id, counter),
-        2 => convert_assistant_bubble(bubble, text, bubble_id, session_id, counter),
+        1 => convert_user_bubble(bubble, text, bubble_id, session_id),
+        2 => convert_assistant_bubble(bubble, text, bubble_id, session_id),
         _ => None,
     }
 }
@@ -397,7 +399,6 @@ fn convert_user_bubble(
     text: &str,
     bubble_id: &str,
     session_id: &str,
-    _counter: &mut u64,
 ) -> Option<ClaudeMessage> {
     if text.is_empty() {
         return None;
@@ -443,7 +444,6 @@ fn convert_assistant_bubble(
     text: &str,
     bubble_id: &str,
     session_id: &str,
-    _counter: &mut u64,
 ) -> Option<ClaudeMessage> {
     let mut content_blocks: Vec<Value> = Vec::new();
 
@@ -548,8 +548,7 @@ mod tests {
             "text": "Hello from Cursor",
             "images": []
         });
-        let mut counter = 0;
-        let result = convert_cursor_bubble(&bubble, 1, "session-1", &mut counter).unwrap();
+        let result = convert_cursor_bubble(&bubble, 1, "session-1").unwrap();
         assert_eq!(result.message_type, "user");
         assert_eq!(result.provider, Some("cursor".to_string()));
     }
@@ -561,8 +560,7 @@ mod tests {
             "bubbleId": "asst-1",
             "text": "Here is the answer"
         });
-        let mut counter = 0;
-        let result = convert_cursor_bubble(&bubble, 2, "session-1", &mut counter).unwrap();
+        let result = convert_cursor_bubble(&bubble, 2, "session-1").unwrap();
         assert_eq!(result.message_type, "assistant");
         let content = result.content.unwrap();
         let arr = content.as_array().unwrap();
@@ -583,8 +581,7 @@ mod tests {
                 "rawArgs": "{\"target_file\": \"src/main.rs\"}"
             }
         });
-        let mut counter = 0;
-        let result = convert_cursor_bubble(&bubble, 2, "session-1", &mut counter).unwrap();
+        let result = convert_cursor_bubble(&bubble, 2, "session-1").unwrap();
         let content = result.content.unwrap();
         let arr = content.as_array().unwrap();
         assert_eq!(arr[0]["type"], "tool_use");
@@ -600,8 +597,7 @@ mod tests {
             "text": "Let me think about this...",
             "isThought": true
         });
-        let mut counter = 0;
-        let result = convert_cursor_bubble(&bubble, 2, "session-1", &mut counter).unwrap();
+        let result = convert_cursor_bubble(&bubble, 2, "session-1").unwrap();
         let content = result.content.unwrap();
         let arr = content.as_array().unwrap();
         assert_eq!(arr[0]["type"], "thinking");
@@ -640,7 +636,6 @@ mod tests {
     #[test]
     fn test_empty_bubble() {
         let bubble = json!({"type": 2, "bubbleId": "empty", "text": ""});
-        let mut counter = 0;
-        assert!(convert_cursor_bubble(&bubble, 2, "session-1", &mut counter).is_none());
+        assert!(convert_cursor_bubble(&bubble, 2, "session-1").is_none());
     }
 }

@@ -1,16 +1,18 @@
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession};
 use crate::providers::ProviderInfo;
-use crate::utils::{build_provider_message, search_json_value_case_insensitive};
+use crate::utils::{build_provider_message, is_symlink, search_json_value_case_insensitive};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 const HISTORY_FILE: &str = ".aider.chat.history.md";
 const SESSION_HEADER_PREFIX: &str = "# aider chat started at ";
 
-/// Detect Aider installations by scanning common project directories
+/// Detect Aider installations by checking if common project directories exist.
+/// Does NOT do a recursive scan — that happens lazily in `scan_projects`.
 pub fn detect() -> Option<ProviderInfo> {
     let dirs = get_search_dirs();
-    let has_history = dirs.iter().any(|d| find_history_files(d, 1).is_some());
+    // Quick check: just see if any search directory exists (no recursive scan)
+    let has_history = !dirs.is_empty();
 
     Some(ProviderInfo {
         id: "aider".to_string(),
@@ -264,12 +266,6 @@ fn find_history_recursive(
     }
 }
 
-fn is_symlink(path: &Path) -> bool {
-    fs::symlink_metadata(path)
-        .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false)
-}
-
 struct SessionData {
     timestamp: Option<String>,
     content: String,
@@ -294,7 +290,11 @@ fn split_sessions(content: &str) -> Vec<SessionData> {
                 current_lines.clear();
             }
             // Parse timestamp: "2025-03-26 14:32:01" → ISO 8601
-            current_timestamp = Some(format!("{}T{}Z", &ts_str[..10], &ts_str[11..]));
+            current_timestamp = if ts_str.len() >= 19 {
+                Some(format!("{}T{}Z", &ts_str[..10], &ts_str[11..19]))
+            } else {
+                Some(ts_str.to_string())
+            };
             first_user_msg = None;
         } else {
             if first_user_msg.is_none() {

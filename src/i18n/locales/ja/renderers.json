@@ -186,6 +186,7 @@
   "globalSearch.select": "選択",
   "globalSearch.shortcutHint": "Cmd+Kで検索を開く",
   "globalSearch.title": "グローバル検索",
+  "globalSearch.allProjects": "すべてのプロジェクト",
   "globalSearch.unknownProject": "不明なプロジェクト",
   "imageRenderer.cannotLoadImage": "画像を読み込めません",
   "imageRenderer.close": "閉じる",

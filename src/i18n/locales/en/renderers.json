@@ -186,6 +186,7 @@
   "globalSearch.select": "Select",
   "globalSearch.shortcutHint": "Press Cmd+K to open search",
   "globalSearch.title": "Global Search",
+  "globalSearch.allProjects": "All Projects",
   "globalSearch.unknownProject": "Unknown Project",
   "imageRenderer.cannotLoadImage": "Cannot load image",
   "imageRenderer.close": "Close",

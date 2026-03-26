@@ -147,17 +147,18 @@ export const GlobalSearchModal = ({
             );
 
             if (targetSession) {
-                // Session is in current project, just select it
                 await selectSession(targetSession);
-                if (result.uuid) navigateToMessage(result.uuid);
                 onClose();
+                // Delay navigateToMessage to ensure virtualizer has rendered
+                if (result.uuid) {
+                    setTimeout(() => navigateToMessage(result.uuid), 300);
+                }
                 return;
             }
 
             // Session not in current project - search through all projects
             for (const project of projects) {
                 try {
-                    // Load sessions for this project via provider-aware invoke
                     const projectProvider = project.provider ?? "claude";
                     const { excludeSidechain } = useAppStore.getState();
                     const projectSessions = await api<ClaudeSession[]>(
@@ -167,7 +168,6 @@ export const GlobalSearchModal = ({
                             : { projectPath: project.path, excludeSidechain },
                     );
 
-                    // Check if any session matches
                     targetSession = projectSessions.find(
                         (s) =>
                             s.session_id === result.sessionId ||
@@ -175,11 +175,12 @@ export const GlobalSearchModal = ({
                     );
 
                     if (targetSession) {
-                        // Found it! Select the project first, then the session
                         await selectProject(project);
                         await selectSession(targetSession);
-                        if (result.uuid) navigateToMessage(result.uuid);
                         onClose();
+                        if (result.uuid) {
+                            setTimeout(() => navigateToMessage(result.uuid), 300);
+                        }
                         return;
                     }
                 } catch (error) {

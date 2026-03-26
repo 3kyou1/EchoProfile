@@ -53,7 +53,7 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
 
     for entry in fs::read_dir(&ws_dir).map_err(|e| e.to_string())?.flatten() {
         let ws_path = entry.path();
-        if !ws_path.is_dir() {
+        if crate::utils::is_symlink(&ws_path) || !ws_path.is_dir() {
             continue;
         }
 
@@ -114,7 +114,12 @@ pub fn load_sessions(
         .strip_prefix("cursor://")
         .unwrap_or(project_path);
 
-    let ws_db_path = PathBuf::from(ws_path).join("state.vscdb");
+    let ws_path_buf = PathBuf::from(ws_path);
+    if !ws_path_buf.is_absolute() {
+        return Err("Cursor workspace path must be absolute".to_string());
+    }
+
+    let ws_db_path = ws_path_buf.join("state.vscdb");
     let composers = read_workspace_composers(&ws_db_path)?;
 
     // Read workspace.json to get the real project folder name

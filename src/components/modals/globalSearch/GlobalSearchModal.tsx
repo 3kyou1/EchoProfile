@@ -33,8 +33,6 @@ interface GlobalSearchModalProps {
 
 const MAX_RESULTS = 100;
 
-const IS_MAC = typeof navigator !== "undefined" && /mac/i.test(navigator.userAgent);
-const SHORTCUT_KEY = IS_MAC ? "⌘" : "Ctrl";
 
 export const GlobalSearchModal = ({
     isOpen,
@@ -398,11 +396,6 @@ export const GlobalSearchModal = ({
                         >
                             <X className="w-3 h-3 text-muted-foreground" />
                         </button>
-                    )}
-                    {!query && (
-                        <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-muted rounded border border-border shrink-0">
-                            {SHORTCUT_KEY}+K
-                        </kbd>
                     )}
                 </div>
 

@@ -40,7 +40,7 @@ export const GlobalSearchModal = ({
 
     const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName, activeProviders, navigateToMessage } =
         useAppStore();
-    const [selectedProjectPath, setSelectedProjectPath] = useState<string>("");
+    const [selectedProjectPath, setSelectedProjectPath] = useState<string>("all");
 
     // Group results by project name
     const groupedResults = useMemo(() => {
@@ -97,7 +97,7 @@ export const GlobalSearchModal = ({
 
             setIsSearching(true);
             try {
-                const filters = selectedProjectPath
+                const filters = selectedProjectPath !== "all"
                     ? { projects: [selectedProjectPath] }
                     : {};
                 const hasNonClaudeProviders = hasNonDefaultProvider(activeProviders);
@@ -246,17 +246,16 @@ export const GlobalSearchModal = ({
             setQuery("");
             setResults([]);
             setSelectedIndex(0);
-            setSelectedProjectPath("");
+            setSelectedProjectPath("all");
         }
     }, [isOpen]);
 
-    // Re-search when project filter changes
+    // Re-search when project filter changes (performSearch captures selectedProjectPath)
     useEffect(() => {
         if (query.trim().length >= 2) {
             performSearch(query);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedProjectPath]);
+    }, [performSearch]);
 
     // Cleanup debounce on unmount
     useEffect(() => {
@@ -375,7 +374,7 @@ export const GlobalSearchModal = ({
                 {projects.length > 1 && (
                     <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/20">
                         <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <Select value={selectedProjectPath} onValueChange={(value) => setSelectedProjectPath(value === "all" ? "" : value)}>
+                        <Select value={selectedProjectPath} onValueChange={setSelectedProjectPath}>
                             <SelectTrigger className="flex-1 h-7 text-xs border-border">
                                 <SelectValue placeholder={t("globalSearch.allProjects")} />
                             </SelectTrigger>

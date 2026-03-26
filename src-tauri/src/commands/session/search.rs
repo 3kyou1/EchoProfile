@@ -14,6 +14,10 @@ use walkdir::WalkDir;
 /// Initial buffer capacity for JSON parsing (4KB covers most messages)
 const PARSE_BUFFER_INITIAL_CAPACITY: usize = 4096;
 
+lazy_static::lazy_static! {
+    static ref ERROR_MATCHER: AhoCorasick = build_matcher("error");
+}
+
 /// Initial capacity for search results (most searches find few matches)
 const SEARCH_RESULTS_INITIAL_CAPACITY: usize = 8;
 
@@ -176,10 +180,6 @@ fn has_tool_calls(message: &ClaudeMessage) -> bool {
 }
 
 fn has_errors(message: &ClaudeMessage) -> bool {
-    lazy_static::lazy_static! {
-        static ref ERROR_MATCHER: AhoCorasick = build_matcher("error");
-    }
-
     message.message_type == "error"
         || message.level.as_deref() == Some("error")
         || message
@@ -382,10 +382,8 @@ pub async fn search_messages(
     #[cfg(debug_assertions)]
     eprintln!("🔍 search_messages: searching {} files", file_paths.len());
 
-    // 2. Build matcher once, share across parallel threads
     let matcher = build_matcher(&query);
 
-    // 3. Parallel search using rayon
     let mut all_messages: Vec<ClaudeMessage> = file_paths
         .par_iter()
         .flat_map(|path| search_in_file(path, &matcher))
@@ -393,7 +391,7 @@ pub async fn search_messages(
 
     all_messages = apply_search_filters(all_messages, &filters);
 
-    // 4. Top-k selection: O(n) partial sort instead of O(n log n) full sort
+    // Top-k selection: O(n) partial sort instead of O(n log n) full sort
     if all_messages.len() > max_results {
         all_messages.select_nth_unstable_by(max_results, |a, b| b.timestamp.cmp(&a.timestamp));
         all_messages.truncate(max_results);

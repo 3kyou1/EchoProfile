@@ -97,8 +97,11 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
   const providerCounts = useMemo(() => {
     const counts: Record<ProviderTabId, number> = {
       all: projects.length,
+      aider: 0,
       claude: 0,
+      cline: 0,
       codex: 0,
+      cursor: 0,
       gemini: 0,
       opencode: 0,
     };

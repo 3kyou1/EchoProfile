@@ -32,6 +32,9 @@ pub async fn scan_all_projects(
             "codex".to_string(),
             "gemini".to_string(),
             "opencode".to_string(),
+            "cline".to_string(),
+            "cursor".to_string(),
+            "aider".to_string(),
         ]
     });
 
@@ -112,6 +115,36 @@ pub async fn scan_all_projects(
         }
     }
 
+    // Cline
+    if providers_to_scan.iter().any(|p| p == "cline") {
+        match providers::cline::scan_projects() {
+            Ok(projects) => all_projects.extend(projects),
+            Err(e) => {
+                log::warn!("Cline scan failed: {e}");
+            }
+        }
+    }
+
+    // Cursor
+    if providers_to_scan.iter().any(|p| p == "cursor") {
+        match providers::cursor::scan_projects() {
+            Ok(projects) => all_projects.extend(projects),
+            Err(e) => {
+                log::warn!("Cursor scan failed: {e}");
+            }
+        }
+    }
+
+    // Aider
+    if providers_to_scan.iter().any(|p| p == "aider") {
+        match providers::aider::scan_projects() {
+            Ok(projects) => all_projects.extend(projects),
+            Err(e) => {
+                log::warn!("Aider scan failed: {e}");
+            }
+        }
+    }
+
     // Hide empty containers that have no session files regardless of provider.
     all_projects.retain(|project| project.session_count > 0);
 
@@ -153,6 +186,9 @@ pub async fn load_provider_sessions(
         "codex" => providers::codex::load_sessions(&project_path, exclude),
         "gemini" => providers::gemini::load_sessions(&project_path, exclude),
         "opencode" => providers::opencode::load_sessions(&project_path, exclude),
+        "cline" => providers::cline::load_sessions(&project_path, exclude),
+        "cursor" => providers::cursor::load_sessions(&project_path, exclude),
+        "aider" => providers::aider::load_sessions(&project_path, exclude),
         _ => Err(format!("Unknown provider: {provider}")),
     }
 }
@@ -177,6 +213,9 @@ pub async fn load_provider_messages(
         "codex" => providers::codex::load_messages(&session_path)?,
         "gemini" => providers::gemini::load_messages(&session_path)?,
         "opencode" => providers::opencode::load_messages(&session_path)?,
+        "cline" => providers::cline::load_messages(&session_path)?,
+        "cursor" => providers::cursor::load_messages(&session_path)?,
+        "aider" => providers::aider::load_messages(&session_path)?,
         _ => return Err(format!("Unknown provider: {provider}")),
     };
 
@@ -204,6 +243,9 @@ pub async fn search_all_providers(
             "codex".to_string(),
             "gemini".to_string(),
             "opencode".to_string(),
+            "cline".to_string(),
+            "cursor".to_string(),
+            "aider".to_string(),
         ]
     });
 
@@ -292,6 +334,36 @@ pub async fn search_all_providers(
             Ok(results) => all_results.extend(results),
             Err(e) => {
                 log::warn!("OpenCode search failed: {e}");
+            }
+        }
+    }
+
+    // Cline
+    if providers_to_search.iter().any(|p| p == "cline") {
+        match providers::cline::search(&query, max_results) {
+            Ok(results) => all_results.extend(results),
+            Err(e) => {
+                log::warn!("Cline search failed: {e}");
+            }
+        }
+    }
+
+    // Cursor
+    if providers_to_search.iter().any(|p| p == "cursor") {
+        match providers::cursor::search(&query, max_results) {
+            Ok(results) => all_results.extend(results),
+            Err(e) => {
+                log::warn!("Cursor search failed: {e}");
+            }
+        }
+    }
+
+    // Aider
+    if providers_to_search.iter().any(|p| p == "aider") {
+        match providers::aider::search(&query, max_results) {
+            Ok(results) => all_results.extend(results),
+            Err(e) => {
+                log::warn!("Aider search failed: {e}");
             }
         }
     }

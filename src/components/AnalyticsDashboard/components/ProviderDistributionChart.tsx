@@ -10,8 +10,11 @@ interface ProviderDistributionChartProps {
 }
 
 const PROVIDER_COLORS: Record<string, string> = {
+  aider: "var(--metric-red)",
   claude: "var(--metric-amber)",
+  cline: "var(--metric-teal)",
   codex: "var(--metric-green)",
+  cursor: "var(--metric-sky)",
   gemini: "var(--metric-purple)",
   opencode: "var(--metric-blue)",
 };

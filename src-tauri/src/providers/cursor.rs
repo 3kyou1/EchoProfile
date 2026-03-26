@@ -81,8 +81,16 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
             .to_string_lossy()
             .to_string();
 
-        let session_count = composers.len();
-        let last_modified = composers
+        let active_composers: Vec<&Value> = composers
+            .iter()
+            .filter(|c| {
+                !c.get("isArchived")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false)
+            })
+            .collect();
+        let session_count = active_composers.len();
+        let last_modified = active_composers
             .iter()
             .filter_map(|c| c.get("lastUpdatedAt").and_then(Value::as_f64))
             .fold(0.0f64, f64::max);
@@ -263,7 +271,7 @@ pub fn search(query: &str, limit: usize) -> Result<Vec<ClaudeMessage>, String> {
     let base = get_base_path().ok_or("Cursor not found")?;
     let global_db_path = base.join("globalStorage/state.vscdb");
 
-    if !global_db_path.is_file() {
+    if !global_db_path.is_file() || query.is_empty() || limit == 0 {
         return Ok(Vec::new());
     }
 
@@ -331,11 +339,13 @@ fn read_workspace_folder(workspace_json_path: &Path) -> Option<String> {
     // "file:///Users/jack/project" → "/Users/jack/project"
     folder.strip_prefix("file://").map(|s| {
         // Handle Windows drive letters: file:///C:/Users/...
-        if s.len() > 2 && s.as_bytes()[2] == b':' {
-            s[1..].to_string()
+        let path = if s.len() > 2 && s.as_bytes()[2] == b':' {
+            &s[1..]
         } else {
-            s.to_string()
-        }
+            s
+        };
+        // Percent-decode URI-encoded characters (e.g., %20 → space)
+        percent_decode(path)
     })
 }
 
@@ -359,8 +369,7 @@ fn read_workspace_composers(ws_db_path: &Path) -> Result<Vec<Value>, String> {
         Err(_) => return Ok(Vec::new()),
     };
 
-    let json: Value =
-        serde_json::from_str(&data).map_err(|e| format!("Failed to parse composer data: {e}"))?;
+    let json: Value = parse_cursor_json(&data)?;
 
     let composers = json
         .get("allComposers")
@@ -388,6 +397,25 @@ fn parse_cursor_json(data: &str) -> Result<Value, String> {
     serde_json::from_str(&sanitized).map_err(|e| format!("JSON parse error: {e}"))
 }
 
+/// Decode percent-encoded URI characters (e.g., `%20` → space)
+fn percent_decode(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let bytes = input.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let Ok(byte) = u8::from_str_radix(&input[i + 1..i + 3], 16) {
+                result.push(byte as char);
+                i += 3;
+                continue;
+            }
+        }
+        result.push(bytes[i] as char);
+        i += 1;
+    }
+    result
+}
+
 /// Convert a Cursor bubble to `ClaudeMessage`
 fn convert_cursor_bubble(
     bubble: &Value,
@@ -413,11 +441,12 @@ fn convert_user_bubble(
     bubble_id: &str,
     session_id: &str,
 ) -> Option<ClaudeMessage> {
-    if text.is_empty() {
-        return None;
-    }
+    let mut content_blocks: Vec<Value> = Vec::new();
 
-    let mut content_blocks = vec![serde_json::json!({"type": "text", "text": text})];
+    // Add text block only if non-empty
+    if !text.is_empty() {
+        content_blocks.push(serde_json::json!({"type": "text", "text": text}));
+    }
 
     // Add image attachments if present
     if let Some(images) = bubble.get("images").and_then(Value::as_array) {
@@ -443,6 +472,10 @@ fn convert_user_bubble(
                 }
             }
         }
+    }
+
+    if content_blocks.is_empty() {
+        return None;
     }
 
     Some(build_provider_message(

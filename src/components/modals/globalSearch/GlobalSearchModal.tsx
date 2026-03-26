@@ -11,6 +11,7 @@ import {
     Filter,
 } from "lucide-react";
 import { Dialog, DialogContent, Input } from "@/components/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppStore } from "@/store/useAppStore";
 import type { ClaudeMessage, ClaudeSession, ContentItem } from "@/types";
 import { getProviderLabel, hasNonDefaultProvider } from "@/utils/providers";
@@ -378,18 +379,19 @@ export const GlobalSearchModal = ({
                 {projects.length > 1 && (
                     <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/20">
                         <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <select
-                            value={selectedProjectPath}
-                            onChange={(e) => setSelectedProjectPath(e.target.value)}
-                            className="flex-1 text-xs bg-transparent border border-border rounded px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                            <option value="">{t("globalSearch.allProjects")}</option>
-                            {projects.map((project) => (
-                                <option key={project.path} value={project.path}>
-                                    {project.name}
-                                </option>
-                            ))}
-                        </select>
+                        <Select value={selectedProjectPath} onValueChange={(value) => setSelectedProjectPath(value === "all" ? "" : value)}>
+                            <SelectTrigger className="flex-1 h-7 text-xs border-border">
+                                <SelectValue placeholder={t("globalSearch.allProjects")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">{t("globalSearch.allProjects")}</SelectItem>
+                                {projects.map((project) => (
+                                    <SelectItem key={project.path} value={project.path}>
+                                        {project.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 )}
 

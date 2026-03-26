@@ -28,6 +28,7 @@ import { CodeExecutionToolResultRenderer } from "./CodeExecutionToolResultRender
 import { BashCodeExecutionToolResultRenderer } from "./BashCodeExecutionToolResultRenderer";
 import { TextEditorCodeExecutionToolResultRenderer } from "./TextEditorCodeExecutionToolResultRenderer";
 import { ToolSearchToolResultRenderer } from "./ToolSearchToolResultRenderer";
+import { ContainerUploadRenderer } from "./ContainerUploadRenderer";
 import { UnifiedToolExecutionRenderer } from "./UnifiedToolExecutionRenderer";
 import { ClaudeToolResultItem } from "../toolResultRenderer";
 import { HighlightedText } from "../common/HighlightedText";
@@ -47,6 +48,7 @@ import {
   isBashCodeExecutionToolResultContent,
   isTextEditorCodeExecutionToolResultContent,
   isToolSearchToolResultContent,
+  isContainerUploadContent,
 } from "@/utils/contentTypeGuards";
 
 type Props = {
@@ -471,6 +473,18 @@ export const ClaudeContentArrayRenderer = memo(({
                 key={entry.key}
                 toolUseId={item.tool_use_id}
                 content={item.content}
+              />
+            );
+          }
+
+          case "container_upload": {
+            if (!isContainerUploadContent(item)) {
+              return null;
+            }
+            return (
+              <ContainerUploadRenderer
+                key={entry.key}
+                fileId={item.file_id}
               />
             );
           }

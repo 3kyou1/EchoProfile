@@ -123,3 +123,9 @@ export interface SearchResultContent {
   source: string;
   content: TextContent[];
 }
+
+/** File uploaded to code execution container (beta: files-api-2025-04-14) */
+export interface ContainerUploadContent {
+  type: "container_upload";
+  file_id: string;
+}

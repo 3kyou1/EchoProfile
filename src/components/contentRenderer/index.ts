@@ -18,3 +18,4 @@ export { CodeExecutionToolResultRenderer } from "./CodeExecutionToolResultRender
 export { BashCodeExecutionToolResultRenderer } from "./BashCodeExecutionToolResultRenderer";
 export { TextEditorCodeExecutionToolResultRenderer } from "./TextEditorCodeExecutionToolResultRenderer";
 export { ToolSearchToolResultRenderer } from "./ToolSearchToolResultRenderer";
+export { ContainerUploadRenderer } from "./ContainerUploadRenderer";

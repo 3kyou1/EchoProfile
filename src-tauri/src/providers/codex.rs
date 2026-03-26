@@ -1,6 +1,6 @@
 use super::ProviderInfo;
 use crate::models::{ClaudeMessage, ClaudeProject, ClaudeSession, TokenUsage};
-use crate::utils::{find_line_ranges, search_json_value_case_insensitive};
+use crate::utils::{build_provider_message, find_line_ranges, search_json_value_case_insensitive};
 use chrono::{DateTime, Utc};
 use memmap2::Mmap;
 use serde_json::Value;
@@ -949,6 +949,30 @@ fn convert_codex_event(
                 None,
             ))
         }
+        "turn_aborted" => {
+            *counter += 1;
+            let reason = payload
+                .get("reason")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            let turn_id = payload.get("turn_id").and_then(Value::as_str).unwrap_or("");
+            let content = serde_json::json!([{
+                "type": "text",
+                "text": format!("[Turn Aborted] reason: {reason}, turn: {turn_id}")
+            }]);
+            let mut msg = build_codex_message(
+                format!("codex-abort-{counter}"),
+                session_id,
+                line_timestamp.to_string(),
+                "system",
+                None,
+                Some(content),
+                None,
+            );
+            msg.subtype = Some("turn_aborted".to_string());
+            msg.level = Some("warning".to_string());
+            Some(msg)
+        }
         // Unsupported/duplicated Codex events are intentionally ignored.
         _ => None,
     }
@@ -1243,40 +1267,18 @@ fn build_codex_message(
         None
     };
 
-    ClaudeMessage {
+    let mut msg = build_provider_message(
+        "codex",
         uuid,
-        parent_uuid: None,
-        session_id: session_id.to_string(),
+        session_id,
         timestamp,
-        message_type: message_type.to_string(),
+        message_type,
+        role,
         content,
-        project_name: None,
-        tool_use,
-        tool_use_result: None,
-        is_sidechain: None,
-        usage: None,
-        role: role.map(String::from),
         model,
-        stop_reason: None,
-        cost_usd: None,
-        duration_ms: None,
-        message_id: None,
-        snapshot: None,
-        is_snapshot_update: None,
-        data: None,
-        tool_use_id: None,
-        parent_tool_use_id: None,
-        operation: None,
-        subtype: None,
-        level: None,
-        hook_count: None,
-        hook_infos: None,
-        stop_reason_system: None,
-        prevented_continuation: None,
-        compact_metadata: None,
-        microcompact_metadata: None,
-        provider: Some("codex".to_string()),
-    }
+    );
+    msg.tool_use = tool_use;
+    msg
 }
 
 #[cfg(test)]

@@ -227,6 +227,7 @@ import type {
   ImageContent,
   DocumentContent,
   SearchResultContent,
+  ContainerUploadContent,
 } from "./content.types";
 
 import type { MCPToolUseContent, MCPToolResultContent } from "./mcp.types";
@@ -248,4 +249,5 @@ export type ContentItem =
   | DocumentContent
   | SearchResultContent
   | MCPToolUseContent
-  | MCPToolResultContent;
+  | MCPToolResultContent
+  | ContainerUploadContent;

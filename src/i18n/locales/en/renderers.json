@@ -343,5 +343,7 @@
   "renderers.globToolRenderer.path": "path",
   "renderers.webSearchToolRenderer.query": "query",
   "renderers.webSearchToolRenderer.allow": "allow",
-  "renderers.webSearchToolRenderer.block": "block"
+  "renderers.webSearchToolRenderer.block": "block",
+  "renderers.containerUpload.title": "Container File Upload",
+  "renderers.containerUpload.description": "File uploaded to code execution container"
 }

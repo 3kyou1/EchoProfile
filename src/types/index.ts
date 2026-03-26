@@ -53,6 +53,7 @@ export type {
   CitationsConfig,
   Citation,
   SearchResultContent,
+  ContainerUploadContent,
 } from "./core/content";
 
 // Tool Types

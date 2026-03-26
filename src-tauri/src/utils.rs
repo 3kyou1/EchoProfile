@@ -1,6 +1,7 @@
-use crate::models::{GitInfo, GitWorktreeType};
+use crate::models::{ClaudeMessage, GitInfo, GitWorktreeType};
 use chrono::{DateTime, Utc};
 use memchr::memchr_iter;
+use serde_json::Value;
 use std::fs;
 use std::path::{Component, Path};
 
@@ -362,6 +363,57 @@ pub fn detect_git_worktree_info(project_path: &str) -> Option<GitInfo> {
         worktree_type: GitWorktreeType::NotGit,
         main_project_path: None,
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+/// Build a `ClaudeMessage` with common defaults for provider implementations.
+///
+/// Providers only differ in `provider` string and optional fields like `tool_use`.
+/// This eliminates the per-provider boilerplate of setting 20+ None fields.
+pub fn build_provider_message(
+    provider: &str,
+    uuid: String,
+    session_id: &str,
+    timestamp: String,
+    message_type: &str,
+    role: Option<&str>,
+    content: Option<Value>,
+    model: Option<String>,
+) -> ClaudeMessage {
+    ClaudeMessage {
+        uuid,
+        parent_uuid: None,
+        session_id: session_id.to_string(),
+        timestamp,
+        message_type: message_type.to_string(),
+        content,
+        project_name: None,
+        tool_use: None,
+        tool_use_result: None,
+        is_sidechain: None,
+        usage: None,
+        role: role.map(String::from),
+        model,
+        stop_reason: None,
+        cost_usd: None,
+        duration_ms: None,
+        message_id: None,
+        snapshot: None,
+        is_snapshot_update: None,
+        data: None,
+        tool_use_id: None,
+        parent_tool_use_id: None,
+        operation: None,
+        subtype: None,
+        level: None,
+        hook_count: None,
+        hook_infos: None,
+        stop_reason_system: None,
+        prevented_continuation: None,
+        compact_metadata: None,
+        microcompact_metadata: None,
+        provider: Some(provider.to_string()),
+    }
 }
 
 #[cfg(test)]

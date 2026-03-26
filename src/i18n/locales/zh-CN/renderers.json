@@ -343,5 +343,7 @@
   "renderers.globToolRenderer.path": "路径",
   "renderers.webSearchToolRenderer.query": "搜索词",
   "renderers.webSearchToolRenderer.allow": "允许",
-  "renderers.webSearchToolRenderer.block": "屏蔽"
+  "renderers.webSearchToolRenderer.block": "屏蔽",
+  "renderers.containerUpload.title": "容器文件上传",
+  "renderers.containerUpload.description": "上传到代码执行容器的文件"
 }

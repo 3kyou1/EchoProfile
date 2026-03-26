@@ -949,6 +949,30 @@ fn convert_codex_event(
                 None,
             ))
         }
+        "turn_aborted" => {
+            *counter += 1;
+            let reason = payload
+                .get("reason")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            let turn_id = payload.get("turn_id").and_then(Value::as_str).unwrap_or("");
+            let content = serde_json::json!([{
+                "type": "text",
+                "text": format!("[Turn Aborted] reason: {reason}, turn: {turn_id}")
+            }]);
+            let mut msg = build_codex_message(
+                format!("codex-abort-{counter}"),
+                session_id,
+                line_timestamp.to_string(),
+                "system",
+                None,
+                Some(content),
+                None,
+            );
+            msg.subtype = Some("turn_aborted".to_string());
+            msg.level = Some("warning".to_string());
+            Some(msg)
+        }
         // Unsupported/duplicated Codex events are intentionally ignored.
         _ => None,
     }

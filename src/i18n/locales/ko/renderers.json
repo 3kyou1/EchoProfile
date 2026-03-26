@@ -343,5 +343,7 @@
   "renderers.globToolRenderer.path": "경로",
   "renderers.webSearchToolRenderer.query": "검색어",
   "renderers.webSearchToolRenderer.allow": "허용",
-  "renderers.webSearchToolRenderer.block": "차단"
+  "renderers.webSearchToolRenderer.block": "차단",
+  "renderers.containerUpload.title": "컨테이너 파일 업로드",
+  "renderers.containerUpload.description": "코드 실행 컨테이너에 업로드된 파일"
 }

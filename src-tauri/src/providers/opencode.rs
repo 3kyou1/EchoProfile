@@ -1187,17 +1187,53 @@ fn process_parts(parts: &[Value]) -> (Option<Value>, Option<TokenUsage>, Option<
                 }
             }
             "file" => {
-                // Show file reference
                 let filename = part.get("filename").and_then(|v| v.as_str()).unwrap_or("");
                 let url = part.get("url").and_then(|v| v.as_str()).unwrap_or("");
-                if !filename.is_empty() {
+                let mime = part.get("mime").and_then(|v| v.as_str()).unwrap_or("");
+
+                if mime.starts_with("image/") {
+                    // Image file — extract base64 data from data: URI or use URL
+                    if let Some(data) = url
+                        .strip_prefix("data:image/png;base64,")
+                        .or_else(|| url.strip_prefix("data:image/jpeg;base64,"))
+                        .or_else(|| url.strip_prefix("data:image/gif;base64,"))
+                        .or_else(|| url.strip_prefix("data:image/webp;base64,"))
+                    {
+                        content_items.push(serde_json::json!({
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": mime,
+                                "data": data
+                            }
+                        }));
+                    } else if !url.is_empty() {
+                        content_items.push(serde_json::json!({
+                            "type": "image",
+                            "source": {
+                                "type": "url",
+                                "url": url
+                            }
+                        }));
+                    }
+                } else if !filename.is_empty() {
+                    // Non-image file reference
                     content_items.push(serde_json::json!({
                         "type": "text",
                         "text": format!("[File] {filename} ({url})")
                     }));
                 }
             }
-            // Skip: snapshot, agent, subtask, retry, step-start
+            "step-start" => {
+                let snapshot = part.get("snapshot").and_then(|v| v.as_str()).unwrap_or("");
+                if !snapshot.is_empty() {
+                    content_items.push(serde_json::json!({
+                        "type": "text",
+                        "text": format!("[Step Start] snapshot: {}", &snapshot[..snapshot.len().min(8)])
+                    }));
+                }
+            }
+            // Skip: snapshot, agent, subtask, retry
             _ => {}
         }
     }

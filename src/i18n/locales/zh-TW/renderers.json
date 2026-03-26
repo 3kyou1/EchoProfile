@@ -343,5 +343,7 @@
   "renderers.globToolRenderer.path": "路徑",
   "renderers.webSearchToolRenderer.query": "搜尋詞",
   "renderers.webSearchToolRenderer.allow": "允許",
-  "renderers.webSearchToolRenderer.block": "封鎖"
+  "renderers.webSearchToolRenderer.block": "封鎖",
+  "renderers.containerUpload.title": "容器檔案上傳",
+  "renderers.containerUpload.description": "上傳至程式碼執行容器的檔案"
 }

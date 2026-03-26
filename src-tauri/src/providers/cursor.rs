@@ -398,22 +398,23 @@ fn parse_cursor_json(data: &str) -> Result<Value, String> {
 }
 
 /// Decode percent-encoded URI characters (e.g., `%20` → space)
+/// Decode percent-encoded URI characters, preserving UTF-8 multibyte sequences
 fn percent_decode(input: &str) -> String {
-    let mut result = String::with_capacity(input.len());
+    let mut buf = Vec::with_capacity(input.len());
     let bytes = input.as_bytes();
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
             if let Ok(byte) = u8::from_str_radix(&input[i + 1..i + 3], 16) {
-                result.push(byte as char);
+                buf.push(byte);
                 i += 3;
                 continue;
             }
         }
-        result.push(bytes[i] as char);
+        buf.push(bytes[i]);
         i += 1;
     }
-    result
+    String::from_utf8(buf).unwrap_or_else(|_| input.to_string())
 }
 
 /// Convert a Cursor bubble to `ClaudeMessage`

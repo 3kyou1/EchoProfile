@@ -32,6 +32,7 @@ import type {
   Base64PDFSource,
   PlainTextSource,
   URLPDFSource,
+  ContainerUploadContent,
 } from "../types";
 
 // ============================================================================
@@ -541,6 +542,15 @@ export function filterContentByType<T extends ContentItem>(
  * const firstThinking = findContentByType(content, isThinkingContent);
  * ```
  */
+/**
+ * Type guard for container_upload content blocks (beta: files-api-2025-04-14)
+ */
+export function isContainerUploadContent(
+  item: unknown
+): item is ContainerUploadContent {
+  return isContentItem(item) && item.type === "container_upload";
+}
+
 export function findContentByType<T extends ContentItem>(
   items: unknown[],
   typeGuard: (item: unknown) => item is T

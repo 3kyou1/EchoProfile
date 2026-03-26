@@ -343,5 +343,7 @@
   "renderers.globToolRenderer.path": "パス",
   "renderers.webSearchToolRenderer.query": "検索クエリ",
   "renderers.webSearchToolRenderer.allow": "許可",
-  "renderers.webSearchToolRenderer.block": "ブロック"
+  "renderers.webSearchToolRenderer.block": "ブロック",
+  "renderers.containerUpload.title": "コンテナファイルアップロード",
+  "renderers.containerUpload.description": "コード実行コンテナにアップロードされたファイル"
 }

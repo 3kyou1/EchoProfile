@@ -1,14 +1,17 @@
 import type { ProviderId } from "../types";
 
-export const PROVIDER_IDS: ProviderId[] = ["claude", "codex", "gemini", "opencode"];
+export const PROVIDER_IDS: ProviderId[] = ["aider", "claude", "cline", "codex", "cursor", "gemini", "opencode"];
 export const DEFAULT_PROVIDER_ID: ProviderId = "claude";
 
 const PROVIDER_TRANSLATIONS: Record<
   ProviderId,
   { key: string; fallback: string }
 > = {
+  aider: { key: "common.provider.aider", fallback: "Aider" },
   claude: { key: "common.provider.claude", fallback: "Claude Code" },
+  cline: { key: "common.provider.cline", fallback: "Cline" },
   codex: { key: "common.provider.codex", fallback: "Codex CLI" },
+  cursor: { key: "common.provider.cursor", fallback: "Cursor" },
   gemini: { key: "common.provider.gemini", fallback: "Gemini CLI" },
   opencode: { key: "common.provider.opencode", fallback: "OpenCode" },
 };
@@ -23,8 +26,11 @@ const PROVIDER_ANALYTICS_CAPABILITIES: Record<
   ProviderId,
   ProviderAnalyticsCapability
 > = {
+  aider: { supportsConversationBreakdown: false },
   claude: { supportsConversationBreakdown: true },
+  cline: { supportsConversationBreakdown: false },
   codex: { supportsConversationBreakdown: false },
+  cursor: { supportsConversationBreakdown: false },
   gemini: { supportsConversationBreakdown: false },
   opencode: { supportsConversationBreakdown: false },
 };
@@ -43,7 +49,10 @@ export interface ConversationBreakdownCoverage {
 
 export function getProviderId(provider?: ProviderId | string): ProviderId {
   switch (provider) {
+    case "aider":
+    case "cline":
     case "codex":
+    case "cursor":
     case "gemini":
     case "opencode":
     case "claude":
@@ -111,8 +120,6 @@ export function calculateConversationBreakdownCoverage(
     }
   }
 
-  // Align with chart math: when there are no tokens, show 0% coverage (no data)
-  // instead of treating it as vacuous 100%.
   const coveragePercent =
     totalTokens > 0 ? (coveredTokens / totalTokens) * 100 : 0;
 

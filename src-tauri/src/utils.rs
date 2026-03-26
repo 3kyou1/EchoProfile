@@ -365,6 +365,20 @@ pub fn detect_git_worktree_info(project_path: &str) -> Option<GitInfo> {
     })
 }
 
+/// Check if a path is a symlink (without following it)
+pub fn is_symlink(path: &std::path::Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
+}
+
+/// Convert milliseconds timestamp to ISO 8601 string
+pub fn ms_to_iso(ms: u64) -> String {
+    chrono::DateTime::from_timestamp_millis(i64::try_from(ms).unwrap_or(0))
+        .map(|dt| dt.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string())
+        .unwrap_or_default()
+}
+
 #[allow(clippy::too_many_arguments)]
 /// Build a `ClaudeMessage` with common defaults for provider implementations.
 ///

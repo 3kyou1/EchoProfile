@@ -8,12 +8,12 @@ use lru::LruCache;
 use memmap2::Mmap;
 use rayon::prelude::*;
 use std::collections::hash_map::DefaultHasher;
+use std::fs;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
-use std::{fs, time};
 use uuid::Uuid;
 use walkdir::WalkDir;
 
@@ -25,9 +25,6 @@ const SEARCH_RESULTS_INITIAL_CAPACITY: usize = 8;
 
 /// LRU cache capacity
 const SEARCH_CACHE_CAPACITY: usize = 64;
-
-/// Early termination buffer multiplier (collect 2x limit before stopping)
-const EARLY_TERMINATION_MULTIPLIER: usize = 2;
 
 lazy_static::lazy_static! {
     static ref ERROR_MATCHER: AhoCorasick = build_matcher("error");
@@ -45,7 +42,7 @@ struct CachedSearchResult {
 
 /// Called by the file watcher when session files change.
 pub fn invalidate_search_cache() {
-    CACHE_GENERATION.fetch_add(1, Ordering::Relaxed);
+    CACHE_GENERATION.fetch_add(1, Ordering::Release);
 }
 
 fn cache_key(query: &str, filters: &serde_json::Value, limit: usize) -> u64 {
@@ -401,9 +398,8 @@ pub async fn search_messages(
     let max_results = limit.unwrap_or(DEFAULT_SEARCH_LIMIT);
     validate_search_filters(&filters)?;
 
-    // Check LRU cache
     let key = cache_key(&query, &filters, max_results);
-    let current_gen = CACHE_GENERATION.load(Ordering::Relaxed);
+    let current_gen = CACHE_GENERATION.load(Ordering::Acquire);
     if let Ok(mut cache) = SEARCH_CACHE.lock() {
         if let Some(cached) = cache.get(&key) {
             if cached.generation == current_gen {
@@ -419,52 +415,31 @@ pub async fn search_messages(
         return Ok(vec![]);
     }
 
-    // Collect file paths sorted by mtime descending (newest first for early termination)
-    let mut file_entries: Vec<(PathBuf, time::SystemTime)> = WalkDir::new(&projects_path)
+    let file_paths: Vec<PathBuf> = WalkDir::new(&projects_path)
         .into_iter()
         .filter_map(std::result::Result::ok)
         .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-        .filter_map(|e| {
-            let mtime = e.metadata().ok()?.modified().ok()?;
-            Some((e.path().to_path_buf(), mtime))
-        })
+        .map(|e| e.path().to_path_buf())
         .collect();
-    file_entries.sort_unstable_by(|a, b| b.1.cmp(&a.1));
 
     #[cfg(debug_assertions)]
-    eprintln!("🔍 search_messages: searching {} files", file_entries.len());
+    eprintln!("🔍 search_messages: searching {} files", file_paths.len());
 
     let matcher = build_matcher(&query);
-    let done = AtomicBool::new(false);
-    let early_stop_threshold = max_results * EARLY_TERMINATION_MULTIPLIER;
-    let collected = Mutex::new(Vec::with_capacity(early_stop_threshold));
 
-    file_entries.par_iter().for_each(|(path, _)| {
-        if done.load(Ordering::Relaxed) {
-            return;
-        }
-        let file_results = search_in_file(path, &matcher);
-        if file_results.is_empty() {
-            return;
-        }
-        let mut locked = collected.lock().expect("collected lock");
-        locked.extend(file_results);
-        if locked.len() >= early_stop_threshold {
-            done.store(true, Ordering::Relaxed);
-        }
-    });
+    let mut filtered: Vec<ClaudeMessage> = file_paths
+        .par_iter()
+        .flat_map(|path| search_in_file(path, &matcher))
+        .collect();
 
-    let all_messages = collected.into_inner().expect("collected into_inner");
-    let mut filtered = apply_search_filters(all_messages, &filters);
+    filtered = apply_search_filters(filtered, &filters);
 
-    // Top-k selection: O(n) partial sort instead of O(n log n) full sort
     if filtered.len() > max_results {
         filtered.select_nth_unstable_by(max_results, |a, b| b.timestamp.cmp(&a.timestamp));
         filtered.truncate(max_results);
     }
     filtered.sort_unstable_by(|a, b| b.timestamp.cmp(&a.timestamp));
 
-    // Store in cache
     if let Ok(mut cache) = SEARCH_CACHE.lock() {
         cache.put(
             key,

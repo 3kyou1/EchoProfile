@@ -91,6 +91,21 @@ export function supportsConversationBreakdown(
     .supportsConversationBreakdown;
 }
 
+export const PROVIDER_BADGE_STYLES: Record<ProviderId, string> = {
+  claude: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  codex: "bg-green-500/15 text-green-600 dark:text-green-400",
+  cline: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+  cursor: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300",
+  gemini: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
+  opencode: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
+  aider: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
+};
+
+export function getProviderBadgeStyle(provider?: ProviderId | string): string {
+  const id = getProviderId(provider);
+  return PROVIDER_BADGE_STYLES[id] ?? "bg-gray-500/15 text-gray-500";
+}
+
 export function hasAnyConversationBreakdownProvider(
   providers?: readonly (ProviderId | string)[]
 ): boolean {

@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/store/useAppStore";
 import type { ClaudeMessage, ClaudeSession, ContentItem } from "@/types";
-import { getProviderLabel, hasNonDefaultProvider, getProviderId } from "@/utils/providers";
+import { getProviderLabel, hasNonDefaultProvider, getProviderBadgeStyle } from "@/utils/providers";
 import { cn } from "@/lib/utils";
 
 type GlobalSearchResult = ClaudeMessage;
@@ -31,17 +31,10 @@ interface GlobalSearchModalProps {
     onClose: () => void;
 }
 
-const PROVIDER_BADGE_STYLES: Record<string, string> = {
-    claude: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-    codex: "bg-green-500/15 text-green-600 dark:text-green-400",
-    cline: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
-    cursor: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300",
-    gemini: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
-    opencode: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-    aider: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
-};
-
 const MAX_RESULTS = 100;
+
+const IS_MAC = typeof navigator !== "undefined" && /mac/i.test(navigator.userAgent);
+const SHORTCUT_KEY = IS_MAC ? "⌘" : "Ctrl";
 
 export const GlobalSearchModal = ({
     isOpen,
@@ -337,18 +330,22 @@ export const GlobalSearchModal = ({
         }
     };
 
-    // Highlight search term in text
-    const highlightText = (text: string, searchTerm: string): React.ReactNode => {
-        if (!searchTerm.trim()) return text;
-
-        const regex = new RegExp(
-            `(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+    // Memoize regex to avoid re-creation per result item
+    const highlightRegex = useMemo(() => {
+        const trimmed = query.trim();
+        if (!trimmed) return null;
+        return new RegExp(
+            `(${trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
             "i",
         );
-        const parts = text.split(regex);
+    }, [query]);
 
+    const highlightText = (text: string): React.ReactNode => {
+        if (!highlightRegex) return text;
+
+        const parts = text.split(highlightRegex);
         return parts.map((part, index) =>
-            regex.test(part) ? (
+            highlightRegex.test(part) ? (
                 <mark
                     key={index}
                     className="bg-yellow-300 dark:bg-yellow-500/40 text-foreground rounded-sm px-0.5"
@@ -360,9 +357,6 @@ export const GlobalSearchModal = ({
             ),
         );
     };
-
-    const isMac = /mac/i.test(navigator.userAgent);
-    const shortcutKey = isMac ? "⌘" : "Ctrl";
 
     let currentResultIndex = 0;
 
@@ -407,7 +401,7 @@ export const GlobalSearchModal = ({
                     )}
                     {!query && (
                         <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-muted rounded border border-border shrink-0">
-                            {shortcutKey}+K
+                            {SHORTCUT_KEY}+K
                         </kbd>
                     )}
                 </div>
@@ -534,7 +528,7 @@ export const GlobalSearchModal = ({
                                                     size="sm"
                                                     className={cn(
                                                         "rounded px-1 py-0 text-2xs",
-                                                        PROVIDER_BADGE_STYLES[getProviderId(group.provider)] ?? "bg-gray-500/15 text-gray-500"
+                                                        getProviderBadgeStyle(group.provider)
                                                     )}
                                                 >
                                                     {getProviderLabel((key, fallback) => t(key, fallback), group.provider)}
@@ -588,10 +582,7 @@ export const GlobalSearchModal = ({
                                                                 ) : null;
                                                             })()}
                                                             <p className="text-sm text-foreground line-clamp-2">
-                                                                {highlightText(
-                                                                    getPreviewText(result),
-                                                                    query,
-                                                                )}
+                                                                {highlightText(getPreviewText(result))}
                                                             </p>
                                                         </div>
                                                     </div>

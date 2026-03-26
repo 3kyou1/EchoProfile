@@ -8,6 +8,7 @@ import {
     CornerDownLeft,
     X,
     Loader2,
+    Filter,
 } from "lucide-react";
 import { Dialog, DialogContent, Input } from "@/components/ui";
 import { useAppStore } from "@/store/useAppStore";
@@ -36,8 +37,9 @@ export const GlobalSearchModal = ({
         null,
     );
 
-    const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName, activeProviders } =
+    const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName, activeProviders, navigateToMessage } =
         useAppStore();
+    const [selectedProjectPath, setSelectedProjectPath] = useState<string>("");
 
     // Group results by project name
     const groupedResults = useMemo(() => {
@@ -94,12 +96,15 @@ export const GlobalSearchModal = ({
 
             setIsSearching(true);
             try {
+                const filters = selectedProjectPath
+                    ? { projects: [selectedProjectPath] }
+                    : {};
                 const hasNonClaudeProviders = hasNonDefaultProvider(activeProviders);
                 const searchResults = await api<GlobalSearchResult[]>(
                     hasNonClaudeProviders ? "search_all_providers" : "search_messages",
                     hasNonClaudeProviders
-                        ? { claudePath, query: trimmedQuery, activeProviders, filters: {}, limit: MAX_RESULTS }
-                        : { claudePath, query: trimmedQuery, filters: {}, limit: MAX_RESULTS },
+                        ? { claudePath, query: trimmedQuery, activeProviders, filters, limit: MAX_RESULTS }
+                        : { claudePath, query: trimmedQuery, filters, limit: MAX_RESULTS },
                 );
                 setResults(searchResults);
                 setSelectedIndex(0);
@@ -110,7 +115,7 @@ export const GlobalSearchModal = ({
                 setIsSearching(false);
             }
         },
-        [claudePath, activeProviders],
+        [claudePath, activeProviders, selectedProjectPath],
     );
 
     // Handle input change with debounce
@@ -143,6 +148,7 @@ export const GlobalSearchModal = ({
             if (targetSession) {
                 // Session is in current project, just select it
                 await selectSession(targetSession);
+                if (result.uuid) navigateToMessage(result.uuid);
                 onClose();
                 return;
             }
@@ -170,9 +176,8 @@ export const GlobalSearchModal = ({
                     if (targetSession) {
                         // Found it! Select the project first, then the session
                         await selectProject(project);
-                        // After selectProject, sessions state is updated
-                        // We need to select the session from the updated state
                         await selectSession(targetSession);
+                        if (result.uuid) navigateToMessage(result.uuid);
                         onClose();
                         return;
                     }
@@ -190,7 +195,7 @@ export const GlobalSearchModal = ({
             );
             onClose();
         },
-        [projects, sessions, selectProject, selectSession, onClose],
+        [projects, sessions, selectProject, selectSession, navigateToMessage, onClose],
     );
 
     // Keyboard navigation
@@ -244,8 +249,17 @@ export const GlobalSearchModal = ({
             setQuery("");
             setResults([]);
             setSelectedIndex(0);
+            setSelectedProjectPath("");
         }
     }, [isOpen]);
+
+    // Re-search when project filter changes
+    useEffect(() => {
+        if (query.trim().length >= 2) {
+            performSearch(query);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedProjectPath]);
 
     // Cleanup debounce on unmount
     useEffect(() => {
@@ -359,6 +373,25 @@ export const GlobalSearchModal = ({
                         </button>
                     )}
                 </div>
+
+                {/* Project Filter */}
+                {projects.length > 1 && (
+                    <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/20">
+                        <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <select
+                            value={selectedProjectPath}
+                            onChange={(e) => setSelectedProjectPath(e.target.value)}
+                            className="flex-1 text-xs bg-transparent border border-border rounded px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                            <option value="">{t("globalSearch.allProjects")}</option>
+                            {projects.map((project) => (
+                                <option key={project.path} value={project.path}>
+                                    {project.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 {/* Results */}
                 <div

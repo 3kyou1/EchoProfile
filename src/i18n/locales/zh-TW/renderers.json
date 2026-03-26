@@ -186,6 +186,7 @@
   "globalSearch.select": "選擇",
   "globalSearch.shortcutHint": "按 Cmd+K 開啟搜尋",
   "globalSearch.title": "全域搜尋",
+  "globalSearch.allProjects": "所有專案",
   "globalSearch.unknownProject": "未知專案",
   "imageRenderer.cannotLoadImage": "無法載入圖像",
   "imageRenderer.close": "關閉",

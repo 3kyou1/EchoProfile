@@ -136,10 +136,10 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1">
-        {/* Mobile search button */}
+        {/* Search button */}
         <button
           onClick={() => openModal("globalSearch")}
-          className="md:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           aria-label={t("common.commandPalette")}
         >
           <Search className="w-5 h-5" />

@@ -7,12 +7,23 @@ use std::path::{Path, PathBuf};
 const HISTORY_FILE: &str = ".aider.chat.history.md";
 const SESSION_HEADER_PREFIX: &str = "# aider chat started at ";
 
-/// Detect Aider installations by checking if common project directories exist.
-/// Does NOT do a recursive scan — that happens lazily in `scan_projects`.
+/// Detect Aider by checking top-level project directories for history files.
+/// Only does a shallow (depth-1) check to avoid slow recursive scans at startup.
 pub fn detect() -> Option<ProviderInfo> {
     let dirs = get_search_dirs();
-    // Quick check: just see if any search directory exists (no recursive scan)
-    let has_history = !dirs.is_empty();
+    // Shallow check: look for .aider.chat.history.md directly in search dirs
+    // and their immediate children (depth 1 only, no recursive scan)
+    let has_history = dirs.iter().any(|d| {
+        if d.join(HISTORY_FILE).is_file() {
+            return true;
+        }
+        // Check one level of subdirectories
+        fs::read_dir(d)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .any(|entry| entry.path().join(HISTORY_FILE).is_file())
+    });
 
     Some(ProviderInfo {
         id: "aider".to_string(),

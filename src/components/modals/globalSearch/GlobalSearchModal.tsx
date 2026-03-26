@@ -147,12 +147,9 @@ export const GlobalSearchModal = ({
             );
 
             if (targetSession) {
+                if (result.uuid) navigateToMessage(result.uuid);
                 await selectSession(targetSession);
                 onClose();
-                // Delay navigateToMessage to ensure virtualizer has rendered
-                if (result.uuid) {
-                    setTimeout(() => navigateToMessage(result.uuid), 300);
-                }
                 return;
             }
 
@@ -175,12 +172,10 @@ export const GlobalSearchModal = ({
                     );
 
                     if (targetSession) {
+                        if (result.uuid) navigateToMessage(result.uuid);
                         await selectProject(project);
                         await selectSession(targetSession);
                         onClose();
-                        if (result.uuid) {
-                            setTimeout(() => navigateToMessage(result.uuid), 300);
-                        }
                         return;
                     }
                 } catch (error) {

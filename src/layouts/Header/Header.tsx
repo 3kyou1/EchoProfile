@@ -28,6 +28,9 @@ interface HeaderProps {
   updater: UseUpdaterReturn;
 }
 
+const IS_MAC = typeof navigator !== "undefined" && /mac/i.test(navigator.userAgent);
+const SHORTCUT_LABEL = IS_MAC ? "⌘+K" : "Ctrl+K";
+
 export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderProps) => {
   const { t } = useTranslation();
   const { openModal } = useModal();
@@ -145,7 +148,7 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
           <Search className="w-3.5 h-3.5" />
           <span>{t("globalSearch.placeholder")}</span>
           <kbd className="ml-1 px-1 py-0.5 text-[10px] font-mono bg-muted rounded border border-border">
-            {/mac/i.test(navigator.userAgent) ? "⌘" : "Ctrl"}+K
+            {SHORTCUT_LABEL}
           </kbd>
         </button>
         <button

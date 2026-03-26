@@ -33,7 +33,6 @@ interface GlobalSearchModalProps {
 
 const MAX_RESULTS = 100;
 
-
 export const GlobalSearchModal = ({
     isOpen,
     onClose,

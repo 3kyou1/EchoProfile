@@ -2,6 +2,7 @@
 
 use crate::models::{ClaudeMessage, RawLogEntry};
 use crate::utils::find_line_ranges;
+use aho_corasick::AhoCorasick;
 use chrono::{DateTime, Utc};
 use memmap2::Mmap;
 use rayon::prelude::*;
@@ -16,17 +17,25 @@ const PARSE_BUFFER_INITIAL_CAPACITY: usize = 4096;
 /// Initial capacity for search results (most searches find few matches)
 const SEARCH_RESULTS_INITIAL_CAPACITY: usize = 8;
 
-/// Recursively search for a query within a `serde_json::Value`
-/// Returns true if the query is found in any string value.
-/// This avoids the expensive JSON serialization that was previously used.
+/// Recursively search for a query within a `serde_json::Value` using aho-corasick.
+/// Case-insensitive matching without per-string heap allocation from `.to_lowercase()`.
 #[inline]
-fn search_in_value(value: &serde_json::Value, query: &str) -> bool {
+fn search_in_value(value: &serde_json::Value, matcher: &AhoCorasick) -> bool {
     match value {
-        serde_json::Value::String(s) => s.to_lowercase().contains(query),
-        serde_json::Value::Array(arr) => arr.iter().any(|item| search_in_value(item, query)),
-        serde_json::Value::Object(obj) => obj.values().any(|val| search_in_value(val, query)),
-        _ => false, // Numbers, booleans, null don't contain searchable text
+        serde_json::Value::String(s) => matcher.is_match(s),
+        serde_json::Value::Array(arr) => arr.iter().any(|item| search_in_value(item, matcher)),
+        serde_json::Value::Object(obj) => obj.values().any(|val| search_in_value(val, matcher)),
+        _ => false,
     }
+}
+
+/// Build an aho-corasick matcher for case-insensitive single-pattern search.
+/// Uses ASCII case-insensitive mode (sufficient for most search queries).
+fn build_matcher(query: &str) -> AhoCorasick {
+    AhoCorasick::builder()
+        .ascii_case_insensitive(true)
+        .build([query])
+        .expect("single-pattern AhoCorasick build should never fail")
 }
 
 /// Extract project name from file path
@@ -42,9 +51,9 @@ fn extract_project_name(file_path: &PathBuf) -> Option<String> {
 /// Search for messages matching the query in a single file
 ///
 /// Uses a reusable buffer to avoid repeated heap allocations during JSON parsing.
+/// Accepts a pre-built `AhoCorasick` matcher to avoid rebuilding per file.
 #[allow(unsafe_code)] // Required for mmap performance optimization
-fn search_in_file(file_path: &PathBuf, query: &str) -> Vec<ClaudeMessage> {
-    let query_lower = query.to_lowercase();
+fn search_in_file(file_path: &PathBuf, matcher: &AhoCorasick) -> Vec<ClaudeMessage> {
     let project_name = extract_project_name(file_path);
 
     let file = match fs::File::open(file_path) {
@@ -87,11 +96,11 @@ fn search_in_file(file_path: &PathBuf, query: &str) -> Vec<ClaudeMessage> {
             None => continue,
         };
 
-        // Use recursive search to avoid JSON serialization overhead
+        // Use aho-corasick for case-insensitive matching without heap allocation
         let matches = match &message_content.content {
-            serde_json::Value::String(s) => s.to_lowercase().contains(&query_lower),
+            serde_json::Value::String(s) => matcher.is_match(s),
             serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
-                search_in_value(&message_content.content, &query_lower)
+                search_in_value(&message_content.content, matcher)
             }
             _ => false,
         };
@@ -167,17 +176,21 @@ fn has_tool_calls(message: &ClaudeMessage) -> bool {
 }
 
 fn has_errors(message: &ClaudeMessage) -> bool {
+    lazy_static::lazy_static! {
+        static ref ERROR_MATCHER: AhoCorasick = build_matcher("error");
+    }
+
     message.message_type == "error"
         || message.level.as_deref() == Some("error")
         || message
             .stop_reason_system
             .as_deref()
-            .map(|s| s.to_lowercase().contains("error"))
+            .map(|s| ERROR_MATCHER.is_match(s))
             .unwrap_or(false)
         || message
             .content
             .as_ref()
-            .map(|v| search_in_value(v, "error"))
+            .map(|v| search_in_value(v, &ERROR_MATCHER))
             .unwrap_or(false)
 }
 
@@ -369,17 +382,23 @@ pub async fn search_messages(
     #[cfg(debug_assertions)]
     eprintln!("🔍 search_messages: searching {} files", file_paths.len());
 
-    // 2. Parallel search using rayon
+    // 2. Build matcher once, share across parallel threads
+    let matcher = build_matcher(&query);
+
+    // 3. Parallel search using rayon
     let mut all_messages: Vec<ClaudeMessage> = file_paths
         .par_iter()
-        .flat_map(|path| search_in_file(path, &query))
+        .flat_map(|path| search_in_file(path, &matcher))
         .collect();
 
     all_messages = apply_search_filters(all_messages, &filters);
 
-    // 3. Sort by timestamp descending and truncate to limit
-    all_messages.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
-    all_messages.truncate(max_results);
+    // 4. Top-k selection: O(n) partial sort instead of O(n log n) full sort
+    if all_messages.len() > max_results {
+        all_messages.select_nth_unstable_by(max_results, |a, b| b.timestamp.cmp(&a.timestamp));
+        all_messages.truncate(max_results);
+    }
+    all_messages.sort_unstable_by(|a, b| b.timestamp.cmp(&a.timestamp));
 
     #[cfg(debug_assertions)]
     {

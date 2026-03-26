@@ -14,7 +14,7 @@ const PROVIDER_COLORS: Record<string, string> = {
   claude: "var(--metric-amber)",
   cline: "var(--metric-teal)",
   codex: "var(--metric-green)",
-  cursor: "var(--metric-sky)",
+  cursor: "var(--metric-cyan)",
   gemini: "var(--metric-purple)",
   opencode: "var(--metric-blue)",
 };

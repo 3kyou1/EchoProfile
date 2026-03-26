@@ -4,22 +4,57 @@ use crate::models::{ClaudeMessage, RawLogEntry};
 use crate::utils::find_line_ranges;
 use aho_corasick::AhoCorasick;
 use chrono::{DateTime, Utc};
+use lru::LruCache;
 use memmap2::Mmap;
 use rayon::prelude::*;
-use std::fs;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Mutex;
+use std::{fs, time};
 use uuid::Uuid;
 use walkdir::WalkDir;
 
 /// Initial buffer capacity for JSON parsing (4KB covers most messages)
 const PARSE_BUFFER_INITIAL_CAPACITY: usize = 4096;
 
-lazy_static::lazy_static! {
-    static ref ERROR_MATCHER: AhoCorasick = build_matcher("error");
-}
-
 /// Initial capacity for search results (most searches find few matches)
 const SEARCH_RESULTS_INITIAL_CAPACITY: usize = 8;
+
+/// LRU cache capacity
+const SEARCH_CACHE_CAPACITY: usize = 64;
+
+/// Early termination buffer multiplier (collect 2x limit before stopping)
+const EARLY_TERMINATION_MULTIPLIER: usize = 2;
+
+lazy_static::lazy_static! {
+    static ref ERROR_MATCHER: AhoCorasick = build_matcher("error");
+    static ref SEARCH_CACHE: Mutex<LruCache<u64, CachedSearchResult>> =
+        Mutex::new(LruCache::new(NonZeroUsize::new(SEARCH_CACHE_CAPACITY).expect("non-zero")));
+}
+
+/// Generation counter — incremented on any file change to invalidate cache
+static CACHE_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+struct CachedSearchResult {
+    generation: u64,
+    results: Vec<ClaudeMessage>,
+}
+
+/// Called by the file watcher when session files change.
+pub fn invalidate_search_cache() {
+    CACHE_GENERATION.fetch_add(1, Ordering::Relaxed);
+}
+
+fn cache_key(query: &str, filters: &serde_json::Value, limit: usize) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    query.to_lowercase().hash(&mut hasher);
+    filters.to_string().hash(&mut hasher);
+    limit.hash(&mut hasher);
+    hasher.finish()
+}
 
 /// Recursively search for a query within a `serde_json::Value` using aho-corasick.
 /// Case-insensitive matching without per-string heap allocation from `.to_lowercase()`.
@@ -365,51 +400,93 @@ pub async fn search_messages(
 
     let max_results = limit.unwrap_or(DEFAULT_SEARCH_LIMIT);
     validate_search_filters(&filters)?;
-    let projects_path = PathBuf::from(&claude_path).join("projects");
 
+    // Check LRU cache
+    let key = cache_key(&query, &filters, max_results);
+    let current_gen = CACHE_GENERATION.load(Ordering::Relaxed);
+    if let Ok(mut cache) = SEARCH_CACHE.lock() {
+        if let Some(cached) = cache.get(&key) {
+            if cached.generation == current_gen {
+                #[cfg(debug_assertions)]
+                eprintln!("📊 search_messages: cache hit");
+                return Ok(cached.results.clone());
+            }
+        }
+    }
+
+    let projects_path = PathBuf::from(&claude_path).join("projects");
     if !projects_path.exists() {
         return Ok(vec![]);
     }
 
-    // 1. Collect all JSONL file paths
-    let file_paths: Vec<PathBuf> = WalkDir::new(&projects_path)
+    // Collect file paths sorted by mtime descending (newest first for early termination)
+    let mut file_entries: Vec<(PathBuf, time::SystemTime)> = WalkDir::new(&projects_path)
         .into_iter()
         .filter_map(std::result::Result::ok)
         .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-        .map(|e| e.path().to_path_buf())
+        .filter_map(|e| {
+            let mtime = e.metadata().ok()?.modified().ok()?;
+            Some((e.path().to_path_buf(), mtime))
+        })
         .collect();
+    file_entries.sort_unstable_by(|a, b| b.1.cmp(&a.1));
 
     #[cfg(debug_assertions)]
-    eprintln!("🔍 search_messages: searching {} files", file_paths.len());
+    eprintln!("🔍 search_messages: searching {} files", file_entries.len());
 
     let matcher = build_matcher(&query);
+    let done = AtomicBool::new(false);
+    let early_stop_threshold = max_results * EARLY_TERMINATION_MULTIPLIER;
+    let collected = Mutex::new(Vec::with_capacity(early_stop_threshold));
 
-    let mut all_messages: Vec<ClaudeMessage> = file_paths
-        .par_iter()
-        .flat_map(|path| search_in_file(path, &matcher))
-        .collect();
+    file_entries.par_iter().for_each(|(path, _)| {
+        if done.load(Ordering::Relaxed) {
+            return;
+        }
+        let file_results = search_in_file(path, &matcher);
+        if file_results.is_empty() {
+            return;
+        }
+        let mut locked = collected.lock().expect("collected lock");
+        locked.extend(file_results);
+        if locked.len() >= early_stop_threshold {
+            done.store(true, Ordering::Relaxed);
+        }
+    });
 
-    all_messages = apply_search_filters(all_messages, &filters);
+    let all_messages = collected.into_inner().expect("collected into_inner");
+    let mut filtered = apply_search_filters(all_messages, &filters);
 
     // Top-k selection: O(n) partial sort instead of O(n log n) full sort
-    if all_messages.len() > max_results {
-        all_messages.select_nth_unstable_by(max_results, |a, b| b.timestamp.cmp(&a.timestamp));
-        all_messages.truncate(max_results);
+    if filtered.len() > max_results {
+        filtered.select_nth_unstable_by(max_results, |a, b| b.timestamp.cmp(&a.timestamp));
+        filtered.truncate(max_results);
     }
-    all_messages.sort_unstable_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    filtered.sort_unstable_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+    // Store in cache
+    if let Ok(mut cache) = SEARCH_CACHE.lock() {
+        cache.put(
+            key,
+            CachedSearchResult {
+                generation: current_gen,
+                results: filtered.clone(),
+            },
+        );
+    }
 
     #[cfg(debug_assertions)]
     {
         let elapsed = start_time.elapsed();
         eprintln!(
             "📊 search_messages performance: {} results (limit: {}), {}ms elapsed",
-            all_messages.len(),
+            filtered.len(),
             max_results,
             elapsed.as_millis()
         );
     }
 
-    Ok(all_messages)
+    Ok(filtered)
 }
 
 #[cfg(test)]

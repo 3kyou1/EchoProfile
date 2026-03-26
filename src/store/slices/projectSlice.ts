@@ -252,6 +252,17 @@ export const createProjectSlice: StateCreator<
             excludeSidechain: get().excludeSidechain,
           });
       set({ sessions });
+
+      // Update project's session_count to match actual loaded sessions
+      // (scan_projects counts files, but load_sessions filters invalid ones)
+      if (sessions.length !== project.session_count) {
+        const projects = get().projects.map((p) =>
+          p.path === project.path
+            ? { ...p, session_count: sessions.length }
+            : p
+        );
+        set({ projects });
+      }
     } catch (error) {
       console.error("Failed to load project sessions:", error);
       set({ error: { type: AppErrorType.UNKNOWN, message: String(error) } });

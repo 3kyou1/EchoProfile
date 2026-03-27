@@ -600,6 +600,7 @@ pub(crate) fn validate_dialog_path(path: &Path) -> Result<(), String> {
 ///
 /// # Returns
 /// `Ok(())` if path is safe, error message if not
+#[cfg(feature = "webui-server")]
 pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
     let home_raw = dirs::home_dir().ok_or("Could not find home directory")?;
     // Canonicalize home to resolve symlinks (e.g. macOS /var → /private/var)
@@ -637,6 +638,7 @@ pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
 /// Strip the `\\?\` extended-length path prefix that Windows `canonicalize()` adds.
 ///
 /// On non-Windows platforms this is a no-op (the prefix never appears).
+#[cfg(feature = "webui-server")]
 fn strip_windows_prefix(path: &Path) -> PathBuf {
     let s = path.to_string_lossy();
     if let Some(stripped) = s.strip_prefix(r"\\?\") {
@@ -1049,6 +1051,7 @@ mod tests {
         drop(temp);
     }
 
+    #[cfg(feature = "webui-server")]
     #[test]
     fn test_strip_windows_prefix_with_prefix() {
         let path = Path::new(r"\\?\C:\Users\test");
@@ -1056,6 +1059,7 @@ mod tests {
         assert_eq!(result, PathBuf::from(r"C:\Users\test"));
     }
 
+    #[cfg(feature = "webui-server")]
     #[test]
     fn test_strip_windows_prefix_without_prefix() {
         let path = Path::new("/normal/unix/path");
@@ -1063,6 +1067,7 @@ mod tests {
         assert_eq!(result, PathBuf::from("/normal/unix/path"));
     }
 
+    #[cfg(feature = "webui-server")]
     #[test]
     fn test_strip_windows_prefix_empty() {
         let path = Path::new("");
@@ -1070,6 +1075,7 @@ mod tests {
         assert_eq!(result, PathBuf::from(""));
     }
 
+    #[cfg(feature = "webui-server")]
     #[test]
     fn test_is_safe_path_downloads_accepted() {
         let temp = setup_test_env();
@@ -1083,6 +1089,7 @@ mod tests {
         drop(temp);
     }
 
+    #[cfg(feature = "webui-server")]
     #[test]
     fn test_is_safe_path_desktop_accepted() {
         let temp = setup_test_env();
@@ -1096,6 +1103,7 @@ mod tests {
         drop(temp);
     }
 
+    #[cfg(feature = "webui-server")]
     #[test]
     fn test_is_safe_path_disallowed_dir_rejected() {
         let temp = setup_test_env();

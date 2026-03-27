@@ -558,23 +558,70 @@ pub async fn get_claude_json_config(
     .map_err(|e| format!("Task join error: {e}"))?
 }
 
-/// Validate that a path is within allowed directories
+/// Validate a path chosen by user via native file dialog.
 ///
-/// # Security
-/// Prevents unauthorized file system access by restricting operations to safe directories.
+/// Checks: absolute path, no `..` traversal, parent directory exists.
+/// Used by [`write_text_file`], [`read_text_file`], and [`save_screenshot`].
+pub(crate) fn validate_dialog_path(path: &Path) -> Result<(), String> {
+    if !path.is_absolute() {
+        return Err("Path must be absolute".to_string());
+    }
+    if path
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err("Path cannot contain '..' components".to_string());
+    }
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            return Err(format!(
+                "Parent directory does not exist: {}",
+                parent.display()
+            ));
+        }
+        let metadata = parent.symlink_metadata().map_err(|e| {
+            format!(
+                "Failed to read metadata for parent directory {}: {}",
+                parent.display(),
+                e
+            )
+        })?;
+        if metadata.file_type().is_symlink() {
+            return Err("Symlink parent directories are not allowed".to_string());
+        }
+    }
+    Ok(())
+}
+
+/// Validate that a path is within allowed directories.
+///
+/// Used by `WebUI` HTTP handlers to restrict file operations to safe directories.
+/// Tauri desktop commands use [`validate_dialog_path`] instead (OS dialog guarantees user intent).
 ///
 /// # Arguments
 /// * `path` - Path to validate
 ///
 /// # Returns
-/// Ok(()) if path is safe, error message if not
+/// `Ok(())` if path is safe, error message if not
+#[cfg(feature = "webui-server")]
 pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
-    let allowed_dirs = [
-        home.join(".claude-history-viewer").join("exports"),
-        home.join("Downloads"),
-        home.join("Documents"),
-    ];
+    let home_raw = dirs::home_dir().ok_or("Could not find home directory")?;
+    // Canonicalize home to resolve symlinks (e.g. macOS /var → /private/var)
+    let home = home_raw.canonicalize().unwrap_or_else(|_| home_raw.clone());
+    let home = strip_windows_prefix(&home);
+    // Use known-folder APIs to support Windows folder redirection (e.g. OneDrive).
+    // Fall back to home-relative paths when the API returns None.
+    let mut allowed_dirs = vec![home.join(".claude-history-viewer").join("exports")];
+    for (api_dir, fallback_name) in [
+        (dirs::download_dir(), "Downloads"),
+        (dirs::document_dir(), "Documents"),
+        (dirs::desktop_dir(), "Desktop"),
+    ] {
+        let resolved = api_dir.unwrap_or_else(|| home.join(fallback_name));
+        let resolved =
+            strip_windows_prefix(&resolved.canonicalize().unwrap_or_else(|_| resolved.clone()));
+        allowed_dirs.push(resolved);
+    }
 
     // For non-existing paths, canonicalize parent
     let canonical = if path.exists() {
@@ -587,30 +634,44 @@ pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
             .ok_or_else(|| "Invalid path".to_string())?
     };
 
+    // Strip \\?\ prefix on Windows for consistent comparison
+    // (canonicalize() returns \\?\C:\... but home_dir() returns C:\...)
+    let canonical = strip_windows_prefix(&canonical);
+
     if allowed_dirs.iter().any(|d| canonical.starts_with(d)) {
         Ok(())
     } else {
-        Err(format!(
-            "Path not in allowed directories. Allowed: {allowed_dirs:?}"
-        ))
+        Err("Path not in allowed directories".to_string())
     }
 }
 
-/// Write text content to a file
+/// Strip the `\\?\` extended-length path prefix that Windows `canonicalize()` adds.
+///
+/// On non-Windows platforms this is a no-op (the prefix never appears).
+#[cfg(feature = "webui-server")]
+fn strip_windows_prefix(path: &Path) -> PathBuf {
+    let s = path.to_string_lossy();
+    if let Some(stripped) = s.strip_prefix(r"\\?\") {
+        PathBuf::from(stripped)
+    } else {
+        path.to_path_buf()
+    }
+}
+
+/// Write text content to a file chosen by user via native dialog.
+///
+/// Path is validated for basic safety (absolute, no traversal, parent exists).
+/// Directory allowlisting for `WebUI` callers is enforced at the HTTP handler layer.
 ///
 /// # Arguments
-/// * `path` - Absolute path to the file to write
+/// * `path` - Absolute path chosen by user via save dialog
 /// * `content` - Text content to write
-///
-/// # Returns
-/// Ok(()) on success, error message on failure
 #[tauri::command]
 pub async fn write_text_file(path: String, content: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         let path = PathBuf::from(path);
 
-        // Validate path is in allowed directories
-        is_safe_path(&path)?;
+        validate_dialog_path(&path)?;
 
         // Atomic write: write to temp file then rename
         let temp_path = path.with_extension("tmp");
@@ -645,25 +706,7 @@ pub async fn save_screenshot(path: String, data: String) -> Result<(), String> {
     use base64::Engine;
     tauri::async_runtime::spawn_blocking(move || {
         let path = PathBuf::from(&path);
-        if !path.is_absolute() {
-            return Err("Path must be absolute".to_string());
-        }
-        if path
-            .components()
-            .any(|c| matches!(c, std::path::Component::ParentDir))
-        {
-            return Err("Path cannot contain '..' components".to_string());
-        }
-
-        // Ensure parent directory exists
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
-                return Err(format!(
-                    "Parent directory does not exist: {}",
-                    parent.display()
-                ));
-            }
-        }
+        validate_dialog_path(&path)?;
 
         let bytes = base64::engine::general_purpose::STANDARD
             .decode(&data)
@@ -684,20 +727,19 @@ pub async fn save_screenshot(path: String, data: String) -> Result<(), String> {
     .map_err(|e| format!("Task join error: {e}"))?
 }
 
-/// Read text content from a file
+/// Read text content from a file chosen by user via native dialog.
+///
+/// Path is validated for basic safety (absolute, no traversal, parent exists).
+/// Directory allowlisting for `WebUI` callers is enforced at the HTTP handler layer.
 ///
 /// # Arguments
-/// * `path` - Absolute path to the file to read
-///
-/// # Returns
-/// File content as string on success, error message on failure
+/// * `path` - Absolute path chosen by user via open dialog
 #[tauri::command]
 pub async fn read_text_file(path: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let path = PathBuf::from(path);
 
-        // Validate path is in allowed directories
-        is_safe_path(&path)?;
+        validate_dialog_path(&path)?;
 
         fs::read_to_string(&path)
             .map_err(|e| format!("Failed to read file {}: {}", path.display(), e))
@@ -927,6 +969,163 @@ mod tests {
         assert_eq!(parsed["theme"], "dark");
         assert_eq!(parsed["fontSize"], 14);
 
+        drop(temp);
+    }
+
+    #[test]
+    fn test_validate_dialog_path_absolute_accepted() {
+        let temp = setup_test_env();
+        let path = temp.path().join("test.txt");
+        assert!(validate_dialog_path(&path).is_ok());
+        drop(temp);
+    }
+
+    #[test]
+    fn test_validate_dialog_path_relative_rejected() {
+        let path = Path::new("relative/path.txt");
+        let result = validate_dialog_path(path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("absolute"));
+    }
+
+    #[test]
+    fn test_validate_dialog_path_parent_dir_rejected() {
+        let path = Path::new("/some/path/../escape.txt");
+        let result = validate_dialog_path(path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("'..'"));
+    }
+
+    #[test]
+    fn test_validate_dialog_path_nonexistent_parent_rejected() {
+        let path = Path::new("/nonexistent_dir_abc123/file.txt");
+        let result = validate_dialog_path(path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("does not exist"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_validate_dialog_path_symlink_parent_rejected() {
+        let temp = setup_test_env();
+        let real_dir = temp.path().join("real_dir");
+        fs::create_dir_all(&real_dir).unwrap();
+        let symlink_dir = temp.path().join("symlink_dir");
+        std::os::unix::fs::symlink(&real_dir, &symlink_dir).unwrap();
+        let file_path = symlink_dir.join("test.txt");
+
+        let result = validate_dialog_path(&file_path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Symlink"));
+        drop(temp);
+    }
+
+    #[tokio::test]
+    async fn test_write_text_file_to_temp_dir() {
+        let temp = setup_test_env();
+        let file_path = temp.path().join("export-test.md");
+        let content = "# Test Export\nHello world".to_string();
+
+        let result =
+            write_text_file(file_path.to_string_lossy().to_string(), content.clone()).await;
+        assert!(result.is_ok());
+        assert_eq!(fs::read_to_string(&file_path).unwrap(), content);
+        drop(temp);
+    }
+
+    #[tokio::test]
+    async fn test_write_text_file_relative_path_rejected() {
+        let result = write_text_file("relative/path.txt".to_string(), "content".to_string()).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("absolute"));
+    }
+
+    #[tokio::test]
+    async fn test_read_text_file_success() {
+        let temp = setup_test_env();
+        let file_path = temp.path().join("read-test.json");
+        fs::write(&file_path, r#"{"key":"value"}"#).unwrap();
+
+        let result = read_text_file(file_path.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), r#"{"key":"value"}"#);
+        drop(temp);
+    }
+
+    #[tokio::test]
+    async fn test_read_text_file_nonexistent_returns_error() {
+        let temp = setup_test_env();
+        let file_path = temp.path().join("does-not-exist.json");
+
+        let result = read_text_file(file_path.to_string_lossy().to_string()).await;
+        assert!(result.is_err());
+        drop(temp);
+    }
+
+    #[cfg(feature = "webui-server")]
+    #[test]
+    fn test_strip_windows_prefix_with_prefix() {
+        let path = Path::new(r"\\?\C:\Users\test");
+        let result = strip_windows_prefix(path);
+        assert_eq!(result, PathBuf::from(r"C:\Users\test"));
+    }
+
+    #[cfg(feature = "webui-server")]
+    #[test]
+    fn test_strip_windows_prefix_without_prefix() {
+        let path = Path::new("/normal/unix/path");
+        let result = strip_windows_prefix(path);
+        assert_eq!(result, PathBuf::from("/normal/unix/path"));
+    }
+
+    #[cfg(feature = "webui-server")]
+    #[test]
+    fn test_strip_windows_prefix_empty() {
+        let path = Path::new("");
+        let result = strip_windows_prefix(path);
+        assert_eq!(result, PathBuf::from(""));
+    }
+
+    #[cfg(feature = "webui-server")]
+    #[test]
+    fn test_is_safe_path_downloads_accepted() {
+        let temp = setup_test_env();
+        let downloads = temp.path().join("Downloads");
+        fs::create_dir_all(&downloads).unwrap();
+        let file_path = downloads.join("export.md");
+        fs::write(&file_path, "test").unwrap();
+
+        let result = is_safe_path(&file_path);
+        assert!(result.is_ok());
+        drop(temp);
+    }
+
+    #[cfg(feature = "webui-server")]
+    #[test]
+    fn test_is_safe_path_desktop_accepted() {
+        let temp = setup_test_env();
+        let desktop = temp.path().join("Desktop");
+        fs::create_dir_all(&desktop).unwrap();
+        let file_path = desktop.join("export.md");
+        fs::write(&file_path, "test").unwrap();
+
+        let result = is_safe_path(&file_path);
+        assert!(result.is_ok());
+        drop(temp);
+    }
+
+    #[cfg(feature = "webui-server")]
+    #[test]
+    fn test_is_safe_path_disallowed_dir_rejected() {
+        let temp = setup_test_env();
+        let random_dir = temp.path().join("SomeRandomDir");
+        fs::create_dir_all(&random_dir).unwrap();
+        let file_path = random_dir.join("export.md");
+        fs::write(&file_path, "test").unwrap();
+
+        let result = is_safe_path(&file_path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not in allowed directories"));
         drop(temp);
     }
 }

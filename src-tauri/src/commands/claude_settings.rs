@@ -579,6 +579,13 @@ pub(crate) fn validate_dialog_path(path: &Path) -> Result<(), String> {
                 parent.display()
             ));
         }
+        if parent
+            .symlink_metadata()
+            .map(|m| m.file_type().is_symlink())
+            .unwrap_or(false)
+        {
+            return Err("Symlink parent directories are not allowed".to_string());
+        }
     }
     Ok(())
 }
@@ -623,9 +630,7 @@ pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
     if allowed_dirs.iter().any(|d| canonical.starts_with(d)) {
         Ok(())
     } else {
-        Err(format!(
-            "Path not in allowed directories. Allowed: {allowed_dirs:?}"
-        ))
+        Err("Path not in allowed directories".to_string())
     }
 }
 
@@ -985,6 +990,21 @@ mod tests {
         let result = validate_dialog_path(path);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("does not exist"));
+    }
+
+    #[test]
+    fn test_validate_dialog_path_symlink_parent_rejected() {
+        let temp = setup_test_env();
+        let real_dir = temp.path().join("real_dir");
+        fs::create_dir_all(&real_dir).unwrap();
+        let symlink_dir = temp.path().join("symlink_dir");
+        std::os::unix::fs::symlink(&real_dir, &symlink_dir).unwrap();
+        let file_path = symlink_dir.join("test.txt");
+
+        let result = validate_dialog_path(&file_path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Symlink"));
+        drop(temp);
     }
 
     #[tokio::test]

@@ -558,6 +558,32 @@ pub async fn get_claude_json_config(
     .map_err(|e| format!("Task join error: {e}"))?
 }
 
+/// Validate a path chosen by user via native file dialog.
+///
+/// Checks: absolute path, no `..` traversal, parent directory exists.
+/// Used by [`write_text_file`], [`read_text_file`], and [`save_screenshot`].
+#[allow(dead_code)]
+pub(crate) fn validate_dialog_path(path: &Path) -> Result<(), String> {
+    if !path.is_absolute() {
+        return Err("Path must be absolute".to_string());
+    }
+    if path
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err("Path cannot contain '..' components".to_string());
+    }
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            return Err(format!(
+                "Parent directory does not exist: {}",
+                parent.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Validate that a path is within allowed directories
 ///
 /// # Security
@@ -928,5 +954,37 @@ mod tests {
         assert_eq!(parsed["fontSize"], 14);
 
         drop(temp);
+    }
+
+    #[test]
+    fn test_validate_dialog_path_absolute_accepted() {
+        let temp = setup_test_env();
+        let path = temp.path().join("test.txt");
+        assert!(validate_dialog_path(&path).is_ok());
+        drop(temp);
+    }
+
+    #[test]
+    fn test_validate_dialog_path_relative_rejected() {
+        let path = Path::new("relative/path.txt");
+        let result = validate_dialog_path(path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("absolute"));
+    }
+
+    #[test]
+    fn test_validate_dialog_path_parent_dir_rejected() {
+        let path = Path::new("/some/path/../escape.txt");
+        let result = validate_dialog_path(path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("'..'"));
+    }
+
+    #[test]
+    fn test_validate_dialog_path_nonexistent_parent_rejected() {
+        let path = Path::new("/nonexistent_dir_abc123/file.txt");
+        let result = validate_dialog_path(path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("does not exist"));
     }
 }

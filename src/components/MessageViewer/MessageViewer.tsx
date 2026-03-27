@@ -481,6 +481,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     virtualizer,
     getScrollIndex,
     scrollElementReady,
+    targetMessageUuid,
   });
 
   // Handle Deep Linking / Scrolling to Target

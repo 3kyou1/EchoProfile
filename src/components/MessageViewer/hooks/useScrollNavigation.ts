@@ -32,6 +32,8 @@ interface UseScrollNavigationOptions {
   getScrollIndex?: (uuid: string) => number | null;
   /** Whether the scroll element is ready (OverlayScrollbars initialized) */
   scrollElementReady?: boolean;
+  /** When set, skip auto-scroll-to-bottom so the target useEffect can scroll instead */
+  targetMessageUuid?: string | null;
 }
 
 interface UseScrollNavigationReturn {
@@ -54,6 +56,7 @@ export const useScrollNavigation = ({
   virtualizer,
   getScrollIndex,
   scrollElementReady = false,
+  targetMessageUuid,
 }: UseScrollNavigationOptions): UseScrollNavigationReturn => {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
@@ -202,6 +205,11 @@ export const useScrollNavigation = ({
       selectedSessionId &&
       scrollReadyForSessionId !== selectedSessionId
     ) {
+      // targetMessageUuid가 있으면 scrollToBottom을 건너뛰고 target scroll에 위임
+      if (targetMessageUuid) {
+        setScrollReadyForSessionId(selectedSessionId);
+        return;
+      }
       if (import.meta.env.DEV) {
         console.log(`[useScrollNavigation] Starting scroll for session ${selectedSessionId?.slice(-8)}, messages: ${messagesLength}`);
       }
@@ -230,7 +238,7 @@ export const useScrollNavigation = ({
         clearTimeout(scrollTimeoutRef.current);
       }
     };
-  }, [messagesLength, isLoading, selectedSessionId, scrollReadyForSessionId, scrollToBottom, scrollElementReady]);
+  }, [messagesLength, isLoading, selectedSessionId, scrollReadyForSessionId, scrollToBottom, scrollElementReady, targetMessageUuid]);
 
   // 현재 매치 변경 시 해당 하이라이트로 스크롤
   useEffect(() => {

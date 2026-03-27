@@ -8,18 +8,31 @@ import {
     CornerDownLeft,
     X,
     Loader2,
+    Filter,
+    User,
+    Bot,
+    MessageSquare,
+    Lightbulb,
 } from "lucide-react";
 import { Dialog, DialogContent, Input } from "@/components/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/store/useAppStore";
 import type { ClaudeMessage, ClaudeSession, ContentItem } from "@/types";
-import { getProviderLabel, hasNonDefaultProvider } from "@/utils/providers";
+import { getProviderLabel, hasNonDefaultProvider, getProviderBadgeStyle } from "@/utils/providers";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type GlobalSearchResult = ClaudeMessage;
+
+type MessageTypeFilter = "all" | "user" | "assistant";
 
 interface GlobalSearchModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
+
+const MAX_RESULTS = 100;
 
 export const GlobalSearchModal = ({
     isOpen,
@@ -30,18 +43,18 @@ export const GlobalSearchModal = ({
     const [results, setResults] = useState<GlobalSearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [messageTypeFilter, setMessageTypeFilter] = useState<MessageTypeFilter>("all");
     const inputRef = useRef<HTMLInputElement>(null);
     const resultsContainerRef = useRef<HTMLDivElement>(null);
-    const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-        null,
-    );
+    const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName, activeProviders } =
+    const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName, activeProviders, navigateToMessage, clearTargetMessage } =
         useAppStore();
+    const [selectedProjectPath, setSelectedProjectPath] = useState<string>("all");
 
     // Group results by project name
     const groupedResults = useMemo(() => {
-        const groups = new Map<string, { label: string; items: GlobalSearchResult[] }>();
+        const groups = new Map<string, { label: string; provider?: string; items: GlobalSearchResult[] }>();
 
         for (const result of results) {
             const projectName =
@@ -54,7 +67,7 @@ export const GlobalSearchModal = ({
             const groupLabel = `${projectName} (${providerLabel})`;
 
             if (!groups.has(groupKey)) {
-                groups.set(groupKey, { label: groupLabel, items: [] });
+                groups.set(groupKey, { label: groupLabel, provider: result.provider, items: [] });
             }
             groups.get(groupKey)!.items.push(result);
         }
@@ -77,15 +90,11 @@ export const GlobalSearchModal = ({
         return getSessionDisplayName(result.sessionId);
     }, [getSessionDisplayName]);
 
-    // Maximum results to display for performance
-    const MAX_RESULTS = 100;
-
     // Debounced search
     const performSearch = useCallback(
         async (searchQuery: string) => {
             const trimmedQuery = searchQuery.trim();
 
-            // Require at least 2 characters to search
             if (!claudePath || trimmedQuery.length < 2) {
                 setResults([]);
                 setIsSearching(false);
@@ -94,23 +103,33 @@ export const GlobalSearchModal = ({
 
             setIsSearching(true);
             try {
+                const filters: Record<string, unknown> = {};
+                if (selectedProjectPath !== "all") {
+                    // Backend matches by directory name (last path segment), not full path
+                    const dirName = selectedProjectPath.split(/[\\/]/).pop() || selectedProjectPath;
+                    filters.projects = [dirName];
+                }
+                if (messageTypeFilter !== "all") {
+                    filters.messageType = messageTypeFilter;
+                }
                 const hasNonClaudeProviders = hasNonDefaultProvider(activeProviders);
                 const searchResults = await api<GlobalSearchResult[]>(
                     hasNonClaudeProviders ? "search_all_providers" : "search_messages",
                     hasNonClaudeProviders
-                        ? { claudePath, query: trimmedQuery, activeProviders, filters: {}, limit: MAX_RESULTS }
-                        : { claudePath, query: trimmedQuery, filters: {}, limit: MAX_RESULTS },
+                        ? { claudePath, query: trimmedQuery, activeProviders, filters, limit: MAX_RESULTS }
+                        : { claudePath, query: trimmedQuery, filters, limit: MAX_RESULTS },
                 );
                 setResults(searchResults);
                 setSelectedIndex(0);
             } catch (error) {
                 console.error("Global search failed:", error);
                 setResults([]);
+                toast.error(t("globalSearch.searchFailed"));
             } finally {
                 setIsSearching(false);
             }
         },
-        [claudePath, activeProviders],
+        [claudePath, activeProviders, selectedProjectPath, messageTypeFilter],
     );
 
     // Handle input change with debounce
@@ -133,64 +152,64 @@ export const GlobalSearchModal = ({
     // Navigate to selected result
     const handleSelectResult = useCallback(
         async (result: GlobalSearchResult) => {
-            // First, check if the session is in the currently loaded sessions
-            let targetSession = sessions.find(
-                (s) =>
-                    s.session_id === result.sessionId ||
-                    s.actual_session_id === result.sessionId,
-            );
+            try {
+                let targetSession = sessions.find(
+                    (s) =>
+                        s.session_id === result.sessionId ||
+                        s.actual_session_id === result.sessionId,
+                );
 
-            if (targetSession) {
-                // Session is in current project, just select it
-                await selectSession(targetSession);
-                onClose();
-                return;
-            }
-
-            // Session not in current project - search through all projects
-            for (const project of projects) {
-                try {
-                    // Load sessions for this project via provider-aware invoke
-                    const projectProvider = project.provider ?? "claude";
-                    const { excludeSidechain } = useAppStore.getState();
-                    const projectSessions = await api<ClaudeSession[]>(
-                        projectProvider !== "claude" ? "load_provider_sessions" : "load_project_sessions",
-                        projectProvider !== "claude"
-                            ? { provider: projectProvider, projectPath: project.path, excludeSidechain }
-                            : { projectPath: project.path, excludeSidechain },
-                    );
-
-                    // Check if any session matches
-                    targetSession = projectSessions.find(
-                        (s) =>
-                            s.session_id === result.sessionId ||
-                            s.actual_session_id === result.sessionId,
-                    );
-
-                    if (targetSession) {
-                        // Found it! Select the project first, then the session
-                        await selectProject(project);
-                        // After selectProject, sessions state is updated
-                        // We need to select the session from the updated state
-                        await selectSession(targetSession);
-                        onClose();
-                        return;
-                    }
-                } catch (error) {
-                    console.error(
-                        `Failed to load sessions for project ${project.name}:`,
-                        error,
-                    );
+                if (targetSession) {
+                    if (result.uuid) navigateToMessage(result.uuid);
+                    await selectSession(targetSession);
+                    onClose();
+                    return;
                 }
-            }
 
-            // Session not found in any project
-            console.warn(
-                `Could not find session ${result.sessionId} in any project`,
-            );
-            onClose();
+                for (const project of projects) {
+                    try {
+                        const projectProvider = project.provider ?? "claude";
+                        const { excludeSidechain } = useAppStore.getState();
+                        const projectSessions = await api<ClaudeSession[]>(
+                            projectProvider !== "claude" ? "load_provider_sessions" : "load_project_sessions",
+                            projectProvider !== "claude"
+                                ? { provider: projectProvider, projectPath: project.path, excludeSidechain }
+                                : { projectPath: project.path, excludeSidechain },
+                        );
+
+                        targetSession = projectSessions.find(
+                            (s) =>
+                                s.session_id === result.sessionId ||
+                                s.actual_session_id === result.sessionId,
+                        );
+
+                        if (targetSession) {
+                            if (result.uuid) navigateToMessage(result.uuid);
+                            await selectProject(project);
+                            await selectSession(targetSession);
+                            onClose();
+                            return;
+                        }
+                    } catch (error) {
+                        console.error(
+                            `Failed to load sessions for project ${project.name}:`,
+                            error,
+                        );
+                    }
+                }
+
+                // Session not found in any project
+                clearTargetMessage();
+                toast.error(t("globalSearch.sessionNotFound"));
+                onClose();
+            } catch (error) {
+                clearTargetMessage();
+                console.error("Failed to navigate to search result:", error);
+                toast.error(t("globalSearch.navigationFailed"));
+                onClose();
+            }
         },
-        [projects, sessions, selectProject, selectSession, onClose],
+        [projects, sessions, selectProject, selectSession, navigateToMessage, clearTargetMessage, onClose, t],
     );
 
     // Keyboard navigation
@@ -244,8 +263,20 @@ export const GlobalSearchModal = ({
             setQuery("");
             setResults([]);
             setSelectedIndex(0);
+            setSelectedProjectPath("all");
+            setMessageTypeFilter("all");
         }
     }, [isOpen]);
+
+    // Re-search when filters change. `query` is intentionally omitted —
+    // keystroke-driven searches go through handleInputChange's debounce.
+    // This effect only fires when performSearch identity changes (i.e., filter deps).
+    useEffect(() => {
+        if (query.trim().length >= 2) {
+            performSearch(query);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [performSearch]);
 
     // Cleanup debounce on unmount
     useEffect(() => {
@@ -256,27 +287,44 @@ export const GlobalSearchModal = ({
         };
     }, []);
 
-    // Get preview text from message content
+    // Get preview text centered around the search term
     const getPreviewText = (message: GlobalSearchResult): string => {
         if (!message.content) return t("globalSearch.noPreview");
 
         const content = message.content;
-        if (typeof content === "string") {
-            return content.slice(0, 150) + (content.length > 150 ? "..." : "");
-        }
+        let fullText = "";
 
-        if (Array.isArray(content)) {
+        if (typeof content === "string") {
+            fullText = content;
+        } else if (Array.isArray(content)) {
+            const texts: string[] = [];
             for (const item of content as ContentItem[]) {
                 if (item.type === "text" && "text" in item) {
-                    const text = item.text as string;
-                    return (
-                        text.slice(0, 150) + (text.length > 150 ? "..." : "")
-                    );
+                    texts.push(item.text as string);
                 }
+            }
+            fullText = texts.join(" ");
+        }
+
+        if (!fullText) return t("globalSearch.noPreview");
+
+        // Find search term position and show surrounding context
+        const trimmedQuery = query.trim().toLowerCase();
+        if (trimmedQuery.length >= 2) {
+            const lowerText = fullText.toLowerCase();
+            const matchIndex = lowerText.indexOf(trimmedQuery);
+            if (matchIndex !== -1) {
+                const contextRadius = 60;
+                const start = Math.max(0, matchIndex - contextRadius);
+                const end = Math.min(fullText.length, matchIndex + trimmedQuery.length + contextRadius);
+                const slice = fullText.slice(start, end);
+                const prefix = start > 0 ? "..." : "";
+                const suffix = end < fullText.length ? "..." : "";
+                return prefix + slice + suffix;
             }
         }
 
-        return t("globalSearch.noPreview");
+        return fullText.slice(0, 150) + (fullText.length > 150 ? "..." : "");
     };
 
     // Format timestamp
@@ -294,18 +342,22 @@ export const GlobalSearchModal = ({
         }
     };
 
-    // Highlight search term in text
-    const highlightText = (text: string, searchTerm: string): React.ReactNode => {
-        if (!searchTerm.trim()) return text;
-
-        const regex = new RegExp(
-            `(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+    // Memoize regex to avoid re-creation per result item
+    const highlightRegex = useMemo(() => {
+        const trimmed = query.trim();
+        if (!trimmed) return null;
+        return new RegExp(
+            `(${trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
             "i",
         );
-        const parts = text.split(regex);
+    }, [query]);
 
+    const highlightText = (text: string): React.ReactNode => {
+        if (!highlightRegex) return text;
+
+        const parts = text.split(highlightRegex);
         return parts.map((part, index) =>
-            regex.test(part) ? (
+            highlightRegex.test(part) ? (
                 <mark
                     key={index}
                     className="bg-yellow-300 dark:bg-yellow-500/40 text-foreground rounded-sm px-0.5"
@@ -354,9 +406,60 @@ export const GlobalSearchModal = ({
                                 inputRef.current?.focus();
                             }}
                             className="p-1 hover:bg-muted rounded"
+                            aria-label={t("globalSearch.clearSearch")}
                         >
                             <X className="w-3 h-3 text-muted-foreground" />
                         </button>
+                    )}
+                </div>
+
+                {/* Filters Bar */}
+                <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/20">
+                    {/* Message Type Filter */}
+                    <div className="flex items-center gap-1">
+                        {(["all", "user", "assistant"] as const).map((type) => (
+                            <button
+                                key={type}
+                                onClick={() => setMessageTypeFilter(type)}
+                                className={cn(
+                                    "flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors",
+                                    messageTypeFilter === type
+                                        ? "bg-foreground/10 text-foreground font-medium"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                )}
+                                aria-label={t(`globalSearch.filterType.${type}`)}
+                            >
+                                {type === "all" && <MessageSquare className="w-3 h-3" />}
+                                {type === "user" && <User className="w-3 h-3" />}
+                                {type === "assistant" && <Bot className="w-3 h-3" />}
+                                <span>{t(`globalSearch.filterType.${type}`)}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Divider */}
+                    {projects.length > 1 && (
+                        <div className="w-px h-4 bg-border" />
+                    )}
+
+                    {/* Project Filter */}
+                    {projects.length > 1 && (
+                        <>
+                            <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <Select value={selectedProjectPath} onValueChange={setSelectedProjectPath}>
+                                <SelectTrigger className="h-7 text-xs border-border w-40">
+                                    <SelectValue placeholder={t("globalSearch.allProjects")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">{t("globalSearch.allProjects")}</SelectItem>
+                                    {projects.map((project) => (
+                                        <SelectItem key={project.path} value={project.path}>
+                                            {project.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </>
                     )}
                 </div>
 
@@ -365,21 +468,58 @@ export const GlobalSearchModal = ({
                     ref={resultsContainerRef}
                     className="max-h-100 overflow-y-auto"
                 >
+                    {/* Loading skeleton */}
                     {isSearching && results.length === 0 && (
-                        <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                            {t("globalSearch.searching")}
+                        <div className="py-4 space-y-3 px-4">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                                <div key={i} className="animate-pulse">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <div className="h-4 w-12 bg-muted rounded" />
+                                        <div className="h-3 w-20 bg-muted rounded" />
+                                    </div>
+                                    <div className="h-4 w-full bg-muted rounded mb-1" />
+                                    <div className="h-4 w-3/4 bg-muted rounded" />
+                                </div>
+                            ))}
                         </div>
                     )}
 
-                    {!isSearching && query && results.length === 0 && (
+                    {!isSearching && query.trim().length >= 2 && results.length === 0 && (
                         <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                             {t("globalSearch.noResults")}
                         </div>
                     )}
 
+                    {/* Empty state with search tips */}
                     {!query && (
+                        <div className="px-6 py-8 space-y-4">
+                            <div className="text-center">
+                                <Search className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
+                                <p className="text-sm text-muted-foreground">
+                                    {t("globalSearch.hint")}
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-start gap-2 text-xs text-muted-foreground/70">
+                                    <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                    <span>{t("globalSearch.tips.minChars")}</span>
+                                </div>
+                                <div className="flex items-start gap-2 text-xs text-muted-foreground/70">
+                                    <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                    <span>{t("globalSearch.tips.filters")}</span>
+                                </div>
+                                <div className="flex items-start gap-2 text-xs text-muted-foreground/70">
+                                    <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                    <span>{t("globalSearch.tips.navigate")}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Typing but not enough chars */}
+                    {query && query.trim().length < 2 && !isSearching && (
                         <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                            {t("globalSearch.hint")}
+                            {t("globalSearch.tips.minChars")}
                         </div>
                     )}
 
@@ -389,53 +529,55 @@ export const GlobalSearchModal = ({
                                 ([groupKey, group]) => (
                                     <div key={groupKey}>
                                         {/* Project Header */}
-                                        <div className="px-4 py-1.5 text-xs font-medium text-muted-foreground bg-muted sticky top-0 truncate">
-                                            {group.label}
+                                        <div className="px-4 py-1.5 text-xs font-medium text-muted-foreground bg-muted sticky top-0 truncate flex items-center gap-2">
+                                            {group.provider && group.provider !== "claude" && (
+                                                <Badge
+                                                    size="sm"
+                                                    className={cn(
+                                                        "rounded px-1 py-0 text-2xs",
+                                                        getProviderBadgeStyle(group.provider)
+                                                    )}
+                                                >
+                                                    {getProviderLabel((key, fallback) => t(key, fallback), group.provider)}
+                                                </Badge>
+                                            )}
+                                            <span className="truncate">{group.label}</span>
                                         </div>
 
                                         {/* Results in this project */}
                                         {group.items.map((result) => {
                                             const index = currentResultIndex++;
-                                            const isSelected =
-                                                index === selectedIndex;
+                                            const isSelected = index === selectedIndex;
 
                                             return (
                                                 <button
                                                     key={result.uuid}
                                                     data-index={index}
-                                                    onClick={() =>
-                                                        handleSelectResult(
-                                                            result,
-                                                        )
-                                                    }
-                                                    className={`w-full text-left px-4 py-2.5 hover:bg-muted/50 transition-colors ${
-                                                        isSelected
-                                                            ? "bg-muted"
-                                                            : ""
-                                                    }`}
+                                                    onClick={() => handleSelectResult(result)}
+                                                    className={cn(
+                                                        "w-full text-left px-4 py-2.5 hover:bg-muted/50 transition-colors",
+                                                        isSelected && "bg-muted"
+                                                    )}
                                                 >
                                                     <div className="flex items-start gap-3">
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <span
-                                                                    className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                                                                        result.type ===
-                                                                        "user"
+                                                                    className={cn(
+                                                                        "inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-medium",
+                                                                        result.type === "user"
                                                                             ? "bg-blue-500/10 text-blue-500"
-                                                                            : result.type ===
-                                                                                "assistant"
+                                                                            : result.type === "assistant"
                                                                               ? "bg-amber-500/10 text-amber-500"
                                                                               : "bg-gray-500/10 text-gray-500"
-                                                                    }`}
+                                                                    )}
                                                                 >
-                                                                    {
-                                                                        result.type
-                                                                    }
+                                                                    {result.type === "user" && <User className="w-3 h-3" />}
+                                                                    {result.type === "assistant" && <Bot className="w-3 h-3" />}
+                                                                    {result.type}
                                                                 </span>
                                                                 <span className="text-xs text-muted-foreground">
-                                                                    {formatTimestamp(
-                                                                        result.timestamp,
-                                                                    )}
+                                                                    {formatTimestamp(result.timestamp)}
                                                                 </span>
                                                             </div>
                                                             {(() => {
@@ -447,10 +589,7 @@ export const GlobalSearchModal = ({
                                                                 ) : null;
                                                             })()}
                                                             <p className="text-sm text-foreground line-clamp-2">
-                                                                {highlightText(
-                                                                    getPreviewText(result),
-                                                                    query,
-                                                                )}
+                                                                {highlightText(getPreviewText(result))}
                                                             </p>
                                                         </div>
                                                     </div>

@@ -20,6 +20,7 @@ import { useModal } from "@/contexts/modal";
 
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { isMacOS } from "@/utils/platform";
 import { SettingDropdown } from "./SettingDropdown";
 
 interface HeaderProps {
@@ -27,6 +28,8 @@ interface HeaderProps {
   analyticsComputed: UseAnalyticsReturn["computed"];
   updater: UseUpdaterReturn;
 }
+
+const SHORTCUT_LABEL = isMacOS() ? "⌘+K" : "Ctrl+K";
 
 export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderProps) => {
   const { t } = useTranslation();
@@ -136,7 +139,18 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1">
-        {/* Mobile search button */}
+        {/* Search button with shortcut hint */}
+        <button
+          onClick={() => openModal("globalSearch")}
+          className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border/50 text-xs"
+          aria-label={t("common.commandPalette")}
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span>{t("globalSearch.placeholder")}</span>
+          <kbd className="ml-1 px-1 py-0.5 text-[10px] font-mono bg-muted rounded border border-border">
+            {SHORTCUT_LABEL}
+          </kbd>
+        </button>
         <button
           onClick={() => openModal("globalSearch")}
           className="md:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

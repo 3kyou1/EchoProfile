@@ -185,6 +185,8 @@ fn handle_file_event(app_handle: &AppHandle, event: &DebouncedEvent) {
         return;
     };
 
+    super::session::invalidate_search_cache();
+
     if let Err(e) = app_handle.emit(&watch_event.event_type, &watch_event) {
         log::error!("Failed to emit file watch event: {e}");
     }

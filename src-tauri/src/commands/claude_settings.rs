@@ -579,11 +579,14 @@ pub(crate) fn validate_dialog_path(path: &Path) -> Result<(), String> {
                 parent.display()
             ));
         }
-        if parent
-            .symlink_metadata()
-            .map(|m| m.file_type().is_symlink())
-            .unwrap_or(false)
-        {
+        let metadata = parent.symlink_metadata().map_err(|e| {
+            format!(
+                "Failed to read metadata for parent directory {}: {}",
+                parent.display(),
+                e
+            )
+        })?;
+        if metadata.file_type().is_symlink() {
             return Err("Symlink parent directories are not allowed".to_string());
         }
     }
@@ -606,12 +609,19 @@ pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
     // Canonicalize home to resolve symlinks (e.g. macOS /var → /private/var)
     let home = home_raw.canonicalize().unwrap_or_else(|_| home_raw.clone());
     let home = strip_windows_prefix(&home);
-    let allowed_dirs = [
-        home.join(".claude-history-viewer").join("exports"),
-        home.join("Downloads"),
-        home.join("Documents"),
-        home.join("Desktop"),
-    ];
+    // Use known-folder APIs to support Windows folder redirection (e.g. OneDrive).
+    // Fall back to home-relative paths when the API returns None.
+    let mut allowed_dirs = vec![home.join(".claude-history-viewer").join("exports")];
+    for (api_dir, fallback_name) in [
+        (dirs::download_dir(), "Downloads"),
+        (dirs::document_dir(), "Documents"),
+        (dirs::desktop_dir(), "Desktop"),
+    ] {
+        let resolved = api_dir.unwrap_or_else(|| home.join(fallback_name));
+        let resolved =
+            strip_windows_prefix(&resolved.canonicalize().unwrap_or_else(|_| resolved.clone()));
+        allowed_dirs.push(resolved);
+    }
 
     // For non-existing paths, canonicalize parent
     let canonical = if path.exists() {
@@ -994,6 +1004,7 @@ mod tests {
         assert!(result.unwrap_err().contains("does not exist"));
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_validate_dialog_path_symlink_parent_rejected() {
         let temp = setup_test_env();

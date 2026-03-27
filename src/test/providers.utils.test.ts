@@ -35,7 +35,7 @@ describe("providers utils", () => {
   });
 
   it("keeps provider id list stable for all known providers", () => {
-    expect(PROVIDER_IDS).toEqual(["claude", "codex", "opencode"]);
+    expect(PROVIDER_IDS).toEqual(["aider", "claude", "cline", "codex", "cursor", "gemini", "opencode"]);
   });
 
   it("knows which providers support conversation breakdown", () => {

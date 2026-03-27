@@ -21,6 +21,7 @@ import { useAppStore } from "@/store/useAppStore";
 import type { ClaudeMessage, ClaudeSession, ContentItem } from "@/types";
 import { getProviderLabel, hasNonDefaultProvider, getProviderBadgeStyle } from "@/utils/providers";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type GlobalSearchResult = ClaudeMessage;
 
@@ -47,7 +48,7 @@ export const GlobalSearchModal = ({
     const resultsContainerRef = useRef<HTMLDivElement>(null);
     const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName, activeProviders, navigateToMessage } =
+    const { claudePath, projects, selectProject, selectSession, sessions, getSessionDisplayName, activeProviders, navigateToMessage, clearTargetMessage } =
         useAppStore();
     const [selectedProjectPath, setSelectedProjectPath] = useState<string>("all");
 
@@ -150,57 +151,64 @@ export const GlobalSearchModal = ({
     // Navigate to selected result
     const handleSelectResult = useCallback(
         async (result: GlobalSearchResult) => {
-            let targetSession = sessions.find(
-                (s) =>
-                    s.session_id === result.sessionId ||
-                    s.actual_session_id === result.sessionId,
-            );
+            try {
+                let targetSession = sessions.find(
+                    (s) =>
+                        s.session_id === result.sessionId ||
+                        s.actual_session_id === result.sessionId,
+                );
 
-            if (targetSession) {
-                if (result.uuid) navigateToMessage(result.uuid);
-                await selectSession(targetSession);
-                onClose();
-                return;
-            }
-
-            for (const project of projects) {
-                try {
-                    const projectProvider = project.provider ?? "claude";
-                    const { excludeSidechain } = useAppStore.getState();
-                    const projectSessions = await api<ClaudeSession[]>(
-                        projectProvider !== "claude" ? "load_provider_sessions" : "load_project_sessions",
-                        projectProvider !== "claude"
-                            ? { provider: projectProvider, projectPath: project.path, excludeSidechain }
-                            : { projectPath: project.path, excludeSidechain },
-                    );
-
-                    targetSession = projectSessions.find(
-                        (s) =>
-                            s.session_id === result.sessionId ||
-                            s.actual_session_id === result.sessionId,
-                    );
-
-                    if (targetSession) {
-                        if (result.uuid) navigateToMessage(result.uuid);
-                        await selectProject(project);
-                        await selectSession(targetSession);
-                        onClose();
-                        return;
-                    }
-                } catch (error) {
-                    console.error(
-                        `Failed to load sessions for project ${project.name}:`,
-                        error,
-                    );
+                if (targetSession) {
+                    if (result.uuid) navigateToMessage(result.uuid);
+                    await selectSession(targetSession);
+                    onClose();
+                    return;
                 }
-            }
 
-            console.warn(
-                `Could not find session ${result.sessionId} in any project`,
-            );
-            onClose();
+                for (const project of projects) {
+                    try {
+                        const projectProvider = project.provider ?? "claude";
+                        const { excludeSidechain } = useAppStore.getState();
+                        const projectSessions = await api<ClaudeSession[]>(
+                            projectProvider !== "claude" ? "load_provider_sessions" : "load_project_sessions",
+                            projectProvider !== "claude"
+                                ? { provider: projectProvider, projectPath: project.path, excludeSidechain }
+                                : { projectPath: project.path, excludeSidechain },
+                        );
+
+                        targetSession = projectSessions.find(
+                            (s) =>
+                                s.session_id === result.sessionId ||
+                                s.actual_session_id === result.sessionId,
+                        );
+
+                        if (targetSession) {
+                            if (result.uuid) navigateToMessage(result.uuid);
+                            await selectProject(project);
+                            await selectSession(targetSession);
+                            onClose();
+                            return;
+                        }
+                    } catch (error) {
+                        console.error(
+                            `Failed to load sessions for project ${project.name}:`,
+                            error,
+                        );
+                    }
+                }
+
+                // Session not found in any project
+                clearTargetMessage();
+                toast.error(t("globalSearch.sessionNotFound"));
+                onClose();
+            } catch (error) {
+                clearTargetMessage();
+                console.error("Failed to navigate to search result:", error);
+                toast.error(t("globalSearch.navigationFailed"));
+                onClose();
+            }
         },
-        [projects, sessions, selectProject, selectSession, navigateToMessage, onClose],
+        [projects, sessions, selectProject, selectSession, navigateToMessage, clearTargetMessage, onClose, t],
     );
 
     // Keyboard navigation

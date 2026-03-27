@@ -190,6 +190,8 @@
   "globalSearch.filterType.all": "全部",
   "globalSearch.filterType.user": "使用者",
   "globalSearch.filterType.assistant": "助理",
+  "globalSearch.sessionNotFound": "找不到工作階段",
+  "globalSearch.navigationFailed": "無法導航至訊息",
   "globalSearch.tips.minChars": "輸入至少2個字元開始搜尋",
   "globalSearch.tips.filters": "使用篩選器按訊息類型或專案縮小搜尋範圍",
   "globalSearch.tips.navigate": "使用 ↑↓ 瀏覽結果，Enter 選擇",

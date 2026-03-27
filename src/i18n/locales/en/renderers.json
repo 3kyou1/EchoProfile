@@ -190,6 +190,8 @@
   "globalSearch.filterType.all": "All",
   "globalSearch.filterType.user": "User",
   "globalSearch.filterType.assistant": "Assistant",
+  "globalSearch.sessionNotFound": "Session not found",
+  "globalSearch.navigationFailed": "Failed to navigate to message",
   "globalSearch.tips.minChars": "Type at least 2 characters to search",
   "globalSearch.tips.filters": "Use filters to narrow results by message type or project",
   "globalSearch.tips.navigate": "Use ↑↓ to navigate results, Enter to select",

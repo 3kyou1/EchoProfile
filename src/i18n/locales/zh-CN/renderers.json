@@ -190,6 +190,8 @@
   "globalSearch.filterType.all": "全部",
   "globalSearch.filterType.user": "用户",
   "globalSearch.filterType.assistant": "助手",
+  "globalSearch.sessionNotFound": "未找到会话",
+  "globalSearch.navigationFailed": "无法导航到消息",
   "globalSearch.tips.minChars": "输入至少2个字符开始搜索",
   "globalSearch.tips.filters": "使用筛选器按消息类型或项目缩小搜索范围",
   "globalSearch.tips.navigate": "使用 ↑↓ 浏览结果，Enter 选择",

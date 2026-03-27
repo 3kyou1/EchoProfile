@@ -190,6 +190,8 @@
   "globalSearch.filterType.all": "すべて",
   "globalSearch.filterType.user": "ユーザー",
   "globalSearch.filterType.assistant": "アシスタント",
+  "globalSearch.sessionNotFound": "セッションが見つかりません",
+  "globalSearch.navigationFailed": "メッセージへの移動に失敗しました",
   "globalSearch.tips.minChars": "2文字以上入力すると検索が開始されます",
   "globalSearch.tips.filters": "フィルターでメッセージの種類やプロジェクトを絞り込めます",
   "globalSearch.tips.navigate": "↑↓で結果を選択、Enterで確定",

@@ -174,6 +174,7 @@
   "gitWorkflowRenderer.gitWorkflow": "Git 워크플로우",
   "gitWorkflowRenderer.status": "상태:",
   "gitWorkflowRenderer.viewDiff": "Diff 보기",
+  "globalSearch.clearSearch": "검색어 지우기",
   "globalSearch.close": "닫기",
   "globalSearch.description": "모든 프로젝트와 세션에서 검색",
   "globalSearch.hint": "모든 대화에서 검색하려면 입력하세요",

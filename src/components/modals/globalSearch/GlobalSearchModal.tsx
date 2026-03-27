@@ -267,11 +267,14 @@ export const GlobalSearchModal = ({
         }
     }, [isOpen]);
 
-    // Re-search when filters change
+    // Re-search when filters change. `query` is intentionally omitted —
+    // keystroke-driven searches go through handleInputChange's debounce.
+    // This effect only fires when performSearch identity changes (i.e., filter deps).
     useEffect(() => {
         if (query.trim().length >= 2) {
             performSearch(query);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [performSearch]);
 
     // Cleanup debounce on unmount
@@ -402,7 +405,7 @@ export const GlobalSearchModal = ({
                                 inputRef.current?.focus();
                             }}
                             className="p-1 hover:bg-muted rounded"
-                            aria-label={t("globalSearch.close")}
+                            aria-label={t("globalSearch.clearSearch")}
                         >
                             <X className="w-3 h-3 text-muted-foreground" />
                         </button>

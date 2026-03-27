@@ -708,20 +708,19 @@ pub async fn save_screenshot(path: String, data: String) -> Result<(), String> {
     .map_err(|e| format!("Task join error: {e}"))?
 }
 
-/// Read text content from a file
+/// Read text content from a file chosen by user via native dialog.
+///
+/// Path is validated for basic safety (absolute, no traversal, parent exists).
+/// Directory allowlisting for `WebUI` callers is enforced at the HTTP handler layer.
 ///
 /// # Arguments
-/// * `path` - Absolute path to the file to read
-///
-/// # Returns
-/// File content as string on success, error message on failure
+/// * `path` - Absolute path chosen by user via open dialog
 #[tauri::command]
 pub async fn read_text_file(path: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let path = PathBuf::from(path);
 
-        // Validate path is in allowed directories
-        is_safe_path(&path)?;
+        validate_dialog_path(&path)?;
 
         fs::read_to_string(&path)
             .map_err(|e| format!("Failed to read file {}: {}", path.display(), e))
@@ -1004,5 +1003,27 @@ mod tests {
         let result = write_text_file("relative/path.txt".to_string(), "content".to_string()).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("absolute"));
+    }
+
+    #[tokio::test]
+    async fn test_read_text_file_success() {
+        let temp = setup_test_env();
+        let file_path = temp.path().join("read-test.json");
+        fs::write(&file_path, r#"{"key":"value"}"#).unwrap();
+
+        let result = read_text_file(file_path.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), r#"{"key":"value"}"#);
+        drop(temp);
+    }
+
+    #[tokio::test]
+    async fn test_read_text_file_nonexistent_returns_error() {
+        let temp = setup_test_env();
+        let file_path = temp.path().join("does-not-exist.json");
+
+        let result = read_text_file(file_path.to_string_lossy().to_string()).await;
+        assert!(result.is_err());
+        drop(temp);
     }
 }

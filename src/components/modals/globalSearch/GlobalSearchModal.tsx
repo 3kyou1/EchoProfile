@@ -104,7 +104,9 @@ export const GlobalSearchModal = ({
             try {
                 const filters: Record<string, unknown> = {};
                 if (selectedProjectPath !== "all") {
-                    filters.projects = [selectedProjectPath];
+                    // Backend matches by directory name (last path segment), not full path
+                    const dirName = selectedProjectPath.split(/[\\/]/).pop() || selectedProjectPath;
+                    filters.projects = [dirName];
                 }
                 if (messageTypeFilter !== "all") {
                     filters.messageType = messageTypeFilter;
@@ -283,12 +285,13 @@ export const GlobalSearchModal = ({
         if (typeof content === "string") {
             fullText = content;
         } else if (Array.isArray(content)) {
+            const texts: string[] = [];
             for (const item of content as ContentItem[]) {
                 if (item.type === "text" && "text" in item) {
-                    fullText = item.text as string;
-                    break;
+                    texts.push(item.text as string);
                 }
             }
+            fullText = texts.join(" ");
         }
 
         if (!fullText) return t("globalSearch.noPreview");

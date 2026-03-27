@@ -45,8 +45,9 @@ pub fn invalidate_search_cache() {
     CACHE_GENERATION.fetch_add(1, Ordering::Release);
 }
 
-fn cache_key(query: &str, filters: &serde_json::Value, limit: usize) -> u64 {
+fn cache_key(claude_path: &str, query: &str, filters: &serde_json::Value, limit: usize) -> u64 {
     let mut hasher = DefaultHasher::new();
+    claude_path.hash(&mut hasher);
     query.to_lowercase().hash(&mut hasher);
     filters.to_string().hash(&mut hasher);
     limit.hash(&mut hasher);
@@ -398,7 +399,7 @@ pub async fn search_messages(
     let max_results = limit.unwrap_or(DEFAULT_SEARCH_LIMIT);
     validate_search_filters(&filters)?;
 
-    let key = cache_key(&query, &filters, max_results);
+    let key = cache_key(&claude_path, &query, &filters, max_results);
     let current_gen = CACHE_GENERATION.load(Ordering::Acquire);
     if let Ok(mut cache) = SEARCH_CACHE.lock() {
         if let Some(cached) = cache.get(&key) {

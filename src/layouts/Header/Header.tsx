@@ -20,6 +20,7 @@ import { useModal } from "@/contexts/modal";
 
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { isMacOS } from "@/utils/platform";
 import { SettingDropdown } from "./SettingDropdown";
 
 interface HeaderProps {
@@ -28,8 +29,7 @@ interface HeaderProps {
   updater: UseUpdaterReturn;
 }
 
-const IS_MAC = typeof navigator !== "undefined" && /mac/i.test(navigator.userAgent);
-const SHORTCUT_LABEL = IS_MAC ? "⌘+K" : "Ctrl+K";
+const SHORTCUT_LABEL = isMacOS() ? "⌘+K" : "Ctrl+K";
 
 export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderProps) => {
   const { t } = useTranslation();

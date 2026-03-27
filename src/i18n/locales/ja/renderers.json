@@ -183,6 +183,7 @@
   "globalSearch.noResults": "結果が見つかりません",
   "globalSearch.placeholder": "メッセージを検索...",
   "globalSearch.results": "{{count}}件の結果",
+  "globalSearch.searchFailed": "検索に失敗しました",
   "globalSearch.searching": "検索中...",
   "globalSearch.select": "選択",
   "globalSearch.shortcutHint": "Cmd+Kで検索を開く",

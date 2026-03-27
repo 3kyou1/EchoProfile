@@ -562,7 +562,6 @@ pub async fn get_claude_json_config(
 ///
 /// Checks: absolute path, no `..` traversal, parent directory exists.
 /// Used by [`write_text_file`], [`read_text_file`], and [`save_screenshot`].
-#[allow(dead_code)]
 pub(crate) fn validate_dialog_path(path: &Path) -> Result<(), String> {
     if !path.is_absolute() {
         return Err("Path must be absolute".to_string());
@@ -622,21 +621,20 @@ pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
     }
 }
 
-/// Write text content to a file
+/// Write text content to a file chosen by user via native dialog.
+///
+/// Path is validated for basic safety (absolute, no traversal, parent exists).
+/// Directory allowlisting for `WebUI` callers is enforced at the HTTP handler layer.
 ///
 /// # Arguments
-/// * `path` - Absolute path to the file to write
+/// * `path` - Absolute path chosen by user via save dialog
 /// * `content` - Text content to write
-///
-/// # Returns
-/// Ok(()) on success, error message on failure
 #[tauri::command]
 pub async fn write_text_file(path: String, content: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         let path = PathBuf::from(path);
 
-        // Validate path is in allowed directories
-        is_safe_path(&path)?;
+        validate_dialog_path(&path)?;
 
         // Atomic write: write to temp file then rename
         let temp_path = path.with_extension("tmp");
@@ -986,5 +984,25 @@ mod tests {
         let result = validate_dialog_path(path);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("does not exist"));
+    }
+
+    #[tokio::test]
+    async fn test_write_text_file_to_temp_dir() {
+        let temp = setup_test_env();
+        let file_path = temp.path().join("export-test.md");
+        let content = "# Test Export\nHello world".to_string();
+
+        let result =
+            write_text_file(file_path.to_string_lossy().to_string(), content.clone()).await;
+        assert!(result.is_ok());
+        assert_eq!(fs::read_to_string(&file_path).unwrap(), content);
+        drop(temp);
+    }
+
+    #[tokio::test]
+    async fn test_write_text_file_relative_path_rejected() {
+        let result = write_text_file("relative/path.txt".to_string(), "content".to_string()).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("absolute"));
     }
 }

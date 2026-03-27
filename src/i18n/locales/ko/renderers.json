@@ -183,6 +183,7 @@
   "globalSearch.noResults": "검색 결과 없음",
   "globalSearch.placeholder": "메시지 검색...",
   "globalSearch.results": "{{count}}개 결과",
+  "globalSearch.searchFailed": "검색에 실패했습니다",
   "globalSearch.searching": "검색 중...",
   "globalSearch.select": "선택",
   "globalSearch.shortcutHint": "Cmd+K를 눌러 검색 열기",

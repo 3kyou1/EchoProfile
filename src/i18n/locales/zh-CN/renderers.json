@@ -183,6 +183,7 @@
   "globalSearch.noResults": "未找到结果",
   "globalSearch.placeholder": "搜索消息...",
   "globalSearch.results": "{{count}} 个结果",
+  "globalSearch.searchFailed": "搜索失败",
   "globalSearch.searching": "搜索中...",
   "globalSearch.select": "选择",
   "globalSearch.shortcutHint": "按 Cmd+K 打开搜索",

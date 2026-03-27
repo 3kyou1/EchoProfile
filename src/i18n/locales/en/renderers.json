@@ -183,6 +183,7 @@
   "globalSearch.noResults": "No results found",
   "globalSearch.placeholder": "Search messages...",
   "globalSearch.results": "{{count}} results",
+  "globalSearch.searchFailed": "Search failed",
   "globalSearch.searching": "Searching...",
   "globalSearch.select": "Select",
   "globalSearch.shortcutHint": "Press Cmd+K to open search",

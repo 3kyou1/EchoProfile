@@ -124,6 +124,7 @@ export const GlobalSearchModal = ({
             } catch (error) {
                 console.error("Global search failed:", error);
                 setResults([]);
+                toast.error(t("globalSearch.searchFailed"));
             } finally {
                 setIsSearching(false);
             }

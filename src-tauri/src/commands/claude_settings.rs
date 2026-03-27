@@ -583,22 +583,26 @@ pub(crate) fn validate_dialog_path(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Validate that a path is within allowed directories
+/// Validate that a path is within allowed directories.
 ///
-/// # Security
-/// Prevents unauthorized file system access by restricting operations to safe directories.
+/// Used by `WebUI` HTTP handlers to restrict file operations to safe directories.
+/// Tauri desktop commands use [`validate_dialog_path`] instead (OS dialog guarantees user intent).
 ///
 /// # Arguments
 /// * `path` - Path to validate
 ///
 /// # Returns
-/// Ok(()) if path is safe, error message if not
+/// `Ok(())` if path is safe, error message if not
 pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
+    let home_raw = dirs::home_dir().ok_or("Could not find home directory")?;
+    // Canonicalize home to resolve symlinks (e.g. macOS /var → /private/var)
+    let home = home_raw.canonicalize().unwrap_or_else(|_| home_raw.clone());
+    let home = strip_windows_prefix(&home);
     let allowed_dirs = [
         home.join(".claude-history-viewer").join("exports"),
         home.join("Downloads"),
         home.join("Documents"),
+        home.join("Desktop"),
     ];
 
     // For non-existing paths, canonicalize parent
@@ -612,12 +616,28 @@ pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
             .ok_or_else(|| "Invalid path".to_string())?
     };
 
+    // Strip \\?\ prefix on Windows for consistent comparison
+    // (canonicalize() returns \\?\C:\... but home_dir() returns C:\...)
+    let canonical = strip_windows_prefix(&canonical);
+
     if allowed_dirs.iter().any(|d| canonical.starts_with(d)) {
         Ok(())
     } else {
         Err(format!(
             "Path not in allowed directories. Allowed: {allowed_dirs:?}"
         ))
+    }
+}
+
+/// Strip the `\\?\` extended-length path prefix that Windows `canonicalize()` adds.
+///
+/// On non-Windows platforms this is a no-op (the prefix never appears).
+fn strip_windows_prefix(path: &Path) -> PathBuf {
+    let s = path.to_string_lossy();
+    if let Some(stripped) = s.strip_prefix(r"\\?\") {
+        PathBuf::from(stripped)
+    } else {
+        path.to_path_buf()
     }
 }
 
@@ -1006,6 +1026,67 @@ mod tests {
 
         let result = read_text_file(file_path.to_string_lossy().to_string()).await;
         assert!(result.is_err());
+        drop(temp);
+    }
+
+    #[test]
+    fn test_strip_windows_prefix_with_prefix() {
+        let path = Path::new(r"\\?\C:\Users\test");
+        let result = strip_windows_prefix(path);
+        assert_eq!(result, PathBuf::from(r"C:\Users\test"));
+    }
+
+    #[test]
+    fn test_strip_windows_prefix_without_prefix() {
+        let path = Path::new("/normal/unix/path");
+        let result = strip_windows_prefix(path);
+        assert_eq!(result, PathBuf::from("/normal/unix/path"));
+    }
+
+    #[test]
+    fn test_strip_windows_prefix_empty() {
+        let path = Path::new("");
+        let result = strip_windows_prefix(path);
+        assert_eq!(result, PathBuf::from(""));
+    }
+
+    #[test]
+    fn test_is_safe_path_downloads_accepted() {
+        let temp = setup_test_env();
+        let downloads = temp.path().join("Downloads");
+        fs::create_dir_all(&downloads).unwrap();
+        let file_path = downloads.join("export.md");
+        fs::write(&file_path, "test").unwrap();
+
+        let result = is_safe_path(&file_path);
+        assert!(result.is_ok());
+        drop(temp);
+    }
+
+    #[test]
+    fn test_is_safe_path_desktop_accepted() {
+        let temp = setup_test_env();
+        let desktop = temp.path().join("Desktop");
+        fs::create_dir_all(&desktop).unwrap();
+        let file_path = desktop.join("export.md");
+        fs::write(&file_path, "test").unwrap();
+
+        let result = is_safe_path(&file_path);
+        assert!(result.is_ok());
+        drop(temp);
+    }
+
+    #[test]
+    fn test_is_safe_path_disallowed_dir_rejected() {
+        let temp = setup_test_env();
+        let random_dir = temp.path().join("SomeRandomDir");
+        fs::create_dir_all(&random_dir).unwrap();
+        let file_path = random_dir.join("export.md");
+        fs::write(&file_path, "test").unwrap();
+
+        let result = is_safe_path(&file_path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not in allowed directories"));
         drop(temp);
     }
 }

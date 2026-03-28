@@ -56,7 +56,7 @@ function WslSectionInner({ isExpanded, onToggle }: WslSectionProps) {
     const loadDistros = async () => {
       setIsLoadingDistros(true);
       try {
-        const list = await api<WslDistro[]>("list_wsl_distros");
+        const list = await api<WslDistro[]>("detect_wsl_distros");
         if (!cancelled) {
           setDistros(list);
         }

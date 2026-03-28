@@ -31,6 +31,10 @@ pub fn get_base_path() -> Option<String> {
 
 /// Scan for all Gemini CLI projects from a specific base path.
 pub fn scan_projects_from_path(base_path: &str) -> Result<Vec<ClaudeProject>, String> {
+    if base_path.trim().is_empty() || !Path::new(base_path).is_absolute() {
+        return Err("Gemini base path must be a non-empty absolute path".to_string());
+    }
+
     let tmp_dir = PathBuf::from(base_path).join("tmp");
 
     let is_real_dir = std::fs::symlink_metadata(&tmp_dir)

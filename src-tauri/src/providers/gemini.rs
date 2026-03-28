@@ -29,10 +29,9 @@ pub fn get_base_path() -> Option<String> {
     dirs::home_dir().map(|h| h.join(".gemini").to_string_lossy().to_string())
 }
 
-/// Scan for all Gemini CLI projects
-pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
-    let base = get_base_path().ok_or("Could not determine Gemini base path")?;
-    let tmp_dir = PathBuf::from(&base).join("tmp");
+/// Scan for all Gemini CLI projects from a specific base path.
+pub fn scan_projects_from_path(base_path: &str) -> Result<Vec<ClaudeProject>, String> {
+    let tmp_dir = PathBuf::from(base_path).join("tmp");
 
     if !tmp_dir.is_dir() {
         return Ok(Vec::new());
@@ -110,6 +109,12 @@ pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
     }
 
     Ok(projects)
+}
+
+/// Scan for all Gemini CLI projects from the default location.
+pub fn scan_projects() -> Result<Vec<ClaudeProject>, String> {
+    let base = get_base_path().ok_or("Could not determine Gemini base path")?;
+    scan_projects_from_path(&base)
 }
 
 /// Load sessions for a Gemini project

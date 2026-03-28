@@ -2,6 +2,7 @@ pub mod commands;
 pub mod models;
 pub mod providers;
 pub mod utils;
+pub mod wsl;
 
 #[cfg(feature = "webui-server")]
 pub mod server;

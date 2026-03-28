@@ -127,7 +127,11 @@ pub fn scan_projects_from_path(base_path: &str) -> Result<Vec<ClaudeProject>, St
 
     let session_dirs: Vec<PathBuf> = [sessions_dir, archived_sessions_dir]
         .into_iter()
-        .filter(|path| path.exists() && path.is_dir())
+        .filter(|path| {
+            std::fs::symlink_metadata(path)
+                .map(|m| m.file_type().is_dir())
+                .unwrap_or(false)
+        })
         .collect();
 
     if session_dirs.is_empty() {

@@ -33,7 +33,10 @@ pub fn get_base_path() -> Option<String> {
 pub fn scan_projects_from_path(base_path: &str) -> Result<Vec<ClaudeProject>, String> {
     let tmp_dir = PathBuf::from(base_path).join("tmp");
 
-    if !tmp_dir.is_dir() {
+    let is_real_dir = std::fs::symlink_metadata(&tmp_dir)
+        .map(|m| m.file_type().is_dir())
+        .unwrap_or(false);
+    if !is_real_dir {
         return Ok(Vec::new());
     }
 

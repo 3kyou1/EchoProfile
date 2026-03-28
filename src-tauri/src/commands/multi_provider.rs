@@ -147,59 +147,35 @@ pub async fn scan_all_projects(
         }
     }
 
-    // WSL scanning
-    if wsl_enabled.unwrap_or(false) {
+    // WSL scanning (Claude only — other providers' load_sessions/load_messages
+    // use native base paths internally, so WSL projects would be visible but
+    // not loadable. Extending other providers requires base-path-aware loaders.)
+    if wsl_enabled.unwrap_or(false) && providers_to_scan.iter().any(|p| p == "claude") {
         let excluded = wsl_excluded_distros.unwrap_or_default();
 
         for (distro, home_path) in resolve_active_wsl_distros(&excluded) {
             let wsl_label = format!("WSL: {}", distro.name);
+            let claude_linux_path = home_path.join(".claude");
 
-            // CLI-based providers and their Linux data paths relative to home
-            let cli_providers: Vec<(&str, std::path::PathBuf)> = vec![
-                ("claude", home_path.join(".claude")),
-                ("codex", home_path.join(".codex")),
-                ("gemini", home_path.join(".gemini")),
-                ("opencode", home_path.join(".local/share/opencode")),
-            ];
-
-            for (provider_id, linux_data_path) in &cli_providers {
-                if !providers_to_scan.iter().any(|p| p == provider_id) {
-                    continue;
-                }
-
-                let unc_path =
-                    match crate::wsl::resolve_wsl_provider_path(&distro.name, linux_data_path) {
-                        Some(p) => p,
-                        None => continue,
-                    };
-
-                let unc_str = unc_path.to_string_lossy().to_string();
-
-                let scan_result = match *provider_id {
-                    "claude" => crate::commands::project::scan_projects(unc_str.clone()).await,
-                    "codex" => crate::providers::codex::scan_projects_from_path(&unc_str),
-                    "gemini" => crate::providers::gemini::scan_projects_from_path(&unc_str),
-                    "opencode" => crate::providers::opencode::scan_projects_from_path(&unc_str),
-                    _ => continue,
+            let unc_path =
+                match crate::wsl::resolve_wsl_provider_path(&distro.name, &claude_linux_path) {
+                    Some(p) => p,
+                    None => continue,
                 };
 
-                match scan_result {
-                    Ok(mut projects) => {
-                        for p in &mut projects {
-                            if p.provider.is_none() {
-                                p.provider = Some((*provider_id).to_string());
-                            }
-                            p.custom_directory_label = Some(wsl_label.clone());
+            let unc_str = unc_path.to_string_lossy().to_string();
+            match crate::commands::project::scan_projects(unc_str).await {
+                Ok(mut projects) => {
+                    for p in &mut projects {
+                        if p.provider.is_none() {
+                            p.provider = Some("claude".to_string());
                         }
-                        all_projects.extend(projects);
+                        p.custom_directory_label = Some(wsl_label.clone());
                     }
-                    Err(e) => {
-                        log::warn!(
-                            "WSL: {} scan failed for '{}': {e}",
-                            provider_id,
-                            distro.name
-                        );
-                    }
+                    all_projects.extend(projects);
+                }
+                Err(e) => {
+                    log::warn!("WSL: Claude scan failed for '{}': {e}", distro.name);
                 }
             }
         }

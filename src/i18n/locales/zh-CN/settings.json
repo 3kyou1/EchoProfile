@@ -524,5 +524,6 @@
   "settings.wsl.noDistros": "未找到 WSL 发行版",
   "settings.wsl.scanning": "正在扫描 WSL...",
   "settings.wsl.slowWarning": "WSL 文件访问可能比本地慢",
-  "settings.wsl.defaultBadge": "默认"
+  "settings.wsl.defaultBadge": "默认",
+  "settings.wsl.detectError": "检测 WSL 发行版失败"
 }

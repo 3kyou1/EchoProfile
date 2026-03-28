@@ -45,6 +45,7 @@ function WslSectionInner({ isExpanded, onToggle }: WslSectionProps) {
 
   const [distros, setDistros] = useState<WslDistro[]>([]);
   const [isLoadingDistros, setIsLoadingDistros] = useState(false);
+  const [distroError, setDistroError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!wslSettings.enabled) return;
@@ -53,14 +54,16 @@ function WslSectionInner({ isExpanded, onToggle }: WslSectionProps) {
 
     const loadDistros = async () => {
       setIsLoadingDistros(true);
+      setDistroError(null);
       try {
         const list = await api<WslDistro[]>("detect_wsl_distros");
         if (!cancelled) {
           setDistros(list);
         }
-      } catch {
+      } catch (err) {
         if (!cancelled) {
           setDistros([]);
+          setDistroError(String(err));
         }
       } finally {
         if (!cancelled) {
@@ -131,6 +134,10 @@ function WslSectionInner({ isExpanded, onToggle }: WslSectionProps) {
               {isLoadingDistros ? (
                 <p className="text-xs text-muted-foreground italic">
                   {t("settings.wsl.scanning")}
+                </p>
+              ) : distroError ? (
+                <p className="text-xs text-destructive">
+                  {t("settings.wsl.detectError")}
                 </p>
               ) : distros.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">

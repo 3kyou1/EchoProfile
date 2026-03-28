@@ -5,8 +5,8 @@
  * 직접 수정하지 마세요.
  *
  * 생성 명령: pnpm run generate:i18n-types
- * 생성 시간: 2026-03-28T02:59:53.742Z
- * 총 키 개수: 1721
+ * 생성 시간: 2026-03-28T04:13:32.935Z
+ * 총 키 개수: 1722
  * Namespace 수: 11
  */
 
@@ -571,7 +571,7 @@ export type SessionKeys =
   | 'session.title';
 
 /**
- * settings namespace의 번역 키 (526개)
+ * settings namespace의 번역 키 (527개)
  * 파일: locales/{lang}/settings.json
  */
 export type SettingsKeys =
@@ -610,6 +610,7 @@ export type SettingsKeys =
   | 'settings.customDirectories.removeConfirm'
   | 'settings.wsl.defaultBadge'
   | 'settings.wsl.description'
+  | 'settings.wsl.detectError'
   | 'settings.wsl.distros'
   | 'settings.wsl.enable'
   | 'settings.wsl.noDistros'
@@ -2814,6 +2815,7 @@ export type TranslationKey =
   | 'settings.customDirectories.removeConfirm'
   | 'settings.wsl.defaultBadge'
   | 'settings.wsl.description'
+  | 'settings.wsl.detectError'
   | 'settings.wsl.distros'
   | 'settings.wsl.enable'
   | 'settings.wsl.noDistros'

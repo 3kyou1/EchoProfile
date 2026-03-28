@@ -56,6 +56,14 @@ export interface CustomClaudePath {
   label?: string;
 }
 
+/** WSL (Windows Subsystem for Linux) integration settings */
+export interface WslSettings {
+  /** Whether WSL scanning is enabled */
+  enabled: boolean;
+  /** List of WSL distro names to exclude from scanning */
+  excludedDistros: string[];
+}
+
 /** Global user settings */
 export interface UserSettings {
   /** Glob patterns for projects to hide (e.g., "folders-dg-*") */
@@ -68,6 +76,8 @@ export interface UserSettings {
   groupingMode?: GroupingMode;
   /** Additional Claude configuration directories to scan */
   customClaudePaths?: CustomClaudePath[];
+  /** WSL integration settings (Windows only) */
+  wsl?: WslSettings;
 }
 
 // ============================================================================

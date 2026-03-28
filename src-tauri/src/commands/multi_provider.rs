@@ -25,6 +25,8 @@ pub async fn scan_all_projects(
     claude_path: Option<String>,
     active_providers: Option<Vec<String>>,
     custom_claude_paths: Option<Vec<CustomClaudePathParam>>,
+    wsl_enabled: Option<bool>,
+    wsl_excluded_distros: Option<Vec<String>>,
 ) -> Result<Vec<ClaudeProject>, String> {
     let providers_to_scan = active_providers.unwrap_or_else(|| {
         vec![
@@ -145,6 +147,77 @@ pub async fn scan_all_projects(
         }
     }
 
+    // WSL scanning (Windows only — on other platforms, detect_distros returns empty)
+    if wsl_enabled.unwrap_or(false) {
+        let excluded = wsl_excluded_distros.unwrap_or_default();
+        let distros = crate::wsl::detect_distros();
+
+        for distro in &distros {
+            if excluded.contains(&distro.name) {
+                continue;
+            }
+
+            let home_path = match crate::wsl::resolve_home_path(&distro.name) {
+                Ok(p) => p,
+                Err(e) => {
+                    log::warn!("WSL: Could not resolve home for '{}': {e}", distro.name);
+                    continue;
+                }
+            };
+
+            let wsl_label = format!("WSL: {}", distro.name);
+
+            // CLI-based providers and their Linux data paths relative to home
+            let cli_providers: Vec<(&str, std::path::PathBuf)> = vec![
+                ("claude", home_path.join(".claude")),
+                ("codex", home_path.join(".codex")),
+                ("gemini", home_path.join(".gemini")),
+                ("opencode", home_path.join(".local/share/opencode")),
+            ];
+
+            for (provider_id, linux_data_path) in &cli_providers {
+                if !providers_to_scan.iter().any(|p| p == provider_id) {
+                    continue;
+                }
+
+                let unc_path =
+                    match crate::wsl::resolve_wsl_provider_path(&distro.name, linux_data_path) {
+                        Some(p) => p,
+                        None => continue,
+                    };
+
+                let unc_str = unc_path.to_string_lossy().to_string();
+
+                let scan_result = match *provider_id {
+                    "claude" => crate::commands::project::scan_projects(unc_str.clone()).await,
+                    "codex" => crate::providers::codex::scan_projects_from_path(&unc_str),
+                    "gemini" => crate::providers::gemini::scan_projects_from_path(&unc_str),
+                    "opencode" => crate::providers::opencode::scan_projects_from_path(&unc_str),
+                    _ => continue,
+                };
+
+                match scan_result {
+                    Ok(mut projects) => {
+                        for p in &mut projects {
+                            if p.provider.is_none() {
+                                p.provider = Some((*provider_id).to_string());
+                            }
+                            p.custom_directory_label = Some(wsl_label.clone());
+                        }
+                        all_projects.extend(projects);
+                    }
+                    Err(e) => {
+                        log::warn!(
+                            "WSL: {} scan failed for '{}': {e}",
+                            provider_id,
+                            distro.name
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     // Hide empty containers that have no session files regardless of provider.
     all_projects.retain(|project| project.session_count > 0);
 
@@ -224,6 +297,7 @@ pub async fn load_provider_messages(
 
 /// Search across all (or selected) providers
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn search_all_providers(
     claude_path: Option<String>,
     query: String,
@@ -231,6 +305,8 @@ pub async fn search_all_providers(
     filters: Option<Value>,
     limit: Option<usize>,
     custom_claude_paths: Option<Vec<CustomClaudePathParam>>,
+    wsl_enabled: Option<bool>,
+    wsl_excluded_distros: Option<Vec<String>>,
 ) -> Result<Vec<ClaudeMessage>, String> {
     let max_results = limit.unwrap_or(100);
     let search_filters =
@@ -364,6 +440,56 @@ pub async fn search_all_providers(
             Ok(results) => all_results.extend(results),
             Err(e) => {
                 log::warn!("Aider search failed: {e}");
+            }
+        }
+    }
+
+    // WSL search (Windows only — currently Claude only)
+    if wsl_enabled.unwrap_or(false) && providers_to_search.iter().any(|p| p == "claude") {
+        let excluded = wsl_excluded_distros.unwrap_or_default();
+        let distros = crate::wsl::detect_distros();
+
+        for distro in &distros {
+            if excluded.contains(&distro.name) {
+                continue;
+            }
+
+            let home_path = match crate::wsl::resolve_home_path(&distro.name) {
+                Ok(p) => p,
+                Err(e) => {
+                    log::warn!(
+                        "WSL search: Could not resolve home for '{}': {e}",
+                        distro.name
+                    );
+                    continue;
+                }
+            };
+
+            let claude_linux_path = home_path.join(".claude");
+            if let Some(unc_path) =
+                crate::wsl::resolve_wsl_provider_path(&distro.name, &claude_linux_path)
+            {
+                let unc_str = unc_path.to_string_lossy().to_string();
+                match crate::commands::session::search_messages(
+                    unc_str,
+                    query.clone(),
+                    search_filters.clone(),
+                    Some(max_results),
+                )
+                .await
+                {
+                    Ok(mut results) => {
+                        for m in &mut results {
+                            if m.provider.is_none() {
+                                m.provider = Some("claude".to_string());
+                            }
+                        }
+                        all_results.extend(results);
+                    }
+                    Err(e) => {
+                        log::warn!("WSL Claude search failed for '{}': {e}", distro.name);
+                    }
+                }
             }
         }
     }

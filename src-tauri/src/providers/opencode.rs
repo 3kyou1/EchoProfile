@@ -65,6 +65,14 @@ pub fn get_base_path() -> Option<String> {
 pub fn scan_projects_from_path(base_path: &str) -> Result<Vec<ClaudeProject>, String> {
     let storage_path = Path::new(base_path).join("storage");
 
+    // Reject symlinked storage root
+    if std::fs::symlink_metadata(&storage_path)
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
+    {
+        return Ok(Vec::new());
+    }
+
     let mut projects = Vec::new();
     let mut seen_ids: HashSet<String> = HashSet::new();
 

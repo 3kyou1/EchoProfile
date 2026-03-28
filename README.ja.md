@@ -6,7 +6,7 @@
 
 **AIコーディングアシスタントのための統合履歴ビューア。**
 
-**Claude Code**、**Codex CLI**、**OpenCode**の会話履歴を閲覧・検索・分析 — デスクトップアプリまたはヘッドレスサーバーとして。100%オフライン。
+**Claude Code**、**Gemini CLI**、**Codex CLI**、**Cline**、**Cursor**、**Aider**、**OpenCode**の会話履歴を閲覧・検索・分析 — デスクトップアプリまたはヘッドレスサーバーとして。100%オフライン。
 
 [![Version](https://img.shields.io/github/v/release/jhlee0409/claude-code-history-viewer?label=Version&color=blue)](https://github.com/jhlee0409/claude-code-history-viewer/releases)
 [![Stars](https://img.shields.io/github/stars/jhlee0409/claude-code-history-viewer?style=flat&color=yellow)](https://github.com/jhlee0409/claude-code-history-viewer/stargazers)
@@ -63,12 +63,16 @@ Docker、VPS、systemdのセットアップは[サーバーモード](#サーバ
 
 AIコーディングアシスタントは数千もの会話メッセージを生成しますが、ツール間で履歴を振り返る方法を提供していません。CCHVがこの課題を解決します。
 
-**3つのアシスタント。1つのビューア。** Claude Code、Codex CLI、OpenCodeのセッションをシームレスに切り替え — トークン使用量を比較し、プロバイダー間で検索し、ワークフローを1つのインターフェースで分析。
+**7つのアシスタント。1つのビューア。** Claude Code、Gemini CLI、Codex CLI、Cline、Cursor、Aider、OpenCodeのセッションをシームレスに切り替え — トークン使用量を比較し、プロバイダー間で検索し、ワークフローを1つのインターフェースで分析。
 
 | プロバイダー | データの場所 | 取得できる情報 |
 |----------|--------------|--------------|
 | **Claude Code** | `~/.claude/projects/` | 完全な会話履歴、ツール使用、思考プロセス、コスト |
+| **Gemini CLI** | `~/.gemini/history/` | ツール呼び出しを含む会話履歴 |
 | **Codex CLI** | `~/.codex/sessions/` | エージェント応答を含むセッションロールアウト |
+| **Cline** | `~/.cline/tasks/` | タスクベースの会話履歴 |
+| **Cursor** | `~/.cursor/` | Composerとチャットの会話 |
+| **Aider** | プロジェクトディレクトリ | チャット履歴と編集ログ |
 | **OpenCode** | `~/.local/share/opencode/` | 会話セッションとツール結果 |
 
 ベンダーロックインなし。クラウド依存なし。ローカルの会話ファイルを美しくレンダリング。
@@ -93,7 +97,7 @@ AIコーディングアシスタントは数千もの会話メッセージを生
 
 | 機能 | 説明 |
 |---------|-------------|
-| **マルチプロバイダー** | **Claude Code**、**Codex CLI**、**OpenCode**の会話を統合ビューアで閲覧 — プロバイダー別フィルタリング、ツール間比較 |
+| **マルチプロバイダー** | **Claude Code**、**Gemini CLI**、**Codex CLI**、**Cline**、**Cursor**、**Aider**、**OpenCode**の会話を統合ビューアで閲覧 — プロバイダー別フィルタリング、ツール間比較 |
 | **会話ブラウザ** | プロジェクト/セッション別に会話を閲覧（ワークツリーグループ化対応） |
 | **グローバル検索** | 全プロバイダーの会話を瞬時に検索 |
 | **分析ダッシュボード** | デュアルモードトークン統計（課金 vs 会話）、コスト内訳、プロバイダー分布チャート |
@@ -102,7 +106,16 @@ AIコーディングアシスタントは数千もの会話メッセージを生
 | **メッセージナビゲーター** | 右側折りたたみ式TOCで会話を素早くナビゲーション |
 | **リアルタイム監視** | セッションファイルのライブ監視で即座に更新 |
 
-### v1.6.0の新機能
+### v1.9.0の新機能
+
+| 機能 | 説明 |
+|---------|-------------|
+| **4つの新プロバイダー** | **Gemini CLI**、**Cline**、**Cursor**、**Aider**を追加 — 合計7つのAIコーディングアシスタントに対応 |
+| **WSLサポート** | Windows Subsystem for Linux連携 — WSLディストロ内のClaude Codeプロジェクトをスキャン |
+| **グローバル検索の強化** | プロジェクトフィルター、LRUキャッシュ、aho-corasickマルチパターン最適化、メッセージナビゲーション |
+| **ズームコントロール** | ズームイン/アウトのキーボードショートカット |
+
+### v1.6.0
 
 | 機能 | 説明 |
 |---------|-------------|
@@ -296,7 +309,7 @@ GET /health
 ## 使い方
 
 1. アプリを起動
-2. 対応する全プロバイダー（Claude Code、Codex CLI、OpenCode）から会話データを自動スキャン
+2. 対応する全プロバイダー（Claude Code、Gemini CLI、Codex CLI、Cline、Cursor、Aider、OpenCode）から会話データを自動スキャン
 3. 左サイドバーでプロジェクトを閲覧 — タブバーでプロバイダー別フィルタリング
 4. セッションをクリックしてメッセージを確認
 5. タブでメッセージ、分析、トークン統計、最近の編集、セッションボードを切り替え

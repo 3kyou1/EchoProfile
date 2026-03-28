@@ -6,7 +6,7 @@
 
 **The unified history viewer for AI coding assistants.**
 
-Browse, search, and analyze conversations from **Claude Code**, **Codex CLI**, and **OpenCode** — as a desktop app or headless server. 100% offline.
+Browse, search, and analyze conversations from **Claude Code**, **Gemini CLI**, **Codex CLI**, **Cline**, **Cursor**, **Aider**, and **OpenCode** — as a desktop app or headless server. 100% offline.
 
 [![Version](https://img.shields.io/github/v/release/jhlee0409/claude-code-history-viewer?label=Version&color=blue)](https://github.com/jhlee0409/claude-code-history-viewer/releases)
 [![Stars](https://img.shields.io/github/stars/jhlee0409/claude-code-history-viewer?style=flat&color=yellow)](https://github.com/jhlee0409/claude-code-history-viewer/stargazers)
@@ -63,12 +63,16 @@ See [Server Mode](#server-mode-webui) for Docker, VPS, and systemd setup.
 
 AI coding assistants generate thousands of conversation messages, but none of them provide a way to look back at your history across tools. CCHV solves this.
 
-**Three assistants. One viewer.** Switch between Claude Code, Codex CLI, and OpenCode sessions seamlessly — compare token usage, search across providers, and analyze your workflow in a single interface.
+**Seven assistants. One viewer.** Switch between Claude Code, Gemini CLI, Codex CLI, Cline, Cursor, Aider, and OpenCode sessions seamlessly — compare token usage, search across providers, and analyze your workflow in a single interface.
 
 | Provider | Data Location | What You Get |
 |----------|--------------|--------------|
 | **Claude Code** | `~/.claude/projects/` | Full conversation history, tool use, thinking, costs |
+| **Gemini CLI** | `~/.gemini/history/` | Conversation history with tool calls |
 | **Codex CLI** | `~/.codex/sessions/` | Session rollouts with agent responses |
+| **Cline** | `~/.cline/tasks/` | Task-based conversation history |
+| **Cursor** | `~/.cursor/` | Composer and chat conversations |
+| **Aider** | Project directories | Chat history and edit logs |
 | **OpenCode** | `~/.local/share/opencode/` | Conversation sessions and tool results |
 
 No vendor lock-in. No cloud dependency. Your local conversation files, beautifully rendered.
@@ -93,7 +97,7 @@ No vendor lock-in. No cloud dependency. Your local conversation files, beautiful
 
 | Feature | Description |
 |---------|-------------|
-| **Multi-Provider Support** | Unified viewer for **Claude Code**, **Codex CLI**, and **OpenCode** — filter by provider, compare across tools |
+| **Multi-Provider Support** | Unified viewer for **Claude Code**, **Gemini CLI**, **Codex CLI**, **Cline**, **Cursor**, **Aider**, and **OpenCode** — filter by provider, compare across tools |
 | **Conversation Browser** | Navigate conversations by project/session with worktree grouping |
 | **Global Search** | Search across all conversations from all providers instantly |
 | **Analytics Dashboard** | Dual-mode token stats (billing vs conversation), cost breakdown, and provider distribution charts |
@@ -102,7 +106,16 @@ No vendor lock-in. No cloud dependency. Your local conversation files, beautiful
 | **Message Navigator** | Right-side collapsible TOC for quick conversation navigation |
 | **Real-time Monitoring** | Live session file watching for instant updates |
 
-### New in v1.6.0
+### New in v1.9.0
+
+| Feature | Description |
+|---------|-------------|
+| **4 New Providers** | Added **Gemini CLI**, **Cline**, **Cursor**, and **Aider** — now supports 7 AI coding assistants |
+| **WSL Support** | Windows Subsystem for Linux integration — scan Claude Code projects inside WSL distros |
+| **Enhanced Global Search** | Project filter, LRU cache, aho-corasick multi-pattern optimization, and message navigation |
+| **Zoom Controls** | Keyboard shortcuts for zoom in/out |
+
+### v1.6.0
 
 | Feature | Description |
 |---------|-------------|
@@ -299,7 +312,7 @@ GET /health
 ## Usage
 
 1. Launch the app
-2. It automatically scans for conversation data from all supported providers (Claude Code, Codex CLI, OpenCode)
+2. It automatically scans for conversation data from all supported providers (Claude Code, Gemini CLI, Codex CLI, Cline, Cursor, Aider, OpenCode)
 3. Browse projects in the left sidebar — filter by provider using the tab bar
 4. Click a session to view messages
 5. Use tabs to switch between Messages, Analytics, Token Stats, Recent Edits, and Session Board

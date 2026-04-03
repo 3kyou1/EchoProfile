@@ -171,7 +171,7 @@ export function useSessionEditing(session: ClaudeSession) {
         const confirmed = await ask(
           t(
             "session.deleteConfirm",
-            "This will permanently delete the session file and all associated data (subagents, tool results). This cannot be undone."
+            "This will move the session file and associated data (subagents, tool results) to your system Trash."
           ),
           {
             title: t("session.deleteTitle", "Delete Session"),

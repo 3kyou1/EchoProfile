@@ -37,9 +37,9 @@ use crate::commands::{
         validate_custom_claude_dir,
     },
     session::{
-        get_recent_edits, get_session_message_count, load_project_sessions, load_session_messages,
-        load_session_messages_paginated, rename_opencode_session_title, rename_session_native,
-        reset_session_native_name, restore_file, search_messages,
+        delete_session, get_recent_edits, get_session_message_count, load_project_sessions,
+        load_session_messages, load_session_messages_paginated, rename_opencode_session_title,
+        rename_session_native, reset_session_native_name, restore_file, search_messages,
     },
     settings::{delete_preset, get_preset, load_presets, save_preset},
     stats::{
@@ -170,6 +170,8 @@ fn run_tauri() {
             write_text_file,
             read_text_file,
             save_screenshot,
+            // Session delete command
+            delete_session,
             // Native session rename commands
             rename_session_native,
             reset_session_native_name,

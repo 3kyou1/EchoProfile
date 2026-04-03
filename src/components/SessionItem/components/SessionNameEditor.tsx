@@ -9,6 +9,7 @@ import {
   Copy,
   FileText,
   Play,
+  Trash2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ export const SessionNameEditor: React.FC<SessionNameEditorProps> = ({
   onCopySessionId,
   onCopyResumeCommand,
   onCopyFilePath,
+  onDeleteSession,
   onContextMenuOpenChange,
 }) => {
   const { t } = useTranslation();
@@ -222,6 +224,14 @@ export const SessionNameEditor: React.FC<SessionNameEditorProps> = ({
           <DropdownMenuItem onClick={onCopyFilePath}>
             <FileText className="w-3 h-3 mr-2" />
             {t("session.copyFilePath", "Copy File Path")}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={onDeleteSession}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="w-3 h-3 mr-2" />
+            {t("session.deleteSession", "Delete Session")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

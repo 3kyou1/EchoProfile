@@ -6,6 +6,7 @@ import {
   useSessionMetadata,
 } from "@/hooks/useSessionMetadata";
 import { useAppStore } from "@/store/useAppStore";
+import { api } from "@/services/api";
 import type { ClaudeSession } from "@/types";
 
 export function useSessionEditing(session: ClaudeSession) {
@@ -161,6 +162,38 @@ export function useSessionEditing(session: ClaudeSession) {
     [handleCopyToClipboard, session.file_path, t]
   );
 
+  const handleDeleteSession = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIsContextMenuOpen(false);
+      try {
+        const { ask } = await import("@tauri-apps/plugin-dialog");
+        const confirmed = await ask(
+          t(
+            "session.deleteConfirm",
+            "This will permanently delete the session file and all associated data (subagents, tool results). This cannot be undone."
+          ),
+          {
+            title: t("session.deleteTitle", "Delete Session"),
+            kind: "warning",
+          }
+        );
+        if (!confirmed) return;
+        await api("delete_session", { filePath: session.file_path });
+        const { sessions, setSessions, selectedSession, setSelectedSession } =
+          useAppStore.getState();
+        setSessions(sessions.filter((s) => s.session_id !== session.session_id));
+        if (selectedSession?.session_id === session.session_id) {
+          setSelectedSession(null);
+        }
+        toast.success(t("session.deleteSuccess", "Session deleted"));
+      } catch {
+        toast.error(t("session.deleteError", "Failed to delete session"));
+      }
+    },
+    [session.file_path, session.session_id, t]
+  );
+
   const handleNativeRenameClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -224,6 +257,7 @@ export function useSessionEditing(session: ClaudeSession) {
     handleCopySessionId,
     handleCopyResumeCommand,
     handleCopyFilePath,
+    handleDeleteSession,
     handleNativeRenameClick,
     handleNativeRenameSuccess,
   };

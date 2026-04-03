@@ -73,6 +73,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
             onCopySessionId={editing.handleCopySessionId}
             onCopyResumeCommand={editing.handleCopyResumeCommand}
             onCopyFilePath={editing.handleCopyFilePath}
+            onDeleteSession={editing.handleDeleteSession}
             onContextMenuOpenChange={editing.setIsContextMenuOpen}
           />
         </div>

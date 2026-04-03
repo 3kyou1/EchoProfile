@@ -49,6 +49,7 @@ anyhow = "1.0"
 base64 = "0.22"
 urlencoding = "2.1"
 tempfile = "3.24.0"
+trash = "5.2"
 regex = "1.11"
 lazy_static = "1.5"
 rusqlite = { version = "0.32", features = ["bundled"] }

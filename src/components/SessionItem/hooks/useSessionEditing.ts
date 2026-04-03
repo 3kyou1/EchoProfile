@@ -161,6 +161,20 @@ export function useSessionEditing(session: ClaudeSession) {
     [handleCopyToClipboard, session.file_path, t]
   );
 
+  const handleRevealInFinder = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIsContextMenuOpen(false);
+      try {
+        const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
+        await revealItemInDir(session.file_path);
+      } catch {
+        toast.error(t("session.revealError", "Could not reveal file"));
+      }
+    },
+    [session.file_path, t]
+  );
+
   const handleNativeRenameClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -224,6 +238,7 @@ export function useSessionEditing(session: ClaudeSession) {
     handleCopySessionId,
     handleCopyResumeCommand,
     handleCopyFilePath,
+    handleRevealInFinder,
     handleNativeRenameClick,
     handleNativeRenameSuccess,
   };

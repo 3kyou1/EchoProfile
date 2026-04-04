@@ -12,7 +12,7 @@ COPY . ./
 RUN pnpm exec tsc --build . && pnpm exec vite build
 
 # ── Stage 2: Build Rust server binary (with embedded frontend) ──────
-FROM rust:1.82-bookworm AS backend
+FROM rust:1-bookworm AS backend
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
     && rm -rf /var/lib/apt/lists/*

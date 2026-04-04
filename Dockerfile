@@ -3,11 +3,12 @@
 
 # ── Stage 1: Build frontend ──────────────────────────────────────────
 FROM node:20-slim AS frontend
-RUN corepack enable && corepack install
+RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
+RUN corepack install
 RUN pnpm install --frozen-lockfile --prefer-offline
-COPY . .
+COPY . ./
 RUN pnpm exec tsc --build . && pnpm exec vite build
 
 # ── Stage 2: Build Rust server binary (with embedded frontend) ──────

@@ -128,6 +128,35 @@ jobs:
           updaterJsonPreferNsis: false
           includeUpdaterJson: false
 
+      # Create portable Windows zip (no installer required)
+      - name: Create portable Windows zip
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $exePath = "src-tauri/target/release/Claude Code History Viewer.exe"
+
+          if (-not (Test-Path $exePath)) {
+            Write-Error "Exe not found at: $exePath"
+            exit 1
+          }
+
+          $zipName = "Claude.Code.History.Viewer_${version}_x64-portable.zip"
+          Compress-Archive -Path $exePath -DestinationPath $zipName
+          Write-Output "Created portable zip: $zipName"
+          Write-Output "PORTABLE_ZIP_PATH=$zipName" >> $env:GITHUB_ENV
+
+      - name: Upload portable Windows zip to release
+        if: matrix.platform == 'windows-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          gh release upload "${{ github.ref_name }}" `
+            "${{ env.PORTABLE_ZIP_PATH }}" `
+            --repo "${{ github.repository }}" `
+            --clobber
+
       # Fix AppImage EGL crash on Arch Linux and other rolling-release distros.
       #
       # The AppImage bundles Ubuntu-compiled EGL/Mesa/Wayland libs, but does NOT

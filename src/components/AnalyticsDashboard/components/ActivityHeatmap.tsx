@@ -17,10 +17,16 @@ interface ActivityHeatmapProps {
   data: DailyStats[];
 }
 
-/** Parse "YYYY-MM-DD" into a local Date */
+/** Parse "YYYY-MM-DD" into a local Date (returns epoch fallback on invalid input) */
 function parseDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y ?? 0, (m ?? 1) - 1, d ?? 1);
+  const year = y ?? 0;
+  const month = m ?? 1;
+  const day = d ?? 1;
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return new Date(0);
+  }
+  return new Date(year, month - 1, day);
 }
 
 /** Group DailyStats by "YYYY-MM" key, sorted chronologically */
@@ -150,8 +156,9 @@ const MonthBlock: React.FC<{
 
             return (
               <Tooltip key={dayIdx}>
-                <TooltipTrigger>
-                  <div
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
                     className={cn(
                       "w-[14px] h-[14px] rounded-sm cursor-pointer",
                       "transition-transform duration-150",
@@ -159,7 +166,7 @@ const MonthBlock: React.FC<{
                       intensity > 0 && "hover:ring-1 hover:ring-white/30"
                     )}
                     style={{ backgroundColor: heatColor }}
-                    aria-label={`${cell.date}: ${cell.messageCount} ${t("analytics.tooltip.messages").toLowerCase()}`}
+                    aria-label={`${cell.date}: ${cell.messageCount} ${t("analytics.tooltip.messages")}`}
                   >
                     {/* Show day number only on 1st for orientation */}
                     {dayNum === 1 && (
@@ -167,7 +174,7 @@ const MonthBlock: React.FC<{
                         1
                       </span>
                     )}
-                  </div>
+                  </button>
                 </TooltipTrigger>
                 <ChartTooltip
                   title={cell.date}
@@ -196,9 +203,10 @@ export const ActivityHeatmapComponent: React.FC<ActivityHeatmapProps> = React.me
   const { t } = useTranslation();
   const weekdayLabels = t("analytics.weekdayNamesShort", { returnObjects: true }) as string[];
 
-  const { months, maxActivity } = useMemo(() => {
+  const { months, maxActivity, totalMessages } = useMemo(() => {
     const grouped = groupByMonth(data);
     let max = 0;
+    let total = 0;
 
     const monthEntries: Array<{ key: string; weeks: CalendarDay[][] }> = [];
     for (const [key, entries] of grouped) {
@@ -206,12 +214,13 @@ export const ActivityHeatmapComponent: React.FC<ActivityHeatmapProps> = React.me
       for (const week of weeks) {
         for (const cell of week) {
           if (cell.messageCount > max) max = cell.messageCount;
+          total += cell.messageCount;
         }
       }
       monthEntries.push({ key, weeks });
     }
 
-    return { months: monthEntries, maxActivity: Math.max(max, 1) };
+    return { months: monthEntries, maxActivity: Math.max(max, 1), totalMessages: total };
   }, [data]);
 
   return (
@@ -251,7 +260,7 @@ export const ActivityHeatmapComponent: React.FC<ActivityHeatmapProps> = React.me
         </div>
 
         <span className="text-[9px] font-mono text-muted-foreground">
-          {t("analytics.calendarTotal", { count: data.reduce((sum, d) => sum + d.message_count, 0) })}
+          {t("analytics.calendarTotal", { count: totalMessages })}
         </span>
       </div>
     </div>

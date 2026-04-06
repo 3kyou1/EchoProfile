@@ -141,14 +141,14 @@ jobs:
           }
 
           # Dynamically find the main exe, excluding setup/installer/uninstall binaries
-          $exe = Get-ChildItem "src-tauri/target/release/*.exe" |
-            Where-Object { $_.Name -notmatch '(?i)(setup|install|uninstall)' } |
-            Select-Object -First 1
+          $candidates = @(Get-ChildItem "src-tauri/target/release/*.exe" |
+            Where-Object { $_.Name -notmatch '(?i)(setup|install|uninstall)' })
 
-          if (-not $exe) {
-            Write-Error "No application exe found in src-tauri/target/release/"
+          if ($candidates.Count -ne 1) {
+            Write-Error "Expected exactly 1 app exe, found $($candidates.Count): $($candidates.Name -join ', ')"
             exit 1
           }
+          $exe = $candidates[0]
           Write-Output "Found exe: $($exe.FullName)"
 
           $zipName = "Claude.Code.History.Viewer_${version}_x64-portable.zip"

@@ -71,12 +71,18 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
   }, [position]);
 
   const handleCopyPath = async () => {
+    const path = project.actual_path?.trim();
+    if (!path) {
+      toast.error(t("error.clipboardFailed"));
+      onClose();
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(project.actual_path);
+      await navigator.clipboard.writeText(path);
       toast.success(t("project.pathCopied"));
     } catch (err) {
       console.error("Failed to copy path:", err);
-      toast.error(t("error.clipboardFailed", "Failed to copy to clipboard"));
+      toast.error(t("error.clipboardFailed"));
     }
     onClose();
   };

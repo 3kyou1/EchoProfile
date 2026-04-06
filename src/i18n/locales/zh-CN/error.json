@@ -1,6 +1,7 @@
 {
   "error.apologize": "对给您带来的不便，我们深表歉意。请尝试以下方法解决问题。",
   "error.applyPresetFailed": "应用预设失败: {{detail}}",
+  "error.clipboardFailed": "复制到剪贴板失败",
   "error.copied": "已复制！",
   "error.copyErrorInfo": "复制错误信息",
   "error.copyTemplate.browserInfo": "浏览器信息：",

@@ -1,6 +1,7 @@
 {
   "error.apologize": "ご不便をおかけして申し訳ございません。以下の方法で問題の解決をお試しください。",
   "error.applyPresetFailed": "プリセットの適用に失敗: {{detail}}",
+  "error.clipboardFailed": "クリップボードへのコピーに失敗しました",
   "error.copied": "コピーしました！",
   "error.copyErrorInfo": "エラー情報をコピー",
   "error.copyTemplate.browserInfo": "ブラウザ情報：",

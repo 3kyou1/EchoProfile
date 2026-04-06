@@ -10,6 +10,7 @@ import {
   FileText,
   FolderOpen,
   Play,
+  Trash2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ export const SessionNameEditor: React.FC<SessionNameEditorProps> = ({
   onCopyResumeCommand,
   onCopyFilePath,
   onRevealInFinder,
+  onDeleteSession,
   onContextMenuOpenChange,
 }) => {
   const { t } = useTranslation();
@@ -228,6 +230,14 @@ export const SessionNameEditor: React.FC<SessionNameEditorProps> = ({
           <DropdownMenuItem onClick={onRevealInFinder}>
             <FolderOpen className="w-3 h-3 mr-2" />
             {t("session.showJsonlFile", "Show JSONL File")}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={onDeleteSession}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="w-3 h-3 mr-2" />
+            {t("session.deleteSession", "Delete Session")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -334,9 +334,17 @@ pub fn load_messages(session_path: &str) -> Result<Vec<ClaudeMessage>, String> {
                 }
             }
             "event_msg" => {
-                // Extract token counts and apply to last assistant message
                 if let Some(payload) = val.get("payload") {
                     let event_type = payload.get("type").and_then(|t| t.as_str()).unwrap_or("");
+
+                    // Skip events that duplicate response_item messages.
+                    // Codex logs user/assistant text in both response_item (type=message)
+                    // and event_msg (type=user_message / agent_message) — only keep
+                    // the response_item version to avoid showing every message twice.
+                    if event_type == "user_message" || event_type == "agent_message" {
+                        continue;
+                    }
+
                     if event_type == "token_count" {
                         let usage_totals = extract_token_totals(payload)
                             .or_else(|| extract_last_token_usage(payload));
@@ -924,46 +932,6 @@ fn convert_codex_event(
                 line_timestamp.to_string(),
                 "assistant",
                 Some("assistant"),
-                Some(content),
-                None,
-            ))
-        }
-        "agent_message" => {
-            let text = payload.get("message").and_then(Value::as_str)?.trim();
-            if text.is_empty() {
-                return None;
-            }
-            *counter += 1;
-            let content = serde_json::json!([{
-                "type": "text",
-                "text": text
-            }]);
-            Some(build_codex_message(
-                format!("codex-event-{counter}"),
-                session_id,
-                line_timestamp.to_string(),
-                "assistant",
-                Some("assistant"),
-                Some(content),
-                None,
-            ))
-        }
-        "user_message" => {
-            let text = payload.get("message").and_then(Value::as_str)?.trim();
-            if text.is_empty() {
-                return None;
-            }
-            *counter += 1;
-            let content = serde_json::json!([{
-                "type": "text",
-                "text": text
-            }]);
-            Some(build_codex_message(
-                format!("codex-event-{counter}"),
-                session_id,
-                line_timestamp.to_string(),
-                "user",
-                Some("user"),
                 Some(content),
                 None,
             ))
@@ -1712,7 +1680,10 @@ mod tests {
     }
 
     #[test]
-    fn convert_agent_message_event_to_assistant_text_message() {
+    fn convert_agent_message_event_not_handled() {
+        // agent_message events are skipped in load_messages() to avoid
+        // duplicating response_item messages. convert_codex_event should
+        // return None for them.
         let mut counter = 0u64;
         let msg = convert_codex_event(
             &json!({
@@ -1722,40 +1693,15 @@ mod tests {
             "session-1",
             "2026-02-19T12:00:00Z",
             &mut counter,
-        )
-        .expect("agent_message should be converted");
-
-        assert_eq!(msg.message_type, "assistant");
-        let arr = msg
-            .content
-            .as_ref()
-            .and_then(Value::as_array)
-            .expect("content should be an array");
-        assert_eq!(arr[0].get("type").and_then(Value::as_str), Some("text"));
-        assert_eq!(
-            arr[0].get("text").and_then(Value::as_str),
-            Some("Working on requested changes")
         );
-    }
-
-    #[test]
-    fn convert_agent_message_event_skips_missing_field() {
-        let mut counter = 0u64;
-        let msg = convert_codex_event(
-            &json!({
-                "type": "agent_message"
-            }),
-            "session-1",
-            "2026-02-19T12:00:00Z",
-            &mut counter,
-        );
-
         assert!(msg.is_none());
-        assert_eq!(counter, 0);
     }
 
     #[test]
-    fn convert_user_message_event_to_user_text_message() {
+    fn convert_user_message_event_not_handled() {
+        // user_message events are skipped in load_messages() to avoid
+        // duplicating response_item messages. convert_codex_event should
+        // return None for them.
         let mut counter = 0u64;
         let msg = convert_codex_event(
             &json!({
@@ -1765,20 +1711,8 @@ mod tests {
             "session-1",
             "2026-02-19T12:00:00Z",
             &mut counter,
-        )
-        .expect("user_message should be converted");
-
-        assert_eq!(msg.message_type, "user");
-        let arr = msg
-            .content
-            .as_ref()
-            .and_then(Value::as_array)
-            .expect("content should be an array");
-        assert_eq!(arr[0].get("type").and_then(Value::as_str), Some("text"));
-        assert_eq!(
-            arr[0].get("text").and_then(Value::as_str),
-            Some("Please patch this file")
         );
+        assert!(msg.is_none());
     }
 
     #[test]
@@ -1997,6 +1931,252 @@ mod tests {
             .iter()
             .all(|m| m.provider.as_deref() == Some("codex")));
         assert!(messages.iter().all(|m| m.session_id == "sess-1"));
+    }
+
+    #[test]
+    #[serial]
+    fn load_messages_skips_duplicate_event_msg_for_user_and_agent() {
+        // Codex logs user/assistant text in both response_item (type=message)
+        // and event_msg (type=user_message / agent_message). Only the
+        // response_item version should be kept.
+        let tmp = TempDir::new().expect("temp dir should be created");
+        let codex_home = tmp.path().join("codex-home");
+        let sessions_dir = codex_home.join("sessions");
+        fs::create_dir_all(&sessions_dir).expect("sessions dir should be created");
+        let _guard = EnvVarGuard::set("CODEX_HOME", &codex_home);
+        let rollout_path = sessions_dir.join("rollout-dedup-test.jsonl");
+
+        let lines = [
+            json!({
+                "timestamp": "2026-03-01T10:00:00Z",
+                "type": "session_meta",
+                "payload": { "id": "sess-dedup" }
+            }),
+            // User message via response_item (canonical)
+            json!({
+                "timestamp": "2026-03-01T10:00:01Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "item-u1",
+                    "type": "message",
+                    "role": "user",
+                    "content": [{ "type": "input_text", "text": "hello" }]
+                }
+            }),
+            // Duplicate user message via event_msg (should be skipped)
+            json!({
+                "timestamp": "2026-03-01T10:00:01Z",
+                "type": "event_msg",
+                "payload": {
+                    "type": "user_message",
+                    "message": "hello"
+                }
+            }),
+            // Assistant message via response_item (canonical)
+            json!({
+                "timestamp": "2026-03-01T10:00:02Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "item-a1",
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{ "type": "output_text", "text": "hi there" }]
+                }
+            }),
+            // Duplicate assistant message via event_msg (should be skipped)
+            json!({
+                "timestamp": "2026-03-01T10:00:02Z",
+                "type": "event_msg",
+                "payload": {
+                    "type": "agent_message",
+                    "message": "hi there"
+                }
+            }),
+            // Non-duplicate event (token_count) should still be processed
+            json!({
+                "timestamp": "2026-03-01T10:00:03Z",
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "info": {
+                        "total_token_usage": {
+                            "input_tokens": 50,
+                            "output_tokens": 10
+                        }
+                    }
+                }
+            }),
+        ];
+
+        let content = lines
+            .iter()
+            .map(Value::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&rollout_path, format!("{content}\n")).expect("fixture should be written");
+
+        let messages = load_messages(
+            rollout_path
+                .to_str()
+                .expect("rollout path should be valid UTF-8"),
+        )
+        .expect("rollout should be parsed");
+
+        // Only 2 messages: 1 user + 1 assistant (no duplicates from event_msg)
+        // Before this fix, there were 4 messages (each duplicated by event_msg).
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0].message_type, "user");
+        assert_eq!(messages[1].message_type, "assistant");
+
+        // Verify content is correct
+        let user_text = messages[0]
+            .content
+            .as_ref()
+            .and_then(Value::as_array)
+            .and_then(|arr| arr[0].get("text"))
+            .and_then(Value::as_str);
+        assert_eq!(user_text, Some("hello"));
+
+        let assistant_text = messages[1]
+            .content
+            .as_ref()
+            .and_then(Value::as_array)
+            .and_then(|arr| arr[0].get("text"))
+            .and_then(Value::as_str);
+        assert_eq!(assistant_text, Some("hi there"));
+
+        // token_count event should still be applied to assistant message
+        assert_eq!(
+            messages[1].usage.as_ref().and_then(|u| u.input_tokens),
+            Some(50)
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn load_messages_dedup_multi_turn_conversation() {
+        // Simulates a realistic multi-turn Codex conversation where each
+        // user/assistant message appears as both response_item and event_msg.
+        let tmp = TempDir::new().expect("temp dir should be created");
+        let codex_home = tmp.path().join("codex-home");
+        let sessions_dir = codex_home.join("sessions");
+        fs::create_dir_all(&sessions_dir).expect("sessions dir should be created");
+        let _guard = EnvVarGuard::set("CODEX_HOME", &codex_home);
+        let rollout_path = sessions_dir.join("rollout-multiturn.jsonl");
+
+        let lines = [
+            json!({
+                "timestamp": "2026-03-01T10:00:00Z",
+                "type": "session_meta",
+                "payload": { "id": "sess-multi" }
+            }),
+            // Turn 1: user
+            json!({
+                "timestamp": "2026-03-01T10:00:01Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "u1", "type": "message", "role": "user",
+                    "content": [{ "type": "input_text", "text": "first question" }]
+                }
+            }),
+            json!({
+                "timestamp": "2026-03-01T10:00:01Z",
+                "type": "event_msg",
+                "payload": { "type": "user_message", "message": "first question" }
+            }),
+            // Turn 1: assistant
+            json!({
+                "timestamp": "2026-03-01T10:00:02Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "a1", "type": "message", "role": "assistant",
+                    "content": [{ "type": "output_text", "text": "first answer" }]
+                }
+            }),
+            json!({
+                "timestamp": "2026-03-01T10:00:02Z",
+                "type": "event_msg",
+                "payload": { "type": "agent_message", "message": "first answer" }
+            }),
+            // Turn 2: user
+            json!({
+                "timestamp": "2026-03-01T10:00:03Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "u2", "type": "message", "role": "user",
+                    "content": [{ "type": "input_text", "text": "follow-up" }]
+                }
+            }),
+            json!({
+                "timestamp": "2026-03-01T10:00:03Z",
+                "type": "event_msg",
+                "payload": { "type": "user_message", "message": "follow-up" }
+            }),
+            // Turn 2: assistant
+            json!({
+                "timestamp": "2026-03-01T10:00:04Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "a2", "type": "message", "role": "assistant",
+                    "content": [{ "type": "output_text", "text": "second answer" }]
+                }
+            }),
+            json!({
+                "timestamp": "2026-03-01T10:00:04Z",
+                "type": "event_msg",
+                "payload": { "type": "agent_message", "message": "second answer" }
+            }),
+            // Turn 3: user (final, no assistant reply yet)
+            json!({
+                "timestamp": "2026-03-01T10:00:05Z",
+                "type": "response_item",
+                "payload": {
+                    "id": "u3", "type": "message", "role": "user",
+                    "content": [{ "type": "input_text", "text": "one more thing" }]
+                }
+            }),
+            json!({
+                "timestamp": "2026-03-01T10:00:05Z",
+                "type": "event_msg",
+                "payload": { "type": "user_message", "message": "one more thing" }
+            }),
+        ];
+
+        let content = lines
+            .iter()
+            .map(Value::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&rollout_path, format!("{content}\n")).expect("fixture should be written");
+
+        let messages = load_messages(
+            rollout_path
+                .to_str()
+                .expect("rollout path should be valid UTF-8"),
+        )
+        .expect("rollout should be parsed");
+
+        // 5 messages: user, assistant, user, assistant, user (no duplicates)
+        // Without the fix this would be 10 messages.
+        assert_eq!(messages.len(), 5);
+
+        let expected = [
+            ("user", "first question"),
+            ("assistant", "first answer"),
+            ("user", "follow-up"),
+            ("assistant", "second answer"),
+            ("user", "one more thing"),
+        ];
+        for (i, (msg_type, text)) in expected.iter().enumerate() {
+            assert_eq!(messages[i].message_type, *msg_type, "message {i} type");
+            let actual_text = messages[i]
+                .content
+                .as_ref()
+                .and_then(Value::as_array)
+                .and_then(|arr| arr[0].get("text"))
+                .and_then(Value::as_str);
+            assert_eq!(actual_text, Some(*text), "message {i} content");
+        }
     }
 
     #[test]

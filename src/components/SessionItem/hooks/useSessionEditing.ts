@@ -166,7 +166,7 @@ export function useSessionEditing(session: ClaudeSession) {
     async (e: React.MouseEvent) => {
       e.stopPropagation();
       setIsContextMenuOpen(false);
-      if (!session.file_path || !session.file_path.startsWith("/")) {
+      if (!session.file_path || !/^(?:[A-Za-z]:[\\/]|\/)/.test(session.file_path)) {
         toast.error(t("session.revealError", "Could not reveal file"));
         return;
       }

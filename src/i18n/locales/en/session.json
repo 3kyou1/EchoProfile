@@ -19,6 +19,8 @@
   "project.groupingNone": "Flat list",
   "project.groupingWorktree": "Group by worktree",
   "project.hiddenPatterns": "Hidden patterns",
+  "project.copyPath": "Copy path",
+  "project.pathCopied": "Path copied to clipboard",
   "project.hide": "Hide project",
   "project.main": "main",
   "project.notFound": "Project not found",

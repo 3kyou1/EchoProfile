@@ -19,6 +19,8 @@
   "project.groupingNone": "列表",
   "project.groupingWorktree": "按工作樹",
   "project.hiddenPatterns": "隱藏模式",
+  "project.copyPath": "複製路徑",
+  "project.pathCopied": "路徑已複製到剪貼簿",
   "project.hide": "隱藏專案",
   "project.main": "主分支",
   "project.notFound": "未找到專案",

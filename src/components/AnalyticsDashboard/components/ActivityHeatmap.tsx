@@ -47,10 +47,13 @@ function groupByMonth(data: DailyStats[]): Map<string, DailyStats[]> {
 
 interface CalendarDay {
   date: string | null; // null for padding cells
+  dayNum: number; // day-of-month (1-31), 0 for padding cells
   messageCount: number;
   sessionCount: number;
   totalTokens: number;
 }
+
+const EMPTY_CELL: CalendarDay = { date: null, dayNum: 0, messageCount: 0, sessionCount: 0, totalTokens: 0 };
 
 /** Build a calendar grid for a given month */
 function buildMonthGrid(
@@ -78,7 +81,7 @@ function buildMonthGrid(
 
   // Pad leading empty cells
   for (let i = 0; i < startDow; i++) {
-    currentWeek.push({ date: null, messageCount: 0, sessionCount: 0, totalTokens: 0 });
+    currentWeek.push(EMPTY_CELL);
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
@@ -86,6 +89,7 @@ function buildMonthGrid(
     const dateStr = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     currentWeek.push({
       date: dateStr,
+      dayNum: day,
       messageCount: stats?.message_count ?? 0,
       sessionCount: stats?.session_count ?? 0,
       totalTokens: stats?.total_tokens ?? 0,
@@ -100,7 +104,7 @@ function buildMonthGrid(
   // Pad trailing empty cells
   if (currentWeek.length > 0) {
     while (currentWeek.length < 7) {
-      currentWeek.push({ date: null, messageCount: 0, sessionCount: 0, totalTokens: 0 });
+      currentWeek.push(EMPTY_CELL);
     }
     weeks.push(currentWeek);
   }
@@ -120,8 +124,8 @@ const MonthBlock: React.FC<{
   weeks: CalendarDay[][];
   maxActivity: number;
   weekdayLabels: string[];
-  t: (key: string, opts?: Record<string, unknown>) => string;
-}> = React.memo(({ yearMonth, weeks, maxActivity, weekdayLabels, t }) => {
+}> = React.memo(({ yearMonth, weeks, maxActivity, weekdayLabels }) => {
+  const { t } = useTranslation();
   const monthLabel = formatMonthLabel(yearMonth);
 
   return (
@@ -152,7 +156,6 @@ const MonthBlock: React.FC<{
 
             const intensity = maxActivity > 0 ? cell.messageCount / maxActivity : 0;
             const heatColor = getHeatColor(intensity);
-            const dayNum = parseDate(cell.date).getDate();
 
             return (
               <Tooltip key={dayIdx}>
@@ -169,7 +172,7 @@ const MonthBlock: React.FC<{
                     aria-label={`${cell.date}: ${cell.messageCount} ${t("analytics.tooltip.messages")}`}
                   >
                     {/* Show day number only on 1st for orientation */}
-                    {dayNum === 1 && (
+                    {cell.dayNum === 1 && (
                       <span className="text-[6px] text-foreground/40 leading-none flex items-center justify-center h-full">
                         1
                       </span>
@@ -234,7 +237,6 @@ export const ActivityHeatmapComponent: React.FC<ActivityHeatmapProps> = React.me
             weeks={weeks}
             maxActivity={maxActivity}
             weekdayLabels={weekdayLabels}
-            t={t}
           />
         ))}
       </div>

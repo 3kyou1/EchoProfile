@@ -7,6 +7,7 @@ import {
 } from "@/hooks/useSessionMetadata";
 import { useAppStore } from "@/store/useAppStore";
 import { api } from "@/services/api";
+import { isAbsolutePath } from "@/utils/pathUtils";
 import type { ClaudeSession } from "@/types";
 
 export function useSessionEditing(session: ClaudeSession) {
@@ -166,7 +167,7 @@ export function useSessionEditing(session: ClaudeSession) {
     async (e: React.MouseEvent) => {
       e.stopPropagation();
       setIsContextMenuOpen(false);
-      if (!session.file_path || !/^(?:[A-Za-z]:[\\/]|\/)/.test(session.file_path)) {
+      if (!session.file_path || !isAbsolutePath(session.file_path)) {
         toast.error(t("session.revealError", "Could not reveal file"));
         return;
       }

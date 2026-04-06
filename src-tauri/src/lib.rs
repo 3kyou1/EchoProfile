@@ -170,7 +170,6 @@ fn run_tauri() {
             write_text_file,
             read_text_file,
             save_screenshot,
-            // Session delete command
             delete_session,
             // Native session rename commands
             rename_session_native,

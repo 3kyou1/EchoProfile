@@ -1,6 +1,7 @@
 {
   "error.apologize": "We apologize for the inconvenience. Please try the following solutions to resolve the issue.",
   "error.applyPresetFailed": "Failed to apply preset: {{detail}}",
+  "error.clipboardFailed": "Failed to copy to clipboard",
   "error.copied": "Copied!",
   "error.copyErrorInfo": "Copy Error Information",
   "error.copyTemplate.browserInfo": "Browser Information:",

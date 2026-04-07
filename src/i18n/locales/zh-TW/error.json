@@ -1,6 +1,7 @@
 {
   "error.apologize": "對於給您帶來的不便，我們深表歉意。請嘗試以下方法解決問題。",
   "error.applyPresetFailed": "套用預設失敗: {{detail}}",
+  "error.clipboardFailed": "複製到剪貼簿失敗",
   "error.copied": "已複製！",
   "error.copyErrorInfo": "複製錯誤資訊",
   "error.copyTemplate.browserInfo": "瀏覽器資訊：",

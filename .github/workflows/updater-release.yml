@@ -128,6 +128,51 @@ jobs:
           updaterJsonPreferNsis: false
           includeUpdaterJson: false
 
+      # Create portable Windows zip (no installer required)
+      - name: Create portable Windows zip
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          # Derive version from git tag (same source as create-release job)
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          if (-not $version) {
+            Write-Error "Could not determine version from github.ref_name"
+            exit 1
+          }
+
+          # Dynamically find the main exe, excluding setup/installer/uninstall binaries
+          $candidates = @(Get-ChildItem "src-tauri/target/release/*.exe" |
+            Where-Object { $_.Name -notmatch '(?i)(setup|install|uninstall)' })
+
+          if ($candidates.Count -ne 1) {
+            Write-Error "Expected exactly 1 app exe, found $($candidates.Count): $($candidates.Name -join ', ')"
+            exit 1
+          }
+          $exe = $candidates[0]
+          Write-Output "Found exe: $($exe.FullName)"
+
+          $zipName = "Claude.Code.History.Viewer_${version}_x64-portable.zip"
+          Compress-Archive -Path $exe.FullName -DestinationPath $zipName
+
+          if (-not (Test-Path $zipName)) {
+            Write-Error "Failed to create portable zip"
+            exit 1
+          }
+
+          Write-Output "Created portable zip: $zipName"
+          Write-Output "PORTABLE_ZIP_PATH=$zipName" >> $env:GITHUB_ENV
+
+      - name: Upload portable Windows zip to release
+        if: matrix.platform == 'windows-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          gh release upload "${{ github.ref_name }}" `
+            "${{ env.PORTABLE_ZIP_PATH }}" `
+            --repo "${{ github.repository }}" `
+            --clobber
+
       # Fix AppImage EGL crash on Arch Linux and other rolling-release distros.
       #
       # The AppImage bundles Ubuntu-compiled EGL/Mesa/Wayland libs, but does NOT

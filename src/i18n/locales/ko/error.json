@@ -1,6 +1,7 @@
 {
   "error.apologize": "불편을 드려 죄송합니다. 아래 방법으로 문제를 해결해보세요.",
   "error.applyPresetFailed": "프리셋 적용 실패: {{detail}}",
+  "error.clipboardFailed": "클립보드에 복사하지 못했습니다",
   "error.copied": "복사됨!",
   "error.copyErrorInfo": "에러 정보 복사",
   "error.copyTemplate.browserInfo": "브라우저 정보:",

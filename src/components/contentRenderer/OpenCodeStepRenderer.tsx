@@ -21,7 +21,7 @@ export const OpenCodeStepRenderer = memo<OpenCodeStepProps>(
   ({ reason, snapshot, cost, tokens }) => {
     const { t } = useTranslation();
     const styles = getVariantStyles("system");
-    const totalTokens = tokens.input + tokens.output + tokens.reasoning;
+    const hasTokens = tokens.input + tokens.output + tokens.reasoning + tokens.cache_read + tokens.cache_write > 0;
 
     return (
       <div className={cn("border", layout.rounded, styles.container)}>
@@ -38,7 +38,7 @@ export const OpenCodeStepRenderer = memo<OpenCodeStepProps>(
               </code>
             )}
           </div>
-          {totalTokens > 0 && (
+          {hasTokens && (
             <span className={cn(layout.smallText, "font-mono text-muted-foreground")}>
               <Coins size={10} className="inline mr-0.5" />
               ${cost.toFixed(4)}
@@ -47,10 +47,10 @@ export const OpenCodeStepRenderer = memo<OpenCodeStepProps>(
         </div>
 
         <span className={cn(layout.bodyText, layout.containerPadding, "pt-1 pb-1.5 block text-muted-foreground")}>
-          {t(`renderers.opencodeStep.reason.${reason}`, reason)}
+          {t(`renderers.opencodeStep.reason.${reason}`, { defaultValue: reason })}
         </span>
 
-        {totalTokens > 0 && (
+        {hasTokens && (
           <div className={cn(
             "flex flex-wrap gap-x-3 gap-y-0.5 border-t border-border/50",
             layout.containerPadding, "py-1.5 bg-muted/20"

@@ -303,7 +303,7 @@
   "taskOperation.taskCount": "{{count}} task",
   "taskOperation.taskCount_plural": "{{count}} tasks",
   "taskOperation.taskOperations": "Task Operations",
-  "taskOperation.updated": "updated",
+  "taskOperation.updated": "Updated",
   "taskOperation.taskOutput": "Task Output",
   "terminalExecutionResultRenderer.stderr": "stderr",
   "terminalExecutionResultRenderer.stdout": "stdout",

@@ -1128,23 +1128,51 @@ fn process_parts(parts: &[Value]) -> (Option<Value>, Option<TokenUsage>, Option<
                 }
             }
             "step-finish" => {
-                // Real field is "tokens" with "input", "output", "reasoning",
-                // and "cache" object containing "read" and "write"
+                // Extract token usage from "tokens" field
                 if let Some(t) = part.get("tokens") {
                     let cache_obj = t.get("cache");
+                    let input = t.get("input").and_then(Value::as_u64).map(|v| v as u32);
+                    let output = t.get("output").and_then(Value::as_u64).map(|v| v as u32);
+                    let reasoning = t.get("reasoning").and_then(Value::as_u64).map(|v| v as u32);
+                    let cache_write = cache_obj
+                        .and_then(|c| c.get("write"))
+                        .and_then(Value::as_u64)
+                        .map(|v| v as u32);
+                    let cache_read = cache_obj
+                        .and_then(|c| c.get("read"))
+                        .and_then(Value::as_u64)
+                        .map(|v| v as u32);
+
                     let new_usage = TokenUsage {
-                        input_tokens: t.get("input").and_then(Value::as_u64).map(|v| v as u32),
-                        output_tokens: t.get("output").and_then(Value::as_u64).map(|v| v as u32),
-                        cache_creation_input_tokens: cache_obj
-                            .and_then(|c| c.get("write"))
-                            .and_then(Value::as_u64)
-                            .map(|v| v as u32),
-                        cache_read_input_tokens: cache_obj
-                            .and_then(|c| c.get("read"))
-                            .and_then(Value::as_u64)
-                            .map(|v| v as u32),
+                        input_tokens: input,
+                        output_tokens: output,
+                        cache_creation_input_tokens: cache_write,
+                        cache_read_input_tokens: cache_read,
                         service_tier: None,
                     };
+
+                    // Render step card with token breakdown
+                    let reason = part
+                        .get("reason")
+                        .and_then(Value::as_str)
+                        .unwrap_or("completed");
+                    let snapshot = part.get("snapshot").and_then(Value::as_str).unwrap_or("");
+                    let part_cost = part.get("cost").and_then(Value::as_f64).unwrap_or(0.0);
+
+                    content_items.push(serde_json::json!({
+                        "type": "opencode_step",
+                        "reason": reason,
+                        "snapshot": if snapshot.is_empty() { "" } else { &snapshot[..snapshot.len().min(8)] },
+                        "cost": part_cost,
+                        "tokens": {
+                            "input": input.unwrap_or(0),
+                            "output": output.unwrap_or(0),
+                            "reasoning": reasoning.unwrap_or(0),
+                            "cache_read": cache_read.unwrap_or(0),
+                            "cache_write": cache_write.unwrap_or(0)
+                        }
+                    }));
+
                     // Accumulate tokens across multiple step-finish parts
                     usage = match usage {
                         Some(prev) => Some(TokenUsage {
@@ -1239,16 +1267,8 @@ fn process_parts(parts: &[Value]) -> (Option<Value>, Option<TokenUsage>, Option<
                     }));
                 }
             }
-            "step-start" => {
-                let snapshot = part.get("snapshot").and_then(|v| v.as_str()).unwrap_or("");
-                if !snapshot.is_empty() {
-                    content_items.push(serde_json::json!({
-                        "type": "text",
-                        "text": format!("[Step Start] snapshot: {}", &snapshot[..snapshot.len().min(8)])
-                    }));
-                }
-            }
-            // Skip: snapshot, agent, subtask, retry
+            // step-start is redundant — step-finish contains all useful data
+            // Skip: step-start, snapshot, agent, subtask, retry
             _ => {}
         }
     }

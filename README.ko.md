@@ -39,7 +39,7 @@
 | 플랫폼 | 다운로드 |
 |----------|----------|
 | macOS (Universal) | [`.dmg`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
-| Windows (x64) | [`.exe`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
+| Windows (x64) | [`.exe`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) / [`.zip` (포터블)](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
 | Linux (x64) | [`.AppImage`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
 
 **Homebrew** (macOS):
@@ -106,7 +106,18 @@ AI 코딩 어시스턴트는 수천 개의 대화 메시지를 생성하지만, 
 | **메시지 네비게이터** | 우측 접이식 TOC로 긴 대화 빠르게 탐색 |
 | **실시간 모니터링** | 세션 파일 변경 실시간 감지 및 즉시 업데이트 |
 
-### v1.9.0 신규
+### v1.10.0 신규
+
+| 기능 | 설명 |
+|---------|-------------|
+| **월별 캘린더 히트맵** | 활동 히트맵을 월별 캘린더 블록으로 분리하여 일별 시각화 개선 |
+| **세션 관리** | 세션 삭제 (휴지통 이동) 및 JSONL 파일을 파일 탐색기에서 열기 |
+| **경로 복사** | 프로젝트 컨텍스트 메뉴에서 프로젝트 경로 복사 |
+| **통계 날짜 필터** | 분석 대시보드에서 날짜 범위 필터링 |
+| **Windows 포터블** | 포터블 `.zip` 빌드 — 설치 프로그램 없이 실행 가능 |
+| **도구별 카드** | Bash, Read, Edit, Glob, Grep, Write, WebFetch, WebSearch, Agent 도구별 전용 렌더링 카드 |
+
+### v1.9.0
 
 | 기능 | 설명 |
 |---------|-------------|
@@ -130,7 +141,7 @@ AI 코딩 어시스턴트는 수천 개의 대화 메시지를 생성하지만, 
 
 | 기능 | 설명 |
 |---------|-------------|
-| **세션 컨텍스트 메뉴** | 세션 ID 복사, 재개 명령 복사, 파일 경로 복사; 네이티브 이름 변경 및 검색 연동 |
+| **세션 컨텍스트 메뉴** | 세션 ID 복사, 재개 명령 복사, 파일 경로 복사; 세션 삭제, JSONL 파일 열기; 네이티브 이름 변경 및 검색 연동 |
 | **ANSI 색상 렌더링** | 터미널 출력을 원본 ANSI 색상으로 표시 |
 | **다국어 지원** | 영어, 한국어, 일본어, 중국어 (간체 및 번체) |
 | **최근 편집** | 파일 수정 내역 확인 및 복원 |

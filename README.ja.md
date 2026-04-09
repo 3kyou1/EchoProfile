@@ -39,7 +39,7 @@
 | プラットフォーム | ダウンロード |
 |----------|----------|
 | macOS (Universal) | [`.dmg`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
-| Windows (x64) | [`.exe`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
+| Windows (x64) | [`.exe`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) / [`.zip` (ポータブル)](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
 | Linux (x64) | [`.AppImage`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
 
 **Homebrew** (macOS)：
@@ -106,7 +106,18 @@ AIコーディングアシスタントは数千もの会話メッセージを生
 | **メッセージナビゲーター** | 右側折りたたみ式TOCで会話を素早くナビゲーション |
 | **リアルタイム監視** | セッションファイルのライブ監視で即座に更新 |
 
-### v1.9.0の新機能
+### v1.10.0の新機能
+
+| 機能 | 説明 |
+|---------|-------------|
+| **月別カレンダーヒートマップ** | アクティビティヒートマップを月別カレンダーブロックに分割し、日ごとの可視化を改善 |
+| **セッション管理** | セッション削除（ゴミ箱へ移動）とJSONLファイルをファイルエクスプローラーで表示 |
+| **パスコピー** | プロジェクトコンテキストメニューからプロジェクトパスをコピー |
+| **統計日付フィルター** | 分析ダッシュボードで日付範囲のフィルタリング |
+| **Windowsポータブル** | ポータブル`.zip`ビルド — インストーラー不要で実行可能 |
+| **ツール別カード** | Bash、Read、Edit、Glob、Grep、Write、WebFetch、WebSearch、Agentツール専用レンダリングカード |
+
+### v1.9.0
 
 | 機能 | 説明 |
 |---------|-------------|
@@ -130,7 +141,7 @@ AIコーディングアシスタントは数千もの会話メッセージを生
 
 | 機能 | 説明 |
 |---------|-------------|
-| **セッションコンテキストメニュー** | セッションID・再開コマンド・ファイルパスのコピー、ネイティブ名変更と検索連携 |
+| **セッションコンテキストメニュー** | セッションID・再開コマンド・ファイルパスのコピー、セッション削除、JSONLファイル表示、ネイティブ名変更と検索連携 |
 | **ANSIカラーレンダリング** | ターミナル出力を元のANSIカラーで表示 |
 | **多言語対応** | 英語、韓国語、日本語、中国語（簡体字・繁体字） |
 | **最近の編集** | ファイル変更履歴の確認と復元 |

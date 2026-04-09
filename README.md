@@ -39,7 +39,7 @@ Browse, search, and analyze conversations from **Claude Code**, **Gemini CLI**, 
 | Platform | Download |
 |----------|----------|
 | macOS (Universal) | [`.dmg`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
-| Windows (x64) | [`.exe`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
+| Windows (x64) | [`.exe`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) / [`.zip` (portable)](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
 | Linux (x64) | [`.AppImage`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
 
 **Homebrew** (macOS):
@@ -106,7 +106,18 @@ No vendor lock-in. No cloud dependency. Your local conversation files, beautiful
 | **Message Navigator** | Right-side collapsible TOC for quick conversation navigation |
 | **Real-time Monitoring** | Live session file watching for instant updates |
 
-### New in v1.9.0
+### New in v1.10.0
+
+| Feature | Description |
+|---------|-------------|
+| **Monthly Calendar Heatmap** | Activity heatmap split into monthly calendar blocks for clearer day-by-day visualization |
+| **Session Management** | Delete sessions (move to trash) and reveal JSONL files in system file explorer |
+| **Copy Path** | Copy project path from the project context menu |
+| **Global Stats Date Filter** | Filter analytics dashboard by date range |
+| **Windows Portable** | Portable `.zip` build — no installer required |
+| **Per-tool Cards** | Dedicated rendering cards for Bash, Read, Edit, Glob, Grep, Write, WebFetch, WebSearch, and Agent tools |
+
+### v1.9.0
 
 | Feature | Description |
 |---------|-------------|
@@ -130,7 +141,7 @@ No vendor lock-in. No cloud dependency. Your local conversation files, beautiful
 
 | Feature | Description |
 |---------|-------------|
-| **Session Context Menu** | Copy session ID, resume command, file path; native rename with search integration |
+| **Session Context Menu** | Copy session ID, resume command, file path; delete session, show JSONL file; native rename with search integration |
 | **ANSI Color Rendering** | Terminal output displayed with original ANSI colors |
 | **Multi-language** | English, Korean, Japanese, Chinese (Simplified & Traditional) |
 | **Recent Edits** | View file modification history and restore |

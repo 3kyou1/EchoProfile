@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-04-10
+
+### Added
+- **Monthly Calendar Heatmap**: Activity heatmap split into monthly calendar blocks for clearer visualization (#231)
+- **Delete Session**: Move sessions to trash from context menu (#229)
+- **Show JSONL File**: Open JSONL file in system file explorer from session context menu (#228)
+- **Copy Path**: Copy project path from project context menu (#224)
+- **Date Filter for Global Stats**: DatePickerHeader added to GlobalStatsView for date range filtering (#225)
+- **Windows Portable Build**: Portable `.zip` distribution added to release artifacts alongside `.exe` installer (#232)
+- **OpenCode Step Renderer**: Render OpenCode step-finish events as meaningful step cards (#223)
+- **Per-tool Unified Cards**: Split UnifiedToolExecutionRenderer into dedicated cards (Bash, Read, Edit, Glob, Grep, Write, WebFetch, WebSearch, Agent)
+
+### Fixed
+- Session ID, resume command, and file path copy failures (#244)
+- Codex messages shown twice due to missing deduplication (#227)
+- Windows absolute path validation in revealInFinder (#230)
+- Docker runtime and remote build issues (libgtk-3-0, corepack, MSRV) (#230)
+
 ## [1.6.0] - 2026-03-08
 
 ### Added

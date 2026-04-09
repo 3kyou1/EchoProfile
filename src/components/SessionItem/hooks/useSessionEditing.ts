@@ -10,6 +10,32 @@ import { api } from "@/services/api";
 import { isAbsolutePath } from "@/utils/pathUtils";
 import type { ClaudeSession } from "@/types";
 
+function legacyCopy(text: string): void {
+  let copied = false;
+
+  const handleCopy = (event: ClipboardEvent) => {
+    event.preventDefault();
+    if (!event.clipboardData) {
+      return;
+    }
+
+    event.clipboardData.setData("text/plain", text);
+    copied = true;
+  };
+
+  try {
+    document.addEventListener("copy", handleCopy);
+    if (typeof document.execCommand !== "function" || !document.execCommand("copy")) {
+      throw new Error("Clipboard unavailable");
+    }
+    if (!copied) {
+      throw new Error("Clipboard payload unavailable");
+    }
+  } finally {
+    document.removeEventListener("copy", handleCopy);
+  }
+}
+
 export function useSessionEditing(session: ClaudeSession) {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
@@ -124,7 +150,15 @@ export function useSessionEditing(session: ClaudeSession) {
       e.stopPropagation();
       setIsContextMenuOpen(false);
       try {
-        await navigator.clipboard.writeText(text);
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+          try {
+            await navigator.clipboard.writeText(text);
+          } catch {
+            legacyCopy(text);
+          }
+        } else {
+          legacyCopy(text);
+        }
         toast.success(successMsg);
       } catch {
         toast.error(t("copyButton.error", "Copy failed"));

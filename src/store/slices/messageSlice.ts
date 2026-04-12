@@ -13,6 +13,7 @@ import type {
   SessionTokenStats,
   ProjectStatsSummary,
   SessionComparison,
+  SubagentSession,
 } from "../../types";
 import { AppErrorType } from "../../types";
 import type { StateCreator } from "zustand";
@@ -53,6 +54,9 @@ export interface MessageSliceState {
   projectTokenStatsSummary: ProjectStatsSummary | null;
   projectConversationTokenStatsSummary: ProjectStatsSummary | null;
   projectTokenStatsPagination: ProjectTokenStatsPagination;
+  // SubAgent navigation
+  subagentSessions: SubagentSession[];
+  parentSessionStack: ClaudeSession[];
 }
 
 export interface MessageSliceActions {
@@ -69,6 +73,10 @@ export interface MessageSliceActions {
     projectPath: string
   ) => Promise<SessionComparison>;
   clearTokenStats: () => void;
+  // SubAgent navigation
+  loadSubagents: (sessionPath: string) => Promise<void>;
+  navigateToSubagent: (subagent: SubagentSession) => Promise<void>;
+  navigateBackToParent: () => Promise<void>;
 }
 
 export type MessageSlice = MessageSliceState & MessageSliceActions;
@@ -100,6 +108,8 @@ const initialMessageState: MessageSliceState = {
   projectTokenStatsSummary: null,
   projectConversationTokenStatsSummary: null,
   projectTokenStatsPagination: createInitialPaginationWithCount(TOKENS_STATS_PAGE_SIZE),
+  subagentSessions: [],
+  parentSessionStack: [],
 };
 
 // ============================================================================
@@ -114,6 +124,9 @@ export const createMessageSlice: StateCreator<
 > = (set, get) => {
   let tokenStatsLoadingEpoch = 0;
   let tokenStatsInFlight = 0;
+  // Flag set by navigateToSubagent/navigateBackToParent to prevent
+  // selectSession from clearing the parentSessionStack.
+  let isSubagentNav = false;
 
   const beginTokenStatsLoading = (): number => {
     const epoch = tokenStatsLoadingEpoch;
@@ -152,10 +165,17 @@ export const createMessageSlice: StateCreator<
     // Clear previous session's search index
     clearSearchIndex();
 
+    // Only clear parentSessionStack on non-subagent navigation.
+    // navigateToSubagent/navigateBackToParent manage the stack themselves.
+    const preserveStack = isSubagentNav;
+    isSubagentNav = false;
+
     set({
       messages: [],
       pagination: { ...INITIAL_PAGINATION },
       isLoadingMessages: true,
+      subagentSessions: [],
+      ...(preserveStack ? {} : { parentSessionStack: [] }),
     });
 
     // Reset message filters on session switch
@@ -210,6 +230,9 @@ export const createMessageSlice: StateCreator<
         },
         isLoadingMessages: false,
       });
+
+      // Load subagent sessions (non-blocking)
+      get().loadSubagents(sessionPath);
 
       // Build FlexSearch index asynchronously after UI renders
       // The buildSearchIndex now internally uses chunked async processing
@@ -647,6 +670,69 @@ export const createMessageSlice: StateCreator<
         TOKENS_STATS_PAGE_SIZE
       ),
     });
+  },
+
+  // ============================================================================
+  // SubAgent Navigation
+  // ============================================================================
+
+  loadSubagents: async (sessionPath: string) => {
+    try {
+      const subagents = await api<SubagentSession[]>("get_session_subagents", {
+        sessionPath,
+      });
+      // Guard: only update if still viewing the same session
+      if (get().selectedSession?.file_path === sessionPath) {
+        set({ subagentSessions: subagents });
+      }
+    } catch (error) {
+      // Graceful fallback: older sessions won't have subagents
+      if (import.meta.env.DEV) {
+        console.warn("[loadSubagents] Failed:", error);
+      }
+      if (get().selectedSession?.file_path === sessionPath) {
+        set({ subagentSessions: [] });
+      }
+    }
+  },
+
+  navigateToSubagent: async (subagent: SubagentSession) => {
+    const currentSession = get().selectedSession;
+    if (!currentSession) return;
+
+    // Push current session onto the navigation stack
+    set((state) => ({
+      parentSessionStack: [...state.parentSessionStack, currentSession],
+    }));
+
+    // Create a synthetic ClaudeSession for the subagent
+    const syntheticSession: ClaudeSession = {
+      session_id: subagent.file_path,
+      actual_session_id: subagent.agent_id,
+      file_path: subagent.file_path,
+      project_name: currentSession.project_name,
+      message_count: subagent.message_count,
+      first_message_time: subagent.first_message_time ?? "",
+      last_message_time: subagent.last_message_time ?? "",
+      last_modified: subagent.last_message_time ?? "",
+      has_tool_use: false,
+      has_errors: false,
+      summary: subagent.summary ?? subagent.agent_id,
+    };
+
+    isSubagentNav = true;
+    await get().selectSession(syntheticSession);
+  },
+
+  navigateBackToParent: async () => {
+    const stack = get().parentSessionStack;
+    if (stack.length === 0) return;
+
+    const parentSession = stack[stack.length - 1]!;
+    set({ parentSessionStack: stack.slice(0, -1) });
+
+    isSubagentNav = true;
+    await get().selectSession(parentSession);
   },
   };
 };

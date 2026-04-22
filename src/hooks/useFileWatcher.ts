@@ -133,6 +133,19 @@ export function useFileWatcher(options: UseFileWatcherOptions = {}): UseFileWatc
     // Capture the current version for cancellation checking
     const version = watchVersionRef.current;
 
+    // Pure Vite development (including mock API mode) has no SSE watcher backend.
+    // Skip the connection attempt instead of showing a misleading disconnect toast.
+    if (
+      import.meta.env.DEV &&
+      !isTauri() &&
+      typeof window !== 'undefined' &&
+      window.__WEBUI_API_BASE__ == null
+    ) {
+      isWatchingRef.current = false;
+      setIsWatching(false);
+      return;
+    }
+
     if (isTauri()) {
       // ---- Desktop path: Tauri event listeners ----
       try {

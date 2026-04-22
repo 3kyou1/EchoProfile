@@ -1,0 +1,1 @@
+export { CopaProfilePage } from "./CopaProfilePage";

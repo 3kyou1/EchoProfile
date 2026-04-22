@@ -1,3 +1,4 @@
+import type { RendererVariant } from "../components/renderers/types";
 import type { ClaudeMessage, ClaudeSession, GitCommit } from "./index";
 
 export interface BoardSessionStats {
@@ -48,11 +49,6 @@ export interface DateFilter {
     start: Date | null;
     end: Date | null;
 }
-
-// ... imports
-import type { RendererVariant } from "@/components/renderers/types";
-
-// ... existing code ...
 
 export interface ActiveBrush {
     type: "model" | "status" | "tool" | "file" | "hook" | "command" | "mcp";

@@ -163,7 +163,7 @@ export const createProjectSlice: StateCreator<
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      let errorType = AppErrorType.UNKNOWN;
+      let errorType: AppError["type"] = AppErrorType.UNKNOWN;
       let message = errorMessage;
 
       if (errorMessage.includes("CLAUDE_FOLDER_NOT_FOUND:")) {

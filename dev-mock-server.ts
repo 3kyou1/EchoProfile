@@ -8,6 +8,11 @@
  */
 
 import type { Plugin } from "vite";
+import type {
+  GlobalStatsSummary,
+  ProjectStatsSummary,
+  SessionTokenStats,
+} from "./src/types";
 
 function makeUuid(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -153,6 +158,175 @@ const MOCK_PROJECT = {
   provider: "claude",
 };
 
+export function createMockSessionTokenStats(): SessionTokenStats {
+  return {
+    session_id: MOCK_SESSION.actual_session_id,
+    project_name: MOCK_PROJECT.name,
+    total_input_tokens: 12000,
+    total_output_tokens: 3500,
+    total_cache_creation_tokens: 0,
+    total_cache_read_tokens: 0,
+    total_tokens: 15500,
+    message_count: MOCK_MESSAGES.length,
+    first_message_time: MOCK_SESSION.first_message_time,
+    last_message_time: MOCK_SESSION.last_message_time,
+    summary: MOCK_SESSION.project_name,
+    most_used_tools: [],
+  };
+}
+
+export function createMockProjectStatsSummary(): ProjectStatsSummary {
+  return {
+    project_name: MOCK_PROJECT.name,
+    total_sessions: 1,
+    total_messages: MOCK_MESSAGES.length,
+    total_tokens: 15500,
+    avg_tokens_per_session: 15500,
+    avg_session_duration: 360,
+    total_session_duration: 360,
+    most_active_hour: 14,
+    most_used_tools: [],
+    daily_stats: [
+      {
+        date: "2026-03-07",
+        total_tokens: 4200,
+        input_tokens: 3000,
+        output_tokens: 1200,
+        message_count: 6,
+        session_count: 1,
+        active_hours: 3,
+      },
+      {
+        date: "2026-03-08",
+        total_tokens: 5600,
+        input_tokens: 4100,
+        output_tokens: 1500,
+        message_count: 8,
+        session_count: 1,
+        active_hours: 4,
+      },
+      {
+        date: "2026-03-10",
+        total_tokens: 5700,
+        input_tokens: 4900,
+        output_tokens: 800,
+        message_count: 6,
+        session_count: 1,
+        active_hours: 3,
+      },
+    ],
+    activity_heatmap: [
+      { hour: 10, day: 5, activity_count: 2, tokens_used: 1300 },
+      { hour: 11, day: 5, activity_count: 2, tokens_used: 1450 },
+      { hour: 12, day: 5, activity_count: 2, tokens_used: 1450 },
+      { hour: 9, day: 6, activity_count: 2, tokens_used: 1200 },
+      { hour: 11, day: 6, activity_count: 2, tokens_used: 2200 },
+      { hour: 13, day: 6, activity_count: 2, tokens_used: 2200 },
+      { hour: 15, day: 6, activity_count: 2, tokens_used: 0 },
+      { hour: 14, day: 2, activity_count: 2, tokens_used: 2300 },
+      { hour: 15, day: 2, activity_count: 2, tokens_used: 1900 },
+      { hour: 16, day: 2, activity_count: 2, tokens_used: 1500 },
+    ],
+    token_distribution: {
+      input: 12000,
+      output: 3500,
+      cache_creation: 0,
+      cache_read: 0,
+    },
+  };
+}
+
+export function createMockGlobalStatsSummary(): GlobalStatsSummary {
+  return {
+    total_projects: 1,
+    total_sessions: 1,
+    total_messages: MOCK_MESSAGES.length,
+    total_tokens: 15500,
+    total_session_duration_minutes: 360,
+    date_range: {
+      first_message: MOCK_SESSION.first_message_time,
+      last_message: MOCK_SESSION.last_message_time,
+      days_span: 4,
+    },
+    token_distribution: {
+      input: 12000,
+      output: 3500,
+      cache_creation: 0,
+      cache_read: 0,
+    },
+    daily_stats: [
+      {
+        date: "2026-03-07",
+        total_tokens: 4200,
+        input_tokens: 3000,
+        output_tokens: 1200,
+        message_count: 6,
+        session_count: 1,
+        active_hours: 3,
+      },
+      {
+        date: "2026-03-08",
+        total_tokens: 5600,
+        input_tokens: 4100,
+        output_tokens: 1500,
+        message_count: 8,
+        session_count: 1,
+        active_hours: 4,
+      },
+      {
+        date: "2026-03-10",
+        total_tokens: 5700,
+        input_tokens: 4900,
+        output_tokens: 800,
+        message_count: 6,
+        session_count: 1,
+        active_hours: 3,
+      },
+    ],
+    activity_heatmap: [
+      { hour: 10, day: 5, activity_count: 2, tokens_used: 1300 },
+      { hour: 11, day: 5, activity_count: 2, tokens_used: 1450 },
+      { hour: 12, day: 5, activity_count: 2, tokens_used: 1450 },
+      { hour: 9, day: 6, activity_count: 2, tokens_used: 1200 },
+      { hour: 11, day: 6, activity_count: 2, tokens_used: 2200 },
+      { hour: 13, day: 6, activity_count: 2, tokens_used: 2200 },
+      { hour: 15, day: 6, activity_count: 2, tokens_used: 0 },
+      { hour: 14, day: 2, activity_count: 2, tokens_used: 2300 },
+      { hour: 15, day: 2, activity_count: 2, tokens_used: 1900 },
+      { hour: 16, day: 2, activity_count: 2, tokens_used: 1500 },
+    ],
+    most_used_tools: [],
+    provider_distribution: [
+      {
+        provider_id: "claude",
+        projects: 1,
+        sessions: 1,
+        messages: MOCK_MESSAGES.length,
+        tokens: 15500,
+      },
+    ],
+    model_distribution: [
+      {
+        model_name: "claude-sonnet-4-20250514",
+        message_count: 10,
+        token_count: 15500,
+        input_tokens: 12000,
+        output_tokens: 3500,
+        cache_creation_tokens: 0,
+        cache_read_tokens: 0,
+      },
+    ],
+    top_projects: [
+      {
+        project_name: MOCK_PROJECT.name,
+        sessions: 1,
+        messages: MOCK_MESSAGES.length,
+        tokens: 15500,
+      },
+    ],
+  };
+}
+
 /** API route handlers */
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   get_claude_folder_path: () => "/mock/.claude",
@@ -165,32 +339,15 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   load_session_messages: () => MOCK_MESSAGES,
   load_provider_messages: () => MOCK_MESSAGES,
   search_messages: () => [],
-  get_session_token_stats: () => ({
-    total_input_tokens: 12000,
-    total_output_tokens: 3500,
-    total_cache_creation: 0,
-    total_cache_read: 0,
-    message_count: MOCK_MESSAGES.length,
-    model_breakdown: {},
-  }),
+  get_session_token_stats: () => createMockSessionTokenStats(),
   get_project_token_stats: () => ({
     sessions: [],
     total_sessions: 0,
     page: 1,
     page_size: 20,
   }),
-  get_project_stats_summary: () => ({
-    total_sessions: 1,
-    total_messages: MOCK_MESSAGES.length,
-    total_input_tokens: 12000,
-    total_output_tokens: 3500,
-    date_range: { start: "2026-03-07", end: "2026-03-10" },
-  }),
-  get_global_stats_summary: () => ({
-    total_projects: 1,
-    total_sessions: 1,
-    total_messages: MOCK_MESSAGES.length,
-  }),
+  get_project_stats_summary: () => createMockProjectStatsSummary(),
+  get_global_stats_summary: () => createMockGlobalStatsSummary(),
   get_session_comparison: () => [],
   get_recent_edits: () => [],
   load_mcp_presets: () => [],

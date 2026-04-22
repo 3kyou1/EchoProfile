@@ -10,6 +10,7 @@ import {
   Columns,
   Search,
   Archive,
+  Brain,
 } from "lucide-react";
 
 import { TooltipButton } from "@/shared/TooltipButton";
@@ -36,6 +37,7 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
   const { openModal } = useModal();
 
   const {
+    projects,
     selectedProject,
     selectedSession,
     isLoadingMessages,
@@ -281,6 +283,20 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
                 analyticsActions.switchToMessages();
               } else {
                 analyticsActions.switchToArchive();
+              }
+            }}
+          />
+
+          <NavButton
+            icon={Brain}
+            label={t("common.copa.title", "CoPA Profile")}
+            isActive={computed.isCopaProfileView}
+            disabled={projects.length === 0}
+            onClick={() => {
+              if (computed.isCopaProfileView) {
+                analyticsActions.switchToMessages();
+              } else {
+                analyticsActions.switchToCopaProfile();
               }
             }}
           />

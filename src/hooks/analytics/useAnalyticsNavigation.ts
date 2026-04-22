@@ -54,6 +54,11 @@ export function useAnalyticsNavigation() {
     }
   }, [setAnalyticsCurrentView, clearAnalyticsErrors]);
 
+  const switchToCopaProfile = useCallback(() => {
+    setAnalyticsCurrentView("copaProfile");
+    clearAnalyticsErrors();
+  }, [setAnalyticsCurrentView, clearAnalyticsErrors]);
+
   const switchToTokenStats = useCallback(async () => {
     const project = useAppStore.getState().selectedProject;
     if (!project) {
@@ -429,6 +434,8 @@ export function useAnalyticsNavigation() {
           await useAppStore.getState().loadArchives();
         }
         break;
+      case "copaProfile":
+        break;
       default:
         console.warn("Unknown analytics view:", analytics.currentView);
     }
@@ -459,6 +466,7 @@ export function useAnalyticsNavigation() {
     switchToSettings,
     switchToBoard,
     switchToArchive,
+    switchToCopaProfile,
     setStatsMode,
     setMetricMode,
     refreshAnalytics,

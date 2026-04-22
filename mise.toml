@@ -1,8 +1,7 @@
 [tools]
-just = "latest"
-node = "latest"
-pnpm = "latest"
-rust = "latest"
+node = "25.7.0"
+pnpm = "10.13.1"
+rust = "1.95.0"
 
 [settings]
 # Set to symlink if hardlink fails

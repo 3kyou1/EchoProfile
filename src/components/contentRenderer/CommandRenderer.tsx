@@ -70,7 +70,6 @@ export const CommandRenderer = ({
     }
   }, [searchQuery, text, setIsCommandExpanded]);
 
-  // Command 그룹 (name, message, args) 추출
   const commandNameRegex = /<command-name>\s*(.*?)\s*<\/command-name>/gs;
   const commandMessageRegex =
     /<command-message>\s*(.*?)\s*<\/command-message>/gs;
@@ -104,17 +103,13 @@ export const CommandRenderer = ({
     args: extractedArgs && extractedArgs.length > 0 ? extractedArgs : undefined,
   };
 
-  // 출력 태그들 (stdout, stderr 등) 추출 - 더 포괄적인 패턴 사용
   const outputTags: OutputTag[] = [];
 
-  // stdout 계열: stdout, output이 포함된 모든 태그 (local-command-stdout 제외 - 별도 처리)
   const stdoutRegex = /<(?!local-command-stdout)([^>]*(?:stdout|output)[^>]*)\s*>\s*(.*?)\s*<\/\1>/gs;
-  // stderr 계열: stderr, error가 포함된 모든 태그
   const stderrRegex = /<([^>]*(?:stderr|error)[^>]*)\s*>\s*(.*?)\s*<\/\1>/gs;
 
   let match;
 
-  // stdout 계열 태그들
   while ((match = stdoutRegex.exec(text)) !== null) {
     const [, tagName, content] = match;
     if (content && content.trim()) {
@@ -126,7 +121,6 @@ export const CommandRenderer = ({
     }
   }
 
-  // stderr 계열 태그들
   while ((match = stderrRegex.exec(text)) !== null) {
     const [, tagName, content] = match;
     if (content && content.trim()) {
@@ -414,7 +408,6 @@ const CaveatRenderer = ({
   const [isExpanded, setIsExpanded] = useCaptureExpandState("caveat", false);
   const { t } = useTranslation();
 
-  // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
   useEffect(() => {
     if (searchQuery && content.toLowerCase().includes(searchQuery.toLowerCase())) {
       setIsExpanded(true);

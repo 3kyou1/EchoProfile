@@ -32,21 +32,15 @@ function normalizeDisplayQuote(value: string): string {
   return trimmed.replace(/^["'“”‘’「『]+/, "").replace(/["'“”‘’」』]+$/, "").trim();
 }
 
-function normalizeNameLanguage(language: string): "zh" | "ja" | "ko" | "en" {
+function normalizeNameLanguage(language: string): "zh" | "en" {
   const normalized = language.toLowerCase();
   if (normalized.startsWith("zh")) {
     return "zh";
   }
-  if (normalized.startsWith("ja")) {
-    return "ja";
-  }
-  if (normalized.startsWith("ko")) {
-    return "ko";
-  }
   return "en";
 }
 
-function buildWikipediaUrl(language: "zh" | "ja" | "ko" | "en", title: string): string {
+function buildWikipediaUrl(language: "zh" | "en", title: string): string {
   const host = language === "en" ? "en.wikipedia.org" : `${language}.wikipedia.org`;
   return `https://${host}/wiki/${encodeURIComponent(title.replace(/\s+/g, "_"))}`;
 }

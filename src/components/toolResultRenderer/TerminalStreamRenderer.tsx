@@ -55,7 +55,6 @@ export const TerminalStreamRenderer = ({
       />
       <Renderer.Content>
         <div className="relative">
-          {/* 스트림 타입 표시 */}
           <div className={cn("flex items-center mb-2", layout.iconSpacing)}>
             <span
               className={cn(
@@ -83,7 +82,6 @@ export const TerminalStreamRenderer = ({
             )}
           </div>
 
-          {/* 출력 내용 */}
           <pre className={cn(layout.monoText, "text-foreground whitespace-pre-wrap bg-muted p-2 rounded overflow-auto max-h-80")}>
             {searchQuery ? (
               <HighlightedText

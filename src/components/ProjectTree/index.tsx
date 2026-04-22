@@ -396,7 +396,6 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({
   );
 
   const handleGlobalStatsClick = useCallback(() => {
-    // Global stats 진입 시 현재 열려 있는 프로젝트 확장을 닫는다.
     setExpandedProjects((prev) => {
       if (prev.size === 0) {
         return prev;

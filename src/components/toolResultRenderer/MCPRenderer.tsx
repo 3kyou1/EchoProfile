@@ -49,7 +49,6 @@ export const MCPRenderer = ({
       />
       <Renderer.Content>
         <div className="space-y-2">
-          {/* 매개변수 */}
           <div>
             <button
               type="button"
@@ -66,7 +65,6 @@ export const MCPRenderer = ({
             )}
           </div>
 
-          {/* 결과 */}
           {error ? (
             <div className="p-2 rounded border bg-destructive/10 border-destructive/30">
               <div className={`${layout.smallText} font-medium mb-1 text-destructive`}>

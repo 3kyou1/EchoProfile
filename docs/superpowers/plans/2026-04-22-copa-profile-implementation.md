@@ -93,9 +93,6 @@
 **Files:**
 - Modify: `src/i18n/locales/en/common.json`
 - Modify: `src/i18n/locales/zh-CN/common.json`
-- Modify: `src/i18n/locales/ko/common.json`
-- Modify: `src/i18n/locales/ja/common.json`
-- Modify: `src/i18n/locales/zh-TW/common.json`
 
 - [ ] **Step 1: Add CoPA page labels and messages**
 - [ ] **Step 2: Verify translation lookups resolve**

@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
- * i18n 공유 설정
+ * Shared i18n settings
  *
- * 모든 i18n 스크립트에서 사용하는 공통 상수 정의
- * 새 namespace 추가 시 이 파일만 수정하면 됨
+ * Update this file when adding a new namespace or supported language.
  */
 
 export const NAMESPACES = [
@@ -20,6 +19,6 @@ export const NAMESPACES = [
   'recentEdits',
 ];
 
-export const LANGUAGES = ['en', 'ko', 'ja', 'zh-CN', 'zh-TW'];
+export const LANGUAGES = ['en', 'zh-CN'];
 
 export const BASE_LANG = 'en';

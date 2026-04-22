@@ -203,20 +203,18 @@ export { NewContentTypeRenderer } from './NewContentTypeRenderer';
 
 ### Step 5: Add i18n Keys
 
-Add translations to all 5 language files:
+Add translations to both language files:
 
 ```json
-// src/i18n/locales/en.json
+// src/i18n/locales/en/common.json
 {
   "newContentType.title": "New Content Type Title"
 }
 
-// src/i18n/locales/ko.json
+// src/i18n/locales/zh-CN/common.json
 {
-  "newContentType.title": "새 콘텐츠 타입 제목"
+  "newContentType.title": "新内容类型标题"
 }
-
-// Repeat for ja.json, zh-CN.json, zh-TW.json
 ```
 
 Regenerate types:
@@ -699,7 +697,7 @@ export { SummaryRenderer } from './SummaryRenderer';
 
 ### i18n Keys Not Found
 
-1. Add key to all 5 language files (en, ko, ja, zh-CN, zh-TW)
+1. Add the key to both language files (`en` and `zh-CN`)
 2. Keys must have identical spelling across all files
 3. Run `pnpm run generate:i18n-types` to regenerate types
 4. Verify key count is identical: `pnpm run i18n:sync`

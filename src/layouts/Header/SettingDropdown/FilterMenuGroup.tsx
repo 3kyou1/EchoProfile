@@ -14,7 +14,7 @@ export const FilterMenuGroup = () => {
   return (
     <>
       <DropdownMenuLabel>
-        {t("common.settings.filter.title", { defaultValue: "필터" })}
+        {t("common.settings.filter.title", { defaultValue: "Filter" })}
       </DropdownMenuLabel>
       <DropdownMenuItem
         role="menuitemcheckbox"
@@ -27,7 +27,7 @@ export const FilterMenuGroup = () => {
         <Eye className="mr-2 h-4 w-4 text-foreground" />
         <span className="flex-1">
           {t("common.settings.filter.showSystemMessages", {
-            defaultValue: "시스템 메시지 표시",
+            defaultValue: "Show system messages",
           })}
         </span>
         <Switch

@@ -80,7 +80,7 @@ fn run_tauri() {
     // The CI pipeline removes conflicting EGL libs from the AppImage (primary fix).
     // This env var is defense-in-depth for edge cases (NVIDIA driver quirks, etc.).
     //
-    // See: https://github.com/jhlee0409/claude-code-history-viewer/issues/186
+    // See: https://github.com/jhlee0409/echo-profile/issues/186
     // See: https://github.com/tauri-apps/tauri/issues/11988
     // Note: std::env::set_var becomes unsafe in Rust edition 2024.
     // This is safe here because no threads exist yet at this point in startup.
@@ -102,7 +102,6 @@ fn run_tauri() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
@@ -300,7 +299,7 @@ enum AuthTokenSource {
 /// Priority:
 /// - `--no-auth` → `None` (auth disabled)
 /// - `--token <value>` → `Some(value)` (user-supplied via CLI)
-/// - `CCHV_TOKEN` env var → `Some(value)` (user-supplied via env, e.g. systemd)
+/// - `ECHOPROFILE_TOKEN` env var → `Some(value)` (user-supplied via env, e.g. systemd)
 /// - otherwise → `Some(uuid-v4)` (auto-generated)
 #[cfg(feature = "webui-server")]
 fn resolve_auth_token(args: &[String]) -> Option<(String, AuthTokenSource)> {
@@ -314,7 +313,7 @@ fn resolve_auth_token(args: &[String]) -> Option<(String, AuthTokenSource)> {
         }
         eprintln!("⚠ --token value is empty; falling back to auto-generated token");
     }
-    if let Ok(token) = std::env::var("CCHV_TOKEN") {
+    if let Ok(token) = std::env::var("ECHOPROFILE_TOKEN") {
         let trimmed = token.trim();
         if !trimmed.is_empty() {
             return Some((trimmed.to_string(), AuthTokenSource::Env));

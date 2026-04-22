@@ -41,7 +41,6 @@ export const ProjectStatsView: React.FC<ProjectStatsViewProps> = ({
     [projectSummary?.daily_stats]
   );
 
-  // 데이터가 없으면 항상 로딩 상태 표시 (뷰 전환 직후 isLoading이 false일 수 있음)
   if (!projectSummary) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">

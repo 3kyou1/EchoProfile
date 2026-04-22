@@ -1,4 +1,4 @@
-# Multi-stage build for Claude Code History Viewer (WebUI Server Mode)
+# Multi-stage build for EchoProfile (WebUI Server Mode)
 # Frontend assets are embedded into the binary via rust-embed — no separate dist/ needed.
 
 # ── Stage 1: Build frontend ──────────────────────────────────────────
@@ -46,11 +46,11 @@ ENV http_proxy= https_proxy=
 # Run as non-root user for security
 RUN groupadd -r cchv && useradd -r -g cchv -d /home/cchv -s /sbin/nologin -m cchv
 
-COPY --from=backend /app/src-tauri/target/release/claude-code-history-viewer /usr/local/bin/cchv-server
+COPY --from=backend /app/src-tauri/target/release/echo-profile /usr/local/bin/echo-profile
 
 ENV PORT=3727
 EXPOSE 3727
 USER cchv
 
-ENTRYPOINT ["cchv-server", "--serve", "--host", "0.0.0.0"]
+ENTRYPOINT ["echo-profile", "--serve", "--host", "0.0.0.0"]
 CMD ["--port", "3727"]

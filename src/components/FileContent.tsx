@@ -41,7 +41,6 @@ export const FileContent = ({
   const totalLines =
     typeof fileData.totalLines === "number" ? fileData.totalLines : 0;
 
-  // 파일 확장자에 따른 언어 결정
   const getLanguageFromPath = (path: string) => {
     const ext = path.split(".").pop()?.toLowerCase();
     const fileName = path.split("/").pop()?.toLowerCase() || "";
@@ -123,7 +122,6 @@ export const FileContent = ({
       case "log":
         return "text";
       default:
-        // 파일명으로 특수 케이스 처리
         if (fileName.includes("dockerfile")) return "dockerfile";
         if (fileName.includes("makefile")) return "makefile";
         if (fileName.includes("package.json")) return "json";
@@ -153,11 +151,9 @@ export const FileContent = ({
     return `${totalLines} lines`;
   };
 
-  // 접기/펼치기 상태 관리
   const [isExpanded, setIsExpanded] = useCaptureExpandState(`file:${filePath}:${startLine}:${numLines}`, false);
-  const MAX_LINES = 20; // 최대 표시 줄 수
+  const MAX_LINES = 20;
 
-  // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
   useEffect(() => {
     if (searchQuery && content.toLowerCase().includes(searchQuery.toLowerCase())) {
       setIsExpanded(true);

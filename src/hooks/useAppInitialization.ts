@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { useLanguageStore } from "@/store/useLanguageStore";
-import { type SupportedLanguage } from "@/i18n";
+import { isSupportedLanguage, normalizeLanguage } from "@/i18n";
 import { useTranslation } from "react-i18next";
 import { useFileWatcher } from "./useFileWatcher";
 
@@ -74,19 +74,11 @@ export function useAppInitialization(deps: {
   // i18n language sync
   useEffect(() => {
     const handleLanguageChange = (lng: string) => {
-      const currentLang = lng.startsWith("zh")
-        ? lng.includes("TW") || lng.includes("HK")
-          ? "zh-TW"
-          : "zh-CN"
-        : lng.split("-")[0];
+      const currentLang = normalizeLanguage(lng);
 
-      if (
-        currentLang &&
-        currentLang !== language &&
-        ["en", "ko", "ja", "zh-CN", "zh-TW"].includes(currentLang)
-      ) {
+      if (isSupportedLanguage(currentLang) && currentLang !== language) {
         useLanguageStore.setState({
-          language: currentLang as SupportedLanguage,
+          language: currentLang,
         });
       }
     };

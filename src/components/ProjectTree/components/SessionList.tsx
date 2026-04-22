@@ -11,11 +11,8 @@ import { useAppStore } from "@/store/useAppStore";
 import type { SessionListProps } from "../types";
 import type { ClaudeSession } from "../../../types";
 
-// SessionItem의 대략적인 높이 (py-2.5 + 내용)
 const SESSION_ITEM_HEIGHT = 72;
-// Virtual scroll을 적용할 최소 세션 수
 const VIRTUALIZATION_THRESHOLD = 20;
-// Virtual list의 최대 표시 높이
 const MAX_LIST_HEIGHT = 400;
 
 interface SessionRowProps {
@@ -104,7 +101,6 @@ export const SessionList: React.FC<SessionListProps> = ({
   // Show controls only if we have enough sessions
   const showControls = sessions.length >= 3;
 
-  // Virtual list에 전달할 데이터 memoize
   const itemData = useMemo(
     () => ({
       sessions: filteredAndSortedSessions,
@@ -116,13 +112,11 @@ export const SessionList: React.FC<SessionListProps> = ({
     [filteredAndSortedSessions, selectedSession, onSessionSelect, onSessionHover, formatTimeAgo]
   );
 
-  // 리스트 높이 계산
   const listHeight = useMemo(() => {
     const totalHeight = filteredAndSortedSessions.length * SESSION_ITEM_HEIGHT;
     return Math.min(totalHeight, MAX_LIST_HEIGHT);
   }, [filteredAndSortedSessions.length]);
 
-  // Virtual scroll 사용 여부
   const useVirtualScroll = filteredAndSortedSessions.length >= VIRTUALIZATION_THRESHOLD;
 
   if (isLoading) {
@@ -149,7 +143,6 @@ export const SessionList: React.FC<SessionListProps> = ({
     );
   }
 
-  // 세션 수가 적으면 기존 방식 유지
   if (!useVirtualScroll) {
     return (
       <div className={cn(containerClass, borderClass, (isWorktree || isMain) && "py-1.5")}>
@@ -216,7 +209,6 @@ export const SessionList: React.FC<SessionListProps> = ({
     );
   }
 
-  // 세션 수가 많으면 virtual scroll 적용
   return (
     <div className={cn(containerClass, borderClass, (isWorktree || isMain) && "py-1.5")}>
       {/* Search and Sort Controls */}

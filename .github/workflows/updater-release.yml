@@ -1,4 +1,4 @@
-# GitHub Releases에서 Tauri 업데이터를 위한 메타데이터 자동 생성
+# Auto-generate Tauri updater metadata for GitHub Releases
 name: Release with Updater Metadata
 
 on:
@@ -41,7 +41,7 @@ jobs:
                 repo: context.repo.repo,
                 tag_name: tag,
                 name: tag,
-                body: '⏳ 빌드 진행 중...',
+                body: '⏳ Build in progress...',
                 generate_release_notes: false,
                 draft: true,
                 prerelease: false,
@@ -299,7 +299,7 @@ jobs:
           script: |
             const releaseId = ${{ needs.create-release.outputs.release_id }};
 
-            // 릴리즈 정보 가져오기
+            // Fetch release metadata
             const { data: releaseData } = await github.rest.repos.getRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -370,7 +370,7 @@ jobs:
 
             console.log('📄 latest.json:', JSON.stringify(latestJson, null, 2));
 
-            // 기존 latest.json 삭제
+            // Delete the existing latest.json asset
             const existing = releaseData.assets.find(a => a.name === 'latest.json');
             if (existing) {
               await github.rest.repos.deleteReleaseAsset({
@@ -380,7 +380,7 @@ jobs:
               });
             }
 
-            // latest.json 업로드
+            // Upload latest.json
             const uploadUrl = releaseData.upload_url.replace('{?name,label}', '?name=latest.json');
             await github.request({
               method: 'POST',
@@ -466,7 +466,7 @@ jobs:
               const tmpDmg = path.join(os.tmpdir(), `cchv-${version}-${Date.now()}.dmg`);
 
               try {
-                // GitHub API로 asset 다운로드 (draft release에서도 작동)
+                // Download the asset via the GitHub API (works for draft releases)
                 const { data } = await github.rest.repos.getReleaseAsset({
                   owner: context.repo.owner,
                   repo: context.repo.repo,

@@ -1,0 +1,6 @@
+---
+source: src/models/snapshot_tests.rs
+assertion_line: 348
+expression: error_msg
+---
+CLAUDE_FOLDER_NOT_FOUND:Claude folder not found at /home/user/.claude

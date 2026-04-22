@@ -1,401 +1,46 @@
 <div align="center">
 
-<img src="docs/assets/app-icon.png" alt="CCHV Logo" width="120" />
+# EchoProfile
 
-# Claude Code History Viewer
+**Model yourself through AI conversation history.**
 
-**The unified history viewer for AI coding assistants.**
-
-Browse, search, and analyze conversations from **Claude Code**, **Gemini CLI**, **Codex CLI**, **Cline**, **Cursor**, **Aider**, and **OpenCode** — as a desktop app or headless server. 100% offline.
-
-[![Version](https://img.shields.io/github/v/release/jhlee0409/claude-code-history-viewer?label=Version&color=blue)](https://github.com/jhlee0409/claude-code-history-viewer/releases)
-[![Stars](https://img.shields.io/github/stars/jhlee0409/claude-code-history-viewer?style=flat&color=yellow)](https://github.com/jhlee0409/claude-code-history-viewer/stargazers)
-[![License](https://img.shields.io/github/license/jhlee0409/claude-code-history-viewer)](LICENSE)
-[![Rust Tests](https://img.shields.io/github/actions/workflow/status/jhlee0409/claude-code-history-viewer/rust-tests.yml?label=Rust%20Tests)](https://github.com/jhlee0409/claude-code-history-viewer/actions/workflows/rust-tests.yml)
-[![Last Commit](https://img.shields.io/github/last-commit/jhlee0409/claude-code-history-viewer)](https://github.com/jhlee0409/claude-code-history-viewer/commits/main)
-![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
-
-[Website](https://jhlee0409.github.io/claude-code-history-viewer/) · [Download](https://github.com/jhlee0409/claude-code-history-viewer/releases) · [Report Bug](https://github.com/jhlee0409/claude-code-history-viewer/issues)
-
-**Languages**: [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文 (简体)](README.zh-CN.md) | [中文 (繁體)](README.zh-TW.md)
+EchoProfile is a desktop app for exploring AI chat history and turning it into user-modeling signals, long-term patterns, and self-reflection views.
 
 </div>
 
----
+## Status
 
-<p align="center">
-  <img width="49%" alt="Conversation History" src="https://github.com/user-attachments/assets/9a18304d-3f08-4563-a0e6-dd6e6dfd227e" />
-  <img width="49%" alt="Analytics Dashboard" src="https://github.com/user-attachments/assets/0f869344-4a7c-4f1f-9de3-701af10fc255" />
-</p>
-<p align="center">
-  <img width="49%" alt="Token Statistics" src="https://github.com/user-attachments/assets/d30f3709-1afb-4f76-8f06-1033a3cb7f4a" />
-  <img width="49%" alt="Recent Edits" src="https://github.com/user-attachments/assets/8c9fbff3-55dd-4cfc-a135-ddeb719f3057" />
-</p>
+This repository is the initial independent rebrand of a project derived from `Claude Code History Viewer`.
+It keeps the history-ingestion foundation while shifting the product direction toward personal user modeling based on AI conversation history.
 
-## Quick Start
+## What It Will Become
 
-**Desktop app** — download and run:
+- Build longitudinal user profiles from AI conversations
+- Surface recurring behavioral and prompting patterns
+- Track how a user's style evolves over time
+- Support reflection-oriented views instead of only history browsing
 
-| Platform | Download |
-|----------|----------|
-| macOS (Universal) | [`.dmg`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
-| Windows (x64) | [`.exe`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) / [`.zip` (portable)](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
-| Linux (x64) | [`.AppImage`](https://github.com/jhlee0409/claude-code-history-viewer/releases/latest) |
+## Current Base
 
-**Homebrew** (macOS):
+The current codebase still contains much of the original history viewer infrastructure:
 
-```bash
-brew install --cask jhlee0409/tap/claude-code-history-viewer
-```
+- local conversation ingestion
+- multi-provider session browsing
+- search and message rendering
+- analytics and timeline foundations
 
-**Headless server** — access from any browser:
+This rebrand is the first step toward a more focused product identity.
 
-```bash
-brew install jhlee0409/tap/cchv-server   # or: curl -fsSL https://...install-server.sh | sh
-cchv-server --serve                       # → http://localhost:3727
-```
+## Attribution
 
-See [Server Mode](#server-mode-webui) for Docker, VPS, and systemd setup.
+EchoProfile is an independent open-source project initially derived from `Claude Code History Viewer`, released under the MIT License.
+The original copyright notice and license are preserved in `LICENSE`.
 
----
+## Next Steps
 
-## Why This Exists
+Before the first public release, update these placeholders:
 
-AI coding assistants generate thousands of conversation messages, but none of them provide a way to look back at your history across tools. CCHV solves this.
-
-**Seven assistants. One viewer.** Switch between Claude Code, Gemini CLI, Codex CLI, Cline, Cursor, Aider, and OpenCode sessions seamlessly — compare token usage, search across providers, and analyze your workflow in a single interface.
-
-| Provider | Data Location | What You Get |
-|----------|--------------|--------------|
-| **Claude Code** | `~/.claude/projects/` | Full conversation history, tool use, thinking, costs |
-| **Gemini CLI** | `~/.gemini/history/` | Conversation history with tool calls |
-| **Codex CLI** | `~/.codex/sessions/` | Session rollouts with agent responses |
-| **Cline** | `~/.cline/tasks/` | Task-based conversation history |
-| **Cursor** | `~/.cursor/` | Composer and chat conversations |
-| **Aider** | Project directories | Chat history and edit logs |
-| **OpenCode** | `~/.local/share/opencode/` | Conversation sessions and tool results |
-
-No vendor lock-in. No cloud dependency. Your local conversation files, beautifully rendered.
-
-## Table of Contents
-
-- [Features](#features)
-- [Installation](#installation)
-- [Build from Source](#build-from-source)
-- [Server Mode (WebUI)](#server-mode-webui)
-- [Usage](#usage)
-- [Accessibility](#accessibility)
-- [Tech Stack](#tech-stack)
-- [Data Privacy](#data-privacy)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Features
-
-### Core
-
-| Feature | Description |
-|---------|-------------|
-| **Multi-Provider Support** | Unified viewer for **Claude Code**, **Gemini CLI**, **Codex CLI**, **Cline**, **Cursor**, **Aider**, and **OpenCode** — filter by provider, compare across tools |
-| **Conversation Browser** | Navigate conversations by project/session with worktree grouping |
-| **Global Search** | Search across all conversations from all providers instantly |
-| **Analytics Dashboard** | Dual-mode token stats (billing vs conversation), cost breakdown, and provider distribution charts |
-| **Session Board** | Multi-session visual analysis with pixel view, attribute brushing, and activity timeline |
-| **Settings Manager** | Scope-aware Claude Code settings editor with MCP server management |
-| **Message Navigator** | Right-side collapsible TOC for quick conversation navigation |
-| **Real-time Monitoring** | Live session file watching for instant updates |
-
-### New in v1.10.0
-
-| Feature | Description |
-|---------|-------------|
-| **Monthly Calendar Heatmap** | Activity heatmap split into monthly calendar blocks for clearer day-by-day visualization |
-| **Session Management** | Delete sessions (move to trash) and reveal JSONL files in system file explorer |
-| **Copy Path** | Copy project path from the project context menu |
-| **Global Stats Date Filter** | Filter analytics dashboard by date range |
-| **Windows Portable** | Portable `.zip` build — no installer required |
-| **Per-tool Cards** | Dedicated rendering cards for Bash, Read, Edit, Glob, Grep, Write, WebFetch, WebSearch, and Agent tools |
-
-### v1.9.0
-
-| Feature | Description |
-|---------|-------------|
-| **4 New Providers** | Added **Gemini CLI**, **Cline**, **Cursor**, and **Aider** — now supports 7 AI coding assistants |
-| **WSL Support** | Windows Subsystem for Linux integration — scan Claude Code projects inside WSL distros |
-| **Enhanced Global Search** | Project filter, LRU cache, aho-corasick multi-pattern optimization, and message navigation |
-| **Zoom Controls** | Keyboard shortcuts for zoom in/out |
-
-### v1.6.0
-
-| Feature | Description |
-|---------|-------------|
-| **WebUI Server Mode** | Run as a headless web server with `--serve` — access from any browser, deploy on VPS/Docker |
-| **Screenshot Capture** | Long screenshot with range selection, preview modal, and multi-selection export |
-| **Archive Management** | Create, browse, rename, and export session archives with per-file download |
-| **Accessibility** | Full keyboard navigation, screen reader support, font scaling, and high contrast mode |
-| **Mobile UI** | Responsive 390px viewport support with bottom tab bar |
-| **External Links** | All links open in system browser instead of the app's WebView |
-
-### More
-
-| Feature | Description |
-|---------|-------------|
-| **Session Context Menu** | Copy session ID, resume command, file path; delete session, show JSONL file; native rename with search integration |
-| **ANSI Color Rendering** | Terminal output displayed with original ANSI colors |
-| **Multi-language** | English, Korean, Japanese, Chinese (Simplified & Traditional) |
-| **Recent Edits** | View file modification history and restore |
-| **Auto-update** | Built-in updater with skip/postpone options |
-
-## Installation
-
-### Homebrew (macOS)
-
-```bash
-brew tap jhlee0409/tap
-brew install --cask claude-code-history-viewer
-```
-
-Or install directly with the full cask path:
-
-```bash
-brew install --cask jhlee0409/tap/claude-code-history-viewer
-```
-
-If you see `No Cask with this name exists`, run the full cask path command above.
-
-To upgrade:
-
-```bash
-brew upgrade --cask claude-code-history-viewer
-```
-
-To uninstall:
-
-```bash
-brew uninstall --cask claude-code-history-viewer
-```
-
-> **Migrating from manual (.dmg) installation?**
-> Remove the existing app before installing via Homebrew to avoid conflicts.
-> Choose **one** installation method — do not mix manual and Homebrew installs.
-> ```bash
-> # Remove the manually installed app first
-> rm -rf "/Applications/Claude Code History Viewer.app"
-> # Then install via Homebrew
-> brew tap jhlee0409/tap
-> brew install --cask claude-code-history-viewer
-> ```
-
-## Build from Source
-
-```bash
-git clone https://github.com/jhlee0409/claude-code-history-viewer.git
-cd claude-code-history-viewer
-
-# Option 1: Using just (recommended)
-brew install just    # or: cargo install just
-just setup
-just dev             # Development
-just tauri-build     # Production build
-
-# Option 2: Using pnpm directly
-pnpm install
-pnpm tauri:dev       # Development
-pnpm tauri:build     # Production build
-```
-
-**Requirements**: Node.js 18+, pnpm, Rust toolchain
-
-## Server Mode (WebUI)
-
-Run the viewer as a headless HTTP server — no desktop environment required. Ideal for VPS, remote servers, or Docker. The server binary embeds the frontend — **a single file is all you need**.
-
-> **New to server deployment?** See the full [Server Mode Guide](docs/server-guide.md) ([한국어](docs/server-guide.ko.md)) for step-by-step instructions covering local testing, VPS setup, Docker, and more.
-
-### Quick Install
-
-```bash
-# Homebrew (macOS / Linux)
-brew install jhlee0409/tap/cchv-server
-
-# Or one-line script
-curl -fsSL https://raw.githubusercontent.com/jhlee0409/claude-code-history-viewer/main/install-server.sh | sh
-```
-
-Both methods install `cchv-server` to your PATH.
-
-### Start the Server
-
-```bash
-cchv-server --serve
-```
-
-Output:
-
-```
-🔑 Auth token: b77f41d4-ec24-4102-8f7a-8a942d6dd4a0
-   Open in browser: http://192.168.1.10:3727?token=b77f41d4-ec24-4102-8f7a-8a942d6dd4a0
-👁 File watcher active: /home/user/.claude/projects
-🚀 WebUI server running at http://0.0.0.0:3727
-```
-
-Open the URL in your browser — the token is saved automatically.
-
-### Pre-built Binaries
-
-| Platform | Asset |
-|----------|-------|
-| Linux x64 | `cchv-server-linux-x64.tar.gz` |
-| Linux ARM64 | `cchv-server-linux-arm64.tar.gz` |
-| macOS ARM | `cchv-server-macos-arm64.tar.gz` |
-| macOS x64 | `cchv-server-macos-x64.tar.gz` |
-
-Download from [Releases](https://github.com/jhlee0409/claude-code-history-viewer/releases).
-
-**CLI options:**
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--serve` | — | **Required.** Starts the HTTP server instead of the desktop app |
-| `--port <number>` | `3727` | Server port |
-| `--host <address>` | `0.0.0.0` | Bind address (`127.0.0.1` for local only) |
-| `--token <value>` | auto (uuid v4) | Custom authentication token |
-| `--no-auth` | — | Disable authentication (not recommended for public networks) |
-| `--dist <path>` | embedded | Override built-in frontend with external `dist/` directory |
-
-### Authentication
-
-All `/api/*` endpoints are protected by Bearer token authentication. The token is auto-generated on each server start and printed to stderr.
-
-- **Browser access**: Use the `?token=...` URL printed at startup. The token is saved to `localStorage` automatically.
-- **API access**: Include `Authorization: Bearer <token>` header.
-- **Custom token**: `--token my-secret-token` to set your own.
-- **Environment variable**: `CCHV_TOKEN=your-token cchv-server --serve` (useful for systemd/Docker).
-- **Disable**: `--no-auth` to skip authentication entirely (only use on trusted networks).
-
-### Real-time Updates
-
-The server watches `~/.claude/projects/` for file changes and pushes updates to the browser via Server-Sent Events (SSE). When you use Claude Code in another terminal, the viewer updates automatically — no manual refresh needed.
-
-### Docker
-
-```bash
-docker compose up -d
-```
-
-Check the token after startup:
-
-```bash
-docker compose logs webui
-# 🔑 Auth token: ... ← paste this URL in your browser
-```
-
-The `docker-compose.yml` mounts `~/.claude`, `~/.codex`, and `~/.local/share/opencode` as read-only volumes.
-
-### systemd Service
-
-For persistent server on Linux, use the provided systemd template:
-
-```bash
-sudo cp contrib/cchv.service /etc/systemd/system/
-sudo systemctl edit --full cchv.service   # Set User= to your username
-sudo systemctl enable --now cchv.service
-```
-
-### Build from Source (Server Only)
-
-```bash
-just serve-build           # Build frontend + embed into server binary
-just serve-build-run       # Build and run (embedded assets)
-
-# Or run in development (external dist/):
-just serve-dev             # Build frontend + run server with --dist
-```
-
-### Health Check
-
-```
-GET /health
-→ { "status": "ok" }
-```
-
-## Usage
-
-1. Launch the app
-2. It automatically scans for conversation data from all supported providers (Claude Code, Gemini CLI, Codex CLI, Cline, Cursor, Aider, OpenCode)
-3. Browse projects in the left sidebar — filter by provider using the tab bar
-4. Click a session to view messages
-5. Use tabs to switch between Messages, Analytics, Token Stats, Recent Edits, and Session Board
-
-## Accessibility
-
-The app includes accessibility features for keyboard-only, low-vision, and screen-reader users.
-
-- Keyboard-first navigation:
-  - Skip links for Project Explorer, Main Content, Message Navigator, and Settings
-  - Project tree navigation with `ArrowUp/ArrowDown/Home/End`, type-ahead search, and `*` to expand sibling groups
-  - Message navigator navigation with `ArrowUp/ArrowDown/Home/End` and `Enter` to open the focused message
-- Visual accessibility:
-  - Persistent global font size scaling (`90%`, `100%`, `110%`, `120%`, `130%`)
-  - High contrast mode toggle in settings
-- Screen reader support:
-  - Landmark and tree/list semantics (`navigation`, `tree`, `treeitem`, `group`, `listbox`, `option`)
-  - Live announcements for status/loading and project tree navigation/selection changes
-  - Inline keyboard-help descriptions via `aria-describedby`
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| **Backend** | ![Rust](https://img.shields.io/badge/Rust-000?logo=rust&logoColor=white) ![Tauri](https://img.shields.io/badge/Tauri_v2-24C8D8?logo=tauri&logoColor=white) |
-| **Frontend** | ![React](https://img.shields.io/badge/React_19-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white) |
-| **State** | ![Zustand](https://img.shields.io/badge/Zustand-433E38?logo=react&logoColor=white) |
-| **Build** | ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white) |
-| **i18n** | ![i18next](https://img.shields.io/badge/i18next-26A69A?logo=i18next&logoColor=white) 5 languages |
-
-## Data Privacy
-
-**100% offline.** No conversation data is sent to any server. No analytics, no tracking, no telemetry.
-
-Your data stays on your machine.
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| "No Claude data found" | Make sure `~/.claude` exists with conversation history |
-| Performance issues | Large histories may be slow initially — the app uses virtual scrolling |
-| Update problems | If auto-updater fails, download manually from [Releases](https://github.com/jhlee0409/claude-code-history-viewer/releases) |
-
-## Contributing
-
-Contributions are welcome! Here's how to get started:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/my-feature`)
-3. Run checks before committing:
-   ```bash
-   pnpm tsc --build .        # TypeScript
-   pnpm vitest run            # Tests
-   pnpm lint                  # Lint
-   ```
-4. Commit your changes (`git commit -m 'feat: add my feature'`)
-5. Push to the branch (`git push origin feat/my-feature`)
-6. Open a Pull Request
-
-See [Development Commands](CLAUDE.md#development-commands) for the full list of available commands.
-
-## License
-
-[MIT](LICENSE) — free for personal and commercial use.
-
----
-
-<div align="center">
-
-If this project helps you, consider giving it a star!
-
-[![Star History Chart](https://api.star-history.com/svg?repos=jhlee0409/claude-code-history-viewer&type=Date)](https://star-history.com/#jhlee0409/claude-code-history-viewer&Date)
-
-</div>
+- GitHub repository links
+- feedback email and issue URLs
+- app icons and screenshots
+- package and release metadata

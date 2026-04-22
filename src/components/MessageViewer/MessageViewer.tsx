@@ -163,12 +163,10 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     sessionId: selectedSession?.session_id,
   });
 
-  // 매치된 메시지 UUID Set (효율적인 조회용)
   const matchedUuids = useMemo(() => {
     return new Set(sessionSearch.matches?.map(m => m.messageUuid) || []);
   }, [sessionSearch.matches]);
 
-  // 현재 매치 정보 (UUID와 메시지 내 인덱스)
   const currentMatch = useMemo(() => {
     if (sessionSearch.currentMatchIndex >= 0 && sessionSearch.matches?.length > 0) {
       const match = sessionSearch.matches[sessionSearch.currentMatchIndex];
@@ -264,8 +262,8 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
-    const maxAttempts = 50; // 최대 50번 시도 (약 500ms)
-    const checkInterval = 10; // 10ms 간격
+    const maxAttempts = 50;
+    const checkInterval = 10;
     const startTime = import.meta.env.DEV ? performance.now() : 0;
 
     const checkScrollElement = () => {
@@ -514,14 +512,12 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     }
   }, [targetMessageUuid, scrollElementReady, flattenedMessages, virtualizer, clearTargetMessage]);
 
-  // 검색어 초기화 핸들러
   const handleClearSearch = useCallback(() => {
     handleClearSearchState();
     onClearSearch();
     searchInputRef.current?.focus();
   }, [onClearSearch, handleClearSearchState]);
 
-  // 키보드 단축키 핸들러
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -535,11 +531,9 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     }
   }, [onNextMatch, onPrevMatch, handleClearSearch]);
 
-  // 세션 전환 중인지 확인 (스크롤 요소 미준비 또는 세션 ID 불일치)
   const isSessionTransitioning = selectedSession?.session_id &&
     (!scrollElementReady || scrollReadyForSessionId !== selectedSession?.session_id);
 
-  // 로딩 중이거나 세션 전환 중일 때 로딩 표시
   if ((isLoading || isSessionTransitioning) && messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center h-full">
@@ -553,7 +547,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     );
   }
 
-  // 세션이 없거나 실제로 메시지가 없는 경우에만 "No Messages" 표시
   if (messages.length === 0 && !isSessionTransitioning) {
     return (
       <LoadingState
@@ -877,7 +870,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
             scrollbars: { theme: "os-theme-custom", autoHide: "leave", autoHideDelay: 400 },
           }}
         >
-        {/* 디버깅 정보 */}
         {import.meta.env.DEV && (
           <div className="bg-warning/10 p-2 text-xs text-warning-foreground border-b border-warning/20 space-y-1">
             <div>
@@ -885,7 +877,7 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
                 current: displayMessages.length,
                 total: messages.length,
               })}{" "}
-              | 검색: {sessionSearch.query || "(없음)"}
+              | Search: {sessionSearch.query || "(none)"}
             </div>
             <div>
               {t("messageViewer.debugInfo.session", {
@@ -907,7 +899,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
             </div>
           </div>
         )}
-        {/* 검색 결과 없음 */}
         {sessionSearch.query && (!sessionSearch.matches || sessionSearch.matches.length === 0) && !sessionSearch.isSearching && (
           <div className="max-w-4xl mx-auto flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Search className="w-12 h-12 mb-4 text-muted-foreground/50" />
@@ -920,7 +911,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* 메시지 목록 헤더 */}
         {displayMessages.length > 0 && !sessionSearch.query && (
           <div className="max-w-4xl mx-auto flex items-center justify-center py-4">
             <div className="text-sm text-muted-foreground">
@@ -931,7 +921,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           </div>
         )}
 
-        {/* 스크롤 준비 중 로딩 오버레이 */}
         {flattenedMessages.length > 0 && scrollElementReady &&
           scrollReadyForSessionId !== selectedSession?.session_id && (
             <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
@@ -939,14 +928,12 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
             </div>
           )}
 
-        {/* 가상화된 메시지 렌더링 */}
         {flattenedMessages.length > 0 && scrollElementReady && (
           <div
             style={{
               height: totalSize,
               width: "100%",
               position: "relative",
-              // 스크롤 준비 완료 전까지 투명하게 처리하여 점프 현상 방지
               opacity: scrollReadyForSessionId === selectedSession?.session_id ? 1 : 0,
               transition: "opacity 50ms ease-in",
             }}

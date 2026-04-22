@@ -1,17 +1,17 @@
 [package]
-name = "claude-code-history-viewer"
+name = "echo-profile"
 version = "1.11.0"
-description = "Claude Code 대화 기록을 탐색하고 분석하는 데스크톱 애플리케이션"
-authors = ["JaeHyeok Lee"]
+description = "Desktop app for modeling users from AI conversation history"
+authors = ["EchoProfile contributors"]
 license = "MIT"
-repository = "https://github.com/jhlee0409/claude-code-history-viewer"
+repository = "https://github.com/<your-account>/echoprofile"
 edition = "2021"
 rust-version = "1.77.2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "claude_code_history_viewer_lib"
+name = "echo_profile_lib"
 crate-type = ["cdylib", "rlib"]
 
 [features]

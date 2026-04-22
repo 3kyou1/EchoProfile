@@ -61,8 +61,6 @@ interface GeneralSectionProps {
 const COMMON_LANGUAGES = [
   { value: "__auto__", label: "Auto (system default)" },
   { value: "english", label: "English" },
-  { value: "korean", label: "한국어 (Korean)" },
-  { value: "japanese", label: "日本語 (Japanese)" },
   { value: "chinese", label: "中文 (Chinese)" },
   { value: "spanish", label: "Español (Spanish)" },
   { value: "french", label: "Français (French)" },

@@ -5,12 +5,11 @@ interface HighlightedTextProps {
   text: string;
   searchQuery: string;
   isCurrentMatch?: boolean;
-  currentMatchIndex?: number; // 메시지 내에서 현재 활성화된 매치 인덱스
+  currentMatchIndex?: number;
   className?: string;
 }
 
 /**
- * 검색어를 하이라이트하여 텍스트를 렌더링하는 컴포넌트
  *
  * Features:
  * - Case-insensitive search matching
@@ -51,7 +50,6 @@ const HighlightedTextComponent: React.FC<HighlightedTextProps> = ({
       // Add highlighted match
       const matchedText = text.slice(currentIndex, currentIndex + query.length);
 
-      // 이 매치가 현재 활성화된 매치인지 확인
       const isThisMatchActive = isCurrentMatch && matchIndex === currentMatchIndex;
 
       // Create unique key using position and text snippet to avoid collisions
@@ -91,5 +89,4 @@ const HighlightedTextComponent: React.FC<HighlightedTextProps> = ({
   return <span className={className}>{highlightedContent}</span>;
 };
 
-// React.memo로 불필요한 리렌더링 방지
 export const HighlightedText = memo(HighlightedTextComponent);

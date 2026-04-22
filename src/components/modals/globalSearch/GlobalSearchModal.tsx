@@ -129,7 +129,7 @@ export const GlobalSearchModal = ({
                 setIsSearching(false);
             }
         },
-        [claudePath, activeProviders, selectedProjectPath, messageTypeFilter],
+        [claudePath, activeProviders, selectedProjectPath, messageTypeFilter, t],
     );
 
     // Handle input change with debounce

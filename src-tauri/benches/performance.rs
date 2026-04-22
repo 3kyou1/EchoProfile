@@ -1,4 +1,4 @@
-//! Performance benchmarks for Claude Code History Viewer
+//! Performance benchmarks for `EchoProfile`
 //!
 //! Run with: `cargo bench --bench performance`
 //! Compare baselines: `cargo bench --bench performance -- --save-baseline NAME`
@@ -257,9 +257,9 @@ fn bench_load_session_messages(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| {
                 rt.block_on(async {
-                    claude_code_history_viewer_lib::commands::session::load_session_messages(
-                        black_box(path_str.clone()),
-                    )
+                    echo_profile_lib::commands::session::load_session_messages(black_box(
+                        path_str.clone(),
+                    ))
                     .await
                 })
             });
@@ -287,7 +287,7 @@ fn bench_load_session_messages_paginated(c: &mut Criterion) {
             |b, &size| {
                 b.iter(|| {
                     rt.block_on(async {
-                        claude_code_history_viewer_lib::commands::session::load_session_messages_paginated(
+                        echo_profile_lib::commands::session::load_session_messages_paginated(
                             black_box(path_str.clone()),
                             black_box(0),
                             black_box(size),
@@ -302,23 +302,19 @@ fn bench_load_session_messages_paginated(c: &mut Criterion) {
 
     // Test pagination at different offsets
     for offset in &[0, 100, 500, 900] {
-        group.bench_with_input(
-            BenchmarkId::new("offset", offset),
-            offset,
-            |b, &off| {
-                b.iter(|| {
-                    rt.block_on(async {
-                        claude_code_history_viewer_lib::commands::session::load_session_messages_paginated(
-                            black_box(path_str.clone()),
-                            black_box(off),
-                            black_box(50),
-                            black_box(Some(false)),
-                        )
-                        .await
-                    })
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("offset", offset), offset, |b, &off| {
+            b.iter(|| {
+                rt.block_on(async {
+                    echo_profile_lib::commands::session::load_session_messages_paginated(
+                        black_box(path_str.clone()),
+                        black_box(off),
+                        black_box(50),
+                        black_box(Some(false)),
+                    )
+                    .await
+                })
+            });
+        });
     }
 
     group.finish();
@@ -337,7 +333,7 @@ fn bench_get_session_message_count(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| {
                 rt.block_on(async {
-                    claude_code_history_viewer_lib::commands::session::get_session_message_count(
+                    echo_profile_lib::commands::session::get_session_message_count(
                         black_box(path_str.clone()),
                         black_box(Some(false)),
                     )
@@ -371,7 +367,7 @@ fn bench_search_messages(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("query", name), query, |b, &q| {
             b.iter(|| {
                 rt.block_on(async {
-                    claude_code_history_viewer_lib::commands::session::search_messages(
+                    echo_profile_lib::commands::session::search_messages(
                         black_box(base_path.to_string_lossy().to_string()),
                         black_box(q.to_string()),
                         black_box(serde_json::json!({})),
@@ -403,7 +399,7 @@ fn bench_load_project_sessions(c: &mut Criterion) {
             |b, _| {
                 b.iter(|| {
                     rt.block_on(async {
-                        claude_code_history_viewer_lib::commands::session::load_project_sessions(
+                        echo_profile_lib::commands::session::load_project_sessions(
                             black_box(path_str.clone()),
                             black_box(Some(false)),
                         )
@@ -442,14 +438,14 @@ fn bench_get_project_stats_summary(c: &mut Criterion) {
                     let mode = mode.clone();
                     b.iter(|| {
                         rt.block_on(async {
-                        claude_code_history_viewer_lib::commands::stats::get_project_stats_summary(
-                            black_box(path_str.clone()),
-                            black_box(None),
-                            black_box(None),
-                            black_box(mode.clone()),
-                        )
-                        .await
-                    })
+                            echo_profile_lib::commands::stats::get_project_stats_summary(
+                                black_box(path_str.clone()),
+                                black_box(None),
+                                black_box(None),
+                                black_box(mode.clone()),
+                            )
+                            .await
+                        })
                     });
                 },
             );
@@ -522,15 +518,15 @@ fn bench_get_global_stats_summary(c: &mut Criterion) {
                     let mode = mode.clone();
                     b.iter(|| {
                         rt.block_on(async {
-                        claude_code_history_viewer_lib::commands::stats::get_global_stats_summary(
-                            black_box(path_str.clone()),
-                            black_box(None),
-                            black_box(mode.clone()),
-                            black_box(None),
-                            black_box(None),
-                        )
-                        .await
-                    })
+                            echo_profile_lib::commands::stats::get_global_stats_summary(
+                                black_box(path_str.clone()),
+                                black_box(None),
+                                black_box(mode.clone()),
+                                black_box(None),
+                                black_box(None),
+                            )
+                            .await
+                        })
                     });
                 },
             );
@@ -562,7 +558,7 @@ fn bench_get_session_token_stats(c: &mut Criterion) {
                 let mode = mode.clone();
                 b.iter(|| {
                     rt.block_on(async {
-                        claude_code_history_viewer_lib::commands::stats::get_session_token_stats(
+                        echo_profile_lib::commands::stats::get_session_token_stats(
                             black_box(path_str.clone()),
                             black_box(None),
                             black_box(None),
@@ -618,7 +614,7 @@ fn bench_get_session_comparison(c: &mut Criterion) {
                     let project_path_str = project_path_str.clone();
                     b.iter(|| {
                         rt.block_on(async {
-                            claude_code_history_viewer_lib::commands::stats::get_session_comparison(
+                            echo_profile_lib::commands::stats::get_session_comparison(
                                 black_box(session_id.clone()),
                                 black_box(project_path_str.clone()),
                                 black_box(None),
@@ -654,7 +650,7 @@ fn bench_get_project_token_stats(c: &mut Criterion) {
             |b, _| {
                 b.iter(|| {
                     rt.block_on(async {
-                        claude_code_history_viewer_lib::commands::stats::get_project_token_stats(
+                        echo_profile_lib::commands::stats::get_project_token_stats(
                             black_box(path_str.clone()),
                             black_box(None),
                             black_box(None),
@@ -691,7 +687,7 @@ fn bench_get_recent_edits(c: &mut Criterion) {
             |b, _| {
                 b.iter(|| {
                     rt.block_on(async {
-                        claude_code_history_viewer_lib::commands::session::get_recent_edits(
+                        echo_profile_lib::commands::session::get_recent_edits(
                             black_box(path_str.clone()),
                             black_box(None),
                             black_box(None),

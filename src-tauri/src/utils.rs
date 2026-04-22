@@ -217,11 +217,11 @@ pub fn decode_project_path(session_storage_path: &str) -> String {
 
 /// Decode path by checking filesystem existence at each possible split point
 ///
-/// For `-Users-jack-client-claude-code-history-viewer`:
+/// For `-Users-jack-client-echo-profile`:
 /// 1. Check `/Users` (exists? continue)
 /// 2. Check `/Users/jack` (exists? continue)
 /// 3. Check `/Users/jack/client` (exists? continue)
-/// 4. Check `/Users/jack/client/claude-code-history-viewer` (exists? ✓ return this)
+/// 4. Check `/Users/jack/client/echo-profile` (exists? ✓ return this)
 fn decode_with_filesystem_check(encoded: &str) -> Option<String> {
     decode_recursive(encoded, "")
 }
@@ -230,8 +230,8 @@ fn decode_with_filesystem_check(encoded: &str) -> Option<String> {
 ///
 /// For each hyphen in `encoded`, tries treating it as a `/` separator.
 /// When a valid directory is found, recurses on the remaining string.
-/// This handles nested directories like "claude-code-history-viewer-src-tauri"
-/// → "claude-code-history-viewer/src-tauri".
+/// This handles nested directories like "echo-profile-src-tauri"
+/// → "echo-profile/src-tauri".
 fn decode_recursive(encoded: &str, base_path: &str) -> Option<String> {
     decode_recursive_inner(encoded, base_path, 0)
 }

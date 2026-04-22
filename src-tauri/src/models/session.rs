@@ -1,24 +1,24 @@
 use serde::{Deserialize, Serialize};
 
-/// Git worktree 유형
+/// Git worktree type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum GitWorktreeType {
-    /// 메인 레포지토리 (.git이 디렉토리)
+    /// Main repository (.git is a directory)
     Main,
-    /// 링크드 워크트리 (.git이 파일)
+    /// Linked worktree (.git is a file)
     Linked,
-    /// Git 레포가 아님
+    /// Not a Git repository
     NotGit,
 }
 
-/// Git worktree 정보
+/// Git worktree metadata
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GitInfo {
-    /// 워크트리 유형
+    /// Worktree type
     pub worktree_type: GitWorktreeType,
-    /// 메인 레포의 프로젝트 경로 (링크드 워크트리인 경우)
-    /// 예: "/Users/jack/my-project"
+    /// Main repository project path for linked worktrees
+    /// Example: "/Users/jack/my-project"
     #[serde(skip_serializing_if = "Option::is_none")]
     pub main_project_path: Option<String>,
 }
@@ -33,7 +33,7 @@ pub struct ClaudeProject {
     pub session_count: usize,
     pub message_count: usize,
     pub last_modified: String,
-    /// Git worktree 정보
+    /// Git worktree metadata
     #[serde(skip_serializing_if = "Option::is_none")]
     pub git_info: Option<GitInfo>,
     /// Provider identifier (claude, codex, opencode)

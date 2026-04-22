@@ -25,7 +25,6 @@ export const ThinkingRenderer = memo(function ThinkingRenderer({
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useCaptureExpandState(`thinking-${index}`, false);
 
-  // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
   useEffect(() => {
     if (searchQuery && thinking.toLowerCase().includes(searchQuery.toLowerCase())) {
       setIsExpanded(true);

@@ -1,4 +1,4 @@
-# systemd service unit for cchv-server (Claude Code History Viewer)
+# systemd service unit for echo-profile (EchoProfile)
 #
 # Installation:
 #   1. Copy this file:
@@ -17,7 +17,7 @@
 #      journalctl -u cchv.service -f
 
 [Unit]
-Description=Claude Code History Viewer (WebUI Server)
+Description=EchoProfile (WebUI Server)
 After=network.target
 
 [Service]
@@ -25,14 +25,14 @@ Type=simple
 # IMPORTANT: Change this to the user whose ~/.claude directory you want to serve.
 User=YOUR_USERNAME_HERE
 WorkingDirectory=/home/YOUR_USERNAME_HERE
-ExecStart=/usr/local/bin/cchv-server --serve --host 0.0.0.0
+ExecStart=/usr/local/bin/echo-profile --serve --host 0.0.0.0
 Restart=on-failure
 RestartSec=5
 
-# To require a fixed access token, use either the --token flag or CCHV_TOKEN env var:
-# ExecStart=/usr/local/bin/cchv-server --serve --host 0.0.0.0 --token your-secret-token
+# To require a fixed access token, use either the --token flag or ECHOPROFILE_TOKEN env var:
+# ExecStart=/usr/local/bin/echo-profile --serve --host 0.0.0.0 --token your-secret-token
 # Or via environment variable:
-# Environment=CCHV_TOKEN=your-secret-token
+# Environment=ECHOPROFILE_TOKEN=your-secret-token
 
 # ── Security hardening ──
 NoNewPrivileges=true

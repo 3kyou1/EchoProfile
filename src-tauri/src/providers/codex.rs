@@ -485,14 +485,12 @@ fn extract_session_info(rollout_path: &Path) -> Result<SessionInfo, String> {
                         .map(String::from);
                 }
             }
-            "turn_context" => {
-                if model.is_none() {
-                    if let Some(payload) = val.get("payload") {
-                        model = payload
-                            .get("model")
-                            .and_then(|v| v.as_str())
-                            .map(String::from);
-                    }
+            "turn_context" if model.is_none() => {
+                if let Some(payload) = val.get("payload") {
+                    model = payload
+                        .get("model")
+                        .and_then(|v| v.as_str())
+                        .map(String::from);
                 }
             }
             "response_item" => {
@@ -2194,7 +2192,7 @@ mod tests {
         fs::create_dir_all(&archived_dir).expect("archived dir should be created");
         let _guard = EnvVarGuard::set("CODEX_HOME", &codex_home);
 
-        let project_cwd = "/Users/jack/client/claude-code-history-viewer";
+        let project_cwd = "/Users/jack/client/echo-profile";
         let active_rollout = sessions_dir.join("rollout-active.jsonl");
         let archived_rollout = archived_dir.join("rollout-archived.jsonl");
         let active_lines = [

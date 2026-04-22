@@ -1,7 +1,7 @@
 # Accessibility Plan (Visually Impaired and Blind Coders)
 
 ## Objective
-Make Claude Code History Viewer robust for blind and low-vision coders by prioritizing screen reader semantics, full keyboard workflows, and scalable readability without breaking existing power-user flows.
+Make EchoProfile robust for blind and low-vision users by prioritizing screen reader semantics, full keyboard workflows, and scalable readability without breaking advanced analysis workflows.
 
 ## Success Metrics
 1. 100% keyboard completion for core workflows: select project, open session, read messages, open settings, change filters.
@@ -92,7 +92,7 @@ Make Claude Code History Viewer robust for blind and low-vision coders by priori
 - Insert group into `SettingDropdown` with separators and keyboard-safe structure.
 4. i18n coverage:
 - Add `common.settings.font.title`, `common.settings.font.compact`, `common.settings.font.default`, `common.settings.font.large`, `common.settings.font.extraLarge`, `common.settings.font.max`.
-- Add keys to `en`, then mirror to `ko`, `ja`, `zh-CN`, `zh-TW`.
+- Add keys to `en`, then mirror to `zh-CN`.
 - Run i18n key sync/validation scripts.
 5. Semantics quick wins:
 - Audit icon-only controls in header and top-level actions.

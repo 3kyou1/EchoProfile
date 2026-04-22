@@ -14,14 +14,12 @@ const hasStringProperty = (obj: Record<string, unknown>, key: string): boolean =
   return key in obj && typeof obj[key] === "string";
 };
 
-// 검색 가능한 텍스트 추출 (content 검색용)
-const MAX_TEXT_LENGTH = 10000; // 최대 10KB만 인덱싱 (텍스트용)
+const MAX_TEXT_LENGTH = 10000;
 
 const extractSearchableText = (message: ClaudeMessage): string => {
   const parts: string[] = [];
 
   try {
-    // content 추출
     if (message.content) {
       if (typeof message.content === "string") {
         parts.push(message.content);
@@ -37,11 +35,9 @@ const extractSearchableText = (message: ClaudeMessage): string => {
               continue;
             }
 
-            // text content (길이 제한)
             if (hasStringProperty(item, "text")) {
               parts.push((item.text as string).slice(0, MAX_TEXT_LENGTH));
             }
-            // thinking content (길이 제한)
             if (hasStringProperty(item, "thinking")) {
               parts.push((item.thinking as string).slice(0, MAX_TEXT_LENGTH));
             }
@@ -141,7 +137,6 @@ const extractSearchableText = (message: ClaudeMessage): string => {
       }
     }
 
-    // toolUse name 추출
     if (
       message.type === "assistant" &&
       isRecord(message.toolUse) &&
@@ -150,8 +145,7 @@ const extractSearchableText = (message: ClaudeMessage): string => {
       parts.push(message.toolUse.name as string);
     }
 
-    // toolUseResult 추출 (큰 내용은 처음 부분만 인덱싱)
-    const MAX_CONTENT_LENGTH = 5000; // 최대 5KB만 인덱싱
+    const MAX_CONTENT_LENGTH = 5000;
     if (
       (message.type === "user" || message.type === "assistant") &&
       message.toolUseResult
@@ -198,20 +192,16 @@ const extractMCPToolResultText = (content: unknown, parts: string[]): void => {
   }
 };
 
-// Tool ID 추출 (tool_use_id, tool_use.id 검색용)
 const extractToolIds = (message: ClaudeMessage): string => {
   const ids: string[] = [];
 
   try {
-    // message.content 배열에서 tool_use와 tool_result의 id 추출
     if (Array.isArray(message.content)) {
       for (const item of message.content) {
         if (isRecord(item)) {
-          // tool_use의 id
           if (item.type === "tool_use" && hasStringProperty(item, "id")) {
             ids.push(item.id as string);
           }
-          // tool_result의 tool_use_id
           if (item.type === "tool_result" && hasStringProperty(item, "tool_use_id")) {
             ids.push(item.tool_use_id as string);
           }
@@ -219,7 +209,6 @@ const extractToolIds = (message: ClaudeMessage): string => {
       }
     }
 
-    // toolUse 객체의 id
     if (
       message.type === "assistant" &&
       isRecord(message.toolUse) &&
@@ -234,20 +223,17 @@ const extractToolIds = (message: ClaudeMessage): string => {
   return ids.join(" ");
 };
 
-// FlexSearch Document 인덱스 타입
 interface SearchDocument {
   uuid: string;
   messageIndex: number;
   text: string;
 }
 
-// FlexSearch enriched 결과 타입
 interface EnrichedResult {
   id: string;
   doc?: SearchDocument;
 }
 
-// 결과 아이템에서 UUID 추출 (타입 가드)
 const extractUuidFromResult = (item: string | EnrichedResult): string => {
   if (typeof item === "string") {
     return item;
@@ -255,11 +241,10 @@ const extractUuidFromResult = (item: string | EnrichedResult): string => {
   return item.id;
 };
 
-// FlexSearch Document 인덱스 생성 헬퍼
 const createFlexSearchIndex = (): FlexSearchDocumentIndex => {
   return new FlexSearch.Document({
-    tokenize: "full", // 전체 substring 매칭 지원 (단어 중간도 검색)
-    cache: 100, // 최근 100개 쿼리 캐시
+    tokenize: "full",
+    cache: 100,
     document: {
       id: "uuid",
       index: ["text"],
@@ -268,12 +253,11 @@ const createFlexSearchIndex = (): FlexSearchDocumentIndex => {
   });
 };
 
-// 메시지 검색 인덱스 클래스
 class MessageSearchIndex {
   private contentIndex: FlexSearchDocumentIndex;
   private toolIdIndex: FlexSearchDocumentIndex;
   private messageMap: Map<string, number> = new Map(); // uuid -> messageIndex
-  private messages: ClaudeMessage[] = []; // 메시지 원본 저장 (매치 위치 계산용)
+  private messages: ClaudeMessage[] = [];
   private isBuilt = false;
 
   constructor() {
@@ -281,21 +265,16 @@ class MessageSearchIndex {
     this.toolIdIndex = createFlexSearchIndex();
   }
 
-  // 인덱스 구축 (메시지 로드 시 1회 호출) - 청크 단위 비동기 처리
   build(messages: ClaudeMessage[]): void {
-    // 기존 인덱스 클리어
     this.clear();
 
-    // 메시지 원본 저장
     this.messages = messages;
 
-    // 청크 단위로 비동기 인덱싱 시작
     this.buildAsync(messages);
   }
 
-  // 비동기 청크 인덱싱 (메인 스레드 차단 방지)
   private buildAsync(messages: ClaudeMessage[]): void {
-    const CHUNK_SIZE = 20; // 한 번에 처리할 메시지 수
+    const CHUNK_SIZE = 20;
     let currentIndex = 0;
 
     const processChunk = () => {
@@ -305,7 +284,6 @@ class MessageSearchIndex {
         const message = messages[i];
         if (!message) continue;
 
-        // Content 인덱스
         const text = extractSearchableText(message);
         if (text.trim()) {
           this.contentIndex.add({
@@ -315,7 +293,6 @@ class MessageSearchIndex {
           });
         }
 
-        // Tool ID 인덱스
         const toolIds = extractToolIds(message);
         if (toolIds.trim()) {
           this.toolIdIndex.add({
@@ -331,10 +308,8 @@ class MessageSearchIndex {
       currentIndex = endIndex;
 
       if (currentIndex < messages.length) {
-        // 다음 청크를 다음 프레임에 처리
         setTimeout(processChunk, 0);
       } else {
-        // 완료
         this.isBuilt = true;
         if (import.meta.env.DEV) {
           console.log(`[SearchIndex] Built index for ${messages.length} messages`);
@@ -342,11 +317,9 @@ class MessageSearchIndex {
       }
     };
 
-    // 첫 청크 시작
     processChunk();
   }
 
-  // 메시지 내 모든 매치 위치 찾기
   private findAllMatchesInText(text: string, query: string): number {
     const lowerText = text.toLowerCase();
     const lowerQuery = query.toLowerCase();
@@ -361,7 +334,6 @@ class MessageSearchIndex {
     return count;
   }
 
-  // 검색 실행
   search(
     query: string,
     filterType: SearchFilterType = "content"
@@ -373,13 +345,11 @@ class MessageSearchIndex {
     const lowerQuery = query.toLowerCase();
     const index = filterType === "toolId" ? this.toolIdIndex : this.contentIndex;
 
-    // FlexSearch 검색 (메시지 레벨)
     const results = index.search(lowerQuery, {
-      limit: 1000, // 최대 1000개 결과
-      enrich: true, // 저장된 데이터 포함
+      limit: 1000,
+      enrich: true,
     });
 
-    // 매치된 메시지 UUID 수집
     const matchedUuids = new Set<string>();
     results.forEach((fieldResult: { field: string; result: (string | EnrichedResult)[] }) => {
       if (fieldResult.result) {
@@ -390,7 +360,6 @@ class MessageSearchIndex {
       }
     });
 
-    // 각 메시지에서 모든 매치 추출
     const allMatches: Array<{ messageUuid: string; messageIndex: number; matchIndex: number; matchCount: number }> = [];
 
     matchedUuids.forEach((uuid) => {
@@ -400,16 +369,13 @@ class MessageSearchIndex {
       const message = this.messages[messageIndex];
       if (!message) return;
 
-      // 메시지 텍스트 추출
       const messageText =
         filterType === "toolId"
           ? extractToolIds(message)
           : extractSearchableText(message);
 
-      // 메시지 내 모든 매치 개수 계산
       const matchCount = this.findAllMatchesInText(messageText, lowerQuery);
 
-      // 각 매치마다 별도의 SearchMatch 생성
       for (let i = 0; i < matchCount; i++) {
         allMatches.push({
           messageUuid: uuid,
@@ -420,18 +386,16 @@ class MessageSearchIndex {
       }
     });
 
-    // 완전 역순 정렬: 아래에서 위로 탐색 (최신 메시지의 마지막 매치부터)
     allMatches.sort((a, b) => {
       if (a.messageIndex !== b.messageIndex) {
-        return b.messageIndex - a.messageIndex; // 최신 메시지 우선
+        return b.messageIndex - a.messageIndex;
       }
-      return b.matchIndex - a.matchIndex; // 메시지 내에서도 마지막 매치부터
+      return b.matchIndex - a.matchIndex;
     });
 
     return allMatches;
   }
 
-  // 인덱스 초기화
   clear(): void {
     this.contentIndex = createFlexSearchIndex();
     this.toolIdIndex = createFlexSearchIndex();
@@ -441,10 +405,8 @@ class MessageSearchIndex {
   }
 }
 
-// 싱글톤 인스턴스
 export const messageSearchIndex = new MessageSearchIndex();
 
-// 편의 함수들
 export const buildSearchIndex = (messages: ClaudeMessage[]): void => {
   messageSearchIndex.build(messages);
 };

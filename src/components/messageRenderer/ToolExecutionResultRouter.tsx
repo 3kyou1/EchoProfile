@@ -347,7 +347,6 @@ export const ToolExecutionResultRouter: React.FC<
   const isImage =
     typeof toolResult.isImage === "boolean" ? toolResult.isImage : null;
 
-  // 메타데이터가 있는지 확인
   const hasMetadata = interrupted !== null || isImage !== null;
   const hasOutput =
     stdout.length > 0 || stderr.length > 0 || filePath.length > 0;
@@ -368,7 +367,6 @@ export const ToolExecutionResultRouter: React.FC<
         icon={<Check className="w-4 h-4 text-success" />}
       />
       <Renderer.Content>
-        {/* 메타데이터 정보 */}
         {hasMetadata && (
           <div className={`grid grid-cols-2 gap-2 mb-3 ${layout.smallText}`}>
             {interrupted !== null && (
@@ -425,12 +423,10 @@ export const ToolExecutionResultRouter: React.FC<
           </div>
         )}
 
-        {/* 출력이 없을 때 상태 표시 */}
         {!hasOutput && hasMetadata && (
           <div className="text-muted-foreground">{t("toolResult.noOutput")}</div>
         )}
 
-        {/* 완전히 빈 결과일 때 */}
         {!hasOutput && !hasMetadata && (
           <div className="text-muted-foreground">{t("toolResult.executionComplete")}</div>
         )}

@@ -46,7 +46,6 @@ export const WebSearchRenderer = ({
         }
       />
       <Renderer.Content>
-        {/* 검색 정보 */}
         <div className="mb-3">
           <div className={`${layout.smallText} font-medium mb-1 text-muted-foreground`}>
             {t('webSearchRenderer.query')}
@@ -65,7 +64,6 @@ export const WebSearchRenderer = ({
           </code>
         </div>
 
-        {/* 검색 결과 */}
         {results.length > 0 && (
           <div>
             <div className={`${layout.smallText} font-medium mb-2 text-muted-foreground`}>
@@ -99,7 +97,7 @@ export const WebSearchRenderer = ({
                           }
                         }
                       } catch {
-                        // JSON 파싱 실패시 일반 텍스트로 처리
+                        // Fall back to rendering the raw markdown/string result below.
                       }
 
                       return (

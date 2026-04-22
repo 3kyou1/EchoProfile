@@ -680,10 +680,7 @@ mod tests {
 
     #[test]
     fn test_strip_title_prefix_unicode() {
-        assert_eq!(
-            strip_title_prefix("[日本語タイトル] メッセージ"),
-            "メッセージ"
-        );
+        assert_eq!(strip_title_prefix("[中文标题] 消息"), "消息");
     }
 
     #[test]

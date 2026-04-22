@@ -1539,7 +1539,7 @@ mod tests {
 
     #[test]
     fn test_validate_archive_id_unicode_rejected() {
-        assert!(validate_archive_id("프로젝트-백업_3f8a1b2c").is_err());
+        assert!(validate_archive_id("项目-备份_3f8a1b2c").is_err());
     }
 
     #[test]
@@ -1549,7 +1549,7 @@ mod tests {
         assert_eq!(sanitize_for_dirname("a/b\\c"), "a-b-c");
         assert_eq!(sanitize_for_dirname("a--b"), "a-b");
         assert_eq!(sanitize_for_dirname("v1.2 release!"), "v1-2-release");
-        assert_eq!(sanitize_for_dirname("프로젝트 백업 2026년 3월"), "2026-3");
+        assert_eq!(sanitize_for_dirname("项目 备份 2026年 3月"), "2026-3");
         assert_eq!(sanitize_for_dirname("...dots..."), "dots");
         assert_eq!(sanitize_for_dirname(""), "");
     }

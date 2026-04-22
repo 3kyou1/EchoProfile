@@ -1,6 +1,6 @@
 # Semantics & Data Abstraction Layer
 
-This document describes how `claude-code-history-viewer` interprets raw data from Claude memory sessions and abstracts them into semantic concepts like "Edits", "Sessions", and "Commits".
+This document describes how `echo-profile` interprets raw data from Claude memory sessions and abstracts them into semantic concepts like "Edits", "Sessions", and "Commits".
 
 ## 1. Sessions
 

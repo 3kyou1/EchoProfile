@@ -1,13 +1,8 @@
 /**
- * UnifiedToolExecutionRenderer — tool_use + tool_result를 하나의 카드로 통합 렌더링
  *
- * 각 도구가 "동사 + 대상 + 결과"라는 스토리를 가지므로,
- * 도구별로 이 스토리를 가장 잘 전달하는 레이아웃을 사용한다.
  *
  * - Bash: command + description → stdout/stderr
  * - Read: file_path (range) → file content
- * - Edit: file_path + diff(old→new) → 성공/실패 메시지
- * - Write: file_path → 성공/실패 메시지
  * - Grep: pattern + path → search results
  * - Glob: pattern + path → file list
  * - Agent: subagent_type + description + prompt(md) → result(md)

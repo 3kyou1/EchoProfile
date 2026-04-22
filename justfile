@@ -114,11 +114,11 @@ serve-build: frontend-build
 
 # Build and run server (full rebuild)
 serve-build-run: serve-build
-    -./src-tauri/target/release/claude-code-history-viewer --serve
+    -./src-tauri/target/release/echo-profile --serve
 
 # Run the already-built server binary (no rebuild, instant start)
 serve *ARGS:
-    -./src-tauri/target/release/claude-code-history-viewer --serve {{ARGS}}
+    -./src-tauri/target/release/echo-profile --serve {{ARGS}}
 
 # Run server in development mode (external dist/ for hot reload)
 serve-dev: frontend-build

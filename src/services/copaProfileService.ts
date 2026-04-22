@@ -311,6 +311,13 @@ export async function saveCopaSnapshot(snapshot: CopaSnapshot): Promise<CopaSnap
   return snapshots;
 }
 
+export async function deleteCopaSnapshot(snapshotId: string): Promise<CopaSnapshot[]> {
+  const state = await loadStoreState();
+  const snapshots = state.snapshots.filter((snapshot) => snapshot.id !== snapshotId);
+  await saveStoreState({ ...state, snapshots });
+  return snapshots;
+}
+
 export async function loadCopaConfig(): Promise<CopaModelConfig> {
   const state = await loadStoreState();
   return state.config;

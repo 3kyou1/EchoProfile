@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { ClaudeMessage } from "@/types";
 import {
   buildScopeKey,
+  deleteCopaSnapshot,
   extractUserSignals,
   normalizeCopaResponse,
   renderCopaMarkdown,
@@ -136,6 +137,49 @@ describe("copaProfileService", () => {
     const snapshots = await loadCopaSnapshots();
 
     expect(snapshots.map((snapshot) => snapshot.id)).toEqual(["snap-2", "snap-1"]);
+  });
+
+  test("deleteCopaSnapshot removes only the target snapshot", async () => {
+    const first: CopaSnapshot = {
+      id: "snap-1",
+      createdAt: "2026-04-22T10:00:00.000Z",
+      scope: {
+        type: "project",
+        ref: "/tmp/project-a",
+        label: "Project A",
+        key: buildScopeKey({ type: "project", ref: "/tmp/project-a" }),
+      },
+      providerScope: ["claude"],
+      sourceStats: {
+        projectCount: 1,
+        sessionCount: 2,
+        rawUserMessages: 10,
+        dedupedUserMessages: 8,
+        truncatedMessages: 0,
+      },
+      modelConfig: {
+        baseUrl: "https://example.com/v1",
+        model: "gpt-test",
+      },
+      promptSummary: "Summary one",
+      factors: normalizeCopaResponse({}).factors,
+      markdown: "markdown one",
+    };
+
+    const second: CopaSnapshot = {
+      ...first,
+      id: "snap-2",
+      createdAt: "2026-04-22T11:00:00.000Z",
+      promptSummary: "Summary two",
+      markdown: "markdown two",
+    };
+
+    await saveCopaSnapshot(first);
+    await saveCopaSnapshot(second);
+
+    const snapshots = await deleteCopaSnapshot("snap-2");
+
+    expect(snapshots.map((snapshot) => snapshot.id)).toEqual(["snap-1"]);
   });
 
   test("renderCopaMarkdown includes all factor sections and metadata", () => {

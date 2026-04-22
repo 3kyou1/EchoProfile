@@ -16,7 +16,7 @@ export type RecentEditsPagination = RecentEditsPaginationState;
 /**
  * Analytics 뷰 타입
  */
-export type AnalyticsView = 'messages' | 'tokenStats' | 'analytics' | 'recentEdits' | 'settings' | 'board' | 'archive';
+export type AnalyticsView = 'messages' | 'tokenStats' | 'analytics' | 'recentEdits' | 'settings' | 'board' | 'archive' | 'copaProfile';
 export type AnalyticsViewType = AnalyticsView;
 
 /**
@@ -131,6 +131,7 @@ export interface UseAnalyticsReturn {
     switchToSettings: () => void;
     switchToBoard: () => Promise<void>;
     switchToArchive: () => void;
+    switchToCopaProfile: () => void;
     setStatsMode: (mode: StatsMode, options?: { isViewingGlobalStats?: boolean }) => Promise<void>;
     setMetricMode: (mode: MetricMode) => void;
     refreshAnalytics: () => Promise<void>;
@@ -146,6 +147,7 @@ export interface UseAnalyticsReturn {
     isSettingsView: boolean;
     isBoardView: boolean;
     isArchiveView: boolean;
+    isCopaProfileView: boolean;
     hasAnyError: boolean;
     isLoadingAnalytics: boolean;
     isLoadingTokenStats: boolean;

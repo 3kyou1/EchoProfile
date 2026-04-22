@@ -241,6 +241,8 @@ function App() {
           await analyticsActions.switchToRecentEdits();
         } else if (activeView === "analytics") {
           await analyticsActions.switchToAnalytics();
+        } else if (activeView === "copaProfile") {
+          analyticsActions.switchToCopaProfile();
         } else if (activeView === "settings") {
           analyticsActions.switchToSettings();
         } else {

@@ -1,4 +1,4 @@
-import { FolderOpen, MessageSquare, Columns, BarChart3, SlidersHorizontal } from "lucide-react";
+import { FolderOpen, MessageSquare, Columns, BarChart3, SlidersHorizontal, Brain } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ const tabs = [
   { id: "messages", icon: MessageSquare, labelKey: "common.mobile.tab.messages", alwaysEnabled: true },
   { id: "board", icon: Columns, labelKey: "common.mobile.tab.board", alwaysEnabled: false },
   { id: "analytics", icon: BarChart3, labelKey: "common.mobile.tab.analytics", alwaysEnabled: false },
+  { id: "copaProfile", icon: Brain, labelKey: "common.mobile.tab.copaProfile", alwaysEnabled: true },
   { id: "settings", icon: SlidersHorizontal, labelKey: "common.mobile.tab.settings", alwaysEnabled: true },
 ] as const;
 

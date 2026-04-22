@@ -10,6 +10,7 @@ import {
   Coins,
   Settings,
   Archive,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -25,6 +26,7 @@ import { SimpleUpdateManager } from "@/components/SimpleUpdateManager";
 import { SettingsManager } from "@/components/SettingsManager";
 import { SessionBoard } from "@/components/SessionBoard/SessionBoard";
 import { ArchiveManager } from "@/components/ArchiveManager";
+import { CopaProfilePage } from "@/components/CopaProfile";
 import { BottomTabBar } from "@/components/mobile/BottomTabBar";
 import { MobileNavigatorSheet } from "@/components/mobile/MobileNavigatorSheet";
 import { Header } from "@/layouts/Header/Header";
@@ -363,6 +365,7 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
               computed.isSettingsView ||
               computed.isBoardView ||
               computed.isArchiveView ||
+              computed.isCopaProfileView ||
               (isViewingGlobalStats && !computed.isSettingsView)) && (
               <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border/50 bg-card/50">
                 <div className="flex items-center gap-3">
@@ -371,6 +374,8 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                       <Database className="w-5 h-5 text-accent" />
                     ) : computed.isArchiveView ? (
                       <Archive className="w-5 h-5 text-accent" />
+                    ) : computed.isCopaProfileView ? (
+                      <Brain className="w-5 h-5 text-accent" />
                     ) : computed.isSettingsView ? (
                       <Settings className="w-5 h-5 text-accent" />
                     ) : computed.isAnalyticsView ? (
@@ -389,6 +394,8 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                         ? t("analytics.globalOverview")
                         : computed.isArchiveView
                           ? t("archive.title")
+                          : computed.isCopaProfileView
+                            ? t("common.copa.title", "CoPA Profile")
                           : computed.isSettingsView
                             ? t("settingsManager.title")
                             : computed.isAnalyticsView
@@ -404,6 +411,8 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                         ? globalOverviewDescription
                         : computed.isArchiveView
                           ? t("archive.description")
+                          : computed.isCopaProfileView
+                            ? t("common.copa.description", "Generate a six-factor CoPA profile from historical user messages.")
                           : computed.isSettingsView
                             ? t("settingsManager.description")
                             : computed.isRecentEditsView
@@ -427,7 +436,8 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
               !isViewingGlobalStats &&
               (computed.isAnalyticsView ||
                 computed.isTokenStatsView ||
-                computed.isRecentEditsView) && (
+                computed.isRecentEditsView ||
+                computed.isCopaProfileView) && (
                 <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border/40 bg-card/30 md:hidden overflow-x-auto">
                   <button
                     type="button"
@@ -468,6 +478,19 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                     <FileEdit className="w-3.5 h-3.5" />
                     {t("recentEdits.title")}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => analyticsActions.switchToCopaProfile()}
+                    className={cn(
+                      "shrink-0 flex items-center gap-1.5 px-3 py-2.5 md:py-1.5 rounded-lg text-xs font-medium transition-colors",
+                      computed.isCopaProfileView
+                        ? "bg-accent/15 text-accent border border-accent/30"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <Brain className="w-3.5 h-3.5" />
+                    {t("common.copa.shortTitle", "CoPA")}
+                  </button>
                 </div>
               )}
 
@@ -479,6 +502,8 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                     className="flex-1 min-h-0"
                   />
                 </div>
+              ) : computed.isCopaProfileView ? (
+                <CopaProfilePage />
               ) : computed.isSettingsView ? (
                 <div className="h-full flex flex-col p-3 md:p-6">
                   <SettingsManager
@@ -691,6 +716,9 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                   break;
                 case "archive":
                   analyticsActions.switchToArchive();
+                  break;
+                case "copaProfile":
+                  analyticsActions.switchToCopaProfile();
                   break;
               }
             }}

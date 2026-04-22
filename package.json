@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:web": "vite --host 127.0.0.1 --port 5173",
     "build": "tsc && vite build",
+    "build:web": "node scripts/sync-version.cjs && tsc --build . && vite build",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "lint": "eslint src",

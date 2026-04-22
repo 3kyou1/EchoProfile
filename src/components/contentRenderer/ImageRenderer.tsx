@@ -36,7 +36,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
 
   const handleDownload = useCallback(() => {
     if (imageUrl.startsWith("data:image/")) {
-      // base64 이미지 다운로드
       const link = document.createElement("a");
       link.href = imageUrl;
       link.download = `claude-image-${Date.now()}.png`;
@@ -44,7 +43,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
       link.click();
       document.body.removeChild(link);
     } else {
-      // 외부 URL 이미지
       window.open(imageUrl, "_blank");
     }
   }, [imageUrl]);
@@ -52,7 +50,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
   const openModal = useCallback(() => setIsModalOpen(true), []);
   const closeModal = useCallback(() => setIsModalOpen(false), []);
 
-  // ESC 키로 모달 닫기 & 스크롤 락
   useEffect(() => {
     if (!isModalOpen) return;
 
@@ -62,7 +59,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
       }
     };
 
-    // 스크롤 락
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -90,7 +86,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
 
   return (
     <>
-      {/* 이미지 컨테이너 */}
       <div className={cn("bg-muted/50 border border-border my-2", layout.rounded, layout.containerPadding)}>
         <div className="flex items-center justify-between mb-2">
           <div className={cn("flex items-center", layout.iconSpacing)}>
@@ -120,7 +115,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
           </div>
         </div>
 
-        {/* 이미지 미리보기 */}
         <div className="relative group">
           {isLoading && (
             <div className={cn("absolute inset-0 flex items-center justify-center bg-muted", layout.rounded)}>
@@ -141,7 +135,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
             style={{ maxHeight: "400px", objectFit: "contain" }}
           />
 
-          {/* 호버 오버레이 */}
           <div
             onClick={openModal}
             className={cn(
@@ -158,7 +151,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
         </div>
       </div>
 
-      {/* 모달 - createPortal로 document.body에 직접 렌더링하여 부모 스타일 영향 방지 */}
       {isModalOpen && createPortal(
         <div
           className="fixed inset-0 bg-black/90 flex items-center justify-center p-4"
@@ -172,7 +164,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
             className="relative w-full h-full flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 닫기 버튼 */}
             <button
               onClick={closeModal}
               className={cn(
@@ -186,7 +177,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
               <X className={cn(layout.iconSize, "text-foreground/80")} />
             </button>
 
-            {/* 다운로드 버튼 */}
             <button
               onClick={handleDownload}
               className={cn(
@@ -200,7 +190,6 @@ export const ImageRenderer: React.FC<ImageRendererProps> = ({
               <Download className={cn(layout.iconSize, "text-foreground/80")} />
             </button>
 
-            {/* 전체 화면 이미지 */}
             <img
               src={imageUrl}
               alt={alt}

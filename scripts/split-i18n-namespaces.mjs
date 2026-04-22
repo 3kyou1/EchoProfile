@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * i18n Namespace 분리 스크립트
+ * i18n namespace split script
  *
- * 기존 구조: locales/{lang}.json (단일 파일, 1392 keys)
- * 새 구조: locales/{lang}/{namespace}.json (namespace별 파일)
+ * Previous structure: locales/{lang}.json (single file, 1392 keys)
+ * New structure: locales/{lang}/{namespace}.json (one file per namespace)
  *
- * LLM 친화적 구조를 위해 63개 prefix를 논리적 namespace로 통합
+ * Groups 63 prefixes into logical namespaces for easier maintenance.
  */
 
 import fs from 'fs';
@@ -17,46 +17,46 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = path.join(__dirname, '../src/i18n/locales');
 
 /**
- * Prefix → Namespace 매핑
+ * Prefix -> namespace mapping
  *
- * 63개 prefix를 12개 논리적 namespace로 통합
- * 각 namespace는 LLM이 한 번에 처리 가능한 크기 (2-12K tokens)
+ * Groups 63 prefixes into 12 logical namespaces
+ * Each namespace stays within a manageable 2-12K token range
  */
 const PREFIX_TO_NAMESPACE = {
-  // common: 공통 UI 요소 (~80 keys)
+  // common: shared UI (~80 keys)
   common: 'common',
   status: 'common',
   time: 'common',
   copyButton: 'common',
 
-  // analytics: 분석 대시보드 (~132 keys)
+  // analytics: dashboard (~132 keys)
   analytics: 'analytics',
 
-  // session: 세션 및 프로젝트 (~116 keys)
+  // session: sessions and projects (~116 keys)
   session: 'session',
   project: 'session',
 
-  // settings: 설정 관리자 (~500 keys)
+  // settings: settings manager (~500 keys)
   settingsManager: 'settings',
   settings: 'settings',
   folderPicker: 'settings',
 
-  // tools: 도구 및 결과 (~58 keys)
+  // tools: tools and results (~58 keys)
   tools: 'tools',
   toolResult: 'tools',
   toolUseRenderer: 'tools',
   collapsibleToolResult: 'tools',
 
-  // error: 에러 메시지 (~37 keys)
+  // error: error messages (~37 keys)
   error: 'error',
 
-  // message: 메시지 뷰어 (~80 keys)
+  // message: message viewer (~80 keys)
   message: 'message',
   messages: 'message',
   messageViewer: 'message',
   messageContentDisplay: 'message',
 
-  // renderers: 각종 렌더러 컴포넌트 (~200 keys)
+  // renderers: renderer components (~200 keys)
   advancedTextDiff: 'renderers',
   agentProgressGroup: 'renderers',
   agentTaskGroup: 'renderers',
@@ -95,22 +95,22 @@ const PREFIX_TO_NAMESPACE = {
   webFetchToolResultRenderer: 'renderers',
   webSearchRenderer: 'renderers',
 
-  // update: 업데이트 관련 (~70 keys)
+  // update: update flow (~70 keys)
   updateModal: 'update',
   updateSettingsModal: 'update',
   updateIntroModal: 'update',
   simpleUpdateModal: 'update',
   upToDateNotification: 'update',
 
-  // feedback: 피드백 (~32 keys)
+  // feedback: feedback (~32 keys)
   feedback: 'feedback',
 
-  // recentEdits: 최근 편집 (~20 keys)
+  // recentEdits: recent edits (~20 keys)
   recentEdits: 'recentEdits',
 };
 
 /**
- * Prefix로 namespace 결정
+ * Resolve a namespace from a prefix
  */
 function getNamespace(key) {
   const prefix = key.split('.')[0];
@@ -118,30 +118,30 @@ function getNamespace(key) {
 }
 
 /**
- * 키에서 namespace prefix 제거 (선택적)
- * 현재는 기존 키 형식 유지를 위해 제거하지 않음
+ * Optionally remove the namespace prefix from a key
+ * Currently disabled to preserve the existing key format
  */
 function getKeyWithinNamespace(key) {
-  // 기존 호환성을 위해 전체 키 유지
+  // Keep the full key for backward compatibility
   return key;
 }
 
 /**
- * 언어별 파일을 namespace로 분리
+ * Split one language file into namespace files
  */
 function splitLanguage(lang) {
   const inputPath = path.join(LOCALES_DIR, `${lang}.json`);
   const outputDir = path.join(LOCALES_DIR, lang);
 
-  // 기존 단일 파일 로드
+  // Load the legacy single-file locale
   const data = JSON.parse(fs.readFileSync(inputPath, 'utf-8'));
 
-  // 출력 디렉토리 생성
+  // Create the output directory
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  // Namespace별로 분류
+  // Bucket entries by namespace
   const namespaceData = {};
   for (const ns of [...NAMESPACES, 'misc']) {
     namespaceData[ns] = {};
@@ -153,7 +153,7 @@ function splitLanguage(lang) {
     namespaceData[ns][nsKey] = value;
   }
 
-  // Namespace별 파일 저장
+  // Write one file per namespace
   const stats = {};
   for (const [ns, nsData] of Object.entries(namespaceData)) {
     const keyCount = Object.keys(nsData).length;
@@ -161,7 +161,7 @@ function splitLanguage(lang) {
 
     const outputPath = path.join(outputDir, `${ns}.json`);
 
-    // 키 정렬
+    // Sort keys
     const sorted = {};
     for (const key of Object.keys(nsData).sort()) {
       sorted[key] = nsData[key];
@@ -175,12 +175,12 @@ function splitLanguage(lang) {
 }
 
 /**
- * 메인 실행
+ * Main entry point
  */
 function main() {
-  console.log('i18n Namespace 분리 시작...\n');
-  console.log(`대상 언어: ${LANGUAGES.join(', ')}`);
-  console.log(`Namespace 수: ${NAMESPACES.length + 1} (misc 포함)\n`);
+  console.log('Starting i18n namespace split...\n');
+  console.log(`Target languages: ${LANGUAGES.join(', ')}`);
+  console.log(`Namespace count: ${NAMESPACES.length + 1} (including misc)\n`);
 
   const allStats = {};
 
@@ -194,8 +194,8 @@ function main() {
     }
   }
 
-  // 일관성 검증
-  console.log('\n=== 일관성 검증 ===');
+  // Validate consistency
+  console.log('\n=== Consistency check ===');
   const baseStats = allStats['en'];
   let consistent = true;
 
@@ -214,17 +214,17 @@ function main() {
   }
 
   if (consistent) {
-    console.log('✅ 모든 언어의 namespace별 키 개수가 일치합니다.');
+    console.log('✅ All languages have matching namespace key counts.');
   }
 
-  // 요약 출력
-  console.log('\n=== 요약 ===');
+  // Print a summary
+  console.log('\n=== Summary ===');
   let total = 0;
   for (const [ns, count] of Object.entries(baseStats)) {
     console.log(`${ns}: ${count} keys`);
     total += count;
   }
-  console.log(`\n총 ${total} keys → ${Object.keys(baseStats).length} namespaces`);
+  console.log(`\nTotal ${total} keys → ${Object.keys(baseStats).length} namespaces`);
 }
 
 main();

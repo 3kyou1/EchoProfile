@@ -4,5 +4,5 @@
 )]
 
 fn main() {
-    claude_code_history_viewer_lib::run();
+    echo_profile_lib::run();
 }

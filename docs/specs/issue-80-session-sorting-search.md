@@ -190,10 +190,7 @@ useEffect(() => {
 | `src/components/ProjectTree/index.tsx` | Add search/sort state, filtering logic |
 | `src/components/ProjectTree/types.ts` | Add `SortOrder` type if needed |
 | `src/i18n/locales/en/translation.json` | Add translation keys |
-| `src/i18n/locales/ko/translation.json` | Add translation keys |
-| `src/i18n/locales/ja/translation.json` | Add translation keys |
 | `src/i18n/locales/zh-CN/translation.json` | Add translation keys |
-| `src/i18n/locales/zh-TW/translation.json` | Add translation keys |
 
 ---
 
@@ -213,16 +210,16 @@ useEffect(() => {
 }
 ```
 
-### Korean (ko)
+### Simplified Chinese (zh-CN)
 ```json
 {
   "session": {
     "search": {
-      "placeholder": "세션 검색..."
+      "placeholder": "Search sessions..."
     },
     "sort": {
-      "newestFirst": "최신순 정렬",
-      "oldestFirst": "오래된순 정렬"
+      "newestFirst": "Newest first",
+      "oldestFirst": "Oldest first"
     }
   }
 }

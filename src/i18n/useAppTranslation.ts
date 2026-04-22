@@ -1,10 +1,10 @@
 /**
- * 타입 안전한 번역 훅
+ * Type-safe translation hook
  *
- * useTranslation 대신 이 훅을 사용하면:
- * - 키 자동완성 지원
- * - 잘못된 키 사용 시 타입 에러
- * - 단일 네임스페이스로 단순화
+ * Compared with useTranslation, this hook provides:
+ * - translation key autocompletion
+ * - type errors for invalid keys
+ * - a simplified single-namespace API
  */
 
 import { useTranslation } from 'react-i18next';
@@ -13,20 +13,20 @@ import type { TranslationKey } from './types.generated';
 type InterpolationOptions = Record<string, string | number>;
 
 /**
- * 타입 안전한 번역 훅
+ * Type-safe translation hook
  *
  * @example
  * ```tsx
  * const { t } = useAppTranslation();
- * t('common.loading');  // ✅ 자동완성 지원
- * t('invalid.key');     // ❌ 타입 에러
+ * t('common.loading');  // ✅ autocompletion works
+ * t('invalid.key');     // ❌ type error
  * ```
  */
 export function useAppTranslation() {
   const { t: originalT, i18n } = useTranslation();
 
   /**
-   * 타입 안전한 번역 함수
+   * Type-safe translation function
    */
   const t = (key: TranslationKey, options?: InterpolationOptions): string => {
     return originalT(key, options) as string;

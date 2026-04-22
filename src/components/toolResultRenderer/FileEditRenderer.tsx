@@ -84,7 +84,6 @@ export const FileEditRenderer = ({ toolResult, searchQuery }: Props) => {
         }
       />
       <Renderer.Content>
-        {/* 파일 경로 */}
         <div className="mb-3">
           <div className={`${layout.smallText} font-medium mb-1 text-muted-foreground`}>
             {t('fileEditRenderer.filePath')}
@@ -94,7 +93,6 @@ export const FileEditRenderer = ({ toolResult, searchQuery }: Props) => {
           </code>
         </div>
 
-        {/* 편집 정보 */}
         <div className={cn("grid grid-cols-2 mb-3", layout.iconGap, layout.smallText)}>
           <div className={cn("border bg-card border-border", layout.containerPadding, layout.rounded)}>
             <div className="text-muted-foreground">{t('fileEditRenderer.editType')}</div>
@@ -115,7 +113,6 @@ export const FileEditRenderer = ({ toolResult, searchQuery }: Props) => {
           </div>
         </div>
 
-        {/* 변경 내용 - Enhanced Diff Viewer 사용 */}
         {oldString && newString && (
           <EnhancedDiffViewer
             oldText={oldString}
@@ -125,7 +122,6 @@ export const FileEditRenderer = ({ toolResult, searchQuery }: Props) => {
           />
         )}
 
-        {/* 원본 파일 내용 (접기/펼치기 가능) */}
         {originalFile && (
           <div>
             <FileContent

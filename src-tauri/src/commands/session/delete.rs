@@ -2,6 +2,33 @@ use std::fs;
 use std::path::Path;
 use tauri::command;
 
+#[cfg(all(target_os = "macos", not(test)))]
+use trash::macos::{DeleteMethod, TrashContextExtMacos};
+
+#[cfg(test)]
+fn move_to_trash(path: &Path) -> Result<(), String> {
+    if path.is_dir() {
+        fs::remove_dir_all(path)
+    } else {
+        fs::remove_file(path)
+    }
+    .map_err(|e| format!("Failed to remove test path: {e}"))
+}
+
+#[cfg(all(target_os = "macos", not(test)))]
+fn move_to_trash(path: &Path) -> Result<(), String> {
+    let mut trash_ctx = trash::TrashContext::new();
+    trash_ctx.set_delete_method(DeleteMethod::NsFileManager);
+    trash_ctx
+        .delete(path)
+        .map_err(|e| format!("Failed to move path to trash: {e}"))
+}
+
+#[cfg(all(not(target_os = "macos"), not(test)))]
+fn move_to_trash(path: &Path) -> Result<(), String> {
+    trash::delete(path).map_err(|e| format!("Failed to move path to trash: {e}"))
+}
+
 /// Moves a session's JSONL file and its associated folder (subagents, tool-results) to the system trash.
 ///
 /// For a session at `<dir>/<uuid>.jsonl`, also trashes `<dir>/<uuid>/` if it exists.
@@ -43,14 +70,14 @@ pub async fn delete_session(file_path: String) -> Result<(), String> {
     }
 
     // Trash the .jsonl first (authoritative artifact), then the associated folder
-    trash::delete(path).map_err(|e| format!("Failed to move session file to trash: {e}"))?;
+    move_to_trash(path).map_err(|e| format!("Failed to move session file to trash: {e}"))?;
 
     // Best-effort trash of associated folder — don't fail if it can't be trashed
     // since the primary .jsonl file is already gone
     let associated_dir = path.with_extension("");
     if let Ok(dir_meta) = fs::symlink_metadata(&associated_dir) {
         if !dir_meta.file_type().is_symlink() && dir_meta.is_dir() {
-            let _ = trash::delete(&associated_dir);
+            let _ = move_to_trash(&associated_dir);
         }
     }
 

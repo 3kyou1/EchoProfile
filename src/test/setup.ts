@@ -23,6 +23,46 @@ global.window = global.window || {};
   },
 };
 
+const createStorageMock = (): Storage => {
+  const backing = new Map<string, string>();
+
+  return {
+    getItem: (key: string) => backing.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      backing.set(key, String(value));
+    },
+    removeItem: (key: string) => {
+      backing.delete(key);
+    },
+    clear: () => {
+      backing.clear();
+    },
+    key: (index: number) => Array.from(backing.keys())[index] ?? null,
+    get length() {
+      return backing.size;
+    },
+  };
+};
+
+if (
+  typeof globalThis.localStorage === 'undefined' ||
+  typeof globalThis.localStorage.clear !== 'function'
+) {
+  const storage = createStorageMock();
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    writable: true,
+    value: storage,
+  });
+
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    writable: true,
+    value: storage,
+  });
+}
+
 // Mock matchMedia for components that use media queries
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -62,4 +102,3 @@ global.ResizeObserver = class ResizeObserver {
   new (): ResizeObserver;
   prototype: ResizeObserver;
 };
-

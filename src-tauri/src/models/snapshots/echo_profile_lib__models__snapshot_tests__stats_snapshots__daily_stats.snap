@@ -1,0 +1,14 @@
+---
+source: src/models/snapshot_tests.rs
+assertion_line: 280
+expression: stats
+---
+{
+  "date": "2025-01-15",
+  "total_tokens": 10000,
+  "input_tokens": 6000,
+  "output_tokens": 4000,
+  "message_count": 100,
+  "session_count": 5,
+  "active_hours": 8
+}

@@ -36,10 +36,7 @@ export default defineConfig(async () => {
         manualChunks: (id: string) => {
           // === i18n locale data (split by language to avoid one mega-chunk) ===
           if (id.includes("i18n/locales/en/")) return "i18n-en";
-          if (id.includes("i18n/locales/ko/")) return "i18n-ko";
-          if (id.includes("i18n/locales/ja/")) return "i18n-ja";
           if (id.includes("i18n/locales/zh-CN/")) return "i18n-zh-cn";
-          if (id.includes("i18n/locales/zh-TW/")) return "i18n-zh-tw";
 
           // i18n runtime libraries
           if (

@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - SSE real-time file watcher for live session updates
   - Single-binary deployment with embedded frontend via rust-embed
   - Docker and docker-compose support
-  - Homebrew formula (`cchv-server`) with auto-update CI
+  - Homebrew/server packaging updates for the project
   - Comprehensive server guides (EN + KO)
 - **Screenshot Capture**: Long screenshot with range selection, preview modal, and explorer-style multi-selection
 - **Archive Management**: Create, browse, rename, delete, and export session archives
@@ -126,7 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0-beta.3] - 2025-07-03
 
 ### Added
-- Multi-language support: 5 languages (Korean, English, Japanese, Simplified/Traditional Chinese)
+- Multi-language support: English and Simplified Chinese
 - Feedback system: Category-based feedback submission with GitHub integration
 - Language selection menu: Real-time language switching in settings
 

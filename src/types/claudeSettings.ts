@@ -250,7 +250,7 @@ export interface ClaudeCodeSettings {
   /** Default model to use (opus, sonnet, haiku) */
   model?: ClaudeModel;
 
-  /** Claude's preferred response language (e.g., "english", "korean", "japanese") */
+  /** Claude's preferred response language (e.g., "english", "chinese") */
   language?: string;
 
   /** Output style adjustment for system prompt */

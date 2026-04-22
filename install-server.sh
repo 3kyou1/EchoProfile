@@ -1,8 +1,8 @@
 #!/bin/sh
-# install-server.sh — One-line installer for cchv-server (Claude Code History Viewer)
+# install-server.sh — One-line installer for echo-profile (EchoProfile)
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/jhlee0409/claude-code-history-viewer/main/install-server.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/jhlee0409/echo-profile/main/install-server.sh | sh
 #
 # Environment variables:
 #   INSTALL_DIR  — Installation directory (default: /usr/local/bin)
@@ -10,8 +10,8 @@
 
 set -e
 
-REPO="jhlee0409/claude-code-history-viewer"
-BINARY_NAME="cchv-server"
+REPO="jhlee0409/echo-profile"
+BINARY_NAME="echo-profile"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 
 # ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ resolve_version() {
 # ---------------------------------------------------------------------------
 
 install() {
-    ARTIFACT="cchv-server-${PLATFORM}.tar.gz"
+    ARTIFACT="echo-profile-${PLATFORM}.tar.gz"
     CHECKSUM_FILE="CHECKSUMS.sha256"
     URL="https://github.com/${REPO}/releases/download/${TAG}/${ARTIFACT}"
     CHECKSUM_URL="https://github.com/${REPO}/releases/download/${TAG}/${CHECKSUM_FILE}"
@@ -126,7 +126,7 @@ install() {
 # ---------------------------------------------------------------------------
 
 main() {
-    printf '\n\033[1m  Claude Code History Viewer — Server Installer\033[0m\n\n'
+    printf '\n\033[1m  EchoProfile — Server Installer\033[0m\n\n'
 
     need_cmd curl
     need_cmd tar

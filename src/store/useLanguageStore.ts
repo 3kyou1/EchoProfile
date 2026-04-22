@@ -4,7 +4,7 @@ import { storageAdapter } from "@/services/storage";
 import { isTauri } from "@/utils/platform";
 import i18n from "../i18n";
 import type { SupportedLanguage } from "../i18n";
-import { languageLocaleMap } from "../i18n";
+import { normalizeLanguage } from "../i18n";
 
 interface LanguageStore {
   language: SupportedLanguage;
@@ -13,27 +13,12 @@ interface LanguageStore {
   loadLanguage: () => Promise<void>;
 }
 
-const getSupportedLanguage = (lang: string): SupportedLanguage => {
-  if (lang.startsWith("zh")) {
-    const region = lang.split("-")[1]?.toUpperCase();
-    if (region === "TW" || region === "HK" || region === "MO") {
-      return "zh-TW";
-    }
-    return "zh-CN";
-  }
-  const primary = lang.split("-")[0];
-  if (primary && primary in languageLocaleMap) {
-    return primary as SupportedLanguage;
-  }
-  return "en";
-};
-
 const getCurrentLanguage = (): SupportedLanguage => {
   const storedLang = localStorage.getItem("i18nextLng");
   if (storedLang) {
-    return getSupportedLanguage(storedLang);
+    return normalizeLanguage(storedLang);
   }
-  return getSupportedLanguage(i18n.language || "en");
+  return normalizeLanguage(i18n.language || "en");
 };
 
 export const useLanguageStore = create<LanguageStore>((set, get) => ({
@@ -60,13 +45,14 @@ export const useLanguageStore = create<LanguageStore>((set, get) => ({
 
       const i18nextLang = localStorage.getItem("i18nextLng");
       if (i18nextLang) {
-        language = getSupportedLanguage(i18nextLang);
+        language = normalizeLanguage(i18nextLang);
       }
 
       if (!language) {
         try {
           const store = await storageAdapter.load("settings.json", { defaults: {}, autoSave: true });
-          language = (await store.get("language")) as SupportedLanguage | null;
+          const storedLanguage = (await store.get("language")) as string | null;
+          language = storedLanguage ? normalizeLanguage(storedLanguage) : null;
         } catch (e) {
           console.log("Store not available:", e);
         }
@@ -81,13 +67,13 @@ export const useLanguageStore = create<LanguageStore>((set, get) => ({
           if (isTauri()) {
             const { locale } = await import("@tauri-apps/plugin-os");
             const systemLocale = (await locale()) || navigator.language || "en";
-            detectedLanguage = getSupportedLanguage(systemLocale);
+            detectedLanguage = normalizeLanguage(systemLocale);
           } else {
-            detectedLanguage = getSupportedLanguage(navigator.language || "en");
+            detectedLanguage = normalizeLanguage(navigator.language || "en");
           }
         } catch (error) {
           console.log("Failed to get system locale:", error);
-          detectedLanguage = getSupportedLanguage(navigator.language || "en");
+          detectedLanguage = normalizeLanguage(navigator.language || "en");
         }
         await get().setLanguage(detectedLanguage);
       }

@@ -1,4 +1,4 @@
-//! Test utilities and helpers for the claude-code-history-viewer crate.
+//! Test utilities and helpers for the echo-profile crate.
 //!
 //! This module provides common test fixtures, builders, and utilities
 //! to make testing easier and more consistent across the codebase.

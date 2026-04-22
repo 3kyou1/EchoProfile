@@ -1,7 +1,7 @@
 export interface ScientistRecord {
   slug: string;
   name: string;
-  localized_names?: Partial<Record<"zh" | "ja" | "ko", string>>;
+  localized_names?: Partial<Record<"zh", string>>;
   portrait_url: string;
   quote_en: string;
   quote_zh: string;
@@ -21,7 +21,7 @@ export type ScientistConfidenceStyle = "strong_resonance" | "phase_resonance";
 
 export interface ScientistResonanceCard {
   name: string;
-  localized_names?: Partial<Record<"zh" | "ja" | "ko", string>>;
+  localized_names?: Partial<Record<"zh", string>>;
   slug: string;
   portrait_url: string;
   hook: string;

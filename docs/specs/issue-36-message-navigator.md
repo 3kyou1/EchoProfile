@@ -242,18 +242,18 @@ Match the existing left sidebar (`ProjectTree`) aesthetic:
 
 ## 5. i18n
 
-### New Keys (add to all 5 locales)
+### New Keys (add to all supported locales)
 
 **Namespace: `message` (in `locales/{lang}/message.json`)**
 
 | Key | EN | KO |
 |-----|----|----|
-| `navigator.title` | `Messages` | `메시지` |
-| `navigator.toggle` | `Toggle message navigator` | `메시지 네비게이터 토글` |
-| `navigator.filter` | `Filter messages...` | `메시지 필터...` |
-| `navigator.turnLabel` | `Turn {{index}}` | `턴 {{index}}` |
-| `navigator.noMessages` | `No messages in this session` | `이 세션에 메시지가 없습니다` |
-| `navigator.close` | `Close navigator` | `네비게이터 닫기` |
+| `navigator.title` | `Messages` | `Messages` |
+| `navigator.toggle` | `Toggle message navigator` | `Toggle message navigator` |
+| `navigator.filter` | `Filter messages...` | `Filter messages...` |
+| `navigator.turnLabel` | `Turn {{index}}` | `Turn {{index}}` |
+| `navigator.noMessages` | `No messages in this session` | `No messages in this session` |
+| `navigator.close` | `Close navigator` | `Close navigator` |
 
 After adding keys: run `pnpm run generate:i18n-types && pnpm run i18n:validate`.
 

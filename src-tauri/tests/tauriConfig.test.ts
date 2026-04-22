@@ -47,7 +47,7 @@ describe('Tauri Configuration Tests', () => {
 
   describe('Product Information Validation', () => {
     it('should have correct product name', () => {
-      expect(config.productName).toBe('Claude Code History Viewer');
+      expect(config.productName).toBe('EchoProfile');
       expect(typeof config.productName).toBe('string');
       expect(config.productName.length).toBeGreaterThan(0);
     });
@@ -59,7 +59,7 @@ describe('Tauri Configuration Tests', () => {
 
     it('should have valid app identifier in reverse domain notation', () => {
       expect(config.identifier).toMatch(/^[a-zA-Z0-9.-]+$/);
-      expect(config.identifier).toBe('com.claude.history-viewer');
+      expect(config.identifier).toBe('com.echoprofile.app');
       expect(config.identifier.split('.').length).toBeGreaterThanOrEqual(3);
     });
 
@@ -119,7 +119,7 @@ describe('Tauri Configuration Tests', () => {
       });
 
       it('should have consistent window title with product name', () => {
-        expect(mainWindow.title).toBe('Claude Code History Viewer');
+        expect(mainWindow.title).toBe('EchoProfile');
         expect(mainWindow.title).toBe(config.productName);
       });
 
@@ -235,19 +235,17 @@ describe('Tauri Configuration Tests', () => {
     describe('Updater Plugin', () => {
       it('should have updater plugin enabled', () => {
         expect(config.plugins.updater).toBeDefined();
-        expect(config.plugins.updater.active).toBe(true);
+        expect(config.plugins.updater.active).toBe(false);
         expect(typeof config.plugins.updater.active).toBe('boolean');
       });
 
       it('should have valid GitHub update endpoints', () => {
         expect(Array.isArray(config.plugins.updater.endpoints)).toBe(true);
-        expect(config.plugins.updater.endpoints.length).toBeGreaterThan(0);
+        expect(config.plugins.updater.endpoints.length).toBe(0);
         
         config.plugins.updater.endpoints.forEach((endpoint: string) => {
           expect(endpoint).toMatch(/^https:\/\//); // HTTPS required
-          expect(endpoint).toContain('github.com');
-          expect(endpoint).toContain('jhlee0409/claude-code-history-viewer');
-          expect(endpoint).toContain('latest.json');
+          expect(endpoint).toContain('https://');
         });
       });
 
@@ -257,17 +255,11 @@ describe('Tauri Configuration Tests', () => {
       });
 
       it('should have valid minisign public key', () => {
-        expect(config.plugins.updater.pubkey).toBeDefined();
-        expect(typeof config.plugins.updater.pubkey).toBe('string');
-        expect(config.plugins.updater.pubkey.length).toBeGreaterThan(50);
-
-        // Check for base64 encoded minisign public key format
-        expect(config.plugins.updater.pubkey).toMatch(/^[A-Za-z0-9+/=]+$/);
+        expect(config.plugins.updater.pubkey).toBeUndefined();
       });
 
       it('should not expose private keys or secrets', () => {
-        expect(config.plugins.updater.pubkey).not.toContain('private');
-        expect(config.plugins.updater.pubkey).not.toContain('secret');
+        expect(config.plugins.updater.pubkey).toBeUndefined();
       });
     });
   });
@@ -428,8 +420,8 @@ describe('Tauri Configuration Tests', () => {
       const parts = config.identifier.split('.');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[0]).toBe('com'); // Proper reverse domain
-      expect(parts[1]).toBe('claude');
-      expect(parts[2]).toBe('history-viewer');
+      expect(parts[1]).toBe('echoprofile');
+      expect(parts[2]).toBe('app');
     });
 
     it('should not expose sensitive information', () => {
@@ -446,14 +438,8 @@ describe('Tauri Configuration Tests', () => {
       });
     });
 
-    it('should have updater public key but no private information', () => {
-      expect(config.plugins.updater.pubkey).toBeDefined();
-      expect(typeof config.plugins.updater.pubkey).toBe('string');
-      expect(config.plugins.updater.pubkey.length).toBeGreaterThan(0);
-      // Public key can be base64 encoded, so just check it's not exposing private info
-      const lowerKey = config.plugins.updater.pubkey.toLowerCase();
-      expect(lowerKey).not.toContain('private');
-      expect(lowerKey).not.toContain('secret');
+    it('should not configure updater secrets while updates are disabled', () => {
+      expect(config.plugins.updater.pubkey).toBeUndefined();
     });
   });
 });

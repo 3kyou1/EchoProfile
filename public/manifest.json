@@ -1,6 +1,6 @@
 {
-  "name": "Claude Code History Viewer",
-  "short_name": "Code History",
+  "name": "EchoProfile",
+  "short_name": "EchoProfile",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a12",

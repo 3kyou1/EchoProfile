@@ -79,9 +79,9 @@ function generateMockMessages() {
 
   // Day 1: March 7
   const day1Pairs = [
-    ["프로젝트 구조를 분석해줘", "프로젝트 구조를 분석하겠습니다. src/ 디렉토리 아래에 components, hooks, store, utils가 있습니다."],
-    ["컴포넌트 목록을 보여줘", "주요 컴포넌트는 MessageViewer, ProjectTree, SettingsManager 등이 있습니다."],
-    ["테스트는 어떻게 되어있어?", "현재 Vitest를 사용하고 있으며, src/test/ 디렉토리에 테스트 파일이 있습니다."],
+    ["Analyze the project structure", "I can analyze the project structure. Under src/ you have components, hooks, store, and utils."],
+    ["Show me the component list", "Key components include MessageViewer, ProjectTree, and SettingsManager."],
+    ["How are tests organized?", "The project uses Vitest, and test files live under src/test/."],
   ];
 
   for (let i = 0; i < day1Pairs.length; i++) {
@@ -96,10 +96,10 @@ function generateMockMessages() {
 
   // Day 2: March 8
   const day2Pairs = [
-    ["i18n 설정 방법을 알려줘", "react-i18next를 사용하고 있습니다. src/i18n/locales/ 아래에 5개 언어가 있습니다."],
-    ["새로운 키를 추가하려면?", "각 locale 폴더의 해당 namespace JSON 파일에 키를 추가하고, generate:i18n-types를 실행하세요."],
-    ["빌드 명령어가 뭐야?", "just dev로 개발 모드, just tauri-build로 프로덕션 빌드를 할 수 있습니다."],
-    ["ESLint 설정은?", "TypeScript ESLint를 사용하고 있으며, no-explicit-any가 활성화되어 있습니다."],
+    ["i18n 设置方法是什么？", "我们使用 react-i18next，当前在 src/i18n/locales/ 下保留 en 和 zh-CN 两种语言。"],
+    ["How do I add a new i18n key?", "Add the key to the matching namespace JSON file in each locale folder, then run generate:i18n-types."],
+    ["What are the build commands?", "Use just dev for development mode and just tauri-build for a production build."],
+    ["What is the ESLint setup?", "The project uses TypeScript ESLint with no-explicit-any enabled."],
   ];
 
   for (let i = 0; i < day2Pairs.length; i++) {
@@ -114,9 +114,9 @@ function generateMockMessages() {
 
   // Day 3: March 10 (today)
   const day3Pairs = [
-    ["오늘 할 일 정리해줘", "Issue #170 날짜 표시 개선 작업을 진행합니다. 날짜 구분선과 floating overlay를 추가합니다."],
-    ["구현 시작해줘", "Phase 1부터 시작하겠습니다. time.ts에 formatDateDivider 함수를 추가합니다."],
-    ["잘 동작하는지 확인해봐", "TypeScript 빌드, ESLint, i18n 검증 모두 통과했습니다."],
+    ["Summarize today's tasks", "We're working on Issue #170 to improve date visibility by adding date dividers and a floating overlay."],
+    ["Start the implementation", "I'll begin with Phase 1 by adding formatDateDivider to time.ts."],
+    ["Check whether it works", "The TypeScript build, ESLint, and i18n validation all passed."],
   ];
 
   for (let i = 0; i < day3Pairs.length; i++) {

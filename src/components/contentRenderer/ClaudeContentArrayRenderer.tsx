@@ -213,10 +213,8 @@ export const ClaudeContentArrayRenderer = memo(({
             return null;
 
           case "image":
-            // Claude API 형태의 이미지 객체 처리
             if (item.source && typeof item.source === "object") {
               const source = item.source as Record<string, unknown>;
-              // base64 이미지
               if (
                 source.type === "base64" &&
                 source.data &&
@@ -225,7 +223,6 @@ export const ClaudeContentArrayRenderer = memo(({
                 const imageUrl = `data:${source.media_type};base64,${source.data}`;
                 return <ImageRenderer key={entry.key} imageUrl={imageUrl} />;
               }
-              // URL 이미지
               if (source.type === "url" && typeof source.url === "string") {
                 return <ImageRenderer key={entry.key} imageUrl={source.url} />;
               }
@@ -513,7 +510,6 @@ export const ClaudeContentArrayRenderer = memo(({
           }
 
           default: {
-            // 기본 JSON 렌더링 - warning variant for unknown types
             const warningStyles = getVariantStyles("warning");
             return (
               <div

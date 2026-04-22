@@ -1,4 +1,4 @@
-// 업데이트 설정 관리 유틸리티
+// Update settings utilities
 import type { UpdateSettings } from '../types/updateSettings';
 import { DEFAULT_UPDATE_SETTINGS } from '../types/updateSettings';
 import { updateLogger } from './logger';
@@ -72,7 +72,7 @@ export function getUpdateSettings(): UpdateSettings {
 
     const parsed: unknown = JSON.parse(stored);
     const validated = validateSettings(parsed);
-    // 기본값과 병합하여 새로운 설정이 추가되어도 호환성 유지
+    // Merge with defaults so newly added settings remain backward compatible
     return { ...DEFAULT_UPDATE_SETTINGS, ...validated };
   } catch {
     return { ...DEFAULT_UPDATE_SETTINGS };
@@ -85,7 +85,7 @@ export function setUpdateSettings(settings: Partial<UpdateSettings>): void {
     const updated = { ...current, ...settings };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
   } catch (error) {
-    updateLogger.warn('업데이트 설정 저장 실패:', error);
+    updateLogger.warn('Failed to save update settings:', error);
   }
 }
 
@@ -94,26 +94,26 @@ export function shouldCheckForUpdates(options: ShouldCheckForUpdatesOptions = {}
   const now = options.now ?? Date.now();
   const online = options.online ?? isOnline();
   
-  // 자동 체크가 비활성화된 경우
+  // Skip checks when automatic checking is disabled
   if (!settings.autoCheck) {
     return false;
   }
   
-  // never로 설정된 경우
+  // Skip checks when the interval is set to 'never'
   if (settings.checkInterval === 'never') {
     return false;
   }
   
-  // 오프라인 상태를 존중하는 설정이고 현재 오프라인인 경우
+  // Skip checks when offline mode is respected and the client is offline
   if (settings.respectOfflineStatus && !online) {
     return false;
   }
   
-  // 연기된 업데이트가 있는지 확인
+  // Honor postponed updates
   if (settings.lastPostponedAt) {
     const timeSincePostpone = now - settings.lastPostponedAt;
     if (timeSincePostpone < settings.postponeInterval) {
-      return false; // 아직 연기 기간
+      return false; // Still within the postpone window
     }
   }
 

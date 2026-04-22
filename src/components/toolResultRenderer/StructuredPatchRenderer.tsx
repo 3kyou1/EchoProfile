@@ -77,7 +77,6 @@ export const StructuredPatchRenderer = ({ toolResult }: Props) => {
         }
       />
       <Renderer.Content>
-        {/* 파일 경로 */}
         <div className="mb-3">
           <div className={`${layout.smallText} font-medium mb-1 text-muted-foreground`}>
             {t("structuredPatch.filePath")}
@@ -87,7 +86,6 @@ export const StructuredPatchRenderer = ({ toolResult }: Props) => {
           </code>
         </div>
 
-        {/* 변경 통계 */}
         {patches.length > 0 && (
           <div className="mb-3">
             <div className={`${layout.smallText} font-medium mb-1 text-muted-foreground`}>
@@ -109,7 +107,6 @@ export const StructuredPatchRenderer = ({ toolResult }: Props) => {
           />
         )}
 
-        {/* 전체 파일 내용 */}
         {content && (
           <div>
             <div className={`${layout.smallText} font-medium mb-2 text-muted-foreground`}>

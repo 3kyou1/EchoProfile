@@ -214,7 +214,7 @@ export const createMessageSlice: StateCreator<
       const duration = performance.now() - start;
       if (import.meta.env.DEV) {
         console.log(
-          `[Frontend] selectSession: ${filteredMessages.length}개 메시지 로드, ${duration.toFixed(1)}ms`
+          `[Frontend] selectSession: ${filteredMessages.length} messages loaded, ${duration.toFixed(1)}ms`
         );
       }
 
@@ -260,7 +260,7 @@ export const createMessageSlice: StateCreator<
       return;
     }
 
-    console.log("새로고침 시작:", selectedSession.session_id);
+    console.log("Refreshing session:", selectedSession.session_id);
     get().setError(null);
 
     try {
@@ -289,7 +289,7 @@ export const createMessageSlice: StateCreator<
         (analytics.currentView === "tokenStats" ||
           analytics.currentView === "analytics")
       ) {
-        console.log("분석 데이터 새로고침 시작:", analytics.currentView);
+        console.log("Refreshing analytics data:", analytics.currentView);
 
         if (analytics.currentView === "tokenStats") {
           await get().loadProjectTokenStats(selectedProject.path);
@@ -339,14 +339,14 @@ export const createMessageSlice: StateCreator<
           }
         }
 
-        console.log("분석 데이터 새로고침 완료");
+        console.log("Analytics data refresh complete");
       }
 
-      console.log("새로고침 완료");
+      console.log("Refresh complete");
     } catch (error) {
-      console.error("새로고침 실패:", error);
+      console.error("Refresh failed:", error);
       const message = error instanceof Error ? error.message : String(error);
-      toast.error(`새로고침 실패: ${message}`);
+      toast.error(`Refresh failed: ${message}`);
       get().setError({ type: AppErrorType.UNKNOWN, message: String(error) });
     }
   },

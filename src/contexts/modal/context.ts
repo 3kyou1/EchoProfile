@@ -17,12 +17,10 @@ interface OpenModalOptions {
 }
 
 interface ModalContextValue {
-  // 상태
   isOpen: (modal: ModalType) => boolean;
   folderSelectorMode: FolderSelectorMode;
   feedbackPrefill: FeedbackPrefill | null;
 
-  // 액션
   openModal: (modal: ModalType, options?: OpenModalOptions) => void;
   closeModal: (modal: ModalType) => void;
   closeAllModals: () => void;

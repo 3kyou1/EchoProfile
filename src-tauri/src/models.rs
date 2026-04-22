@@ -1,4 +1,4 @@
-//! Data models for Claude Code History Viewer
+//! Data models for `EchoProfile`
 //!
 //! This module contains all the data structures used throughout the application.
 

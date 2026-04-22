@@ -122,7 +122,7 @@ export const createProjectSlice: StateCreator<
     try {
       if (!isTauriAvailable()) {
         throw new Error(
-          "Tauri API를 사용할 수 없습니다. 데스크톱 앱에서 실행해주세요."
+          "Tauri API is unavailable. Please run this in the desktop app."
         );
       }
 
@@ -217,7 +217,7 @@ export const createProjectSlice: StateCreator<
       const duration = performance.now() - start;
       if (import.meta.env.DEV) {
         console.log(
-          `[Frontend] scanProjects: ${projects.length}개 프로젝트, ${duration.toFixed(1)}ms`
+          `[Frontend] scanProjects: ${projects.length} projects, ${duration.toFixed(1)}ms`
         );
       }
       if (requestId !== getRequestId("scanProjects")) {

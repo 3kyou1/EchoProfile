@@ -19,21 +19,18 @@ type Props = {
 
 export const StringRenderer = memo(function StringRenderer({ result, searchQuery }: Props) {
   const { t } = useTranslation();
-  // 파일 트리나 디렉토리 구조인지 확인
   const isFileTree =
     result.includes("/") &&
     (result.includes("- ") || result.includes("├") || result.includes("└"));
 
-  // 접기/펼치기 상태 관리
   const [isExpanded, setIsExpanded] = useCaptureExpandState("string-output", false);
 
-  // 검색 쿼리가 있고 내용에 매칭되면 자동으로 펼치기
   useEffect(() => {
     if (searchQuery && result.toLowerCase().includes(searchQuery.toLowerCase())) {
       setIsExpanded(true);
     }
   }, [searchQuery, result, setIsExpanded]);
-  const MAX_LINES = 15; // 최대 표시 줄 수
+  const MAX_LINES = 15;
   const resultLines = result.split("\n");
   const shouldCollapse = resultLines.length > MAX_LINES;
   const displayResult =

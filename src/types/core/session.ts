@@ -24,9 +24,7 @@ export interface ProviderInfo {
 export type GitWorktreeType = "main" | "linked" | "not_git";
 
 export interface GitInfo {
-  /** 워크트리 유형 */
   worktree_type: GitWorktreeType;
-  /** 메인 레포의 프로젝트 경로 (링크드 워크트리인 경우) */
   main_project_path?: string;
 }
 
@@ -51,7 +49,6 @@ export interface ClaudeProject {
   session_count: number;
   message_count: number;
   last_modified: string;
-  /** Git worktree 정보 */
   git_info?: GitInfo;
   /** Provider identifier (claude, codex, opencode) */
   provider?: ProviderId;

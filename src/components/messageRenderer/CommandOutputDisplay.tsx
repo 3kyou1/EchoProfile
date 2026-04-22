@@ -31,7 +31,6 @@ export const CommandOutputDisplay: React.FC<CommandOutputDisplayProps> = ({
   const { t } = useTranslation();
   const { isDarkMode } = useTheme();
 
-  // 다양한 출력 유형 감지
   const isTestOutput =
     stdout.includes("Test Suites:") ||
     stdout.includes("jest") ||
@@ -56,7 +55,6 @@ export const CommandOutputDisplay: React.FC<CommandOutputDisplayProps> = ({
   const successStyles = getVariantStyles("success");
   const terminalStyles = getVariantStyles("terminal");
 
-  // JSON 출력 처리
   if (isJsonOutput) {
     try {
       const parsed = JSON.parse(stdout);
@@ -110,11 +108,10 @@ export const CommandOutputDisplay: React.FC<CommandOutputDisplayProps> = ({
         </div>
       );
     } catch {
-      // JSON 파싱 실패시 일반 텍스트로 처리
+      // Fall through to the non-highlighted renderers below.
     }
   }
 
-  // 테스트 출력 처리
   if (isTestOutput) {
     return (
       <div className="bg-card rounded border border-border">
@@ -142,7 +139,6 @@ export const CommandOutputDisplay: React.FC<CommandOutputDisplayProps> = ({
     );
   }
 
-  // 빌드 출력 처리
   if (isBuildOutput) {
     return (
       <div className="bg-card rounded border border-border">
@@ -172,7 +168,6 @@ export const CommandOutputDisplay: React.FC<CommandOutputDisplayProps> = ({
     );
   }
 
-  // 패키지 매니저 출력 처리
   if (isPackageOutput) {
     return (
       <div className="bg-card rounded border border-border">
@@ -202,7 +197,6 @@ export const CommandOutputDisplay: React.FC<CommandOutputDisplayProps> = ({
     );
   }
 
-  // 테이블 형태 출력 처리
   if (isTableOutput) {
     return (
       <div className="bg-card rounded border border-border">
@@ -232,7 +226,6 @@ export const CommandOutputDisplay: React.FC<CommandOutputDisplayProps> = ({
     );
   }
 
-  // 기본 출력 (bash/shell)
   return (
     <div className="bg-card rounded border border-border">
       <div

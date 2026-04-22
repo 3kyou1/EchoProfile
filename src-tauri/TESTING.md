@@ -1,6 +1,6 @@
 # Rust Testing Guide
 
-This document describes the world-class testing infrastructure for the Claude Code History Viewer Rust backend.
+This document describes the world-class testing infrastructure for the EchoProfile Rust backend.
 
 ## Quick Start
 

@@ -60,7 +60,6 @@ export const useScrollNavigation = ({
 }: UseScrollNavigationOptions): UseScrollNavigationReturn => {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
-  // 스크롤이 완료된 세션 ID (현재 세션과 비교하여 오버레이 표시 여부 결정)
   const [scrollReadyForSessionId, setScrollReadyForSessionId] = useState<string | null>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Tracks whether user is near bottom for auto-scroll on new messages
@@ -72,7 +71,6 @@ export const useScrollNavigation = ({
     return scrollContainerRef.current?.osInstance()?.elements().viewport ?? null;
   }, [scrollContainerRef]);
 
-  // 맨 아래로 스크롤하는 함수
   const scrollToBottom = useCallback(() => {
     const element = getScrollViewport();
 
@@ -100,7 +98,6 @@ export const useScrollNavigation = ({
 
     // Fallback to DOM-based scrolling
     if (element) {
-      // 여러 번 시도하여 확실히 맨 아래로 이동
       const attemptScroll = (attempts = 0) => {
         element.scrollTop = element.scrollHeight;
         if (
@@ -114,7 +111,6 @@ export const useScrollNavigation = ({
     }
   }, [getScrollViewport, virtualizer, messagesLength]);
 
-  // 맨 위로 스크롤하는 함수
   const scrollToTop = useCallback(() => {
     // Use virtualizer if available
     if (virtualizer) {
@@ -129,7 +125,6 @@ export const useScrollNavigation = ({
     }
   }, [getScrollViewport, virtualizer]);
 
-  // 현재 매치된 하이라이트 텍스트로 스크롤 이동
   const scrollToHighlight = useCallback((matchUuid: string | null) => {
     if (!matchUuid) return;
 
@@ -160,13 +155,11 @@ export const useScrollNavigation = ({
     const viewport = getScrollViewport();
     if (!viewport) return;
 
-    // 먼저 하이라이트된 텍스트 요소를 찾음
     const highlightElement = viewport.querySelector(
       '[data-search-highlight="current"]'
     );
 
     if (highlightElement) {
-      // 하이라이트된 텍스트로 스크롤
       highlightElement.scrollIntoView({
         behavior: "smooth",
         block: "center",
@@ -174,7 +167,6 @@ export const useScrollNavigation = ({
       return;
     }
 
-    // 하이라이트 요소가 없으면 메시지 영역으로 스크롤 (fallback)
     const messageElement = viewport.querySelector(
       `[data-message-uuid="${matchUuid}"]`
     );
@@ -187,28 +179,22 @@ export const useScrollNavigation = ({
     }
   }, [getScrollViewport, virtualizer, getScrollIndex]);
 
-  // 메시지 로드 완료 후 스크롤 실행
-  // scrollReadyForSessionId !== selectedSessionId 면 스크롤 필요
   useEffect(() => {
-    // 이전 타이머 정리
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
       scrollTimeoutRef.current = null;
     }
 
-    // 스크롤 요소가 준비되지 않았으면 대기
     if (!scrollElementReady) {
       return;
     }
 
-    // 메시지가 있고 로딩 완료되고 현재 세션에 대해 스크롤이 안된 상태일 때
     if (
       messagesLength > 0 &&
       !isLoading &&
       selectedSessionId &&
       scrollReadyForSessionId !== selectedSessionId
     ) {
-      // targetMessageUuid가 있으면 scrollToBottom을 건너뛰고 target scroll에 위임
       if (targetMessageUuid) {
         setScrollReadyForSessionId(selectedSessionId);
         return;
@@ -217,14 +203,11 @@ export const useScrollNavigation = ({
         console.log(`[useScrollNavigation] Starting scroll for session ${selectedSessionId?.slice(-8)}, messages: ${messagesLength}`);
       }
 
-      // 즉시 준비 완료 표시하여 UI 표시 (스크롤은 별도로 진행)
       setScrollReadyForSessionId(selectedSessionId);
 
-      // RAF 2프레임 후 스크롤 (virtualizer 렌더링 대기)
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           scrollToBottom();
-          // 스크롤 보정을 위한 짧은 지연 후 재시도
           scrollTimeoutRef.current = setTimeout(() => {
             scrollToBottom();
             if (import.meta.env.DEV) {
@@ -235,7 +218,6 @@ export const useScrollNavigation = ({
       });
     }
 
-    // 클린업
     return () => {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
@@ -243,10 +225,8 @@ export const useScrollNavigation = ({
     };
   }, [messagesLength, isLoading, selectedSessionId, scrollReadyForSessionId, scrollToBottom, scrollElementReady, targetMessageUuid]);
 
-  // 현재 매치 변경 시 해당 하이라이트로 스크롤
   useEffect(() => {
     if (currentMatchUuid) {
-      // DOM 업데이트 후 스크롤 (렌더링 완료 대기)
       const timer = setTimeout(() => {
         scrollToHighlight(currentMatchUuid);
       }, SCROLL_HIGHLIGHT_DELAY_MS);
@@ -254,7 +234,6 @@ export const useScrollNavigation = ({
     }
   }, [currentMatchUuid, currentMatchIndex, scrollToHighlight]);
 
-  // 스크롤 이벤트 최적화 (쓰로틀링 적용)
   useEffect(() => {
     let throttleTimer: ReturnType<typeof setTimeout> | null = null;
     // Store reference to avoid race condition in cleanup

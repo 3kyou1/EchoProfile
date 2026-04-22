@@ -91,7 +91,7 @@ ${t("error.copyTemplate.timestamp", {
       const emailSubject = encodeURIComponent(
         t("error.emailTemplate.subject", {
           error: this.state.error?.message || "Unknown error",
-          defaultValue: "[Claude Code History Viewer] Error Report: {{error}}",
+          defaultValue: "[EchoProfile] Error Report: {{error}}",
         })
       );
       const emailBody = encodeURIComponent(`
@@ -101,7 +101,7 @@ ${t("error.emailTemplate.greeting", {
 
 ${t("error.emailTemplate.description", {
   defaultValue:
-    "I encountered the following error while using Claude Code History Viewer:",
+    "I encountered the following error while using EchoProfile:",
 })}
 
 ${t("error.emailTemplate.placeholder", {
@@ -256,7 +256,7 @@ ${t("error.emailTemplate.thanks", {
                       <span className="text-muted-foreground/60">•</span>
                       {t("error.troubleshootingSteps.updateVersion", {
                         defaultValue:
-                          "Ensure you have the latest version of Claude Code History Viewer installed",
+                          "Ensure you have the latest version of EchoProfile installed",
                       })}
                     </li>
                     <li className="flex items-start gap-2">

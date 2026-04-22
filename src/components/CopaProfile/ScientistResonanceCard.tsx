@@ -32,9 +32,61 @@ function normalizeDisplayQuote(value: string): string {
   return trimmed.replace(/^["'“”‘’「『]+/, "").replace(/["'“”‘’」』]+$/, "").trim();
 }
 
+function normalizeNameLanguage(language: string): "zh" | "ja" | "ko" | "en" {
+  const normalized = language.toLowerCase();
+  if (normalized.startsWith("zh")) {
+    return "zh";
+  }
+  if (normalized.startsWith("ja")) {
+    return "ja";
+  }
+  if (normalized.startsWith("ko")) {
+    return "ko";
+  }
+  return "en";
+}
+
+function buildWikipediaUrl(language: "zh" | "ja" | "ko" | "en", title: string): string {
+  const host = language === "en" ? "en.wikipedia.org" : `${language}.wikipedia.org`;
+  return `https://${host}/wiki/${encodeURIComponent(title.replace(/\s+/g, "_"))}`;
+}
+
+function splitBiography(value: string): string[] {
+  const normalized = value.trim();
+  if (!normalized) {
+    return [];
+  }
+
+  const parts = normalized
+    .split(/(?<=[。！？.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts.length > 0 ? parts : [normalized];
+}
+
 export function ScientistResonanceCard({ card, label, compact = false }: ScientistResonanceCardProps) {
-  const { t } = useTranslation();
-  const displayQuote = normalizeDisplayQuote(card.quote_zh || card.quote_en);
+  const { t, i18n } = useTranslation();
+  const activeLanguage = normalizeNameLanguage(i18n.resolvedLanguage || i18n.language || "en");
+  const englishName = card.name;
+  const localizedName =
+    activeLanguage === "en" ? englishName : card.localized_names?.[activeLanguage] || englishName;
+  const secondaryName = localizedName !== englishName ? englishName : "";
+  const activeBiography = activeLanguage === "zh" ? card.bio_zh || card.bio_en : card.bio_en || card.bio_zh;
+  const activeAchievements =
+    activeLanguage === "zh"
+      ? card.achievements_zh.length > 0
+        ? card.achievements_zh
+        : card.achievements_en
+      : card.achievements_en.length > 0
+        ? card.achievements_en
+        : card.achievements_zh;
+  const activeQuote =
+    activeLanguage === "zh" ? normalizeDisplayQuote(card.quote_zh || card.quote_en) : normalizeDisplayQuote(card.quote_en || card.quote_zh);
+  const biography = splitBiography(activeBiography);
+  const wikipediaTitle =
+    activeLanguage === "en" ? englishName : card.localized_names?.[activeLanguage] || englishName;
+  const wikipediaUrl = buildWikipediaUrl(activeLanguage, wikipediaTitle);
 
   return (
     <article className="overflow-hidden rounded-2xl border border-border/60 bg-card/90 shadow-sm">
@@ -57,7 +109,12 @@ export function ScientistResonanceCard({ card, label, compact = false }: Scienti
             <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
               {label}
             </span>
-            <h3 className="text-lg font-semibold text-foreground">{card.name}</h3>
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold text-foreground">{localizedName}</h3>
+              {secondaryName ? (
+                <p className="mt-0.5 text-xs font-medium text-muted-foreground">{secondaryName}</p>
+              ) : null}
+            </div>
           </div>
 
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{card.hook}</p>
@@ -75,29 +132,54 @@ export function ScientistResonanceCard({ card, label, compact = false }: Scienti
           </div>
 
           <div className="mt-4 rounded-xl bg-muted/35 p-3">
-            <p className="text-sm leading-6 text-foreground">{displayQuote}</p>
+            <p className="text-sm leading-6 text-foreground">{activeQuote}</p>
           </div>
 
+          {compact ? (
+            <a
+              href={wikipediaUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex w-fit items-center rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+            >
+              {t("common.copa.resonance.wikipedia", "Wikipedia")}
+            </a>
+          ) : null}
+
           {!compact ? (
-            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-              <div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <section className="flex h-full flex-col rounded-xl border border-border/50 bg-background/60 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   {t("common.copa.resonance.biography", "Biography")}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-foreground">{card.bio_zh || card.bio_en}</p>
-              </div>
-              <div>
+                <div className="mt-2 flex-1 space-y-2">
+                  {biography.map((paragraph, index) => (
+                    <p key={`${card.slug}-bio-${index}`} className="text-sm leading-6 text-foreground">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+                <a
+                  href={wikipediaUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-flex w-fit items-center rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                >
+                  {t("common.copa.resonance.wikipedia", "Wikipedia")}
+                </a>
+              </section>
+              <section className="flex h-full flex-col rounded-xl border border-border/50 bg-background/60 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   {t("common.copa.resonance.achievements", "Key achievements")}
                 </p>
-                <ul className="mt-2 space-y-2 text-sm leading-6 text-foreground">
-                  {(card.achievements_zh.length > 0 ? card.achievements_zh : card.achievements_en).map((item) => (
+                <ul className="mt-2 grid flex-1 content-start gap-2 text-sm leading-6 text-foreground sm:grid-cols-2">
+                  {activeAchievements.map((item) => (
                     <li key={item} className="rounded-lg border border-border/40 bg-background/70 px-3 py-2">
                       {item}
                     </li>
                   ))}
                 </ul>
-              </div>
+              </section>
             </div>
           ) : null}
         </div>

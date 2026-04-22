@@ -164,6 +164,61 @@ describe("scientistResonanceService", () => {
     expect(loaded?.cache_key).toBe(generated.cache_key);
   });
 
+  it("rehydrates cached resonance cards from the latest scientist pool data", async () => {
+    const cacheKey = buildScientistResonanceCacheKey({
+      scopeKey: "global:all",
+      profileId: snapshot.id,
+      language: "zh-CN",
+    });
+
+    localStorage.setItem(
+      "webui:scientist-resonance.json:results",
+      JSON.stringify([
+        {
+          id: "cached-1",
+          cache_key: cacheKey,
+          scope_key: "global:all",
+          profile_id: snapshot.id,
+          generated_at: "2026-04-22T12:00:00.000Z",
+          language: "zh",
+          source: "heuristic",
+          long_term: {
+            primary: {
+              name: "Herbert A. Simon",
+              slug: "herbert_simon",
+              portrait_url: "/old.png",
+              hook: "old hook",
+              quote_zh:
+                "在信息丰富的世界里，信息的丰富意味其他东西的匮乏：信息消费掉的东西的稀缺。",
+              quote_en: "old quote",
+              reason: "cached reason",
+              resonance_axes: ["工程理性"],
+              confidence_style: "strong_resonance",
+              loading_copy_zh: "",
+              loading_copy_en: "",
+              bio_zh: "old bio",
+              bio_en: "old bio",
+              achievements_zh: ["old"],
+              achievements_en: ["old"],
+            },
+            secondary: [],
+          },
+          recent_state: null,
+        },
+      ])
+    );
+
+    const loaded = await loadScientistResonanceResult({
+      scopeKey: "global:all",
+      profileId: snapshot.id,
+      language: "zh-CN",
+    });
+
+    expect(loaded?.long_term.primary.slug).toBe("herbert_simon");
+    expect(loaded?.long_term.primary.reason).toBe("cached reason");
+    expect(loaded?.long_term.primary.quote_zh).toBe("信息的丰富，造成了注意力的贫乏。");
+  });
+
   it("deletes cached resonance results for a profile", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
 

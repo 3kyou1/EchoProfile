@@ -11,8 +11,8 @@
     "temperament_summary": "像一个比时代更早看见机器潜力的人，理性而前瞻，带着优雅的未来感。",
     "loading_copy_zh": "Ada Lovelace 正在把你的思路翻译成优雅的指令……",
     "loading_copy_en": "Ada Lovelace is translating your thought process into elegant instructions...",
-    "bio_zh": "英国数学家，长期与巴贝奇合作，是早期通用计算思想最敏锐的观察者之一。",
-    "bio_en": "A British mathematician who worked closely with Babbage and became one of the earliest sharp observers of general-purpose computing.",
+    "bio_zh": "英国数学家，长期与巴贝奇合作，是早期通用计算思想最敏锐的观察者之一。 她是第一位主张计算机不只可以用来算数的人，也发表了第一段分析机用的算法。",
+    "bio_en": "A British mathematician who worked closely with Babbage and became one of the earliest sharp observers of general-purpose computing. She was the first to recognise the machine had applications beyond pure calculation.",
     "achievements_zh": [
       "为分析机撰写经典注释",
       "提出机器可处理符号而不止数字",
@@ -22,22 +22,27 @@
       "Wrote the classic notes on the Analytical Engine",
       "Argued that machines could manipulate symbols, not just numbers",
       "Often regarded as an earliest pioneer of programming"
-    ]
+    ],
+    "localized_names": {
+      "zh": "爱达·勒芙蕾丝",
+      "ja": "エイダ・ラブレス",
+      "ko": "에이다 러브레이스"
+    }
   },
   {
     "slug": "alonzo_church",
     "name": "Alonzo Church",
     "portrait_url": "/scientist-portraits/alonzo_church.jpg",
     "quote_en": "Our subject is logic — or as we may say more fully, in order to distinguish from certain topics and doctrines which have (unfortunately) been called by the same name, it is formal logic.",
-    "quote_zh": "我们的研究对象是逻辑——更准确地说，为了与那些不幸也被叫作“逻辑”的话题和学说区分开来，它是形式逻辑。",
+    "quote_zh": "我们的研究对象是形式逻辑。",
     "core_traits": "形式主义、定义洁癖、边界意识、推理纪律",
     "thinking_style": "先严格界定语言与规则，再允许推演展开，重视可定义性胜过直觉热情。",
     "temperament_tags": "形式主义、定义驱动、克制冷峻、边界意识强",
     "temperament_summary": "像一个先把定义钉牢、再允许思想推进的人，气质冷静而近乎法官式。",
     "loading_copy_zh": "Alonzo Church 正在把你的问题压缩成最干净的逻辑表达……",
     "loading_copy_en": "Alonzo Church is compressing your question into its cleanest logical form...",
-    "bio_zh": "美国逻辑学家，二十世纪数理逻辑核心人物之一，对可计算性定义影响深远。",
-    "bio_en": "An American logician and one of the central figures of twentieth-century mathematical logic, with lasting influence on how computability is defined.",
+    "bio_zh": "美国逻辑学家，二十世纪数理逻辑核心人物之一，对可计算性定义影响深远。 邱奇在普林斯顿大学受教并工作四十年，曾任数学与哲学教授。",
+    "bio_en": "An American logician and one of the central figures of twentieth-century mathematical logic, with lasting influence on how computability is defined. Alongside his doctoral student Alan Turing, Church is considered one of the founders of computer science.",
     "achievements_zh": [
       "提出 lambda 演算",
       "与图灵共同奠定可计算性理论",
@@ -47,7 +52,12 @@
       "Introduced lambda calculus",
       "Helped lay the foundations of computability theory alongside Turing",
       "Showed that the Entscheidungsproblem is undecidable"
-    ]
+    ],
+    "localized_names": {
+      "zh": "阿隆佐·邱奇",
+      "ja": "アロンゾ・チャーチ",
+      "ko": "알론조 처치"
+    }
   },
   {
     "slug": "andrey_kolmogorov",
@@ -61,7 +71,7 @@
     "temperament_summary": "像一个把混沌现象压缩成清晰结构的人，气质极稳，几乎不浪费动作。",
     "loading_copy_zh": "Kolmogorov 正在用极简公理替你整理这团复杂性……",
     "loading_copy_en": "Kolmogorov is tidying this complexity with a few minimal axioms...",
-    "bio_zh": "苏联数学家，研究跨度极广，从概率论到湍流理论都留下深刻印记。",
+    "bio_zh": "苏联数学家，研究跨度极广，从概率论到湍流理论都留下深刻印记。他建立了现代概率论的公理体系，也深刻影响了算法复杂性与信息论的发展。",
     "bio_en": "A Soviet mathematician of extraordinary range, leaving deep marks on fields from probability theory to turbulence.",
     "achievements_zh": [
       "建立现代概率论公理体系",
@@ -72,7 +82,12 @@
       "Built the modern axiomatic foundation of probability",
       "Advanced ideas that shaped algorithmic complexity",
       "Deeply influenced the study of turbulence and stochastic processes"
-    ]
+    ],
+    "localized_names": {
+      "zh": "安德烈·柯尔莫哥洛夫",
+      "ja": "アンドレイ・コルモゴロフ",
+      "ko": "안드레이 콜모고로프"
+    }
   },
   {
     "slug": "benoit_mandelbrot",
@@ -86,8 +101,8 @@
     "temperament_summary": "像一个总能在噪声、粗糙和异常里看见隐藏秩序的人，带着强烈的视觉与反叛气质。",
     "loading_copy_zh": "Mandelbrot 正在放大你的细节，看看哪里藏着分形的脾气……",
     "loading_copy_en": "Mandelbrot is zooming into the details to see where the fractal temperament is hiding...",
-    "bio_zh": "法裔美籍数学家，以跨学科视角研究粗糙性、尺度与自然界的不规则结构。",
-    "bio_en": "A French-American mathematician who approached roughness, scale, and irregular natural structure through a vividly interdisciplinary lens.",
+    "bio_zh": "法裔美籍数学家，以跨学科视角研究粗糙性、尺度与自然界的不规则结构。 幼年随全家移居法国巴黎，大半生均在美国度过，拥有法国和美国的双重国籍。",
+    "bio_en": "A French-American mathematician who approached roughness, scale, and irregular natural structure through a vividly interdisciplinary lens. In 1936, at the age of 11, Mandelbrot and his family emigrated from Warsaw, Poland, to France.",
     "achievements_zh": [
       "开创分形几何的公共语言",
       "推广 Mandelbrot 集",
@@ -97,7 +112,12 @@
       "Gave fractal geometry a public language",
       "Popularized the Mandelbrot set",
       "Brought complex natural forms back to the center of mathematics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "本华·曼德博",
+      "ja": "ブノワ・マンデルブロ",
+      "ko": "브누아 망델브로"
+    }
   },
   {
     "slug": "charles_darwin",
@@ -111,8 +131,8 @@
     "temperament_summary": "像一个愿意让材料自己发酵到足够厚再下结论的人，耐心、克制、后劲极强。",
     "loading_copy_zh": "Darwin 正在耐心观察你的特征，暂时拒绝草率下结论……",
     "loading_copy_en": "Darwin is patiently observing your traits and refusing to jump to conclusions too quickly...",
-    "bio_zh": "英国博物学家，通过长期观察与比较，重塑了人类对生命演化的理解。",
-    "bio_en": "A British naturalist who reshaped humanity's understanding of life through long observation, comparison, and synthesis.",
+    "bio_zh": "英国博物学家，通过长期观察与比较，重塑了人类对生命演化的理解。 在爱丁堡大学研读医学期间，达尔文对自然史逐渐产生兴趣。",
+    "bio_en": "A British naturalist who reshaped humanity's understanding of life through long observation, comparison, and synthesis. His proposition that all species of life have descended from a common ancestor is now generally accepted and considered a fundamental scientific concept.",
     "achievements_zh": [
       "提出自然选择学说",
       "出版《物种起源》",
@@ -122,7 +142,12 @@
       "Proposed evolution by natural selection",
       "Published On the Origin of Species",
       "Organized a vast body of evidence for evolution"
-    ]
+    ],
+    "localized_names": {
+      "zh": "查尔斯·达尔文",
+      "ja": "チャールズ・ダーウィン",
+      "ko": "찰스 다윈"
+    }
   },
   {
     "slug": "claude_shannon",
@@ -136,8 +161,8 @@
     "temperament_summary": "像一个把最深问题先压成最简单模型、再顺手玩出花样的人，轻松却极强。",
     "loading_copy_zh": "Claude Shannon 正在把你的气质编码成最省比特的版本……",
     "loading_copy_en": "Claude Shannon is encoding your temperament into the most bit-efficient form possible...",
-    "bio_zh": "美国数学家与工程师，信息时代的奠基者之一，擅长把通信问题抽象到极致。",
-    "bio_en": "An American mathematician and engineer, and one of the founders of the information age, famed for abstracting communication problems to their essence.",
+    "bio_zh": "美国数学家与工程师，信息时代的奠基者之一，擅长把通信问题抽象到极致。他创立信息论、奠定 bit 的核心地位，也推动了数字电路与人工智能早期思想的发展。",
+    "bio_en": "An American mathematician and engineer, and one of the founders of the information age, famed for abstracting communication problems to their essence. Shannon was the first to describe the use of Boolean algebra—essential to all digital electronic circuits—and helped found the field of artificial intelligence.",
     "achievements_zh": [
       "创立信息论",
       "定义 bit 的核心地位",
@@ -147,7 +172,12 @@
       "Founded information theory",
       "Established the central role of the bit",
       "Showed that Boolean algebra could be used in circuit design"
-    ]
+    ],
+    "localized_names": {
+      "zh": "克劳德·香农",
+      "ja": "クロード・シャノン",
+      "ko": "클로드 섀넌"
+    }
   },
   {
     "slug": "enrico_fermi",
@@ -161,8 +191,8 @@
     "temperament_summary": "像一个不迷恋姿态、只想尽快把问题摸透并推进的人，硬朗、实用、判断快。",
     "loading_copy_zh": "Fermi 正在顺手做一个数量级估算，看看你到底像谁……",
     "loading_copy_en": "Fermi is casually doing a back-of-the-envelope estimate to see who you really resemble...",
-    "bio_zh": "意大利裔美国物理学家，以极强的理论与实验双栖能力闻名。",
-    "bio_en": "An Italian-American physicist known for extraordinary strength in both theory and experiment.",
+    "bio_zh": "意大利裔美国物理学家，以极强的理论与实验双栖能力闻名。他既发展了 Fermi-Dirac 统计，也主持建成首个可控核反应堆，是核时代最关键的奠基者之一。",
+    "bio_en": "An Italian-American physicist known for extraordinary strength in both theory and experiment. He has been called the \"architect of the nuclear age\" and the \"architect of the atomic bomb\".",
     "achievements_zh": [
       "主持建成首个可控核反应堆",
       "发展 Fermi-Dirac 统计",
@@ -172,7 +202,12 @@
       "Led the construction of the first controlled nuclear reactor",
       "Developed Fermi-Dirac statistics",
       "Advanced neutron physics and particle physics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "恩里科·费米",
+      "ja": "エンリコ・フェルミ",
+      "ko": "엔리코 페르미"
+    }
   },
   {
     "slug": "feynman",
@@ -186,7 +221,7 @@
     "temperament_summary": "像一个非得把东西弄懂到能亲手讲明白才算数的人，明亮、好玩、推进感极强。",
     "loading_copy_zh": "Feynman 正在确认这件事能不能讲给大一新生听……",
     "loading_copy_en": "Feynman is checking whether this can be explained to a first-year student...",
-    "bio_zh": "美国理论物理学家，思维直接、表达鲜活，是二十世纪最具个人风格的科学家之一。",
+    "bio_zh": "美国理论物理学家，思维直接、表达鲜活，是二十世纪最具个人风格的科学家之一。 因对量子电动力学的贡献，费曼于1965年与朱利安·施温格及朝永振一郎共同获得诺贝尔物理学奖。",
     "bio_en": "An American theoretical physicist with a direct mind and vivid voice, and one of the most distinctive scientific personalities of the twentieth century.",
     "achievements_zh": [
       "发展路径积分方法",
@@ -197,22 +232,27 @@
       "Developed the path integral formulation",
       "Helped build the core framework of quantum electrodynamics",
       "Left behind a beloved body of physics teaching"
-    ]
+    ],
+    "localized_names": {
+      "zh": "理查德·费曼",
+      "ja": "リチャード・P・ファインマン",
+      "ko": "리처드 파인만"
+    }
   },
   {
     "slug": "freeman_dyson",
     "name": "Freeman Dyson",
     "portrait_url": "/scientist-portraits/freeman_dyson.jpg",
     "quote_en": "I think it's almost true without exception if you want to win a Nobel Prize, you should have a long attention span, get hold of some deep and important problem and stay with it for ten years. That's not my style.",
-    "quote_zh": "如果你想获得诺贝尔奖，我认为这几乎是正确的。你应该长期集中注意力，掌握一些深刻而重要的问题，并坚持十年，这不是我的风格。",
+    "quote_zh": "科学的新方向，往往更多来自新工具，而不是新概念。",
     "core_traits": "跨界联结、工具意识、广域兴趣、桥接能力",
     "thinking_style": "不执着单点深挖，更擅长在不同领域之间搭桥，为别人造出可继续使用的工具。",
     "temperament_tags": "跨界游侠、工具建造、温和异想、广撒型",
     "temperament_summary": "像一个不愿被单一阵地困住的人，偏爱搭桥、造工具、把不同世界连起来。",
     "loading_copy_zh": "Dyson 正在把不同流派的答案悄悄拼成一张大图……",
     "loading_copy_en": "Dyson is quietly stitching different schools of thought into one larger picture...",
-    "bio_zh": "英裔美籍理论物理学家与思想家，擅长在不同学派与尺度之间搭桥。",
-    "bio_en": "A British-American theoretical physicist and public intellectual, gifted at building bridges across schools, scales, and styles of thinking.",
+    "bio_zh": "英裔美籍理论物理学家与思想家，擅长在不同学派与尺度之间搭桥。他既能推进量子电动力学的核心框架，也长期关注科技、宇宙与人类未来的关系。",
+    "bio_en": "A British-American theoretical physicist and public intellectual, gifted at building bridges across schools, scales, and styles of thinking. He was professor emeritus in the Institute for Advanced Study in Princeton and a member of the board of sponsors of the Bulletin of the Atomic Scientists.",
     "achievements_zh": [
       "统一量子电动力学多种表述",
       "提出 Dyson sphere 概念",
@@ -222,7 +262,12 @@
       "Unified multiple formulations of quantum electrodynamics",
       "Proposed the Dyson sphere concept",
       "Remained a major voice in public scientific writing"
-    ]
+    ],
+    "localized_names": {
+      "zh": "弗里曼·戴森",
+      "ja": "フリーマン・ダイソン",
+      "ko": "프리먼 다이슨"
+    }
   },
   {
     "slug": "galileo",
@@ -236,8 +281,8 @@
     "temperament_summary": "像一个不仅要看见真相，还要把它公开说出来的人，锋利、张扬且带一点舞台感。",
     "loading_copy_zh": "Galileo 正把望远镜对准你的细节，看看证据站在哪边……",
     "loading_copy_en": "Galileo is turning the telescope toward your details to see which side the evidence supports...",
-    "bio_zh": "意大利科学家，以观察、实验和公开论辩推动近代科学方法成形。",
-    "bio_en": "An Italian scientist who helped shape modern scientific method through observation, experiment, and public argument.",
+    "bio_zh": "意大利科学家，以观察、实验和公开论辩推动近代科学方法成形。无论在天文学还是运动研究中，他都把可验证的观察提升为科学判断的核心。",
+    "bio_en": "An Italian scientist who helped shape modern scientific method through observation, experiment, and public argument. He was born in the city of Pisa, then part of the Duchy of Florence.",
     "achievements_zh": [
       "改进望远镜并进行系统天文观测",
       "支持日心说传播",
@@ -247,7 +292,12 @@
       "Improved the telescope and carried out systematic astronomical observations",
       "Helped spread heliocentrism",
       "Advanced experimental physics and the study of motion"
-    ]
+    ],
+    "localized_names": {
+      "zh": "伽利略·伽利莱",
+      "ja": "ガリレオ・ガリレイ",
+      "ko": "갈릴레오 갈릴레이"
+    }
   },
   {
     "slug": "georg_cantor",
@@ -261,8 +311,8 @@
     "temperament_summary": "像一个宁可把自己推到边界外，也要为新概念开疆拓土的人，孤绝而壮阔。",
     "loading_copy_zh": "Cantor 正在替你数一数，连无限也别想逃过登记……",
     "loading_copy_en": "Cantor is making a register for your ideas, and not even infinity gets to escape counting...",
-    "bio_zh": "德国数学家，以极具革命性的方式重塑了数学对无穷的理解。",
-    "bio_en": "A German mathematician who radically transformed how mathematics understands the infinite.",
+    "bio_zh": "德国数学家，以极具革命性的方式重塑了数学对无穷的理解。他定义了基数和序数及其算术，使集合论成为现代数学的基础语言之一。",
+    "bio_en": "A German mathematician who radically transformed how mathematics understands the infinite. 19 February] 1845 – 6 January 1918) was a  mathematician who played a pivotal role in the creation of set theory, which has become a fundamental theory in mathematics.",
     "achievements_zh": [
       "创立集合论",
       "提出超穷数与基数理论",
@@ -272,7 +322,12 @@
       "Founded set theory",
       "Introduced transfinite numbers and cardinal theory",
       "Pushed modern debates on the foundations of mathematics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "格奥尔格·康托尔",
+      "ja": "ゲオルク・カントール",
+      "ko": "게오르크 칸토어"
+    }
   },
   {
     "slug": "gh_hardy",
@@ -286,8 +341,8 @@
     "temperament_summary": "像一个把数学首先当作审美事业来对待的人，冷而高贵，对粗糙极不耐烦。",
     "loading_copy_zh": "Hardy 正在挑剔地检查你的证明有没有偷懒……",
     "loading_copy_en": "Hardy is sternly checking whether your proof has tried to cut any corners...",
-    "bio_zh": "英国数学家，强调纯数学的严格与优雅，也是 Ramanujan 的重要合作伙伴。",
-    "bio_en": "A British mathematician who championed rigor and elegance in pure mathematics, and an important collaborator of Ramanujan.",
+    "bio_zh": "英国数学家，强调纯数学的严格与优雅，也是 Ramanujan 的重要合作伙伴。 他被认为是二十世纪英国分析学派的代表人物。",
+    "bio_en": "A British mathematician who championed rigor and elegance in pure mathematics, and an important collaborator of Ramanujan. In biology, he is known for the Hardy–Weinberg principle, a basic principle of population genetics.",
     "achievements_zh": [
       "推动解析数论发展",
       "与 Littlewood 建立高产合作",
@@ -297,7 +352,12 @@
       "Advanced analytic number theory",
       "Built a famously productive partnership with Littlewood",
       "Recognized and supported Ramanujan's genius"
-    ]
+    ],
+    "localized_names": {
+      "zh": "戈弗雷·哈罗德·哈代",
+      "ja": "ゴッドフレイ・ハロルド・ハーディ",
+      "ko": "고드프리 해럴드 하디"
+    }
   },
   {
     "slug": "godel",
@@ -311,8 +371,8 @@
     "temperament_summary": "像一个总在系统最深处寻找裂缝的人，安静、顽固，带着几乎不可接近的密度。",
     "loading_copy_zh": "Godel 正在提醒大家：系统看起来完整，不代表真的完整……",
     "loading_copy_en": "Godel is reminding everyone that a system looking complete does not mean it truly is complete...",
-    "bio_zh": "奥地利裔逻辑学家，以极强的形式敏感度挑战了现代数学基础的乐观主义。",
-    "bio_en": "An Austrian logician whose extraordinary sensitivity to formal structure challenged optimistic views of mathematical foundations.",
+    "bio_zh": "奥地利裔逻辑学家，以极强的形式敏感度挑战了现代数学基础的乐观主义。 哥德尔是二十世纪最伟大的逻辑学家之一，其最杰出的贡献是哥德尔不完备定理和连续统假设的相对协调性证明。",
+    "bio_en": "An Austrian logician whose extraordinary sensitivity to formal structure challenged optimistic views of mathematical foundations. The incompleteness theorems address limitations of formal axiomatic systems.",
     "achievements_zh": [
       "提出不完备定理",
       "证明一阶逻辑的完备性",
@@ -322,7 +382,12 @@
       "Proved the incompleteness theorems",
       "Proved the completeness of first-order logic",
       "Deeply influenced logic, philosophy, and computation theory"
-    ]
+    ],
+    "localized_names": {
+      "zh": "库尔特·哥德尔",
+      "ja": "クルト・ゲーデル",
+      "ko": "쿠르트 괴델"
+    }
   },
   {
     "slug": "grigori_perelman",
@@ -336,8 +401,8 @@
     "temperament_summary": "像一个只对问题本身负责的人，对外部评价体系几乎天然免疫。",
     "loading_copy_zh": "Perelman 正安静地坐在角落里，只在关键一步给你答案……",
     "loading_copy_en": "Perelman is sitting quietly in the corner, saving the decisive step for exactly the right moment...",
-    "bio_zh": "俄罗斯数学家，以极端专注和低调著称，解决了几何拓扑中的世纪难题。",
-    "bio_en": "A Russian mathematician known for extreme focus and reserve, who solved one of the century's hardest problems in geometry and topology.",
+    "bio_zh": "俄罗斯数学家，以极端专注和低调著称，解决了几何拓扑中的世纪难题。 他是一位里奇流专家，对庞加莱猜想的证明作出了决定性的贡献。",
+    "bio_en": "A Russian mathematician known for extreme focus and reserve, who solved one of the century's hardest problems in geometry and topology. He lives in seclusion in Saint Petersburg and has declined requests for interviews since 2006.",
     "achievements_zh": [
       "完成 Poincare 猜想证明",
       "推进 Hamilton 的 Ricci flow 方案",
@@ -347,7 +412,12 @@
       "Completed the proof of the Poincare conjecture",
       "Pushed Hamilton's Ricci flow program forward",
       "Declined the Fields Medal and the Clay Millennium Prize"
-    ]
+    ],
+    "localized_names": {
+      "zh": "格里戈里·佩雷尔曼",
+      "ja": "グリゴリー・ペレルマン",
+      "ko": "그리고리 페렐만"
+    }
   },
   {
     "slug": "grothendieck",
@@ -361,8 +431,8 @@
     "temperament_summary": "像一个不愿在旧地基上修补，而宁可重造整套语言与世界的人，宏大且疏离。",
     "loading_copy_zh": "Grothendieck 正在把你的小问题抬升到一个更高的宇宙层级……",
     "loading_copy_en": "Grothendieck is lifting your small problem into a much larger universe of structure...",
-    "bio_zh": "法籍数学家，擅长用全新的抽象框架重写整个问题空间。",
-    "bio_en": "A French mathematician known for rewriting entire problem spaces through radically new abstract frameworks.",
+    "bio_zh": "法籍数学家，擅长用全新的抽象框架重写整个问题空间。 他于德国柏林出生，一生主要在法国成长及居住，但是工作生涯中长时期是无国籍的，1970至1980年代入籍法国。",
+    "bio_en": "A French mathematician known for rewriting entire problem spaces through radically new abstract frameworks. He is considered by many to be the greatest mathematician of the twentieth century.",
     "achievements_zh": [
       "重塑现代代数几何框架",
       "发展 scheme 与 topos 等核心概念",
@@ -372,22 +442,27 @@
       "Reshaped modern algebraic geometry",
       "Developed core ideas such as schemes and topoi",
       "Influenced generations of pure mathematicians"
-    ]
+    ],
+    "localized_names": {
+      "zh": "亚历山大·格罗滕迪克",
+      "ja": "アレクサンドル・グロタンディーク",
+      "ko": "알렉산더 그로텐디크"
+    }
   },
   {
     "slug": "herbert_simon",
     "name": "Herbert A. Simon",
     "portrait_url": "/scientist-portraits/herbert_simon.jpg",
     "quote_en": "What information consumes is rather obvious: it consumes the attention of its recipients. Hence a wealth of information creates a poverty of attention, and a need to allocate that attention efficiently among the overabundance of information sources that might consume it.",
-    "quote_zh": "在信息丰富的世界里，信息的丰富意味其他东西的匮乏：信息消费掉的东西的稀缺。信息消费掉什么是显而易见的：它消费了信息接受者的注意力。因此，大量的信息造成了人们的注意力的贫乏，因此需要在过量的消耗注意力的信息来源中高效地分配注意力。",
+    "quote_zh": "信息的丰富，造成了注意力的贫乏。",
     "core_traits": "决策框架、组织意识、跨域建模、有限理性",
     "thinking_style": "擅长把复杂行为拆成可管理的决策结构，用框架而非灵感处理复杂度。",
     "temperament_tags": "工程理性、跨域组织、温和务实、决策框架感",
     "temperament_summary": "像一个不断把复杂人类活动整理成可操作结构的人，务实、清醒、组织感很强。",
     "loading_copy_zh": "Herbert Simon 正在评估：你到底是理性，还是有限理性……",
     "loading_copy_en": "Herbert Simon is evaluating whether you are being rational, or only boundedly rational...",
-    "bio_zh": "美国学者，横跨计算机、心理学、管理学与经济学，真正意义上的跨界研究者。",
-    "bio_en": "An American scholar who moved across computer science, psychology, management, and economics with unusual ease.",
+    "bio_zh": "美国学者，横跨计算机、心理学、管理学与经济学，真正意义上的跨界研究者。 为1975年图灵奖、1978年诺贝尔经济学奖得主。",
+    "bio_en": "An American scholar who moved across computer science, psychology, management, and economics with unusual ease. His primary research interest was decision-making within organizations and he is best known for the theories of \"bounded rationality\" and \"satisficing\".",
     "achievements_zh": [
       "提出有限理性理论",
       "推动早期人工智能研究",
@@ -397,7 +472,12 @@
       "Introduced bounded rationality",
       "Advanced early artificial intelligence research",
       "Won the Nobel Prize in Economics for decision theory"
-    ]
+    ],
+    "localized_names": {
+      "zh": "司马贺",
+      "ja": "ハーバート・サイモン",
+      "ko": "허버트 사이먼"
+    }
   },
   {
     "slug": "hermann_weyl",
@@ -411,8 +491,8 @@
     "temperament_summary": "像一个始终想把真理与美感一起保留下来的人，抽象而不失贵气。",
     "loading_copy_zh": "Weyl 正在给你的想法配上一层对称性的滤镜……",
     "loading_copy_en": "Weyl is placing a symmetry filter over your ideas to see what suddenly aligns...",
-    "bio_zh": "德国数学家与理论物理学家，擅长在几何、代数与物理之间寻找统一。",
-    "bio_en": "A German mathematician and theoretical physicist gifted at finding unity across geometry, algebra, and physics.",
+    "bio_zh": "德国数学家与理论物理学家，擅长在几何、代数与物理之间寻找统一。 他的研究工作在理论物理上和在纯数学领域（如数论）等都有着一样杰出的贡献。",
+    "bio_en": "A German mathematician and theoretical physicist gifted at finding unity across geometry, algebra, and physics. His research has had major significance for theoretical physics as well as purely mathematical disciplines such as number theory.",
     "achievements_zh": [
       "推动群表示与几何研究",
       "提出早期规范场思想",
@@ -422,7 +502,12 @@
       "Advanced group representation theory and geometry",
       "Introduced early gauge-field ideas",
       "Helped build the bridge between mathematics and physics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "赫尔曼·外尔",
+      "ja": "ヘルマン・ワイル",
+      "ko": "헤르만 바일"
+    }
   },
   {
     "slug": "hilbert",
@@ -436,8 +521,8 @@
     "temperament_summary": "像一个不仅要解决问题，还要为整片领域立法的人，强势、明亮、组织力极高。",
     "loading_copy_zh": "Hilbert 正在把你的问题整理成一份像样的世纪清单……",
     "loading_copy_en": "Hilbert is reorganizing your question into a respectable century-defining list...",
-    "bio_zh": "德国数学家，二十世纪初数学共同议程的重要塑造者。",
-    "bio_en": "A German mathematician who helped set the shared agenda of mathematics at the start of the twentieth century.",
+    "bio_zh": "德国数学家，二十世纪初数学共同议程的重要塑造者。他以希尔伯特问题、形式主义计划和哥廷根学派的组织力，重塑了现代数学的研究方向。",
+    "bio_en": "A German mathematician who helped set the shared agenda of mathematics at the start of the twentieth century. He adopted and defended Georg Cantor's set theory and transfinite numbers.",
     "achievements_zh": [
       "提出著名的 23 个问题",
       "推动形式主义数学观",
@@ -447,7 +532,12 @@
       "Posed the famous 23 problems",
       "Advanced the formalist view of mathematics",
       "Hilbert spaces became a core tool of modern analysis"
-    ]
+    ],
+    "localized_names": {
+      "zh": "大卫·希尔伯特",
+      "ja": "ダフィット・ヒルベルト",
+      "ko": "다비트 힐베르트"
+    }
   },
   {
     "slug": "isaac_newton",
@@ -461,8 +551,8 @@
     "temperament_summary": "像一个把巨大能量都压在内部、只在结果层面显露的人，冷、硬、不可撼动。",
     "loading_copy_zh": "Newton 正在把苹果、行星和你脑中的问题绑进同一套方程……",
     "loading_copy_en": "Newton is tying apples, planets, and the problem in your head into one system of equations...",
-    "bio_zh": "英国科学家，在数学、力学与光学上都建立了近代科学的关键支柱。",
-    "bio_en": "A British scientist who established essential pillars of modern science across mathematics, mechanics, and optics.",
+    "bio_zh": "英国科学家，在数学、力学与光学上都建立了近代科学的关键支柱。 1687年他发表《自然哲学的数学原理》，阐述了万有引力和三大运动定律，由此奠定现代物理学和天文学，并为现代工程学打下了基础。",
+    "bio_en": "A British scientist who established essential pillars of modern science across mathematics, mechanics, and optics. 25 December] 1643 – 31 March [O.S.",
     "achievements_zh": [
       "提出经典力学三定律",
       "建立万有引力理论",
@@ -472,7 +562,12 @@
       "Formulated the three laws of motion",
       "Built the theory of universal gravitation",
       "Opened new eras in calculus and optics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "艾萨克·牛顿",
+      "ja": "アイザック・ニュートン",
+      "ko": "아이작 뉴턴"
+    }
   },
   {
     "slug": "john_bardeen",
@@ -486,8 +581,8 @@
     "temperament_summary": "像一个不靠传奇姿态取胜，而靠长期稳定的精密工作改变世界的人。",
     "loading_copy_zh": "Bardeen 正在低调地做出第二次诺奖级修补……",
     "loading_copy_en": "Bardeen is quietly delivering another Nobel-level repair without making a fuss...",
-    "bio_zh": "美国物理学家，以沉稳务实著称，是少数两获诺贝尔物理学奖的人。",
-    "bio_en": "An American physicist known for calm practicality, and one of the very few people to win two Nobel Prizes in Physics.",
+    "bio_zh": "美国物理学家，以沉稳务实著称，是少数两获诺贝尔物理学奖的人。 晶体管彻底改变了电子工业，使从电话到电脑的几乎所有现代电子设备的发展成为可能，并开创了信息时代。",
+    "bio_en": "An American physicist known for calm practicality, and one of the very few people to win two Nobel Prizes in Physics. Born and raised in Wisconsin, Bardeen earned both his bachelor's and master's degrees in electrical engineering from the University of Wisconsin, before receiving a Ph.D.",
     "achievements_zh": [
       "共同发明晶体管",
       "共同建立 BCS 超导理论",
@@ -497,7 +592,12 @@
       "Co-invented the transistor",
       "Co-developed BCS theory of superconductivity",
       "Won the Nobel Prize in Physics twice"
-    ]
+    ],
+    "localized_names": {
+      "zh": "约翰·巴丁",
+      "ja": "ジョン・バーディーン",
+      "ko": "존 바딘"
+    }
   },
   {
     "slug": "john_conway",
@@ -511,8 +611,8 @@
     "temperament_summary": "像一个把最严肃的数学和最孩子气的游戏感连在一起的人，灵、怪、极有感染力。",
     "loading_copy_zh": "Conway 正在把你的念头偷偷变成一场会自我繁殖的游戏……",
     "loading_copy_en": "Conway is secretly turning your thought into a game that reproduces itself...",
-    "bio_zh": "英国数学家，以游戏感、想象力和高强度即兴思考著称。",
-    "bio_en": "A British mathematician famous for playfulness, imagination, and intense improvisational thinking.",
+    "bio_zh": "英国数学家，以游戏感、想象力和高强度即兴思考著称。 康韦年少时就对数学很有强烈的兴趣：四岁时，其母发现他背诵二的次方；十一岁时，升读中学的面试，被问及他成长后想干什么，他回答想在剑桥当数学家。",
+    "bio_en": "A British mathematician famous for playfulness, imagination, and intense improvisational thinking. He was active in the theory of finite groups, knot theory, number theory, combinatorial game theory and coding theory.",
     "achievements_zh": [
       "提出生命游戏",
       "发展超现实数理论",
@@ -522,7 +622,12 @@
       "Created the Game of Life",
       "Developed the theory of surreal numbers",
       "Produced major work in group theory and combinatorics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "约翰·霍顿·康威",
+      "ja": "ジョン・ホートン・コンウェイ",
+      "ko": "존 호턴 콘웨이"
+    }
   },
   {
     "slug": "lise_meitner",
@@ -536,8 +641,8 @@
     "temperament_summary": "像一个在高压与失衡环境中仍保持判断与尊严的人，硬度来自内在而非姿态。",
     "loading_copy_zh": "Lise Meitner 正在冷静核对：真正的关键解释是不是还没写进去……",
     "loading_copy_en": "Lise Meitner is calmly checking whether the crucial explanation is still missing from the page...",
-    "bio_zh": "奥地利裔瑞典物理学家，在核物理发展中扮演了关键而长期被低估的角色。",
-    "bio_en": "An Austrian-Swedish physicist who played a crucial yet long-underrecognized role in the development of nuclear physics.",
+    "bio_zh": "奥地利裔瑞典物理学家，在核物理发展中扮演了关键而长期被低估的角色。 她是发现镤和核裂变的主要贡献者之一。",
+    "bio_en": "An Austrian-Swedish physicist who played a crucial yet long-underrecognized role in the development of nuclear physics. After completing her doctoral research in 1906, Meitner became the second woman  to earn a doctorate in physics from the University of Vienna.",
     "achievements_zh": [
       "解释核裂变物理机制",
       "推动放射性与核物理研究",
@@ -547,7 +652,12 @@
       "Explained the physical mechanism of nuclear fission",
       "Advanced radioactivity and nuclear physics research",
       "Became an important symbolic figure in the history of women in science"
-    ]
+    ],
+    "localized_names": {
+      "zh": "莉泽·迈特纳",
+      "ja": "リーゼ・マイトナー",
+      "ko": "리제 마이트너"
+    }
   },
   {
     "slug": "marvin_minsky",
@@ -561,8 +671,8 @@
     "temperament_summary": "像一个总想拆掉单一路径、逼你从多个角度重新理解问题的人，锋利而带玩笑感。",
     "loading_copy_zh": "Minsky 正在召集你脑内的小代理们开一场紧急会议……",
     "loading_copy_en": "Minsky is calling an emergency meeting among all the tiny agents in your mind...",
-    "bio_zh": "美国认知科学家与人工智能先驱，长期思考心智如何由多模块协作构成。",
-    "bio_en": "An American cognitive scientist and AI pioneer who spent decades thinking about how mind emerges from many interacting modules.",
+    "bio_zh": "美国认知科学家与人工智能先驱，长期思考心智如何由多模块协作构成。他是 MIT AI Lab 的创建者之一，也以“心智社会”框架持续影响人工智能与认知科学。",
+    "bio_en": "An American cognitive scientist and AI pioneer who spent decades thinking about how mind emerges from many interacting modules. There, he co-founded MIT's AI laboratory, among other initiatives, and wrote extensively about AI and philosophy.",
     "achievements_zh": [
       "共同创建 MIT AI Lab",
       "提出《心智社会》框架",
@@ -572,22 +682,27 @@
       "Co-founded the MIT AI Lab",
       "Proposed the Society of Mind framework",
       "Helped set the agenda for early AI research"
-    ]
+    ],
+    "localized_names": {
+      "zh": "马文·闵斯基",
+      "ja": "マービン・ミンスキー",
+      "ko": "마빈 민스키"
+    }
   },
   {
     "slug": "max_planck",
     "name": "Max Planck",
     "portrait_url": "/scientist-portraits/max_planck.jpg",
     "quote_en": "Science advances one funeral at a time.",
-    "quote_zh": "新科学真理的胜利，通常不是靠让反对者信服并看见光明；而是因为反对者终于都死了，熟悉真理的新一代成长起来了。",
+    "quote_zh": "新科学真理的胜利，不在于说服反对者，而在于反对者最终都离开了舞台。",
     "core_traits": "稳定推进、范式敏感、原则感、耐压",
     "thinking_style": "在看似稳固的体系中识别必须改变的地方，以克制方式推动范式拐点。",
     "temperament_tags": "稳定权威、克制坚硬、范式转折见证者、耐压",
     "temperament_summary": "像一个站得极稳、但能承受时代慢慢翻面的学者，沉着、坚硬、很少夸张。",
     "loading_copy_zh": "Planck 正在把连续的直觉悄悄切成一小份一小份……",
     "loading_copy_en": "Planck is quietly slicing your continuous intuition into tiny discrete pieces...",
-    "bio_zh": "德国物理学家，量子论的起点人物之一，以谨慎而坚定的方式推动物理革命。",
-    "bio_en": "A German physicist and one of the starting figures of quantum theory, pushing a revolution in physics with careful determination.",
+    "bio_zh": "德国物理学家，量子论的起点人物之一，以谨慎而坚定的方式推动物理革命。 以发现能量量子获得1918年度的诺贝尔物理学奖（1919年颁发）。",
+    "bio_en": "A German physicist and one of the starting figures of quantum theory, pushing a revolution in physics with careful determination. The Planck relation, E= \n  \n    \n      \n        h\n      \n    \n    {\\displaystyle h}\n  \nν, states that the energy of a photon is proportional to its frequency.",
     "achievements_zh": [
       "提出量子假设",
       "解释黑体辐射问题",
@@ -597,7 +712,12 @@
       "Proposed the quantum hypothesis",
       "Explained blackbody radiation",
       "Helped launch quantum physics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "马克斯·普朗克",
+      "ja": "マックス・プランク",
+      "ko": "막스 플랑크"
+    }
   },
   {
     "slug": "michael_faraday",
@@ -611,8 +731,8 @@
     "temperament_summary": "像一个靠双手和专注把奇迹一点点做出来的人，朴素、虔诚、发光但不张扬。",
     "loading_copy_zh": "Faraday 正在靠实验台和线圈替你确认这件事到底通不通电……",
     "loading_copy_en": "Faraday is using the lab bench and a coil to see whether this idea actually conducts...",
-    "bio_zh": "英国实验物理学家与化学家，以卓越直觉和实验才能改变了电磁学。",
-    "bio_en": "A British experimental physicist and chemist whose intuition and laboratory brilliance transformed electromagnetism.",
+    "bio_zh": "英国实验物理学家与化学家，以卓越直觉和实验才能改变了电磁学。 虽然法拉第没有得到足够的正式教育，却成为历史上最具有影响力的科学家之一。",
+    "bio_en": "A British experimental physicist and chemist whose intuition and laboratory brilliance transformed electromagnetism. His main discoveries include the principles underlying electromagnetic induction, diamagnetism, and electrolysis.",
     "achievements_zh": [
       "发现电磁感应",
       "推动电动机与发电机原理发展",
@@ -622,7 +742,12 @@
       "Discovered electromagnetic induction",
       "Advanced the principles behind motors and generators",
       "Established foundational electrochemical terminology"
-    ]
+    ],
+    "localized_names": {
+      "zh": "迈克尔·法拉第",
+      "ja": "マイケル・ファラデー",
+      "ko": "마이클 패러데이"
+    }
   },
   {
     "slug": "niels_bohr",
@@ -636,8 +761,8 @@
     "temperament_summary": "像一个明知问题不能被直线说清、仍坚持绕着它慢慢逼近的人，柔和却极深。",
     "loading_copy_zh": "Bohr 正在提醒大家：看起来矛盾，不代表不能同时成立……",
     "loading_copy_en": "Bohr is reminding everyone that seeming contradictions do not always have to cancel each other out...",
-    "bio_zh": "丹麦物理学家，量子理论思想史中的核心人物，擅长处理互补与边界。",
-    "bio_en": "A Danish physicist at the center of quantum theory's intellectual history, especially gifted at thinking about complementarity and limits.",
+    "bio_zh": "丹麦物理学家，量子理论思想史中的核心人物，擅长处理互补与边界。他提出原子的玻尔模型，并以互补性原理深刻影响了后来的量子解释框架。",
+    "bio_en": "A Danish physicist at the center of quantum theory's intellectual history, especially gifted at thinking about complementarity and limits. He was also a philosopher and a promoter of scientific research.",
     "achievements_zh": [
       "提出 Bohr 原子模型",
       "发展互补原理",
@@ -647,7 +772,12 @@
       "Proposed the Bohr atomic model",
       "Developed the principle of complementarity",
       "Shaped the Copenhagen interpretation of quantum theory"
-    ]
+    ],
+    "localized_names": {
+      "zh": "尼尔斯·玻尔",
+      "ja": "ニールス・ボーア",
+      "ko": "닐스 보어"
+    }
   },
   {
     "slug": "nikola_tesla",
@@ -661,8 +791,8 @@
     "temperament_summary": "像一个总活在尚未到来的未来里的人，耀眼、偏执、带着强烈的传奇电流感。",
     "loading_copy_zh": "Tesla 正在把你的灵感接上高压交流，再看能不能点亮整座城……",
     "loading_copy_en": "Tesla is plugging your inspiration into high-voltage AC to see whether it can light up the whole city...",
-    "bio_zh": "塞尔维亚裔美籍发明家与工程师，以宏大技术想象和强烈发明欲闻名。",
-    "bio_en": "A Serbian-American inventor and engineer known for large-scale technological imagination and an intense drive to invent.",
+    "bio_zh": "塞尔维亚裔美籍发明家与工程师，以宏大技术想象和强烈发明欲闻名。 特斯拉在电磁场领域有着多项革命性的发明。",
+    "bio_en": "A Serbian-American inventor and engineer known for large-scale technological imagination and an intense drive to invent. He is known for his contributions to the design of the modern alternating current (AC) electricity supply system.",
     "achievements_zh": [
       "推动交流电系统普及",
       "发明交流感应电动机",
@@ -672,7 +802,12 @@
       "Helped popularize alternating-current power systems",
       "Invented the AC induction motor",
       "Became legendary through high-voltage and wireless transmission experiments"
-    ]
+    ],
+    "localized_names": {
+      "zh": "尼古拉·特斯拉",
+      "ja": "ニコラ・テスラ",
+      "ko": "니콜라 테슬라"
+    }
   },
   {
     "slug": "noether",
@@ -686,8 +821,8 @@
     "temperament_summary": "像一个不靠自我神话，而靠方法本身进入一切的人，安静、结实、影响深远。",
     "loading_copy_zh": "Noether 正在从对称性里拎出你问题的真正守恒量……",
     "loading_copy_en": "Noether is pulling the real conserved quantity out of the symmetry hidden in your question...",
-    "bio_zh": "德国数学家，对现代代数和理论物理的深层结构都产生了决定性影响。",
-    "bio_en": "A German mathematician whose work decisively shaped both modern algebra and the deep structure of theoretical physics.",
+    "bio_zh": "德国数学家，对现代代数和理论物理的深层结构都产生了决定性影响。 帕维尔·亚历山德罗夫、阿尔伯特·爱因斯坦、让·迪厄多内、赫尔曼·外尔和诺伯特·维纳等学者都把诺特誉为历史上最杰出的女性数学家。",
+    "bio_en": "A German mathematician whose work decisively shaped both modern algebra and the deep structure of theoretical physics. She also proved Noether's first and second theorems, which are fundamental in mathematical physics.",
     "achievements_zh": [
       "提出 Noether 定理",
       "推动抽象代数现代化",
@@ -697,7 +832,12 @@
       "Formulated Noether's theorem",
       "Modernized abstract algebra",
       "Produced key work in invariant theory"
-    ]
+    ],
+    "localized_names": {
+      "zh": "埃米·诺特",
+      "ja": "エミー・ネーター",
+      "ko": "에미 뇌터"
+    }
   },
   {
     "slug": "norbert_wiener",
@@ -711,8 +851,8 @@
     "temperament_summary": "像一个总能同时看见系统、反馈与副作用的人，聪明得发烫，也常带一点过载感。",
     "loading_copy_zh": "Wiener 正在检查你的反馈回路有没有悄悄自激振荡……",
     "loading_copy_en": "Wiener is checking whether your feedback loop has secretly started oscillating on its own...",
-    "bio_zh": "美国数学家，善于把控制、信息和行为统一到反馈系统视角中。",
-    "bio_en": "An American mathematician who excelled at unifying control, information, and behavior through the lens of feedback systems.",
+    "bio_zh": "美国数学家，善于把控制、信息和行为统一到反馈系统视角中。 此外，维纳作为随机过程与噪声信号处理的先驱人物，也为电子工程、电子通信与控制系统等领域做出了一定贡献。",
+    "bio_en": "An American mathematician who excelled at unifying control, information, and behavior through the lens of feedback systems. He became a professor of mathematics at the Massachusetts Institute of Technology (MIT).",
     "achievements_zh": [
       "创立控制论",
       "推动随机过程研究",
@@ -722,7 +862,12 @@
       "Founded cybernetics",
       "Advanced the study of stochastic processes",
       "Influenced computing, engineering, and cognitive science"
-    ]
+    ],
+    "localized_names": {
+      "zh": "诺伯特·维纳",
+      "ja": "ノーバート・ウィーナー",
+      "ko": "노버트 위너"
+    }
   },
   {
     "slug": "paul_erdos",
@@ -736,8 +881,8 @@
     "temperament_summary": "像一个把全部生活都献给问题和同行网络的人，轻、快、奇特而几乎无负重。",
     "loading_copy_zh": "Erdos 正在提着小行李箱路过，顺手给你留下一道新题……",
     "loading_copy_en": "Erdos is passing by with a small suitcase and casually leaving you one more problem to solve...",
-    "bio_zh": "匈牙利数学家，以流动合作和海量论文著称，是数学共同体里的传奇人物。",
-    "bio_en": "A Hungarian mathematician legendary for constant collaboration and an enormous body of papers across the mathematical community.",
+    "bio_zh": "匈牙利数学家，以流动合作和海量论文著称，是数学共同体里的传奇人物。 匈牙利籍犹太人，发表论文高达1525篇（包括与人合写的），为现时发表论文数最多的数学家（其次是欧拉）；曾和511人合写论文。",
+    "bio_en": "A Hungarian mathematician legendary for constant collaboration and an enormous body of papers across the mathematical community. He was one of the most prolific mathematicians and producers of mathematical conjectures of the 20th century.",
     "achievements_zh": [
       "推动组合数学与图论发展",
       "广泛使用概率方法",
@@ -747,7 +892,12 @@
       "Advanced combinatorics and graph theory",
       "Widely developed probabilistic methods",
       "Left behind the famous Erdos number culture"
-    ]
+    ],
+    "localized_names": {
+      "zh": "埃尔德什·帕尔",
+      "ja": "ポール・エルデシュ",
+      "ko": "에르되시 팔"
+    }
   },
   {
     "slug": "poincare",
@@ -761,8 +911,8 @@
     "temperament_summary": "像一个能在大范围复杂材料中迅速抓住潜在形式的人，轻盈、优雅、反应极快。",
     "loading_copy_zh": "Poincare 正在从混沌边缘给你捞回一点全局结构……",
     "loading_copy_en": "Poincare is fishing a bit of global structure back from the edge of chaos for you...",
-    "bio_zh": "法国数学家与理论物理学家，直觉极强，擅长同时把握局部技巧与整体图景。",
-    "bio_en": "A French mathematician and theoretical physicist with extraordinary intuition, able to hold local technique and global picture at once.",
+    "bio_zh": "法国数学家与理论物理学家，直觉极强，擅长同时把握局部技巧与整体图景。 他对数学、数学物理和天体力学做出了很多创造性与基础性的贡献。",
+    "bio_en": "A French mathematician and theoretical physicist with extraordinary intuition, able to hold local technique and global picture at once. He is often described as a polymath, and in mathematics as \"The Last Universalist\", since he excelled in all fields of the discipline as it existed during his lifetime.",
     "achievements_zh": [
       "奠定拓扑学若干核心观念",
       "推进天体力学与动力系统研究",
@@ -772,7 +922,12 @@
       "Laid down several core ideas of topology",
       "Advanced celestial mechanics and dynamical systems",
       "Posed the Poincare conjecture"
-    ]
+    ],
+    "localized_names": {
+      "zh": "亨利·庞加莱",
+      "ja": "アンリ・ポアンカレ",
+      "ko": "앙리 푸앵카레"
+    }
   },
   {
     "slug": "ramanujan",
@@ -786,8 +941,8 @@
     "temperament_summary": "像一个先看见答案的轮廓、再勉强回头补语言的人，内在确信极强，带一点不可译性。",
     "loading_copy_zh": "Ramanujan 正在从宇宙草稿纸上替你抄下一行灵感……",
     "loading_copy_en": "Ramanujan is copying down a fresh line of inspiration for you from the universe's scratch paper...",
-    "bio_zh": "印度数学家，以惊人的直觉和非传统路径，在数论与特殊函数中留下大量神来之笔。",
-    "bio_en": "An Indian mathematician who left a flood of brilliant results in number theory and special functions through astonishing intuition and nontraditional paths.",
+    "bio_zh": "印度数学家，以惊人的直觉和非传统路径，在数论与特殊函数中留下大量神来之笔。 朝露一生中，拉马努金独立整理出了近3900项研究成果（大部分是恒等式和方程）。",
+    "bio_en": "An Indian mathematician who left a flood of brilliant results in number theory and special functions through astonishing intuition and nontraditional paths. Ramanujan initially developed his own mathematical research in isolation.",
     "achievements_zh": [
       "推动分拆数公式研究",
       "在模形式与 q 级数中留下深刻成果",
@@ -797,7 +952,12 @@
       "Advanced formulas for partition numbers",
       "Left deep work on modular forms and q-series",
       "Proposed many remarkably ahead-of-their-time identities and conjectures"
-    ]
+    ],
+    "localized_names": {
+      "zh": "斯里尼瓦瑟·拉马努金",
+      "ja": "シュリニヴァーサ・ラマヌジャン",
+      "ko": "스리니바사 라마누잔"
+    }
   },
   {
     "slug": "turing",
@@ -811,8 +971,8 @@
     "temperament_summary": "像一个会直接把问题切到骨头的人，安静、锐利，不太为社交缓冲让路。",
     "loading_copy_zh": "Turing 正在把你的气质编译成可执行的结构……",
     "loading_copy_en": "Turing is compiling your temperament into an executable structure...",
-    "bio_zh": "英国数学家、逻辑学家与计算机科学先驱，对计算、智能与密码分析影响巨大。",
-    "bio_en": "A British mathematician, logician, and computing pioneer whose influence on computation, intelligence, and cryptanalysis remains immense.",
+    "bio_zh": "英国数学家、逻辑学家与计算机科学先驱，对计算、智能与密码分析影响巨大。 期间他设计了一些加速破译德国密码的技术，包括改进波兰战前研制的机器Bombe，一种可以找到恩尼格玛密码机设置的机电机器。",
+    "bio_en": "A British mathematician, logician, and computing pioneer whose influence on computation, intelligence, and cryptanalysis remains immense. Turing is widely considered to be the father of theoretical computer science.",
     "achievements_zh": [
       "提出图灵机模型",
       "奠定可计算性理论",
@@ -822,7 +982,12 @@
       "Introduced the Turing machine model",
       "Helped found computability theory",
       "Contributed to wartime codebreaking and modern computing thought"
-    ]
+    ],
+    "localized_names": {
+      "zh": "艾伦·图灵",
+      "ja": "アラン・チューリング",
+      "ko": "앨런 튜링"
+    }
   },
   {
     "slug": "von_neumann",
@@ -836,8 +1001,8 @@
     "temperament_summary": "像一个能在多个复杂系统之间高速切换且始终保持掌控的人，强得近乎不讲理。",
     "loading_copy_zh": "von Neumann 正在把你的直觉整理成一套可运行的系统架构……",
     "loading_copy_en": "von Neumann is organizing your intuition into a system architecture that can actually run...",
-    "bio_zh": "匈牙利裔美籍数学家，涉猎极广，擅长把抽象理论迅速转成强有力的系统工具。",
-    "bio_en": "A Hungarian-American mathematician of extraordinary range, gifted at turning abstract theory into powerful working systems.",
+    "bio_zh": "匈牙利裔美籍数学家，涉猎极广，擅长把抽象理论迅速转成强有力的系统工具。他在博弈论、计算机体系结构、量子力学与核武器研究中的工作，都留下了深远影响。",
+    "bio_en": "A Hungarian-American mathematician of extraordinary range, gifted at turning abstract theory into powerful working systems. His analysis of the structure of self-replication preceded the discovery of the structure of DNA.",
     "achievements_zh": [
       "提出存储程序计算机架构思想",
       "奠定博弈论重要基础",
@@ -847,7 +1012,12 @@
       "Advanced the stored-program computer architecture idea",
       "Helped lay major foundations of game theory",
       "Made major contributions to quantum theory and applied mathematics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "约翰·冯·诺伊曼",
+      "ja": "ジョン・フォン・ノイマン",
+      "ko": "존 폰 노이만"
+    }
   },
   {
     "slug": "werner_heisenberg",
@@ -861,8 +1031,8 @@
     "temperament_summary": "像一个始终意识到认知边界本身也是问题的人，内敛、敏感、带着高密度的思辨感。",
     "loading_copy_zh": "Heisenberg 正在提醒你：先别逼得太死，有些东西本来就要留点不确定……",
     "loading_copy_en": "Heisenberg is reminding you not to pin everything down too hard; some things are meant to stay uncertain...",
-    "bio_zh": "德国理论物理学家，是量子力学早期革命的关键推动者之一。",
-    "bio_en": "A German theoretical physicist and one of the crucial drivers of the early quantum revolution.",
+    "bio_zh": "德国理论物理学家，是量子力学早期革命的关键推动者之一。他提出矩阵力学与不确定性原理，使人们重新理解微观世界中测量与现实的关系。",
+    "bio_en": "A German theoretical physicist and one of the crucial drivers of the early quantum revolution. Heisenberg published his Umdeutung paper in 1925, a major reinterpretation of old quantum theory.",
     "achievements_zh": [
       "提出矩阵力学",
       "提出不确定性原理",
@@ -872,7 +1042,12 @@
       "Introduced matrix mechanics",
       "Formulated the uncertainty principle",
       "Helped establish the early core framework of quantum mechanics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "维尔纳·海森堡",
+      "ja": "ヴェルナー・ハイゼンベルク",
+      "ko": "베르너 하이젠베르크"
+    }
   },
   {
     "slug": "yang_zhenning",
@@ -886,8 +1061,8 @@
     "temperament_summary": "像一个总想从更高层次把世界重新统一起来的人，克制、深稳，带着强烈的结构美感。",
     "loading_copy_zh": "杨振宁正在替你检查这套说法背后有没有更深一层的对称性……",
     "loading_copy_en": "Yang is checking whether a deeper symmetry is hiding behind the way you're framing this...",
-    "bio_zh": "华裔理论物理学家，对对称性、规范场与统计物理都做出过关键贡献，是二十世纪最重要的理论物理学家之一。",
-    "bio_en": "A Chinese-born theoretical physicist whose work on symmetry, gauge theory, and statistical physics helped reshape twentieth-century physics.",
+    "bio_zh": "华裔理论物理学家，对对称性、规范场与统计物理都做出过关键贡献，是二十世纪最重要的理论物理学家之一。 杨振宁为数学家杨武之长子，曾于1937年考入西南联大念本科、硕士，后于1945年作为留美公费生进入芝加哥大学念博士。",
+    "bio_en": "A Chinese-born theoretical physicist whose work on symmetry, gauge theory, and statistical physics helped reshape twentieth-century physics. Yang and Tsung-Dao Lee received the 1957 Nobel Prize in Physics for their work on parity non-conservation of the weak interaction, which was confirmed by the Wu experiment in 1956.",
     "achievements_zh": [
       "提出宇称不守恒并获诺贝尔物理学奖",
       "推动规范场与杨-米尔斯理论发展",
@@ -897,7 +1072,12 @@
       "Proposed parity nonconservation and won the Nobel Prize in Physics",
       "Advanced Yang-Mills gauge theory",
       "Left lasting marks on statistical and condensed matter physics"
-    ]
+    ],
+    "localized_names": {
+      "zh": "杨振宁",
+      "ja": "楊振寧",
+      "ko": "양전닝"
+    }
   },
   {
     "slug": "qian_xuesen",
@@ -911,8 +1091,8 @@
     "temperament_summary": "像一个始终从全局系统出发调度资源与路径的人，稳、硬、极有工程组织力。",
     "loading_copy_zh": "钱学森正在把你零散的想法收束成一套能真正落地的总体方案……",
     "loading_copy_en": "Qian is gathering your scattered thoughts into a systems blueprint that can actually be built...",
-    "bio_zh": "中国空气动力学家、系统科学家和航天事业奠基者之一，擅长把前沿理论转成国家级工程体系。",
-    "bio_en": "A Chinese aerodynamicist, systems scientist, and foundational figure in China's aerospace program, known for turning frontier theory into national-scale engineering.",
+    "bio_zh": "中国空气动力学家、系统科学家和航天事业奠基者之一，擅长把前沿理论转成国家级工程体系。他在火箭、导弹、工程控制论与系统工程上的工作，深刻塑造了中国现代航天与国防技术路径。",
+    "bio_en": "A Chinese aerodynamicist, systems scientist, and foundational figure in China's aerospace program, known for turning frontier theory into national-scale engineering. He achieved recognition as one of America's leading experts in rockets and high-speed flight theory prior to his deportation to China in 1955.",
     "achievements_zh": [
       "奠定中国航天与导弹总体设计体系",
       "推动工程控制论与系统工程研究",
@@ -922,7 +1102,12 @@
       "Helped establish China's aerospace and missile system design framework",
       "Advanced engineering cybernetics and systems engineering research",
       "Strengthened aerodynamics and mechanics education"
-    ]
+    ],
+    "localized_names": {
+      "zh": "钱学森",
+      "ja": "銭学森",
+      "ko": "첸쉐썬"
+    }
   },
   {
     "slug": "hua_luogeng",
@@ -936,8 +1121,8 @@
     "temperament_summary": "像一个愿意把硬问题一寸寸磨开的实践型数学家，朴素、扎实、后劲很强。",
     "loading_copy_zh": "华罗庚正在拿起纸笔，替你把最难啃的那一步先算通……",
     "loading_copy_en": "Hua has already picked up a pencil and started grinding through the hardest step for you first...",
-    "bio_zh": "中国数学家，在解析数论、多复变与应用数学推广中都有重要影响，也极重视数学普及。",
-    "bio_en": "A Chinese mathematician with major influence on analytic number theory, several complex variables, and the practical spread of applied mathematics in China.",
+    "bio_zh": "中国数学家，在解析数论、多复变与应用数学推广中都有重要影响，也极重视数学普及。 他是中国解析数论、典型群、矩阵几何学、自守函数论与多元复变函数等很多方面研究的创始人与奠基者，也是中国在世界上最有影响力的数学家之一。",
+    "bio_en": "A Chinese mathematician with major influence on analytic number theory, several complex variables, and the practical spread of applied mathematics in China. He was largely responsible for identifying and nurturing the mathematician Chen Jingrun, who proved Chen's theorem, the best-known result on the Goldbach conjecture.",
     "achievements_zh": [
       "推进中国现代数学发展",
       "在解析数论与矩阵几何中做出重要贡献",
@@ -947,7 +1132,12 @@
       "Advanced modern mathematics in China",
       "Made important contributions to analytic number theory and matrix geometry",
       "Popularized optimization and operations methods for real-world use"
-    ]
+    ],
+    "localized_names": {
+      "zh": "华罗庚",
+      "ja": "華羅庚",
+      "ko": "화뤄겅"
+    }
   },
   {
     "slug": "deng_jiaxian",
@@ -961,8 +1151,8 @@
     "temperament_summary": "像一个把最重责任默默扛在身上的人，克制、坚硬、几乎只对结果负责。",
     "loading_copy_zh": "邓稼先正在替你把最难那部分压力先扛下来，再一点点推进到可交付……",
     "loading_copy_en": "Deng is quietly taking the heaviest pressure first, then pushing the work toward something deliverable...",
-    "bio_zh": "中国核物理学家，是中国核武器理论研究和组织攻关中的关键人物之一，以极强责任感与长期投入著称。",
-    "bio_en": "A Chinese nuclear physicist and one of the central figures in China's nuclear weapons theory program, remembered for his quiet resolve and sustained sense of responsibility.",
+    "bio_zh": "中国核物理学家，是中国核武器理论研究和组织攻关中的关键人物之一，以极强责任感与长期投入著称。 邓稼先本科毕业于中华民国的国立西南联大，后赴美国求学、1950年获得普渡大学物理学博士学位。",
+    "bio_en": "A Chinese nuclear physicist and one of the central figures in China's nuclear weapons theory program, remembered for his quiet resolve and sustained sense of responsibility. Deng Jiaxian made significant contributions to the development of the atomic bomb of the People's Republic of China and was honored as the \"Patriot of the Two Bombs\".",
     "achievements_zh": [
       "参与并推动中国核武器理论设计攻关",
       "长期主持高强度科研协作任务",
@@ -972,6 +1162,10 @@
       "Played a key role in China's nuclear weapons theoretical design effort",
       "Led long-term high-pressure scientific collaboration programs",
       "Became an enduring symbol of the Two Bombs, One Satellite spirit"
-    ]
+    ],
+    "localized_names": {
+      "zh": "邓稼先",
+      "ko": "덩자셴"
+    }
   }
 ]

@@ -212,5 +212,6 @@
   "common.copa.resonance.actionsDescription": "直接基于当前选中的 CoPA Profile 生成或刷新科学家共振结果。",
   "common.copa.historyCount": "个 Profile",
   "common.copa.deleteProfile": "删除 Profile",
-  "common.copa.resonance.regenerateShort": "重新生成"
+  "common.copa.resonance.regenerateShort": "重新生成",
+  "common.copa.resonance.wikipedia": "维基百科"
 }

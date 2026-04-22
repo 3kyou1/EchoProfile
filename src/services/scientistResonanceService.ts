@@ -152,6 +152,7 @@ function buildCardPayload(
 
   return {
     name: scientist.name,
+    localized_names: scientist.localized_names,
     slug: scientist.slug,
     portrait_url: scientist.portrait_url,
     hook: scientist.temperament_summary,
@@ -190,6 +191,37 @@ function normalizeCardPayload(
     resonanceAxes: axes,
     confidenceStyle: options.confidenceStyle,
   });
+}
+
+function rehydrateStoredCard(
+  card: ScientistResonanceCard,
+  confidenceStyle: ScientistConfidenceStyle
+): ScientistResonanceCard {
+  const scientist = SCIENTIST_POOL_BY_SLUG.get(card.slug);
+  if (!scientist) {
+    return card;
+  }
+
+  return buildCardPayload(scientist, {
+    reason: card.reason,
+    resonanceAxes: card.resonance_axes,
+    confidenceStyle,
+  });
+}
+
+function rehydrateStoredResult(result: ScientistResonanceResult): ScientistResonanceResult {
+  return {
+    ...result,
+    long_term: {
+      primary: rehydrateStoredCard(result.long_term.primary, "strong_resonance"),
+      secondary: result.long_term.secondary.map((card) =>
+        rehydrateStoredCard(card, "strong_resonance")
+      ),
+    },
+    recent_state: result.recent_state
+      ? rehydrateStoredCard(result.recent_state, "phase_resonance")
+      : null,
+  };
 }
 
 function normalizeLongTermPayload(payload: unknown): ScientistResonancePayload["long_term"] | null {
@@ -496,7 +528,8 @@ export async function loadScientistResonanceResult(input: {
 }): Promise<ScientistResonanceResult | null> {
   const results = await loadStoreResults();
   const cacheKey = buildScientistResonanceCacheKey(input);
-  return results.find((item) => item.cache_key === cacheKey) ?? null;
+  const matched = results.find((item) => item.cache_key === cacheKey) ?? null;
+  return matched ? rehydrateStoredResult(matched) : null;
 }
 
 export async function saveScientistResonanceResult(

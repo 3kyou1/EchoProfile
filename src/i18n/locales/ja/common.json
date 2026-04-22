@@ -212,5 +212,6 @@
   "common.copa.resonance.actionsDescription": "Use the selected CoPA Profile to generate or refresh the scientist resonance result.",
   "common.copa.historyCount": "Profiles",
   "common.copa.deleteProfile": "Delete Profile",
-  "common.copa.resonance.regenerateShort": "Regenerate"
+  "common.copa.resonance.regenerateShort": "Regenerate",
+  "common.copa.resonance.wikipedia": "Wikipedia"
 }

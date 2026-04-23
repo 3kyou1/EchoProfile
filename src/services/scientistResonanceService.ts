@@ -399,7 +399,7 @@ function buildScientistPrompt(profileMarkdown: string, recentMessages: string[],
   if (normalizeLanguage(language) === "zh") {
     return {
       system: [
-        "你正在为 CoPA Profile 页面生成 Scientist Resonance 结果。",
+        "你正在为 CoPA Profile 页面生成 Thought Echoes 结果。",
         "任务不是判断用户像不像名人，而是根据思维方式、人格气质与学习表达偏好，从固定科学家库中找出最强共振人物镜像。",
         "规则：",
         "1. 优先依据思维方式判断；",
@@ -410,7 +410,7 @@ function buildScientistPrompt(profileMarkdown: string, recentMessages: string[],
         "6. 所有 slug 只能从给定 scientist_pool 中选择。",
       ].join("\n"),
       user: [
-        "请根据以下已选中的 CoPA Profile 与最近用户消息，生成 Scientist Resonance。",
+        "请根据以下已选中的 CoPA Profile 与最近用户消息，生成 Thought Echoes。",
         `<profile>\n${profileMarkdown || "(empty)"}\n</profile>`,
         `<recent_messages>\n${JSON.stringify(recentMessages, null, 2)}\n</recent_messages>`,
         `<allow_recent_state>\n${JSON.stringify(recentAllowed)}\n</allow_recent_state>`,
@@ -424,7 +424,7 @@ function buildScientistPrompt(profileMarkdown: string, recentMessages: string[],
 
   return {
     system: [
-      "Generate Scientist Resonance for an existing CoPA Profile.",
+      "Generate Thought Echoes for an existing CoPA Profile.",
       "Choose from the fixed scientist pool based on thinking style first, temperament second.",
       "Return strict JSON only.",
     ].join("\n"),

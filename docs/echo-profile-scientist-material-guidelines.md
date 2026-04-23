@@ -1,6 +1,6 @@
-# EchoProfile 科学家共振素材规范
+# EchoProfile 思想回响素材规范
 
-这份文档总结 `EchoProfile` 项目里「科学家共振」素材的实际使用要求，基于当前的 EchoProfile 产品形态整理。
+这份文档总结 `EchoProfile` 项目里「思想回响」素材的实际使用要求，基于当前的 EchoProfile 产品形态整理。
 
 目标不是做百科全书，而是保证人物素材在当前 UI 里：
 

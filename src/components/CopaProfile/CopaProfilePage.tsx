@@ -483,7 +483,7 @@ export function CopaProfilePage() {
                 }`}
               >
                 <RefreshCw className="h-4 w-4" />
-                {t("common.copa.resonance.title", "Scientist Resonance")}
+                {t("common.copa.resonance.title", "Thought Echoes")}
               </button>
             </div>
           </div>
@@ -862,10 +862,10 @@ export function CopaProfilePage() {
                   <section className="rounded-3xl border border-border/60 bg-card/90 p-5 shadow-sm">
                     <div className="max-w-2xl">
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        {t("common.copa.resonance.eyebrow", "Scientist resonance")}
+                        {t("common.copa.resonance.eyebrow", "Thought echoes")}
                       </p>
                       <h3 className="mt-2 text-xl font-semibold text-foreground">
-                        {t("common.copa.resonance.title", "Scientist Resonance")}
+                        {t("common.copa.resonance.title", "Thought Echoes")}
                       </h3>
                       <p className="mt-2 text-sm leading-7 text-muted-foreground">
                         {t(
@@ -941,7 +941,7 @@ export function CopaProfilePage() {
                       <div className="mt-5 rounded-2xl border border-dashed border-border/70 bg-background/60 px-4 py-5 text-sm text-muted-foreground">
                         {t(
                           "common.copa.resonance.empty.description",
-                          "Use the selected CoPA Profile as the long-term signal, then generate matching scientist resonance."
+                          "Use the selected CoPA Profile as the long-term signal, then generate matching thought echoes."
                         )}
                       </div>
                     )}
@@ -965,7 +965,7 @@ export function CopaProfilePage() {
                       )
                     : t(
                         "common.copa.resonance.empty.noProfile",
-                        "Select or generate a CoPA Profile first, then you can generate scientist resonance from it."
+                        "Select or generate a CoPA Profile first, then you can generate thought echoes from it."
                       )}
                 </p>
                 {activeSubview === "profile" ? (

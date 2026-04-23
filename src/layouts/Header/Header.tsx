@@ -95,7 +95,7 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
       <div className="flex items-center gap-2.5 min-w-0">
         <img
           src="/app-icon.png"
-          alt="Claude Code History"
+          alt="EchoProfile"
           className="w-6 h-6 hidden md:block"
         />
         <div className="flex flex-col min-w-0">

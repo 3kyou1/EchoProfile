@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CopaSnapshot } from "@/types/copaProfile";
 import {
-  buildScientistResonanceCacheKey,
-  deleteScientistResonanceResultsForProfile,
-  generateScientistResonance,
-  getScientistPoolCount,
-  loadScientistResonanceResult,
-} from "@/services/scientistResonanceService";
+  buildFigureResonanceCacheKey,
+  deleteFigureResonanceResultsForProfile,
+  generateFigureResonance,
+  loadFigureResonanceResult,
+} from "@/services/figureResonanceService";
+import { deleteFigurePool, importFigurePool, loadFigurePools } from "@/services/figurePoolService";
 
 const snapshot: CopaSnapshot = {
   id: "profile-1",
@@ -79,7 +79,7 @@ const snapshot: CopaSnapshot = {
   markdown: "## CoPA Profile\n\n- User profile: Likes formal abstractions, structure compression, calm rigor.",
 };
 
-describe("scientistResonanceService", () => {
+describe("figureResonanceService", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     const memory = new Map<string, string>();
@@ -99,19 +99,63 @@ describe("scientistResonanceService", () => {
 
   it("normalizes cache key by language", () => {
     expect(
-      buildScientistResonanceCacheKey({
+      buildFigureResonanceCacheKey({
         scopeKey: "global:all",
         profileId: "profile-1",
         language: "zh-CN",
+        poolId: "builtin-scientists",
       })
-    ).toBe("global:all:profile-1:zh");
+    ).toBe("global:all:profile-1:zh:builtin-scientists");
   });
 
-  it("falls back to heuristic generation when llm request fails", async () => {
+  it("falls back to heuristic generation when llm request fails and excludes invalid pool records", async () => {
+    const imported = await importFigurePool({
+      name: "Operators",
+      records: [
+        {
+          slug: "valid_operator",
+          name: "Valid Operator",
+          localized_names: { zh: "有效操盘手" },
+          portrait_url: "/valid.png",
+          quote_en: "A short quote.",
+          quote_zh: "一句简短的话。",
+          core_traits: "结构化、系统化",
+          thinking_style: "把复杂问题转成清晰结构。",
+          temperament_tags: "冷静、抽象",
+          temperament_summary: "偏系统思考。",
+          loading_copy_zh: "正在对齐...",
+          loading_copy_en: "Aligning...",
+          bio_zh: "有效人物。",
+          bio_en: "Valid figure.",
+          achievements_zh: ["成就一"],
+          achievements_en: ["Achievement one"],
+        },
+        {
+          slug: "broken_operator",
+          name: "Broken Operator",
+          localized_names: { zh: "失效操盘手" },
+          portrait_url: "",
+          quote_en: "Broken",
+          quote_zh: "坏的",
+          core_traits: "系统化",
+          thinking_style: "坏数据不应参与匹配。",
+          temperament_tags: "抽象",
+          temperament_summary: "无效数据。",
+          loading_copy_zh: "坏的",
+          loading_copy_en: "Broken",
+          bio_zh: "坏的",
+          bio_en: "Broken",
+          achievements_zh: ["成就"],
+          achievements_en: ["Achievement"],
+        },
+      ],
+    });
+
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
 
-    const result = await generateScientistResonance({
+    const result = await generateFigureResonance({
       scopeKey: "global:all",
+      poolId: imported.id,
       profileSnapshot: snapshot,
       recentMessages: [
         "我喜欢把复杂系统压缩成结构化框架。",
@@ -128,17 +172,20 @@ describe("scientistResonanceService", () => {
     });
 
     expect(result.source).toBe("heuristic");
-    expect(result.long_term.primary.slug).toBeTruthy();
+    expect(result.long_term.primary.slug).toBe("valid_operator");
     expect(result.long_term.secondary.length).toBeLessThanOrEqual(2);
     expect(result.recent_state).not.toBeNull();
-    expect(getScientistPoolCount()).toBeGreaterThan(10);
+    expect(result.pool_id).toBe(imported.id);
+    expect(result.pool_name_snapshot).toBe("Operators");
   });
 
   it("persists generated resonance result in cache", async () => {
+    const pools = await loadFigurePools();
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
 
-    const generated = await generateScientistResonance({
+    const generated = await generateFigureResonance({
       scopeKey: "global:all",
+      poolId: pools[0]!.id,
       profileSnapshot: snapshot,
       recentMessages: [
         "我喜欢把复杂系统压缩成结构化框架。",
@@ -154,21 +201,25 @@ describe("scientistResonanceService", () => {
       language: "zh-CN",
     });
 
-    const loaded = await loadScientistResonanceResult({
+    const loaded = await loadFigureResonanceResult({
       scopeKey: "global:all",
       profileId: snapshot.id,
       language: "zh-CN",
+      poolId: pools[0]!.id,
     });
 
     expect(loaded?.id).toBe(generated.id);
     expect(loaded?.cache_key).toBe(generated.cache_key);
+    expect(loaded?.pool_id).toBe(pools[0]!.id);
   });
 
-  it("rehydrates cached resonance cards from the latest scientist pool data", async () => {
-    const cacheKey = buildScientistResonanceCacheKey({
+  it("rehydrates cached resonance cards from the latest figure pool data", async () => {
+    const pools = await loadFigurePools();
+    const cacheKey = buildFigureResonanceCacheKey({
       scopeKey: "global:all",
       profileId: snapshot.id,
       language: "zh-CN",
+      poolId: pools[0]!.id,
     });
 
     localStorage.setItem(
@@ -181,6 +232,9 @@ describe("scientistResonanceService", () => {
           profile_id: snapshot.id,
           generated_at: "2026-04-22T12:00:00.000Z",
           language: "zh",
+          pool_id: pools[0]!.id,
+          pool_name_snapshot: pools[0]!.name,
+          pool_updated_at_snapshot: pools[0]!.updatedAt,
           source: "heuristic",
           long_term: {
             primary: {
@@ -208,22 +262,84 @@ describe("scientistResonanceService", () => {
       ])
     );
 
-    const loaded = await loadScientistResonanceResult({
+    const loaded = await loadFigureResonanceResult({
       scopeKey: "global:all",
       profileId: snapshot.id,
       language: "zh-CN",
+      poolId: pools[0]!.id,
     });
 
     expect(loaded?.long_term.primary.slug).toBe("herbert_simon");
     expect(loaded?.long_term.primary.reason).toBe("cached reason");
     expect(loaded?.long_term.primary.quote_zh).toBe("信息的丰富，造成了注意力的贫乏。");
+    expect(localStorage.getItem("webui:figure-resonance.json:results")).not.toBeNull();
+  });
+
+  it("keeps stored pool metadata after the source pool is deleted", async () => {
+    const imported = await importFigurePool({
+      name: "Investors",
+      records: [
+        {
+          slug: "investor_one",
+          name: "Investor One",
+          localized_names: { zh: "投资人一号" },
+          portrait_url: "/investor.png",
+          quote_en: "Focus.",
+          quote_zh: "专注。",
+          core_traits: "结构化、概率思维",
+          thinking_style: "重视框架和复利。",
+          temperament_tags: "克制、耐心",
+          temperament_summary: "偏向长期主义。",
+          loading_copy_zh: "正在匹配长期主义...",
+          loading_copy_en: "Matching long-term thinking...",
+          bio_zh: "投资人。",
+          bio_en: "Investor.",
+          achievements_zh: ["长期主义"],
+          achievements_en: ["Long-termism"],
+        },
+      ],
+    });
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+
+    await generateFigureResonance({
+      scopeKey: "global:all",
+      poolId: imported.id,
+      profileSnapshot: snapshot,
+      recentMessages: [
+        "我偏好长期主义。",
+        "我倾向于框架先行。",
+        "我希望表达尽量结构化。",
+        "我会过滤掉噪音。",
+      ],
+      config: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      language: "zh-CN",
+    });
+
+    await deleteFigurePool(imported.id);
+
+    const loaded = await loadFigureResonanceResult({
+      scopeKey: "global:all",
+      profileId: snapshot.id,
+      language: "zh-CN",
+      poolId: imported.id,
+    });
+
+    expect(loaded?.pool_name_snapshot).toBe("Investors");
+    expect(loaded?.pool_deleted).toBe(true);
   });
 
   it("deletes cached resonance results for a profile", async () => {
+    const pools = await loadFigurePools();
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
 
-    await generateScientistResonance({
+    await generateFigureResonance({
       scopeKey: "global:all",
+      poolId: pools[0]!.id,
       profileSnapshot: snapshot,
       recentMessages: [
         "我喜欢把复杂系统压缩成结构化框架。",
@@ -239,12 +355,13 @@ describe("scientistResonanceService", () => {
       language: "zh-CN",
     });
 
-    await deleteScientistResonanceResultsForProfile(snapshot.id);
+    await deleteFigureResonanceResultsForProfile(snapshot.id);
 
-    const loaded = await loadScientistResonanceResult({
+    const loaded = await loadFigureResonanceResult({
       scopeKey: "global:all",
       profileId: snapshot.id,
       language: "zh-CN",
+      poolId: pools[0]!.id,
     });
 
     expect(loaded).toBeNull();

@@ -4,6 +4,7 @@ import type {
   CopaFactor,
   CopaFactorCode,
   CopaFactors,
+  CopaLlmConfigState,
   CopaModelConfig,
   CopaNormalizedResponse,
   CopaSnapshot,
@@ -90,6 +91,14 @@ export const DEFAULT_COPA_MODEL_CONFIG: CopaModelConfig = {
   model: "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
   apiKey: "sk-bJGY1sslj60pLLE3Mx8FFAUUCmJKEFsVBvoZ3oAE1DUpLFa6",
   temperature: 0.2,
+};
+
+export const DEFAULT_COPA_LLM_CONFIG: CopaLlmConfigState = {
+  copa: { ...DEFAULT_COPA_MODEL_CONFIG },
+  resonance: {
+    enabled: false,
+    config: { ...DEFAULT_COPA_MODEL_CONFIG },
+  },
 };
 
 function stripFence(value: string): string {
@@ -189,26 +198,80 @@ function buildPromptSummary(factors: CopaFactors): string {
   return compact || "Adapt to the user's task, pace, framework, and trust needs.";
 }
 
+function normalizeModelConfig(value: unknown, fallback: CopaModelConfig): CopaModelConfig {
+  const payload = value && typeof value === "object" ? (value as Partial<CopaModelConfig>) : {};
+
+  const baseUrl =
+    typeof payload.baseUrl === "string" && payload.baseUrl.trim().length > 0
+      ? payload.baseUrl.trim()
+      : fallback.baseUrl;
+  const model =
+    typeof payload.model === "string" && payload.model.trim().length > 0
+      ? payload.model.trim()
+      : fallback.model;
+  const apiKey =
+    typeof payload.apiKey === "string" && payload.apiKey.trim().length > 0
+      ? payload.apiKey.trim()
+      : fallback.apiKey;
+  const temperature =
+    typeof payload.temperature === "number" ? payload.temperature : fallback.temperature;
+
+  return {
+    baseUrl,
+    model,
+    apiKey,
+    temperature,
+  };
+}
+
+function normalizeLlmConfigState(value: unknown): CopaLlmConfigState {
+  const payload = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+  if ("copa" in payload) {
+    const copa = normalizeModelConfig(payload.copa, DEFAULT_COPA_MODEL_CONFIG);
+    const resonancePayload =
+      payload.resonance && typeof payload.resonance === "object"
+        ? (payload.resonance as Record<string, unknown>)
+        : {};
+
+    return {
+      copa,
+      resonance: {
+        enabled: resonancePayload.enabled === true,
+        config: normalizeModelConfig(resonancePayload.config, copa),
+      },
+    };
+  }
+
+  const legacyCopa = normalizeModelConfig(payload, DEFAULT_COPA_MODEL_CONFIG);
+  return {
+    copa: legacyCopa,
+    resonance: {
+      enabled: false,
+      config: { ...legacyCopa },
+    },
+  };
+}
+
 async function loadStoreState(): Promise<CopaStoredState> {
   const store = await storageAdapter.load(STORE_NAME, {
     defaults: {
       [SNAPSHOTS_KEY]: [],
-      [CONFIG_KEY]: DEFAULT_COPA_MODEL_CONFIG,
+      [CONFIG_KEY]: DEFAULT_COPA_LLM_CONFIG,
     },
     autoSave: true,
   });
 
   const snapshots = (await store.get<CopaSnapshot[]>(SNAPSHOTS_KEY)) ?? [];
-  const config = (await store.get<CopaModelConfig>(CONFIG_KEY)) ?? DEFAULT_COPA_MODEL_CONFIG;
+  const config = normalizeLlmConfigState(
+    (await store.get<CopaLlmConfigState | CopaModelConfig>(CONFIG_KEY)) ?? DEFAULT_COPA_LLM_CONFIG
+  );
 
   return {
     snapshots: snapshots
       .slice()
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
-    config: {
-      ...DEFAULT_COPA_MODEL_CONFIG,
-      ...config,
-    },
+    config,
   };
 }
 
@@ -318,17 +381,24 @@ export async function deleteCopaSnapshot(snapshotId: string): Promise<CopaSnapsh
   return snapshots;
 }
 
-export async function loadCopaConfig(): Promise<CopaModelConfig> {
+export function resolveCopaModelConfig(config: CopaLlmConfigState): CopaModelConfig {
+  return normalizeModelConfig(config.copa, DEFAULT_COPA_MODEL_CONFIG);
+}
+
+export function resolveResonanceModelConfig(config: CopaLlmConfigState): CopaModelConfig {
+  return config.resonance.enabled
+    ? normalizeModelConfig(config.resonance.config, resolveCopaModelConfig(config))
+    : resolveCopaModelConfig(config);
+}
+
+export async function loadCopaConfig(): Promise<CopaLlmConfigState> {
   const state = await loadStoreState();
   return state.config;
 }
 
-export async function saveCopaConfig(config: CopaModelConfig): Promise<CopaModelConfig> {
+export async function saveCopaConfig(config: CopaLlmConfigState): Promise<CopaLlmConfigState> {
   const state = await loadStoreState();
-  const nextConfig = {
-    ...DEFAULT_COPA_MODEL_CONFIG,
-    ...config,
-  };
+  const nextConfig = normalizeLlmConfigState(config);
   await saveStoreState({ ...state, config: nextConfig });
   return nextConfig;
 }

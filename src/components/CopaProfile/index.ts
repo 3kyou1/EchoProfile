@@ -1,2 +1,2 @@
 export { CopaProfilePage } from "./CopaProfilePage";
-export { ScientistResonanceCard } from "./ScientistResonanceCard";
+export { FigureResonanceCard } from "./FigureResonanceCard";

@@ -27,6 +27,7 @@ import {
   extractUserSignals,
   loadCopaConfig,
   loadCopaSnapshots,
+  normalizeCopaLanguage,
   requestCopaProfile,
   resolveCopaModelConfig,
   resolveResonanceModelConfig,
@@ -444,6 +445,7 @@ export function CopaProfilePage() {
     setError("");
 
     try {
+      const generationLanguage = normalizeCopaLanguage(i18n.resolvedLanguage || i18n.language || "en");
       const collected = await collectScopeMessages();
       const extracted = extractUserSignals(collected.messages);
       const limitedSignals =
@@ -457,8 +459,13 @@ export function CopaProfilePage() {
       }
 
       await saveCopaConfig(config);
-      const result = await requestCopaProfile(limitedSignals, resolveCopaModelConfig(config));
+      const result = await requestCopaProfile(
+        limitedSignals,
+        resolveCopaModelConfig(config),
+        generationLanguage
+      );
       const snapshot = createSnapshot({
+        language: generationLanguage,
         scope: {
           type: scopeType,
           ref: collected.scopeRef,

@@ -1,4 +1,5 @@
 export type CopaFactorCode = "CT" | "SA" | "SC" | "CLM" | "MS" | "AMR";
+export type CopaLanguage = "zh" | "en";
 
 export type CopaScopeType = "session" | "project" | "global";
 
@@ -52,6 +53,7 @@ export interface CopaScopeRef {
 export interface CopaSnapshot {
   id: string;
   createdAt: string;
+  language: CopaLanguage;
   scope: CopaScopeRef;
   providerScope: string[];
   sourceStats: CopaSourceStats;

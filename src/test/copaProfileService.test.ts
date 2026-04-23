@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import type { ClaudeMessage } from "@/types";
 import {
+  buildCopaPrompt,
   buildScopeKey,
+  createSnapshot,
   deleteCopaSnapshot,
   extractUserSignals,
   loadCopaConfig,
@@ -34,7 +36,7 @@ describe("copaProfileService", () => {
     });
   });
 
-  test("extractUserSignals keeps user text only and removes duplicates", () => {
+  test("extractUserSignals keeps user text only, including short messages, and removes duplicates", () => {
     const messages: ClaudeMessage[] = [
       {
         uuid: "u1",
@@ -78,9 +80,44 @@ describe("copaProfileService", () => {
     expect(result.messages).toEqual([
       "Explain this like I know the basics but not the details.",
       "Please give me a checklist.",
+      "ok",
     ]);
     expect(result.stats.userMessages).toBe(3);
-    expect(result.stats.dedupedMessages).toBe(2);
+    expect(result.stats.dedupedMessages).toBe(3);
+  });
+
+  test("extractUserSignals drops only long pasted content while keeping long preference-style messages", () => {
+    const pastedLog = Array.from(
+      { length: 12 },
+      (_, index) => `Error: request failed ${index}\n    at module${index}.ts:10:5`
+    ).join("\n");
+    const longPreference =
+      "我希望你回答时先给结论，再补关键依据，并且尽量贴近我的实际限制，不要把重点淹没在背景介绍里。".repeat(10);
+
+    const result = extractUserSignals([
+      {
+        uuid: "u-long-log",
+        sessionId: "s1",
+        timestamp: "2026-04-22T00:04:00Z",
+        type: "user",
+        role: "user",
+        content: pastedLog,
+      },
+      {
+        uuid: "u-long-pref",
+        sessionId: "s1",
+        timestamp: "2026-04-22T00:05:00Z",
+        type: "user",
+        role: "user",
+        content: longPreference,
+      },
+    ]);
+
+    expect(pastedLog.length).toBeGreaterThan(400);
+    expect(longPreference.length).toBeGreaterThan(400);
+    expect(result.messages).toEqual([longPreference]);
+    expect(result.stats.userMessages).toBe(2);
+    expect(result.stats.dedupedMessages).toBe(1);
   });
 
   test("normalizeCopaResponse fills missing factors with defaults", () => {
@@ -99,10 +136,45 @@ describe("copaProfileService", () => {
     expect(result.promptSummary).toContain("Prioritize");
   });
 
+  test("normalizeCopaResponse accepts full English factor names", () => {
+    const result = normalizeCopaResponse({
+      factors: {
+        "Cognitive Trust": {
+          user_profile_description: "Wants claims backed by evidence.",
+          response_strategy: ["Cite concrete evidence."],
+        },
+      },
+      prompt_summary: "Lead with evidence.",
+    });
+
+    expect(result.factors.CT.user_profile_description).toContain("evidence");
+    expect(result.factors.CT.response_strategy).toEqual(["Cite concrete evidence."]);
+    expect(result.promptSummary).toBe("Lead with evidence.");
+  });
+
+  test("buildCopaPrompt localizes the prompt to English and Chinese", () => {
+    const english = buildCopaPrompt(["Please keep this practical."], "en");
+    const chinese = buildCopaPrompt(["请保持结论简洁。"], "zh");
+
+    expect(english.system).toContain("You are generating a CoPA profile from user-only interaction history.");
+    expect(english.system).toContain("- Cognitive Trust -");
+    expect(english.system).not.toContain("CT:");
+    expect(english.system).not.toContain("Cognitive Trust (CT)");
+    expect(english.user).toContain("Generate a CoPA profile from these user messages only.");
+    expect(english.user).toContain("- Please keep this practical.");
+
+    expect(chinese.system).toContain("你正在基于仅包含用户消息的互动历史生成 CoPA profile。");
+    expect(chinese.system).toContain("- 认知信任 -");
+    expect(chinese.system).not.toContain("（CT）");
+    expect(chinese.user).toContain("请仅基于这些用户消息生成 CoPA profile。");
+    expect(chinese.user).toContain("- 请保持结论简洁。");
+  });
+
   test("saveCopaSnapshot appends snapshots and loadCopaSnapshots returns latest first", async () => {
     const first: CopaSnapshot = {
       id: "snap-1",
       createdAt: "2026-04-22T10:00:00.000Z",
+      language: "en",
       scope: {
         type: "project",
         ref: "/tmp/project-a",
@@ -130,6 +202,7 @@ describe("copaProfileService", () => {
       ...first,
       id: "snap-2",
       createdAt: "2026-04-22T11:00:00.000Z",
+      language: "zh",
       promptSummary: "Summary two",
       markdown: "markdown two",
     };
@@ -140,12 +213,14 @@ describe("copaProfileService", () => {
     const snapshots = await loadCopaSnapshots();
 
     expect(snapshots.map((snapshot) => snapshot.id)).toEqual(["snap-2", "snap-1"]);
+    expect(snapshots.map((snapshot) => snapshot.language)).toEqual(["zh", "en"]);
   });
 
   test("deleteCopaSnapshot removes only the target snapshot", async () => {
     const first: CopaSnapshot = {
       id: "snap-1",
       createdAt: "2026-04-22T10:00:00.000Z",
+      language: "en",
       scope: {
         type: "project",
         ref: "/tmp/project-a",
@@ -173,6 +248,7 @@ describe("copaProfileService", () => {
       ...first,
       id: "snap-2",
       createdAt: "2026-04-22T11:00:00.000Z",
+      language: "en",
       promptSummary: "Summary two",
       markdown: "markdown two",
     };
@@ -188,11 +264,12 @@ describe("copaProfileService", () => {
   test("renderCopaMarkdown includes all factor sections and metadata", () => {
     const normalized = normalizeCopaResponse({
       prompt_summary: "Keep answers practical and trustworthy.",
-    });
+    }, "en");
 
     const markdown = renderCopaMarkdown({
       id: "snap-1",
       createdAt: "2026-04-22T12:00:00.000Z",
+      language: "en",
       scope: {
         type: "global",
         ref: "global",
@@ -220,6 +297,77 @@ describe("copaProfileService", () => {
     expect(markdown).toContain("### Cognitive Trust (CT)");
     expect(markdown).toContain("### Affective and Motivational Resonance (AMR)");
     expect(markdown).toContain("## Metadata");
+  });
+
+  test("createSnapshot freezes the generation language and localized factor copy", () => {
+    const normalized = normalizeCopaResponse({}, "zh");
+
+    const snapshot = createSnapshot({
+      language: "zh",
+      scope: {
+        type: "global",
+        ref: "global",
+        label: "全局历史",
+        key: buildScopeKey({ type: "global", ref: "global", providerScope: ["claude"] }),
+      },
+      providerScope: ["claude"],
+      sourceStats: {
+        projectCount: 1,
+        sessionCount: 1,
+        rawUserMessages: 3,
+        dedupedUserMessages: 3,
+        truncatedMessages: 0,
+      },
+      modelConfig: {
+        baseUrl: "https://example.com/v1",
+        model: "gpt-test",
+      },
+      promptSummary: "保持聚焦、简洁和严谨。",
+      factors: normalized.factors,
+    });
+
+    expect(snapshot.language).toBe("zh");
+    expect(snapshot.factors.CT.title).toBe("认知信任（CT）");
+    expect(snapshot.markdown).toContain("## CoPA 画像");
+  });
+
+  test("loadCopaSnapshots backfills a missing legacy snapshot language without rewriting its copy", async () => {
+    localStorage.setItem(
+      "webui:copa-profiles.json:snapshots",
+      JSON.stringify([
+        {
+          id: "legacy-1",
+          createdAt: "2026-04-22T09:00:00.000Z",
+          scope: {
+            type: "global",
+            ref: "global",
+            label: "Global",
+            key: "global:all",
+          },
+          providerScope: ["claude"],
+          sourceStats: {
+            projectCount: 1,
+            sessionCount: 1,
+            rawUserMessages: 8,
+            dedupedUserMessages: 6,
+            truncatedMessages: 0,
+          },
+          modelConfig: {
+            baseUrl: "https://example.com/v1",
+            model: "gpt-test",
+          },
+          promptSummary: "保持简洁。",
+          factors: normalizeCopaResponse({}, "zh").factors,
+          markdown: "## CoPA 画像",
+        },
+      ])
+    );
+
+    const [snapshot] = await loadCopaSnapshots();
+
+    expect(snapshot.language).toBe("zh");
+    expect(snapshot.promptSummary).toBe("保持简洁。");
+    expect(snapshot.factors.CT.title).toBe("认知信任（CT）");
   });
 
   test("loadCopaConfig migrates legacy single-config storage into dual llm config", async () => {

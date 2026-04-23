@@ -9,6 +9,11 @@ const mockLoadCopaConfig = vi.fn();
 const mockLoadCopaSnapshots = vi.fn();
 const mockLoadFigurePools = vi.fn();
 const mockLoadFigureResonanceHistory = vi.fn();
+const mockRequestCopaProfile = vi.fn();
+const mockCreateSnapshot = vi.fn();
+const mockExtractUserSignals = vi.fn();
+const mockSaveCopaSnapshot = vi.fn();
+const mockApi = vi.fn();
 const mockSaveCopaConfig = vi.fn();
 const mockOpenBinaryFileDialog = vi.fn();
 const mockSaveBinaryFileDialog = vi.fn();
@@ -25,7 +30,7 @@ vi.mock("@/store/useAppStore", () => ({
 }));
 
 vi.mock("@/services/api", () => ({
-  api: vi.fn(),
+  api: (...args: unknown[]) => mockApi(...args),
 }));
 
 vi.mock("@/utils/fileDialog", () => ({
@@ -60,17 +65,20 @@ vi.mock("@/services/copaProfileService", () => ({
     },
   },
   buildScopeKey: ({ type, ref }: { type: string; ref: string }) => `${type}:${ref}`,
-  createSnapshot: vi.fn(),
-  extractUserSignals: vi.fn(() => ({ messages: [], stats: { userMessages: 0, dedupedMessages: 0, truncatedMessages: 0 } })),
+  createSnapshot: (...args: unknown[]) => mockCreateSnapshot(...args),
+  extractUserSignals: (...args: unknown[]) =>
+    mockExtractUserSignals(...args),
   loadCopaConfig: () => mockLoadCopaConfig(),
   loadCopaSnapshots: () => mockLoadCopaSnapshots(),
-  requestCopaProfile: vi.fn(),
+  normalizeCopaLanguage: (language?: string) =>
+    typeof language === "string" && language.toLowerCase().startsWith("zh") ? "zh" : "en",
+  requestCopaProfile: (...args: unknown[]) => mockRequestCopaProfile(...args),
   resolveCopaModelConfig: vi.fn((config) => config.copa),
   resolveResonanceModelConfig: vi.fn((config) =>
     config.resonance.enabled ? config.resonance.config : config.copa
   ),
   saveCopaConfig: (...args: unknown[]) => mockSaveCopaConfig(...args),
-  saveCopaSnapshot: vi.fn(),
+  saveCopaSnapshot: (...args: unknown[]) => mockSaveCopaSnapshot(...args),
   deleteCopaSnapshot: vi.fn(),
 }));
 
@@ -150,11 +158,17 @@ describe("CopaProfilePage resonance layout", () => {
     });
 
     mockSaveCopaConfig.mockImplementation(async (next) => next);
+    mockRequestCopaProfile.mockReset();
+    mockCreateSnapshot.mockReset();
+    mockExtractUserSignals.mockReset();
+    mockSaveCopaSnapshot.mockReset();
+    mockApi.mockReset();
 
     mockLoadCopaSnapshots.mockResolvedValue([
       {
         id: "snapshot-1",
         createdAt: "2026-04-23T00:00:00.000Z",
+        language: "en",
         scope: {
           type: "global",
           ref: "global",
@@ -204,6 +218,144 @@ describe("CopaProfilePage resonance layout", () => {
     mockExportFigurePoolToZip.mockResolvedValue(new Uint8Array([1, 2, 3]));
     mockImportFigurePoolFromZip.mockResolvedValue(null);
     mockInspectFigurePoolZip.mockResolvedValue(null);
+    mockExtractUserSignals.mockReturnValue({
+      messages: [],
+      stats: { userMessages: 0, dedupedMessages: 0, truncatedMessages: 0 },
+    });
+  });
+
+  it("passes the normalized UI language into CoPA generation and snapshot creation", async () => {
+    mockUseTranslation.mockReturnValue({
+      t: (
+        _key: string,
+        fallbackOrOptions?: string | { defaultValue?: string },
+        values?: Record<string, string | number>
+      ) => {
+        if (typeof fallbackOrOptions === "string") {
+          return fallbackOrOptions;
+        }
+        if (fallbackOrOptions?.defaultValue) {
+          return fallbackOrOptions.defaultValue;
+        }
+        return values?.defaultValue ? String(values.defaultValue) : _key;
+      },
+      i18n: {
+        resolvedLanguage: "zh-CN",
+        language: "zh-CN",
+      },
+    });
+
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "load_project_sessions") {
+        return [
+          {
+            actual_session_id: "session-1",
+            file_path: "/tmp/echoprofile/session-1.jsonl",
+            provider: "claude",
+            summary: "Session 1",
+          },
+        ];
+      }
+      if (command === "load_provider_messages") {
+        return [
+          {
+            uuid: "u1",
+            sessionId: "session-1",
+            timestamp: "2026-04-23T00:00:00.000Z",
+            type: "user",
+            role: "user",
+            content: "请保持结构化。",
+          },
+        ];
+      }
+      return [];
+    });
+    mockExtractUserSignals.mockReturnValue({
+      messages: ["请保持结构化。"],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
+    mockRequestCopaProfile.mockResolvedValue({
+      promptSummary: "保持结构化。",
+      factors: {},
+    });
+    mockCreateSnapshot.mockReturnValue({
+      id: "snapshot-zh",
+      createdAt: "2026-04-23T01:00:00.000Z",
+      language: "zh",
+      scope: {
+        type: "global",
+        ref: "global",
+        label: "全局历史",
+        key: "global:global",
+      },
+      providerScope: ["claude"],
+      sourceStats: {
+        projectCount: 1,
+        sessionCount: 1,
+        rawUserMessages: 1,
+        dedupedUserMessages: 1,
+        truncatedMessages: 0,
+      },
+      modelConfig: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        temperature: 0.2,
+      },
+      promptSummary: "保持结构化。",
+      factors: {},
+      markdown: "# CoPA 画像",
+    });
+    mockSaveCopaSnapshot.mockResolvedValue([
+      {
+        id: "snapshot-zh",
+        createdAt: "2026-04-23T01:00:00.000Z",
+        language: "zh",
+        scope: {
+          type: "global",
+          ref: "global",
+          label: "全局历史",
+          key: "global:global",
+        },
+        providerScope: ["claude"],
+        sourceStats: {
+          projectCount: 1,
+          sessionCount: 1,
+          rawUserMessages: 1,
+          dedupedUserMessages: 1,
+          truncatedMessages: 0,
+        },
+        modelConfig: {
+          baseUrl: "http://example.com/v1",
+          model: "test-model",
+          temperature: 0.2,
+        },
+        promptSummary: "保持结构化。",
+        factors: {},
+        markdown: "# CoPA 画像",
+      },
+    ]);
+
+    render(<CopaProfilePage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("A concise summary.").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate CoPA Profile" }));
+
+    await waitFor(() => {
+      expect(mockRequestCopaProfile).toHaveBeenCalledWith(
+        ["请保持结构化。"],
+        expect.objectContaining({ model: "test-model" }),
+        "zh"
+      );
+    });
+
+    expect(mockCreateSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        language: "zh",
+      })
+    );
   });
 
   it("places figure pool controls in the thought echoes section instead of the shared config card", async () => {

@@ -1,36 +1,68 @@
-import { useEffect, useMemo, useState } from "react";
-import { Brain, Download, Loader2, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Brain, Download, LibraryBig, Loader2, RefreshCw, Settings2, Sparkles, Trash2, X } from "lucide-react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { api } from "@/services/api";
-import { saveFileDialog } from "@/utils/fileDialog";
+import { openBinaryFileDialog, saveBinaryFileDialog, saveFileDialog } from "@/utils/fileDialog";
 import { useAppStore } from "@/store/useAppStore";
 import type { ClaudeMessage, ClaudeProject, ClaudeSession } from "@/types";
-import { CopaFactorCard } from "./CopaFactorCard";
-import { ScientistResonanceCard } from "./ScientistResonanceCard";
+import { Button } from "@/components/ui/button";
 import {
-  DEFAULT_COPA_MODEL_CONFIG,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { CopaFactorCard } from "./CopaFactorCard";
+import { FigurePoolManager } from "./FigurePoolManager";
+import { FigureResonanceCard } from "./FigureResonanceCard";
+import {
+  DEFAULT_COPA_LLM_CONFIG,
   buildScopeKey,
   createSnapshot,
   extractUserSignals,
   loadCopaConfig,
   loadCopaSnapshots,
   requestCopaProfile,
+  resolveCopaModelConfig,
+  resolveResonanceModelConfig,
   saveCopaConfig,
   saveCopaSnapshot,
   deleteCopaSnapshot,
 } from "@/services/copaProfileService";
-import type { CopaModelConfig, CopaSnapshot, CopaScopeType } from "@/types/copaProfile";
-import type { ScientistResonanceResult } from "@/types/scientistResonance";
+import type { CopaLlmConfigState, CopaModelConfig, CopaSnapshot, CopaScopeType } from "@/types/copaProfile";
+import type { FigureResonanceResult } from "@/types/figureResonance";
 import {
-  deleteScientistResonanceResultsForProfile,
-  generateScientistResonance,
-  loadScientistResonanceResult,
-} from "@/services/scientistResonanceService";
+  deleteFigureResonanceResultsForProfile,
+  generateFigureResonance,
+  loadFigureResonanceHistory,
+} from "@/services/figureResonanceService";
+import type { FigurePool, FigureRecordInput } from "@/types/figurePool";
+import {
+  createFigureRecord,
+  deleteFigurePool,
+  deleteFigureRecord,
+  exportFigurePoolToZip,
+  importFigurePoolFromZip,
+  inspectFigurePoolZip,
+  loadFigurePools,
+  renameFigurePool,
+  setDefaultFigurePool,
+  updateFigureRecord,
+} from "@/services/figurePoolService";
+import type { FigurePoolZipInspection } from "@/types/figurePool";
 
 const MAX_PROMPT_SIGNALS = 300;
-type CopaSubview = "profile" | "resonance";
+type CopaSubview = "profile" | "resonance" | "pools";
+
+interface PendingFigurePoolImport {
+  archive: Uint8Array;
+  inspection: FigurePoolZipInspection;
+}
 
 function dedupeProviders(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort();
@@ -76,7 +108,9 @@ export function CopaProfilePage() {
   const [sessionsForScope, setSessionsForScope] = useState<ClaudeSession[]>([]);
   const [providerScope, setProviderScope] = useState<string[]>([]);
   const [activeSubview, setActiveSubview] = useState<CopaSubview>("profile");
-  const [config, setConfig] = useState<CopaModelConfig>(DEFAULT_COPA_MODEL_CONFIG);
+  const [activeLlmConfigSection, setActiveLlmConfigSection] = useState<"copa" | "resonance">("copa");
+  const [isLlmConfigOpen, setIsLlmConfigOpen] = useState(false);
+  const [config, setConfig] = useState<CopaLlmConfigState>(DEFAULT_COPA_LLM_CONFIG);
   const [snapshots, setSnapshots] = useState<CopaSnapshot[]>([]);
   const [currentSnapshotId, setCurrentSnapshotId] = useState<string>("");
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
@@ -84,7 +118,15 @@ export function CopaProfilePage() {
   const [isGeneratingResonance, setIsGeneratingResonance] = useState(false);
   const [error, setError] = useState("");
   const [resonanceError, setResonanceError] = useState("");
-  const [resonanceResult, setResonanceResult] = useState<ScientistResonanceResult | null>(null);
+  const [resonanceResult, setResonanceResult] = useState<FigureResonanceResult | null>(null);
+  const [resonanceHistory, setResonanceHistory] = useState<FigureResonanceResult[]>([]);
+  const [figurePools, setFigurePools] = useState<FigurePool[]>([]);
+  const [selectedPoolId, setSelectedPoolId] = useState("");
+  const [importSummaryPool, setImportSummaryPool] = useState<FigurePool | null>(null);
+  const [pendingFigurePoolImport, setPendingFigurePoolImport] = useState<PendingFigurePoolImport | null>(null);
+  const [pendingFigurePoolImportName, setPendingFigurePoolImportName] = useState("");
+  const [figurePoolImportError, setFigurePoolImportError] = useState("");
+  const llmConfigPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setProjectPath((current) => current || selectedProject?.path || projects[0]?.path || "");
@@ -97,7 +139,51 @@ export function CopaProfilePage() {
   useEffect(() => {
     void loadCopaConfig().then(setConfig);
     void loadCopaSnapshots().then(setSnapshots);
+    void loadFigurePools().then((pools) => {
+      setFigurePools(pools);
+      const defaultPool = pools.find((pool) => pool.isDefault) ?? pools[0] ?? null;
+      setSelectedPoolId(defaultPool?.id ?? "");
+    });
   }, []);
+
+  useEffect(() => {
+    if (!isLlmConfigOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (llmConfigPanelRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      setIsLlmConfigOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsLlmConfigOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isLlmConfigOpen]);
+
+  useEffect(() => {
+    if (figurePools.length === 0) {
+      setSelectedPoolId("");
+      return;
+    }
+
+    if (!figurePools.some((pool) => pool.id === selectedPoolId)) {
+      const defaultPool = figurePools.find((pool) => pool.isDefault) ?? figurePools[0] ?? null;
+      setSelectedPoolId(defaultPool?.id ?? "");
+    }
+  }, [figurePools, selectedPoolId]);
 
   const selectedProjectForScope = useMemo(
     () => projects.find((project) => project.path === projectPath) ?? null,
@@ -179,39 +265,91 @@ export function CopaProfilePage() {
     [currentSnapshotId, visibleSnapshots]
   );
 
+  const selectedFigurePool = useMemo(
+    () => figurePools.find((pool) => pool.id === selectedPoolId) ?? null,
+    [figurePools, selectedPoolId]
+  );
+
+  const isInheritedResonanceConfig = activeLlmConfigSection === "resonance" && !config.resonance.enabled;
+  const activeLlmModelConfig =
+    activeLlmConfigSection === "copa"
+      ? config.copa
+      : config.resonance.enabled
+        ? config.resonance.config
+        : resolveCopaModelConfig(config);
+
   useEffect(() => {
     if (!currentSnapshot) {
       setResonanceResult(null);
+      setResonanceHistory([]);
       setResonanceError("");
       return;
     }
 
     let cancelled = false;
     setResonanceError("");
-    void loadScientistResonanceResult({
+    void loadFigureResonanceHistory({
       scopeKey: currentScopeKey,
       profileId: currentSnapshot.id,
       language: i18n.resolvedLanguage || i18n.language || "zh",
-    }).then((result) => {
+    }).then((results) => {
       if (!cancelled) {
-        setResonanceResult(result);
+        setResonanceHistory(results);
+        const selectedResult =
+          results.find((item) => item.pool_id === selectedPoolId) ?? results[0] ?? null;
+        setResonanceResult(selectedResult);
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [currentScopeKey, currentSnapshot, i18n.language, i18n.resolvedLanguage]);
+  }, [currentScopeKey, currentSnapshot, i18n.language, i18n.resolvedLanguage, selectedPoolId]);
 
   const selectedSessionForScope = useMemo(
     () => sessionsForScope.find((session) => session.file_path === sessionPath) ?? null,
     [sessionPath, sessionsForScope]
   );
 
-  const handleConfigChange = <K extends keyof CopaModelConfig>(key: K, value: CopaModelConfig[K]) => {
-    const next = { ...config, [key]: value };
+  const persistConfig = (next: CopaLlmConfigState) => {
     setConfig(next);
     void saveCopaConfig(next);
+  };
+
+  const handleCopaConfigChange = <K extends keyof CopaModelConfig>(key: K, value: CopaModelConfig[K]) => {
+    persistConfig({
+      ...config,
+      copa: {
+        ...config.copa,
+        [key]: value,
+      },
+    });
+  };
+
+  const handleResonanceConfigToggle = (enabled: boolean) => {
+    persistConfig({
+      ...config,
+      resonance: {
+        enabled,
+        config: enabled && !config.resonance.enabled ? { ...resolveCopaModelConfig(config) } : config.resonance.config,
+      },
+    });
+  };
+
+  const handleResonanceConfigChange = <K extends keyof CopaModelConfig>(
+    key: K,
+    value: CopaModelConfig[K]
+  ) => {
+    persistConfig({
+      ...config,
+      resonance: {
+        ...config.resonance,
+        config: {
+          ...config.resonance.config,
+          [key]: value,
+        },
+      },
+    });
   };
 
   const toggleProvider = (provider: string) => {
@@ -319,7 +457,7 @@ export function CopaProfilePage() {
       }
 
       await saveCopaConfig(config);
-      const result = await requestCopaProfile(limitedSignals, config);
+      const result = await requestCopaProfile(limitedSignals, resolveCopaModelConfig(config));
       const snapshot = createSnapshot({
         scope: {
           type: scopeType,
@@ -340,9 +478,9 @@ export function CopaProfilePage() {
           truncatedMessages: extracted.stats.truncatedMessages + overflowCount,
         },
         modelConfig: {
-          baseUrl: config.baseUrl,
-          model: config.model,
-          temperature: config.temperature,
+          baseUrl: resolveCopaModelConfig(config).baseUrl,
+          model: resolveCopaModelConfig(config).model,
+          temperature: resolveCopaModelConfig(config).temperature,
         },
         promptSummary: result.promptSummary,
         factors: result.factors,
@@ -365,20 +503,31 @@ export function CopaProfilePage() {
       );
       return;
     }
+    if (!selectedFigurePool) {
+      setResonanceError(
+        t("common.copa.resonance.pool.error.noPool", "Select a figure pool before generating thought echoes.")
+      );
+      return;
+    }
 
     setIsGeneratingResonance(true);
     setResonanceError("");
 
     try {
       const collected = await collectScopeMessages();
-      const result = await generateScientistResonance({
+      const result = await generateFigureResonance({
         scopeKey: currentScopeKey,
+        poolId: selectedFigurePool.id,
         profileSnapshot: currentSnapshot,
         recentMessages: extractUserSignals(collected.messages).messages,
-        config,
+        config: resolveResonanceModelConfig(config),
         language: i18n.resolvedLanguage || i18n.language || "zh",
       });
       setResonanceResult(result);
+      setResonanceHistory((current) => [
+        result,
+        ...current.filter((item) => item.cache_key !== result.cache_key),
+      ]);
     } catch (generationError) {
       setResonanceError(generationError instanceof Error ? generationError.message : String(generationError));
     } finally {
@@ -412,12 +561,122 @@ export function CopaProfilePage() {
 
   const handleDeleteSnapshot = async (snapshotId: string) => {
     const nextSnapshots = await deleteCopaSnapshot(snapshotId);
-    await deleteScientistResonanceResultsForProfile(snapshotId);
+    await deleteFigureResonanceResultsForProfile(snapshotId);
     setSnapshots(nextSnapshots);
     if (currentSnapshotId === snapshotId) {
       const nextVisible = nextSnapshots.filter((snapshot) => snapshot.scope.key === currentScopeKey);
       setCurrentSnapshotId(nextVisible[0]?.id ?? "");
     }
+  };
+
+  const refreshFigurePools = async () => {
+    const pools = await loadFigurePools();
+    setFigurePools(pools);
+    return pools;
+  };
+
+  const resetFigurePoolImportDialog = () => {
+    setPendingFigurePoolImport(null);
+    setPendingFigurePoolImportName("");
+    setFigurePoolImportError("");
+  };
+
+  const completeFigurePoolImport = async (archive: Uint8Array, name?: string) => {
+    const imported = await importFigurePoolFromZip(archive, name ? { name } : undefined);
+    await refreshFigurePools();
+    setImportSummaryPool(imported);
+    setSelectedPoolId(imported.id);
+    resetFigurePoolImportDialog();
+  };
+
+  const handleImportFigurePool = async () => {
+    try {
+      const archive = await openBinaryFileDialog({
+        filters: [{ name: "ZIP", extensions: ["zip"] }],
+      });
+
+      if (!archive) {
+        return;
+      }
+
+      const inspection = await inspectFigurePoolZip(archive);
+      if (inspection.hasNameConflict) {
+        setPendingFigurePoolImport({ archive, inspection });
+        setPendingFigurePoolImportName(inspection.payload.name);
+        setFigurePoolImportError("");
+        return;
+      }
+
+      await completeFigurePoolImport(archive);
+    } catch (figurePoolError) {
+      setError(figurePoolError instanceof Error ? figurePoolError.message : String(figurePoolError));
+    }
+  };
+
+  const handleExportFigurePool = async (poolId: string) => {
+    const archive = await exportFigurePoolToZip(poolId);
+    const poolName = figurePools.find((pool) => pool.id === poolId)?.name || "figure-pool";
+
+    await saveBinaryFileDialog(archive, {
+      defaultPath: `${poolName}.zip`,
+      filters: [{ name: "ZIP", extensions: ["zip"] }],
+      mimeType: "application/zip",
+    });
+  };
+
+  const handleConfirmFigurePoolImport = async () => {
+    if (!pendingFigurePoolImport) {
+      return;
+    }
+
+    try {
+      await completeFigurePoolImport(
+        pendingFigurePoolImport.archive,
+        pendingFigurePoolImportName.trim()
+      );
+    } catch (figurePoolError) {
+      setFigurePoolImportError(
+        figurePoolError instanceof Error ? figurePoolError.message : String(figurePoolError)
+      );
+    }
+  };
+
+  const handleRenameFigurePool = async (poolId: string, name: string) => {
+    await renameFigurePool(poolId, name);
+    await refreshFigurePools();
+  };
+
+  const handleSetDefaultFigurePool = async (poolId: string) => {
+    const pools = await setDefaultFigurePool(poolId);
+    setFigurePools(pools);
+    setSelectedPoolId(poolId);
+  };
+
+  const handleDeleteFigurePool = async (poolId: string) => {
+    const pools = await deleteFigurePool(poolId);
+    setFigurePools(pools);
+    if (selectedPoolId === poolId) {
+      setSelectedPoolId(pools.find((pool) => pool.isDefault)?.id ?? pools[0]?.id ?? "");
+    }
+  };
+
+  const handleCreateFigureRecord = async (poolId: string, record: FigureRecordInput) => {
+    await createFigureRecord(poolId, record);
+    await refreshFigurePools();
+  };
+
+  const handleUpdateFigureRecord = async (
+    poolId: string,
+    slug: string,
+    record: FigureRecordInput
+  ) => {
+    await updateFigureRecord(poolId, slug, record);
+    await refreshFigurePools();
+  };
+
+  const handleDeleteFigureRecord = async (poolId: string, slug: string) => {
+    await deleteFigureRecord(poolId, slug);
+    await refreshFigurePools();
   };
 
   const formatSnapshotTime = (value: string) => {
@@ -438,8 +697,8 @@ export function CopaProfilePage() {
     <div className="h-full overflow-auto">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 md:p-6">
         <section className="rounded-3xl border border-border/60 bg-[linear-gradient(135deg,rgba(22,163,74,0.12),rgba(255,255,255,0.92))] p-6 shadow-sm">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-8">
+            <div className="max-w-3xl xl:min-w-0 xl:flex-1">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
                 <Brain className="h-3.5 w-3.5" />
                 {t("common.copa.badge", "User-only inference")}
@@ -447,58 +706,235 @@ export function CopaProfilePage() {
               <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
                 {t("common.copa.title", "CoPA Profile")}
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+              <p className="mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-6 text-muted-foreground">
                 {activeSubview === "profile"
                   ? t(
                       "common.copa.description",
                       "Generate a factor-based CoPA profile from historical user messages across a session, a project, or your full history."
                     )
+                  : activeSubview === "pools"
+                    ? t(
+                        "common.copa.resonance.pool.description",
+                        "Manage reusable figure pools for Thought Echoes, including import, export, and record validation."
+                      )
                   : t(
                       "common.copa.resonance.description",
-                      "Map the currently selected CoPA Profile to long-term and recent-state scientist mirrors."
+                      "Map the currently selected CoPA Profile to long-term and recent-state figure mirrors."
                     )}
               </p>
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-background/70 p-2">
-              <button
-                type="button"
-                onClick={() => setActiveSubview("profile")}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                  activeSubview === "profile"
-                    ? "bg-foreground text-background"
-                    : "bg-background/80 text-foreground hover:bg-background"
-                }`}
-              >
-                <Sparkles className="h-4 w-4" />
-                {t("common.copa.title", "CoPA Profile")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSubview("resonance")}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                  activeSubview === "resonance"
-                    ? "bg-emerald-600 text-white"
-                    : "bg-background/80 text-foreground hover:bg-background"
-                }`}
-              >
-                <RefreshCw className="h-4 w-4" />
-                {t("common.copa.resonance.title", "Thought Echoes")}
-              </button>
+            <div className="w-full shrink-0 xl:ml-auto xl:w-auto xl:max-w-none">
+              <div className="flex flex-wrap items-center gap-3 xl:justify-end">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubview("profile")}
+                    className={`inline-flex items-center gap-2 rounded-2xl border border-border/60 px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
+                      activeSubview === "profile"
+                        ? "bg-foreground text-background"
+                        : "bg-background/80 text-foreground hover:bg-background"
+                    }`}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {t("common.copa.title", "CoPA Profile")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubview("resonance")}
+                    className={`inline-flex items-center gap-2 rounded-2xl border border-border/60 px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
+                      activeSubview === "resonance"
+                        ? "bg-foreground text-background"
+                        : "bg-background/80 text-foreground hover:bg-background"
+                    }`}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    {t("common.copa.resonance.title", "Thought Echoes")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubview("pools")}
+                    className={`inline-flex items-center gap-2 rounded-2xl border border-border/60 px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
+                      activeSubview === "pools"
+                        ? "bg-foreground text-background"
+                        : "bg-background/80 text-foreground hover:bg-background"
+                    }`}
+                  >
+                    <LibraryBig className="h-4 w-4" />
+                    {t("common.copa.resonance.pool.title", "Figure Pools")}
+                  </button>
+                </div>
+
+                <div ref={llmConfigPanelRef} className="relative shrink-0">
+                  <button
+                    type="button"
+                    aria-label={
+                      isLlmConfigOpen
+                        ? t("common.copa.llmConfig.closeAria", "Close LLM settings")
+                        : t("common.copa.llmConfig.openAria", "Open LLM settings")
+                    }
+                    aria-expanded={isLlmConfigOpen}
+                    aria-controls="copa-llm-config-panel"
+                    onClick={() => setIsLlmConfigOpen((current) => !current)}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/80 text-foreground shadow-sm transition-colors hover:bg-background"
+                  >
+                    {isLlmConfigOpen ? <X className="h-5 w-5" /> : <Settings2 className="h-5 w-5" />}
+                  </button>
+
+                  {isLlmConfigOpen ? (
+                    <div
+                      id="copa-llm-config-panel"
+                      role="dialog"
+                      aria-label={t("common.copa.llmConfig.title", "LLM config")}
+                      className="absolute right-0 top-full z-30 mt-3 w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-border/70 bg-popover/95 p-4 text-popover-foreground shadow-2xl backdrop-blur"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            {t("common.copa.llmConfig.title", "LLM config")}
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {t(
+                              "common.copa.llmConfig.description",
+                              "Centralize CoPA and Thought Echoes model settings here."
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={t("common.copa.llmConfig.closeAria", "Close LLM settings")}
+                          onClick={() => setIsLlmConfigOpen(false)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-background/70 text-foreground transition-colors hover:bg-background"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="mt-4 flex items-center gap-2 rounded-xl border border-border/60 bg-background/70 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setActiveLlmConfigSection("copa")}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                            activeLlmConfigSection === "copa"
+                              ? "bg-foreground text-background"
+                              : "text-foreground hover:bg-background"
+                          }`}
+                        >
+                          {t("common.copa.llmConfig.copa", "CoPA config")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveLlmConfigSection("resonance")}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                            activeLlmConfigSection === "resonance"
+                              ? "bg-foreground text-background"
+                              : "text-foreground hover:bg-background"
+                          }`}
+                        >
+                          {t("common.copa.llmConfig.resonance", "Thought Echoes config")}
+                        </button>
+                      </div>
+
+                      {activeLlmConfigSection === "resonance" ? (
+                        <div className="mt-4">
+                          <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                            <input
+                              type="checkbox"
+                              checked={config.resonance.enabled}
+                              onChange={(event) => handleResonanceConfigToggle(event.target.checked)}
+                              className="h-4 w-4 rounded border-border/70"
+                            />
+                            {t("common.copa.llmConfig.resonance.toggle", "Use separate Thought Echoes config")}
+                          </label>
+                          {!config.resonance.enabled ? (
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              {t(
+                                "common.copa.llmConfig.resonance.inherit",
+                                "Thought Echoes will use the CoPA configuration until you enable a separate override."
+                              )}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      <div className={`mt-4 grid gap-3 ${isInheritedResonanceConfig ? "opacity-60" : ""}`}>
+                        <label className="block">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            {t("common.copa.baseUrl", "Base URL")}
+                          </span>
+                          <input
+                            value={activeLlmModelConfig.baseUrl}
+                            onChange={(event) =>
+                              activeLlmConfigSection === "copa"
+                                ? handleCopaConfigChange("baseUrl", event.target.value)
+                                : handleResonanceConfigChange("baseUrl", event.target.value)
+                            }
+                            disabled={isInheritedResonanceConfig}
+                            className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            {t("common.copa.model", "Model")}
+                          </span>
+                          <input
+                            value={activeLlmModelConfig.model}
+                            onChange={(event) =>
+                              activeLlmConfigSection === "copa"
+                                ? handleCopaConfigChange("model", event.target.value)
+                                : handleResonanceConfigChange("model", event.target.value)
+                            }
+                            disabled={isInheritedResonanceConfig}
+                            className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            {t("common.copa.apiKey", "API key")}
+                          </span>
+                          <input
+                            type="password"
+                            value={activeLlmModelConfig.apiKey ?? ""}
+                            onChange={(event) =>
+                              activeLlmConfigSection === "copa"
+                                ? handleCopaConfigChange("apiKey", event.target.value)
+                                : handleResonanceConfigChange("apiKey", event.target.value)
+                            }
+                            disabled={isInheritedResonanceConfig}
+                            className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="space-y-6">
+        {activeSubview === "pools" ? (
+          <section className="space-y-6">
+            <FigurePoolManager
+              pools={figurePools}
+              selectedPoolId={selectedPoolId}
+              importSummaryPool={importSummaryPool}
+              onSelectPool={setSelectedPoolId}
+              onImport={handleImportFigurePool}
+              onExport={handleExportFigurePool}
+              onRenamePool={handleRenameFigurePool}
+              onSetDefault={handleSetDefaultFigurePool}
+              onDeletePool={handleDeleteFigurePool}
+              onCreateRecord={handleCreateFigureRecord}
+              onUpdateRecord={handleUpdateFigureRecord}
+              onDeleteRecord={handleDeleteFigureRecord}
+            />
+          </section>
+        ) : (
+          <section className="space-y-6">
           <div className="space-y-6">
             <div className="rounded-3xl border border-border/60 bg-card/85 p-5 shadow-sm">
-              <div
-                className={`grid gap-5 ${
-                  activeSubview === "resonance"
-                    ? "xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
-                    : "lg:grid-cols-2"
-                }`}
-              >
+              <div className="grid gap-5 lg:grid-cols-2">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     {t("common.copa.scope.label", "Scope")}
@@ -588,62 +1024,6 @@ export function CopaProfilePage() {
                     </div>
                   )}
                 </div>
-
-                {activeSubview === "resonance" ? (
-                  <div className="flex flex-col">
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] opacity-0">
-                      {t("common.copa.actions", "Actions")}
-                    </span>
-                    <div className="mt-2 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => void handleGenerateResonance()}
-                        disabled={!currentSnapshot || isGeneratingResonance}
-                        className="inline-flex h-[52px] min-w-40 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-6 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {isGeneratingResonance ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          t("common.copa.resonance.regenerateShort", "重新生成")
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="mt-6 grid gap-4 lg:grid-cols-3">
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {t("common.copa.baseUrl", "Base URL")}
-                  </span>
-                  <input
-                    value={config.baseUrl}
-                    onChange={(event) => handleConfigChange("baseUrl", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {t("common.copa.model", "Model")}
-                  </span>
-                  <input
-                    value={config.model}
-                    onChange={(event) => handleConfigChange("model", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {t("common.copa.apiKey", "API key")}
-                  </span>
-                  <input
-                    type="password"
-                    value={config.apiKey ?? ""}
-                    onChange={(event) => handleConfigChange("apiKey", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground"
-                  />
-                </label>
               </div>
 
               {activeSubview === "profile" ? (
@@ -859,38 +1239,91 @@ export function CopaProfilePage() {
 
                   </>
                 ) : (
-                  <section className="rounded-3xl border border-border/60 bg-card/90 p-5 shadow-sm">
+                  <section className="rounded-3xl border border-border/60 bg-card/90 p-4 shadow-sm">
                     <div className="max-w-2xl">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        {t("common.copa.resonance.eyebrow", "Thought echoes")}
-                      </p>
-                      <h3 className="mt-2 text-xl font-semibold text-foreground">
+                      <h3 className="text-xl font-semibold text-foreground">
                         {t("common.copa.resonance.title", "Thought Echoes")}
                       </h3>
-                      <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                        {t(
-                          "common.copa.resonance.description",
-                          "Map the currently selected CoPA Profile to long-term and recent-state scientist mirrors."
-                        )}
-                      </p>
                     </div>
 
-                    <div className="mt-5 rounded-2xl border border-border/60 bg-background/60 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        {t("common.copa.title", "CoPA Profile")}
-                      </p>
-                      <p className="mt-2 text-base font-semibold text-foreground">{currentSnapshot.scope.label}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{currentSnapshot.promptSummary}</p>
+                    <div className="mt-3 rounded-2xl border border-border/60 bg-background/50 p-3">
+                      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            {t("common.copa.resonance.pool.select", "Figure pool")}
+                          </p>
+                          <select
+                            value={selectedPoolId}
+                            onChange={(event) => setSelectedPoolId(event.target.value)}
+                            className="mt-2 h-12 w-full rounded-2xl border border-border/70 bg-background px-3 text-sm text-foreground"
+                          >
+                            {figurePools.map((pool) => (
+                              <option key={pool.id} value={pool.id}>
+                                {`${pool.name} (${pool.validationSummary.validCount} 可用 / ${pool.validationSummary.invalidCount} 无效)`}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            {selectedFigurePool
+                              ? t(
+                                  "common.copa.resonance.pool.selectedHint",
+                                  "{{name}} will be used for the next generation; invalid records are skipped automatically.",
+                                  {
+                                    name: selectedFigurePool.name,
+                                    defaultValue: `${selectedFigurePool.name} will be used for the next generation; invalid records are skipped automatically.`,
+                                  }
+                                )
+                              : null}
+                          </p>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => void handleGenerateResonance()}
+                            disabled={!currentSnapshot || isGeneratingResonance || !selectedFigurePool}
+                            className="inline-flex h-12 min-w-40 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-6 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isGeneratingResonance ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              t("common.copa.resonance.regenerateShort", "重新生成")
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
                     {resonanceResult ? (
-                      <div className="mt-5 space-y-5">
+                      <div className="mt-3 rounded-2xl border border-border/60 bg-background/50 p-3.5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          {t("common.copa.resonance.viewingState", "Currently viewing")}
+                        </p>
+                        <p className="mt-1.5 text-sm font-medium text-foreground">
+                          {t("common.copa.resonance.viewingStateValue", "{{name}} history result", {
+                            name: resonanceResult.pool_name_snapshot,
+                            defaultValue: `${resonanceResult.pool_name_snapshot} history result`,
+                          })}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatSnapshotTime(resonanceResult.generated_at)}
+                          {resonanceResult.pool_deleted
+                            ? ` · ${t("common.copa.resonance.pool.deleted", "Original pool deleted")}`
+                            : resonanceResult.pool_updated
+                              ? ` · ${t("common.copa.resonance.pool.updated", "Pool has changed since generation")}`
+                              : ""}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {resonanceResult ? (
+                      <div className="mt-4 space-y-5">
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             {t("common.copa.resonance.longTerm", "Long-term resonance")}
                           </p>
                           <div className="mt-3">
-                            <ScientistResonanceCard
+                            <FigureResonanceCard
                               card={resonanceResult.long_term.primary}
                               label={t("common.copa.resonance.primary", "Primary")}
                             />
@@ -904,7 +1337,7 @@ export function CopaProfilePage() {
                             </p>
                             <div className="mt-3 grid gap-4 xl:grid-cols-2">
                               {resonanceResult.long_term.secondary.map((card) => (
-                                <ScientistResonanceCard
+                                <FigureResonanceCard
                                   key={card.slug}
                                   card={card}
                                   label={t("common.copa.resonance.secondaryShort", "Secondary")}
@@ -921,7 +1354,7 @@ export function CopaProfilePage() {
                               {t("common.copa.resonance.recentState", "Recent state")}
                             </p>
                             <div className="mt-3">
-                              <ScientistResonanceCard
+                              <FigureResonanceCard
                                 card={resonanceResult.recent_state}
                                 label={t("common.copa.resonance.recentStateShort", "Recent")}
                                 compact
@@ -936,6 +1369,43 @@ export function CopaProfilePage() {
                             )}
                           </div>
                         )}
+
+                        {resonanceHistory.length > 0 ? (
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                              {t("common.copa.resonance.history", "Thought echoes history")}
+                            </p>
+                            <div className="mt-3 space-y-2">
+                              {resonanceHistory.map((item) => (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => setResonanceResult(item)}
+                                  className={`w-full rounded-2xl border p-3 text-left transition-colors ${
+                                    resonanceResult.id === item.id
+                                      ? "border-emerald-500/40 bg-emerald-500/10"
+                                      : "border-border/60 bg-background/60 hover:bg-background"
+                                  }`}
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {item.pool_name_snapshot}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatSnapshotTime(item.generated_at)}
+                                    </p>
+                                  </div>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    {item.long_term.primary.name}
+                                    {item.recent_state
+                                      ? ` · ${t("common.copa.resonance.recentState", "Recent state")}`
+                                      : ""}
+                                  </p>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     ) : (
                       <div className="mt-5 rounded-2xl border border-dashed border-border/70 bg-background/60 px-4 py-5 text-sm text-muted-foreground">
@@ -984,8 +1454,68 @@ export function CopaProfilePage() {
               </div>
             )}
           </div>
-        </section>
+          </section>
+        )}
       </div>
+
+      <Dialog
+        open={pendingFigurePoolImport != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            resetFigurePoolImportDialog();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {t("common.copa.resonance.pool.importConflictTitle", "Rename imported pool")}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                "common.copa.resonance.pool.importConflictDescription",
+                'A pool named "{{name}}" already exists. Choose a new name before importing this ZIP.',
+                {
+                  name:
+                    pendingFigurePoolImport?.inspection.conflictingPoolName ??
+                    pendingFigurePoolImport?.inspection.payload.name ??
+                    "",
+                }
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                {t("common.copa.resonance.pool.name", "Pool name")}
+              </span>
+              <Input
+                value={pendingFigurePoolImportName}
+                onChange={(event) => setPendingFigurePoolImportName(event.target.value)}
+                placeholder={t("common.copa.resonance.pool.name", "Pool name")}
+                className="mt-2"
+              />
+            </label>
+
+            {figurePoolImportError ? (
+              <p className="text-sm text-destructive">{figurePoolImportError}</p>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={resetFigurePoolImportDialog}>
+              {t("common.cancel", "Cancel")}
+            </Button>
+            <Button
+              onClick={() => void handleConfirmFigurePoolImport()}
+              disabled={!pendingFigurePoolImportName.trim()}
+            >
+              {t("common.copa.resonance.pool.import", "Import")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

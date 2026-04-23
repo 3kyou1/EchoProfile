@@ -29,6 +29,15 @@ function uint8ArrayToBase64(data: Uint8Array): string {
   return btoa(chunks.join(""));
 }
 
+function base64ToUint8Array(value: string): Uint8Array {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 /**
  * Show a "Save file" dialog and write content.
  *
@@ -162,6 +171,75 @@ export async function openFileDialog(
     // User cancelled — oncancel (Chrome 113+, Firefox 124+, Safari 16.4+)
     input.oncancel = () => safeResolve(null);
     // Fallback for older browsers: detect cancel via window focus
+    const focusHandler = () => {
+      setTimeout(() => {
+        if (!input.files?.length) safeResolve(null);
+      }, 500);
+    };
+    window.addEventListener("focus", focusHandler, { once: true });
+    input.click();
+  });
+}
+
+/**
+ * Show an "Open file" dialog and read a single binary file.
+ *
+ * - Tauri: shows native open dialog, reads via IPC as base64, then decodes.
+ * - Web: shows browser file picker and reads as ArrayBuffer.
+ *
+ * Returns the file bytes, or `null` if cancelled.
+ */
+export async function openBinaryFileDialog(
+  options?: OpenDialogOptions,
+): Promise<Uint8Array | null> {
+  if (isTauri()) {
+    const dialogModule = await import("@tauri-apps/plugin-dialog");
+    const filePath = await dialogModule.open({
+      filters: options?.filters,
+      multiple: false,
+    });
+    if (!filePath || typeof filePath !== "string") return null;
+
+    const { api } = await import("@/services/api");
+    const base64 = await api<string>("read_binary_file", { path: filePath });
+    return base64ToUint8Array(base64);
+  }
+
+  return new Promise<Uint8Array | null>((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    const exts = options?.filters?.flatMap((f) => f.extensions.map((e) => `.${e}`));
+    if (exts?.length) {
+      input.accept = exts.join(",");
+    }
+    let resolved = false;
+    const safeResolve = (val: Uint8Array | null) => {
+      if (!resolved) {
+        resolved = true;
+        window.removeEventListener("focus", focusHandler);
+        resolve(val);
+      }
+    };
+
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) {
+        safeResolve(null);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (!(result instanceof ArrayBuffer)) {
+          safeResolve(null);
+          return;
+        }
+        safeResolve(new Uint8Array(result));
+      };
+      reader.onerror = () => safeResolve(null);
+      reader.readAsArrayBuffer(file);
+    };
+    input.oncancel = () => safeResolve(null);
     const focusHandler = () => {
       setTimeout(() => {
         if (!input.files?.length) safeResolve(null);

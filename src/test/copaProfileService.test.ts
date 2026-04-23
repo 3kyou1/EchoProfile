@@ -4,9 +4,12 @@ import {
   buildScopeKey,
   deleteCopaSnapshot,
   extractUserSignals,
+  loadCopaConfig,
   normalizeCopaResponse,
   renderCopaMarkdown,
+  resolveResonanceModelConfig,
   saveCopaSnapshot,
+  saveCopaConfig,
   loadCopaSnapshots,
 } from "@/services/copaProfileService";
 import type { CopaSnapshot } from "@/types/copaProfile";
@@ -217,5 +220,69 @@ describe("copaProfileService", () => {
     expect(markdown).toContain("### Cognitive Trust (CT)");
     expect(markdown).toContain("### Affective and Motivational Resonance (AMR)");
     expect(markdown).toContain("## Metadata");
+  });
+
+  test("loadCopaConfig migrates legacy single-config storage into dual llm config", async () => {
+    localStorage.setItem(
+      "webui:copa-profiles.json:config",
+      JSON.stringify({
+        baseUrl: "https://legacy.example.com/v1",
+        model: "legacy-model",
+        apiKey: "legacy-key",
+        temperature: 0.4,
+      })
+    );
+
+    const config = await loadCopaConfig();
+
+    expect(config.copa.baseUrl).toBe("https://legacy.example.com/v1");
+    expect(config.copa.model).toBe("legacy-model");
+    expect(config.resonance.enabled).toBe(false);
+    expect(config.resonance.config.model).toBe("legacy-model");
+  });
+
+  test("resolveResonanceModelConfig falls back to CoPA config until a separate resonance config is enabled", async () => {
+    const config = await saveCopaConfig({
+      copa: {
+        baseUrl: "https://copa.example.com/v1",
+        model: "copa-model",
+        apiKey: "copa-key",
+        temperature: 0.2,
+      },
+      resonance: {
+        enabled: false,
+        config: {
+          baseUrl: "https://res.example.com/v1",
+          model: "res-model",
+          apiKey: "res-key",
+          temperature: 0.3,
+        },
+      },
+    });
+
+    expect(resolveResonanceModelConfig(config)).toMatchObject({
+      baseUrl: "https://copa.example.com/v1",
+      model: "copa-model",
+      apiKey: "copa-key",
+    });
+
+    const withSeparateResonance = await saveCopaConfig({
+      ...config,
+      resonance: {
+        enabled: true,
+        config: {
+          baseUrl: "https://res.example.com/v1",
+          model: "res-model",
+          apiKey: "res-key",
+          temperature: 0.3,
+        },
+      },
+    });
+
+    expect(resolveResonanceModelConfig(withSeparateResonance)).toMatchObject({
+      baseUrl: "https://res.example.com/v1",
+      model: "res-model",
+      apiKey: "res-key",
+    });
   });
 });

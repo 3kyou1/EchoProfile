@@ -504,6 +504,13 @@ handler_json!(read_text_file, PathParam, |p: PathParam| async move {
     commands::claude_settings::read_text_file(p.path).await
 });
 
+handler_json!(read_binary_file, PathParam, |p: PathParam| async move {
+    // WebUI: enforce directory allowlist (Tauri desktop relies on OS dialog)
+    let path = PathBuf::from(&p.path);
+    commands::claude_settings::is_safe_path(&path)?;
+    commands::claude_settings::read_binary_file(p.path).await
+});
+
 handler_json!(
     write_text_file,
     WriteFileParams,

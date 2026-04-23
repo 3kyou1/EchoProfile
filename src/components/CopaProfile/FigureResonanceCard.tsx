@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 
-import type { ScientistResonanceCard as ScientistResonanceCardType } from "@/types/scientistResonance";
+import type { FigureResonanceCard as FigureResonanceCardType } from "@/types/figureResonance";
 
-interface ScientistResonanceCardProps {
-  card: ScientistResonanceCardType;
+interface FigureResonanceCardProps {
+  card: FigureResonanceCardType;
   label: string;
   compact?: boolean;
 }
@@ -59,7 +59,7 @@ function splitBiography(value: string): string[] {
   return parts.length > 0 ? parts : [normalized];
 }
 
-export function ScientistResonanceCard({ card, label, compact = false }: ScientistResonanceCardProps) {
+export function FigureResonanceCard({ card, label, compact = false }: FigureResonanceCardProps) {
   const { t, i18n } = useTranslation();
   const activeLanguage = normalizeNameLanguage(i18n.resolvedLanguage || i18n.language || "en");
   const englishName = card.name;
@@ -91,7 +91,7 @@ export function ScientistResonanceCard({ card, label, compact = false }: Scienti
               <img
                 src={card.portrait_url}
                 alt={card.name}
-                className="h-full w-full object-cover grayscale"
+                className="h-full w-full object-cover"
                 loading="lazy"
               />
             ) : null}

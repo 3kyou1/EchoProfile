@@ -561,7 +561,7 @@ pub async fn get_claude_json_config(
 /// Validate a path chosen by user via native file dialog.
 ///
 /// Checks: absolute path, no `..` traversal, parent directory exists.
-/// Used by [`write_text_file`], [`read_text_file`], and [`save_screenshot`].
+/// Used by [`write_text_file`], [`read_text_file`], [`read_binary_file`], and [`save_screenshot`].
 pub(crate) fn validate_dialog_path(path: &Path) -> Result<(), String> {
     if !path.is_absolute() {
         return Err("Path must be absolute".to_string());
@@ -743,6 +743,28 @@ pub async fn read_text_file(path: String) -> Result<String, String> {
 
         fs::read_to_string(&path)
             .map_err(|e| format!("Failed to read file {}: {}", path.display(), e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+/// Read binary content from a file chosen by user via native dialog and return base64.
+///
+/// Path is validated for basic safety (absolute, no traversal, parent exists).
+/// Directory allowlisting for `WebUI` callers is enforced at the HTTP handler layer.
+#[tauri::command]
+pub async fn read_binary_file(path: String) -> Result<String, String> {
+    use base64::Engine;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(path);
+
+        validate_dialog_path(&path)?;
+
+        let bytes = fs::read(&path)
+            .map_err(|e| format!("Failed to read file {}: {}", path.display(), e))?;
+
+        Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
@@ -1059,6 +1081,23 @@ mod tests {
 
         let result = read_text_file(file_path.to_string_lossy().to_string()).await;
         assert!(result.is_err());
+        drop(temp);
+    }
+
+    #[tokio::test]
+    async fn test_read_binary_file_success() {
+        use base64::Engine;
+
+        let temp = setup_test_env();
+        let file_path = temp.path().join("read-test.bin");
+        fs::write(&file_path, vec![1_u8, 2, 3, 4]).unwrap();
+
+        let result = read_binary_file(file_path.to_string_lossy().to_string()).await;
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            base64::engine::general_purpose::STANDARD.encode(vec![1_u8, 2, 3, 4])
+        );
         drop(temp);
     }
 

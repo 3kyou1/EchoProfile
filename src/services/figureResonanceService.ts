@@ -1,22 +1,28 @@
-import scientistPoolData from "@/data/scientistPool.json";
+import { loadFigurePool } from "@/services/figurePoolService";
 import { storageAdapter } from "@/services/storage";
+import type { FigurePool, FigurePoolRecord } from "@/types/figurePool";
 import type { CopaModelConfig, CopaSnapshot } from "@/types/copaProfile";
 import type {
-  ScientistConfidenceStyle,
-  ScientistRecord,
-  ScientistResonanceCard,
-  ScientistResonancePayload,
-  ScientistResonanceResult,
-} from "@/types/scientistResonance";
+  FigureConfidenceStyle,
+  FigureRecord,
+  FigureResonanceCard,
+  FigureResonancePayload,
+  FigureResonanceResult,
+} from "@/types/figureResonance";
 
-const STORE_NAME = "scientist-resonance.json";
+const STORE_NAME = "figure-resonance.json";
+const LEGACY_STORE_NAME = "scientist-resonance.json";
 const RESULTS_KEY = "results";
 const RECENT_WINDOW = 12;
 const RECENT_MIN_MESSAGES = 4;
 const MAX_POOL_AXES = 4;
 
-const SCIENTIST_POOL = scientistPoolData as ScientistRecord[];
-const SCIENTIST_POOL_BY_SLUG = new Map(SCIENTIST_POOL.map((item) => [item.slug, item]));
+interface PoolContext {
+  pool: FigurePool;
+  allRecordsBySlug: Map<string, FigurePoolRecord>;
+  validRecords: FigurePoolRecord[];
+  validRecordsBySlug: Map<string, FigurePoolRecord>;
+}
 
 function stripFence(value: string): string {
   const trimmed = value.trim();
@@ -44,14 +50,14 @@ function uniqueAxes(values: unknown[]): string[] {
   return axes;
 }
 
-function scientistSignature(scientist: ScientistRecord): Set<string> {
-  const parts = `${scientist.core_traits} ${scientist.temperament_tags}`.split(/[、,，;/｜|\s]+/);
+function figureSignature(record: FigureRecord): Set<string> {
+  const parts = `${record.core_traits} ${record.temperament_tags}`.split(/[、,，;/｜|\s]+/);
   return new Set(parts.map((part) => part.trim().toLowerCase()).filter(Boolean));
 }
 
-function candidateSimilarity(left: ScientistRecord, right: ScientistRecord): number {
-  const leftSig = scientistSignature(left);
-  const rightSig = scientistSignature(right);
+function candidateSimilarity(left: FigureRecord, right: FigureRecord): number {
+  const leftSig = figureSignature(left);
+  const rightSig = figureSignature(right);
   if (leftSig.size === 0 || rightSig.size === 0) {
     return 0;
   }
@@ -67,19 +73,19 @@ function candidateSimilarity(left: ScientistRecord, right: ScientistRecord): num
   return universe.size === 0 ? 0 : shared / universe.size;
 }
 
-function defaultReason(scientist: ScientistRecord, mode: "long_term" | "recent_state", language: string): string {
+function defaultReason(record: FigureRecord, mode: "long_term" | "recent_state", language: string): string {
   if (normalizeLanguage(language) === "zh") {
     const prefix = mode === "long_term" ? "你长期更像" : "你最近这段时间更像";
-    return `${prefix}${scientist.name}式研究者：${scientist.thinking_style}`;
+    return `${prefix}${record.name}式研究者：${record.thinking_style}`;
   }
 
   const prefix = mode === "long_term" ? "Your long-term archetype feels closest to" : "Your recent state feels closest to";
-  return `${prefix} ${scientist.name}: ${scientist.thinking_style}`;
+  return `${prefix} ${record.name}: ${record.thinking_style}`;
 }
 
-function scoreScientist(signalText: string, scientist: ScientistRecord): { score: number; resonanceAxes: string[] } {
+function scoreFigure(signalText: string, record: FigureRecord): { score: number; resonanceAxes: string[] } {
   const signal = signalText.toLowerCase();
-  const fields = [scientist.core_traits, scientist.temperament_tags];
+  const fields = [record.core_traits, record.temperament_tags];
   let score = 0;
   const matchedAxes: string[] = [];
 
@@ -109,23 +115,45 @@ function scoreScientist(signalText: string, scientist: ScientistRecord): { score
   return { score, resonanceAxes: uniqueAxes(matchedAxes) };
 }
 
-function heuristicCandidates(signalText: string, language: string): Array<{
+async function loadPoolContext(poolId: string): Promise<PoolContext> {
+  const pool = await loadFigurePool(poolId);
+  if (!pool) {
+    throw new Error(`Figure pool not found: ${poolId}`);
+  }
+
+  const allRecordsBySlug = new Map(pool.records.map((record) => [record.slug, record]));
+  const validRecords = pool.records.filter((record) => record.status === "valid");
+  const validRecordsBySlug = new Map(validRecords.map((record) => [record.slug, record]));
+
+  return {
+    pool,
+    allRecordsBySlug,
+    validRecords,
+    validRecordsBySlug,
+  };
+}
+
+function heuristicCandidates(
+  signalText: string,
+  language: string,
+  records: FigureRecord[]
+): Array<{
   slug: string;
   score: number;
   reason: string;
   resonanceAxes: string[];
 }> {
-  return [...SCIENTIST_POOL]
-    .map((scientist) => {
-      const scored = scoreScientist(signalText, scientist);
+  return [...records]
+    .map((record) => {
+      const scored = scoreFigure(signalText, record);
       return {
-        slug: scientist.slug,
+        slug: record.slug,
         score: scored.score,
-        reason: defaultReason(scientist, "long_term", language),
+        reason: defaultReason(record, "long_term", language),
         resonanceAxes:
           scored.resonanceAxes.length > 0
             ? scored.resonanceAxes
-            : uniqueAxes(scientist.core_traits.split("、").slice(0, 2)),
+            : uniqueAxes(record.core_traits.split("、").slice(0, 2)),
       };
     })
     .sort((left, right) => {
@@ -137,110 +165,128 @@ function heuristicCandidates(signalText: string, language: string): Array<{
 }
 
 function buildCardPayload(
-  scientist: ScientistRecord,
+  record: FigureRecord,
   options: {
     reason: string;
     resonanceAxes: unknown[];
-    confidenceStyle: ScientistConfidenceStyle;
+    confidenceStyle: FigureConfidenceStyle;
   }
-): ScientistResonanceCard {
+): FigureResonanceCard {
   const normalizedAxes = uniqueAxes(options.resonanceAxes).slice(0, MAX_POOL_AXES);
   const fallbackAxes = uniqueAxes([
-    ...scientist.core_traits.split("、").slice(0, 2),
-    ...scientist.temperament_tags.split("、").slice(0, 1),
+    ...record.core_traits.split("、").slice(0, 2),
+    ...record.temperament_tags.split("、").slice(0, 1),
   ]).slice(0, MAX_POOL_AXES);
 
   return {
-    name: scientist.name,
-    localized_names: scientist.localized_names,
-    slug: scientist.slug,
-    portrait_url: scientist.portrait_url,
-    hook: scientist.temperament_summary,
-    quote_zh: scientist.quote_zh,
-    quote_en: scientist.quote_en,
-    reason: options.reason.trim() || scientist.thinking_style,
+    name: record.name,
+    localized_names: record.localized_names,
+    slug: record.slug,
+    portrait_url: record.portrait_url,
+    hook: record.temperament_summary,
+    quote_zh: record.quote_zh,
+    quote_en: record.quote_en,
+    reason: options.reason.trim() || record.thinking_style,
     resonance_axes: normalizedAxes.length > 0 ? normalizedAxes : fallbackAxes,
     confidence_style: options.confidenceStyle,
-    loading_copy_zh: scientist.loading_copy_zh,
-    loading_copy_en: scientist.loading_copy_en,
-    bio_zh: scientist.bio_zh,
-    bio_en: scientist.bio_en,
-    achievements_zh: scientist.achievements_zh,
-    achievements_en: scientist.achievements_en,
+    loading_copy_zh: record.loading_copy_zh,
+    loading_copy_en: record.loading_copy_en,
+    bio_zh: record.bio_zh,
+    bio_en: record.bio_en,
+    achievements_zh: record.achievements_zh,
+    achievements_en: record.achievements_en,
   };
 }
 
 function normalizeCardPayload(
   payload: unknown,
-  options: { confidenceStyle: ScientistConfidenceStyle }
-): ScientistResonanceCard | null {
+  options: {
+    confidenceStyle: FigureConfidenceStyle;
+    recordsBySlug: Map<string, FigureRecord>;
+  }
+): FigureResonanceCard | null {
   if (!payload || typeof payload !== "object") {
     return null;
   }
 
   const record = payload as Record<string, unknown>;
   const slug = typeof record.slug === "string" ? record.slug.trim() : "";
-  const scientist = SCIENTIST_POOL_BY_SLUG.get(slug);
-  if (!scientist) {
+  const matchedRecord = options.recordsBySlug.get(slug);
+  if (!matchedRecord) {
     return null;
   }
 
   const axes = Array.isArray(record.resonance_axes) ? record.resonance_axes : [];
-  return buildCardPayload(scientist, {
-    reason: typeof record.reason === "string" ? record.reason : scientist.thinking_style,
+  return buildCardPayload(matchedRecord, {
+    reason: typeof record.reason === "string" ? record.reason : matchedRecord.thinking_style,
     resonanceAxes: axes,
     confidenceStyle: options.confidenceStyle,
   });
 }
 
 function rehydrateStoredCard(
-  card: ScientistResonanceCard,
-  confidenceStyle: ScientistConfidenceStyle
-): ScientistResonanceCard {
-  const scientist = SCIENTIST_POOL_BY_SLUG.get(card.slug);
-  if (!scientist) {
+  card: FigureResonanceCard,
+  confidenceStyle: FigureConfidenceStyle,
+  context: PoolContext | null
+): FigureResonanceCard {
+  const matchedRecord = context?.allRecordsBySlug.get(card.slug);
+  if (!matchedRecord || matchedRecord.status === "invalid") {
     return card;
   }
 
-  return buildCardPayload(scientist, {
+  return buildCardPayload(matchedRecord, {
     reason: card.reason,
     resonanceAxes: card.resonance_axes,
     confidenceStyle,
   });
 }
 
-function rehydrateStoredResult(result: ScientistResonanceResult): ScientistResonanceResult {
+function rehydrateStoredResult(
+  result: FigureResonanceResult,
+  context: PoolContext | null
+): FigureResonanceResult {
   return {
     ...result,
+    pool_deleted: context ? false : true,
+    pool_updated: context ? result.pool_updated_at_snapshot !== context.pool.updatedAt : false,
     long_term: {
-      primary: rehydrateStoredCard(result.long_term.primary, "strong_resonance"),
+      primary: rehydrateStoredCard(result.long_term.primary, "strong_resonance", context),
       secondary: result.long_term.secondary.map((card) =>
-        rehydrateStoredCard(card, "strong_resonance")
+        rehydrateStoredCard(card, "strong_resonance", context)
       ),
     },
     recent_state: result.recent_state
-      ? rehydrateStoredCard(result.recent_state, "phase_resonance")
+      ? rehydrateStoredCard(result.recent_state, "phase_resonance", context)
       : null,
   };
 }
 
-function normalizeLongTermPayload(payload: unknown): ScientistResonancePayload["long_term"] | null {
+function normalizeLongTermPayload(
+  payload: unknown,
+  context: PoolContext
+): FigureResonancePayload["long_term"] | null {
   if (!payload || typeof payload !== "object") {
     return null;
   }
 
   const record = payload as Record<string, unknown>;
   const primaryPayload = record.primary && typeof record.primary === "object" ? record.primary : payload;
-  const primary = normalizeCardPayload(primaryPayload, { confidenceStyle: "strong_resonance" });
+  const primary = normalizeCardPayload(primaryPayload, {
+    confidenceStyle: "strong_resonance",
+    recordsBySlug: context.validRecordsBySlug,
+  });
   if (!primary) {
     return null;
   }
 
   const secondaryPayloads = Array.isArray(record.secondary) ? record.secondary : [];
-  const secondary: ScientistResonanceCard[] = [];
+  const secondary: FigureResonanceCard[] = [];
   const seen = new Set([primary.slug]);
   for (const item of secondaryPayloads) {
-    const normalized = normalizeCardPayload(item, { confidenceStyle: "strong_resonance" });
+    const normalized = normalizeCardPayload(item, {
+      confidenceStyle: "strong_resonance",
+      recordsBySlug: context.validRecordsBySlug,
+    });
     if (!normalized || seen.has(normalized.slug)) {
       continue;
     }
@@ -256,25 +302,26 @@ function normalizeLongTermPayload(payload: unknown): ScientistResonancePayload["
 
 function pickSecondaryCandidates(
   primarySlug: string,
-  candidates: Array<{ slug: string; resonanceAxes: string[]; reason: string }>
+  candidates: Array<{ slug: string; resonanceAxes: string[]; reason: string }>,
+  recordsBySlug: Map<string, FigureRecord>
 ): Array<{ slug: string; resonanceAxes: string[]; reason: string }> {
   const selected: Array<{ slug: string; resonanceAxes: string[]; reason: string }> = [];
   const skipped: Array<{ slug: string; resonanceAxes: string[]; reason: string }> = [];
-  const primary = SCIENTIST_POOL_BY_SLUG.get(primarySlug);
+  const primary = recordsBySlug.get(primarySlug);
   if (!primary) {
     return selected;
   }
 
   for (const candidate of candidates) {
-    const scientist = SCIENTIST_POOL_BY_SLUG.get(candidate.slug);
-    if (!scientist || scientist.slug === primarySlug) {
+    const matchedRecord = recordsBySlug.get(candidate.slug);
+    if (!matchedRecord || matchedRecord.slug === primarySlug) {
       continue;
     }
 
-    const tooCloseToPrimary = candidateSimilarity(primary, scientist) >= 0.45;
+    const tooCloseToPrimary = candidateSimilarity(primary, matchedRecord) >= 0.45;
     const tooCloseToSelected = selected.some((item) => {
-      const selectedScientist = SCIENTIST_POOL_BY_SLUG.get(item.slug);
-      return selectedScientist ? candidateSimilarity(selectedScientist, scientist) >= 0.45 : false;
+      const selectedRecord = recordsBySlug.get(item.slug);
+      return selectedRecord ? candidateSimilarity(selectedRecord, matchedRecord) >= 0.45 : false;
     });
 
     if (tooCloseToPrimary || tooCloseToSelected) {
@@ -303,17 +350,18 @@ function pickSecondaryCandidates(
 
 function heuristicMatch(
   signalText: string,
-  options: { mode: "long_term" | "recent_state"; language: string }
-): ScientistResonancePayload["long_term"] | ScientistResonanceCard {
-  const candidates = heuristicCandidates(signalText, options.language);
+  options: { mode: "long_term" | "recent_state"; language: string; context: PoolContext }
+): FigureResonancePayload["long_term"] | FigureResonanceCard {
+  const candidates = heuristicCandidates(signalText, options.language, options.context.validRecords);
   const chosenPayload = candidates[0];
-  const chosenScientist = SCIENTIST_POOL_BY_SLUG.get(chosenPayload?.slug ?? "") ?? SCIENTIST_POOL[0];
-  if (!chosenScientist) {
-    throw new Error("Scientist pool is empty");
+  const chosenRecord =
+    options.context.validRecordsBySlug.get(chosenPayload?.slug ?? "") ?? options.context.validRecords[0];
+  if (!chosenRecord) {
+    throw new Error(`Figure pool has no valid records: ${options.context.pool.name}`);
   }
 
-  const primaryCard = buildCardPayload(chosenScientist, {
-    reason: chosenPayload?.reason ?? defaultReason(chosenScientist, options.mode, options.language),
+  const primaryCard = buildCardPayload(chosenRecord, {
+    reason: chosenPayload?.reason ?? defaultReason(chosenRecord, options.mode, options.language),
     resonanceAxes: chosenPayload?.resonanceAxes ?? [],
     confidenceStyle: options.mode === "long_term" ? "strong_resonance" : "phase_resonance",
   });
@@ -322,12 +370,16 @@ function heuristicMatch(
     return primaryCard;
   }
 
-  const secondary = pickSecondaryCandidates(primaryCard.slug, candidates.slice(1)).flatMap((candidate) => {
-    const scientist = SCIENTIST_POOL_BY_SLUG.get(candidate.slug);
-    return scientist
+  const secondary = pickSecondaryCandidates(
+    primaryCard.slug,
+    candidates.slice(1),
+    options.context.validRecordsBySlug
+  ).flatMap((candidate) => {
+    const matchedRecord = options.context.validRecordsBySlug.get(candidate.slug);
+    return matchedRecord
       ? [
-          buildCardPayload(scientist, {
-            reason: defaultReason(scientist, "long_term", options.language),
+          buildCardPayload(matchedRecord, {
+            reason: defaultReason(matchedRecord, "long_term", options.language),
             resonanceAxes: candidate.resonanceAxes,
             confidenceStyle: "strong_resonance",
           }),
@@ -342,28 +394,33 @@ function heuristicMatch(
 }
 
 function enrichLongTermWithSecondary(
-  longTerm: ScientistResonancePayload["long_term"] | null,
+  longTerm: FigureResonancePayload["long_term"] | null,
   signalText: string,
-  language: string
-): ScientistResonancePayload["long_term"] {
+  language: string,
+  context: PoolContext
+): FigureResonancePayload["long_term"] {
   if (!longTerm) {
-    return heuristicMatch(signalText, { mode: "long_term", language }) as ScientistResonancePayload["long_term"];
+    return heuristicMatch(signalText, {
+      mode: "long_term",
+      language,
+      context,
+    }) as FigureResonancePayload["long_term"];
   }
 
   if (longTerm.secondary.length >= 2) {
     return { primary: longTerm.primary, secondary: longTerm.secondary.slice(0, 2) };
   }
 
-  const candidates = heuristicCandidates(signalText, language);
-  const extra = pickSecondaryCandidates(longTerm.primary.slug, candidates)
+  const candidates = heuristicCandidates(signalText, language, context.validRecords);
+  const extra = pickSecondaryCandidates(longTerm.primary.slug, candidates, context.validRecordsBySlug)
     .flatMap((candidate) => {
-      const scientist = SCIENTIST_POOL_BY_SLUG.get(candidate.slug);
-      if (!scientist || longTerm.secondary.some((item) => item.slug === scientist.slug)) {
+      const matchedRecord = context.validRecordsBySlug.get(candidate.slug);
+      if (!matchedRecord || longTerm.secondary.some((item) => item.slug === matchedRecord.slug)) {
         return [];
       }
       return [
-        buildCardPayload(scientist, {
-          reason: defaultReason(scientist, "long_term", language),
+        buildCardPayload(matchedRecord, {
+          reason: defaultReason(matchedRecord, "long_term", language),
           resonanceAxes: candidate.resonanceAxes,
           confidenceStyle: "strong_resonance",
         }),
@@ -385,9 +442,14 @@ function collectSignalText(profileMarkdown: string, recentMessages: string[]): s
   return chunks.join("\n\n").trim();
 }
 
-function buildScientistPrompt(profileMarkdown: string, recentMessages: string[], language: string) {
+function buildFigurePrompt(
+  profileMarkdown: string,
+  recentMessages: string[],
+  language: string,
+  context: PoolContext
+) {
   const recentAllowed = recentMessages.length >= RECENT_MIN_MESSAGES;
-  const scientistPool = SCIENTIST_POOL.map((item) => ({
+  const figurePoolPayload = context.validRecords.map((item) => ({
     slug: item.slug,
     name: item.name,
     core_traits: item.core_traits,
@@ -400,21 +462,21 @@ function buildScientistPrompt(profileMarkdown: string, recentMessages: string[],
     return {
       system: [
         "你正在为 CoPA Profile 页面生成 Thought Echoes 结果。",
-        "任务不是判断用户像不像名人，而是根据思维方式、人格气质与学习表达偏好，从固定科学家库中找出最强共振人物镜像。",
+        `任务是根据思维方式、人格气质与学习表达偏好，从固定人物库中找出最强共振镜像。当前候选池：${context.pool.name}。`,
         "规则：",
         "1. 优先依据思维方式判断；",
         "2. 人格气质只用于确认或区分相近候选；",
         "3. 长期主原型需要给出 1 个 primary 和 2 个 secondary；",
         "4. secondary 要尽量和 primary、彼此之间拉开气质差异；",
         "5. 输出严格 JSON；",
-        "6. 所有 slug 只能从给定 scientist_pool 中选择。",
+        "6. 所有 slug 只能从给定 figure_pool 中选择。",
       ].join("\n"),
       user: [
         "请根据以下已选中的 CoPA Profile 与最近用户消息，生成 Thought Echoes。",
         `<profile>\n${profileMarkdown || "(empty)"}\n</profile>`,
         `<recent_messages>\n${JSON.stringify(recentMessages, null, 2)}\n</recent_messages>`,
         `<allow_recent_state>\n${JSON.stringify(recentAllowed)}\n</allow_recent_state>`,
-        `<scientist_pool>\n${JSON.stringify(scientistPool, null, 2)}\n</scientist_pool>`,
+        `<figure_pool>\n${JSON.stringify(figurePoolPayload, null, 2)}\n</figure_pool>`,
         "返回 JSON，格式必须为：",
         '{"long_term":{"primary":{"slug":"...","reason":"...","resonance_axes":["..."]},"secondary":[{"slug":"...","reason":"...","resonance_axes":["..."]},{"slug":"...","reason":"...","resonance_axes":["..."]}]},"recent_state":{"slug":"...","reason":"...","resonance_axes":["..."]} | null}',
         "要求：long_term.primary 必须存在；recent_state 只有在 allow_recent_state 为 true 时才能返回对象；reason 用中文 1-2 句；resonance_axes 保留 2-4 个短标签；只返回 JSON。",
@@ -425,25 +487,26 @@ function buildScientistPrompt(profileMarkdown: string, recentMessages: string[],
   return {
     system: [
       "Generate Thought Echoes for an existing CoPA Profile.",
-      "Choose from the fixed scientist pool based on thinking style first, temperament second.",
+      `Choose from the fixed figure pool named ${context.pool.name} based on thinking style first, temperament second.`,
       "Return strict JSON only.",
     ].join("\n"),
     user: [
       `Profile:\n${profileMarkdown || "(empty)"}`,
       `Recent messages:\n${JSON.stringify(recentMessages, null, 2)}`,
       `Allow recent state: ${JSON.stringify(recentAllowed)}`,
-      `Scientist pool:\n${JSON.stringify(scientistPool, null, 2)}`,
+      `Figure pool:\n${JSON.stringify(figurePoolPayload, null, 2)}`,
       "Return JSON with long_term { primary, secondary } and recent_state.",
     ].join("\n\n"),
   };
 }
 
-async function requestScientistResonanceFromLlm(
+async function requestFigureResonanceFromLlm(
   profileMarkdown: string,
   recentMessages: string[],
   config: CopaModelConfig,
-  language: string
-): Promise<ScientistResonancePayload> {
+  language: string,
+  context: PoolContext
+): Promise<FigureResonancePayload> {
   if (!config.apiKey?.trim()) {
     throw new Error("Missing API key");
   }
@@ -451,7 +514,7 @@ async function requestScientistResonanceFromLlm(
     throw new Error("Missing model name");
   }
 
-  const prompt = buildScientistPrompt(profileMarkdown, recentMessages, language);
+  const prompt = buildFigurePrompt(profileMarkdown, recentMessages, language, context);
   const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
     headers: {
@@ -471,7 +534,7 @@ async function requestScientistResonanceFromLlm(
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(detail || `Scientist resonance generation failed (${response.status})`);
+    throw new Error(detail || `Figure resonance generation failed (${response.status})`);
   }
 
   const payload = (await response.json()) as {
@@ -486,90 +549,173 @@ async function requestScientistResonanceFromLlm(
 
   const parsed = JSON.parse(stripFence(rawContent)) as Record<string, unknown>;
   const allowRecent = recentMessages.length >= RECENT_MIN_MESSAGES;
-  const longTerm = enrichLongTermWithSecondary(normalizeLongTermPayload(parsed.long_term), collectSignalText(profileMarkdown, recentMessages), language);
+  const longTerm = enrichLongTermWithSecondary(
+    normalizeLongTermPayload(parsed.long_term, context),
+    collectSignalText(profileMarkdown, recentMessages),
+    language,
+    context
+  );
   const recentState = allowRecent
-    ? normalizeCardPayload(parsed.recent_state, { confidenceStyle: "phase_resonance" }) ??
-      (heuristicMatch(recentMessages.join("\n"), { mode: "recent_state", language }) as ScientistResonanceCard)
+    ? normalizeCardPayload(parsed.recent_state, {
+        confidenceStyle: "phase_resonance",
+        recordsBySlug: context.validRecordsBySlug,
+      }) ??
+      (heuristicMatch(recentMessages.join("\n"), {
+        mode: "recent_state",
+        language,
+        context,
+      }) as FigureResonanceCard)
     : null;
 
   return { long_term: longTerm, recent_state: recentState };
 }
 
-async function loadStoreResults(): Promise<ScientistResonanceResult[]> {
+async function loadStoreResults(): Promise<FigureResonanceResult[]> {
   const store = await storageAdapter.load(STORE_NAME, {
     defaults: { [RESULTS_KEY]: [] },
     autoSave: true,
   });
-  return (await store.get<ScientistResonanceResult[]>(RESULTS_KEY)) ?? [];
+  const storedResults = (await store.get<FigureResonanceResult[]>(RESULTS_KEY)) ?? [];
+  if (storedResults.length > 0) {
+    return storedResults;
+  }
+
+  const legacyStore = await storageAdapter.load(LEGACY_STORE_NAME, {
+    defaults: { [RESULTS_KEY]: [] },
+    autoSave: true,
+  });
+  const legacyResults = (await legacyStore.get<FigureResonanceResult[]>(RESULTS_KEY)) ?? [];
+  if (legacyResults.length === 0) {
+    return storedResults;
+  }
+
+  await store.set(RESULTS_KEY, legacyResults);
+  await store.save();
+  return legacyResults;
 }
 
-async function saveStoreResults(results: ScientistResonanceResult[]): Promise<void> {
+async function saveStoreResults(results: FigureResonanceResult[]): Promise<void> {
   const store = await storageAdapter.load(STORE_NAME, { autoSave: true });
   await store.set(RESULTS_KEY, results);
   await store.save();
 }
 
-export function buildScientistResonanceCacheKey(input: {
+export function buildFigureResonanceCacheKey(input: {
   scopeKey: string;
   profileId: string;
   language: string;
+  poolId: string;
 }): string {
-  return `${input.scopeKey}:${input.profileId}:${normalizeLanguage(input.language)}`;
+  return `${input.scopeKey}:${input.profileId}:${normalizeLanguage(input.language)}:${input.poolId}`;
 }
 
-export function getRecentScientistSignals(messages: string[]): string[] {
+export function getRecentFigureSignals(messages: string[]): string[] {
   return messages.map((item) => item.trim()).filter(Boolean).slice(-RECENT_WINDOW);
 }
 
-export async function loadScientistResonanceResult(input: {
+export async function loadFigureResonanceResult(input: {
   scopeKey: string;
   profileId: string;
   language: string;
-}): Promise<ScientistResonanceResult | null> {
+  poolId: string;
+}): Promise<FigureResonanceResult | null> {
   const results = await loadStoreResults();
-  const cacheKey = buildScientistResonanceCacheKey(input);
+  const cacheKey = buildFigureResonanceCacheKey(input);
   const matched = results.find((item) => item.cache_key === cacheKey) ?? null;
-  return matched ? rehydrateStoredResult(matched) : null;
+  if (!matched) {
+    return null;
+  }
+
+  const pool = await loadFigurePool(input.poolId);
+  const context = pool
+    ? {
+        pool,
+        allRecordsBySlug: new Map(pool.records.map((record) => [record.slug, record])),
+        validRecords: pool.records.filter((record) => record.status === "valid"),
+        validRecordsBySlug: new Map(pool.records.filter((record) => record.status === "valid").map((record) => [record.slug, record])),
+      }
+    : null;
+
+  return rehydrateStoredResult(matched, context);
 }
 
-export async function saveScientistResonanceResult(
-  result: ScientistResonanceResult
-): Promise<ScientistResonanceResult> {
+export async function loadFigureResonanceHistory(input: {
+  scopeKey: string;
+  profileId: string;
+  language: string;
+}): Promise<FigureResonanceResult[]> {
+  const results = await loadStoreResults();
+  const normalizedLanguage = normalizeLanguage(input.language);
+  const scoped = results.filter(
+    (item) =>
+      item.scope_key === input.scopeKey &&
+      item.profile_id === input.profileId &&
+      item.language === normalizedLanguage
+  );
+
+  const rehydrated = await Promise.all(
+    scoped.map(async (item) => {
+      const pool = await loadFigurePool(item.pool_id);
+      const context = pool
+        ? {
+            pool,
+            allRecordsBySlug: new Map(pool.records.map((record) => [record.slug, record])),
+            validRecords: pool.records.filter((record) => record.status === "valid"),
+            validRecordsBySlug: new Map(
+              pool.records
+                .filter((record) => record.status === "valid")
+                .map((record) => [record.slug, record])
+            ),
+          }
+        : null;
+      return rehydrateStoredResult(item, context);
+    })
+  );
+
+  return rehydrated.sort((left, right) => right.generated_at.localeCompare(left.generated_at));
+}
+
+export async function saveFigureResonanceResult(
+  result: FigureResonanceResult
+): Promise<FigureResonanceResult> {
   const results = await loadStoreResults();
   const nextResults = [result, ...results.filter((item) => item.cache_key !== result.cache_key)].slice(0, 100);
   await saveStoreResults(nextResults);
   return result;
 }
 
-export async function deleteScientistResonanceResultsForProfile(
+export async function deleteFigureResonanceResultsForProfile(
   profileId: string
-): Promise<ScientistResonanceResult[]> {
+): Promise<FigureResonanceResult[]> {
   const results = await loadStoreResults();
   const nextResults = results.filter((item) => item.profile_id !== profileId);
   await saveStoreResults(nextResults);
   return nextResults;
 }
 
-export async function generateScientistResonance(input: {
+export async function generateFigureResonance(input: {
   scopeKey: string;
+  poolId: string;
   profileSnapshot: CopaSnapshot;
   recentMessages: string[];
   config: CopaModelConfig;
   language: string;
-}): Promise<ScientistResonanceResult> {
+}): Promise<FigureResonanceResult> {
+  const context = await loadPoolContext(input.poolId);
   const profileMarkdown = input.profileSnapshot.markdown.trim();
-  const recentSignals = getRecentScientistSignals(input.recentMessages);
+  const recentSignals = getRecentFigureSignals(input.recentMessages);
   const signalText = collectSignalText(profileMarkdown, recentSignals);
 
-  let payload: ScientistResonancePayload;
-  let source: ScientistResonanceResult["source"] = "llm";
+  let payload: FigureResonancePayload;
+  let source: FigureResonanceResult["source"] = "llm";
 
   try {
-    payload = await requestScientistResonanceFromLlm(
+    payload = await requestFigureResonanceFromLlm(
       profileMarkdown,
       recentSignals,
       input.config,
-      input.language
+      input.language,
+      context
     );
   } catch {
     source = "heuristic";
@@ -577,29 +723,35 @@ export async function generateScientistResonance(input: {
       long_term: heuristicMatch(signalText, {
         mode: "long_term",
         language: input.language,
-      }) as ScientistResonancePayload["long_term"],
+        context,
+      }) as FigureResonancePayload["long_term"],
       recent_state:
         recentSignals.length >= RECENT_MIN_MESSAGES
           ? (heuristicMatch(recentSignals.join("\n"), {
               mode: "recent_state",
               language: input.language,
-            }) as ScientistResonanceCard)
+              context,
+            }) as FigureResonanceCard)
           : null,
     };
   }
 
-  const result: ScientistResonanceResult = {
+  const result: FigureResonanceResult = {
     id:
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
-        : `scientist-resonance-${Date.now()}`,
-    cache_key: buildScientistResonanceCacheKey({
+        : `figure-resonance-${Date.now()}`,
+    cache_key: buildFigureResonanceCacheKey({
       scopeKey: input.scopeKey,
       profileId: input.profileSnapshot.id,
       language: input.language,
+      poolId: input.poolId,
     }),
     scope_key: input.scopeKey,
     profile_id: input.profileSnapshot.id,
+    pool_id: context.pool.id,
+    pool_name_snapshot: context.pool.name,
+    pool_updated_at_snapshot: context.pool.updatedAt,
     generated_at: new Date().toISOString(),
     language: normalizeLanguage(input.language),
     source,
@@ -607,10 +759,11 @@ export async function generateScientistResonance(input: {
     recent_state: payload.recent_state,
   };
 
-  await saveScientistResonanceResult(result);
+  await saveFigureResonanceResult(result);
   return result;
 }
 
-export function getScientistPoolCount(): number {
-  return SCIENTIST_POOL.length;
+export async function getFigurePoolCount(poolId: string): Promise<number> {
+  const context = await loadPoolContext(poolId);
+  return context.validRecords.length;
 }

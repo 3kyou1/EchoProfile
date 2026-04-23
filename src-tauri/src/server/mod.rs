@@ -153,6 +153,7 @@ pub fn build_router(state: Arc<AppState>, host: &str, port: u16, dist_dir: Optio
         .route("/get_claude_json_config", post(h::get_claude_json_config))
         .route("/write_text_file", post(h::write_text_file))
         .route("/read_text_file", post(h::read_text_file))
+        .route("/read_binary_file", post(h::read_binary_file))
         .route(
             "/save_screenshot",
             post(h::save_screenshot).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),

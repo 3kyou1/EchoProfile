@@ -34,6 +34,14 @@ export interface CopaModelConfig {
   temperature?: number;
 }
 
+export interface CopaLlmConfigState {
+  copa: CopaModelConfig;
+  resonance: {
+    enabled: boolean;
+    config: CopaModelConfig;
+  };
+}
+
 export interface CopaScopeRef {
   type: CopaScopeType;
   ref: string;
@@ -55,7 +63,7 @@ export interface CopaSnapshot {
 
 export interface CopaStoredState {
   snapshots: CopaSnapshot[];
-  config: CopaModelConfig;
+  config: CopaLlmConfigState;
 }
 
 export interface CopaNormalizedResponse {

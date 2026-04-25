@@ -1,7 +1,7 @@
 /**
  * Metadata Slice
  *
- * Manages user metadata stored in ~/.claude-history-viewer/user-data.json
+ * Manages user metadata stored in ~/.echo-profile/user-data.json
  */
 
 import { api } from "@/services/api";
@@ -23,7 +23,7 @@ import type { FullAppStore } from "./types";
 // ============================================================================
 
 export interface MetadataSliceState {
-  /** User metadata from ~/.claude-history-viewer/user-data.json */
+  /** User metadata from ~/.echo-profile/user-data.json */
   userMetadata: UserMetadata;
   /** Whether metadata has been loaded */
   isMetadataLoaded: boolean;

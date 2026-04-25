@@ -1,8 +1,9 @@
 //! Tauri commands for MCP server preset management
 //!
 //! This module provides commands for saving, loading, and managing
-//! MCP server presets stored in ~/.claude-history-viewer/mcp-presets/
+//! MCP server presets stored in ~/.echo-profile/mcp-presets/
 
+use crate::app_dirs::app_data_path;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -54,10 +55,9 @@ pub struct MCPPresetInput {
     pub servers: String, // JSON string of MCP servers
 }
 
-/// Get the MCP presets folder path (~/.claude-history-viewer/mcp-presets)
+/// Get the MCP presets folder path (~/.echo-profile/mcp-presets)
 fn get_mcp_presets_folder() -> Result<PathBuf, String> {
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
-    Ok(home.join(".claude-history-viewer").join("mcp-presets"))
+    app_data_path("mcp-presets")
 }
 
 /// Ensure the MCP presets folder exists

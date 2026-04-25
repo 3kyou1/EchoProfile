@@ -5,7 +5,7 @@
  *
  * This module contains data structures for settings presets
  * that allow users to save and quickly switch between different configurations.
- * Location: ~/.claude-history-viewer/presets/
+ * Location: ~/.echo-profile/presets/
  *
  * @see src/types/derived/preset.ts for the unified implementation
  */

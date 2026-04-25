@@ -3,8 +3,9 @@
 //! Unified presets combine settings.json content and MCP server config
 //! into a single preset for complete configuration backup/restore.
 //!
-//! Storage: ~/.claude-history-viewer/unified-presets/*.json
+//! Storage: ~/.echo-profile/unified-presets/*.json
 
+use crate::app_dirs::app_data_path;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
@@ -67,8 +68,7 @@ pub struct UnifiedPresetInput {
 
 /// Get the unified presets folder path
 fn get_presets_folder() -> Result<PathBuf, String> {
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
-    Ok(home.join(".claude-history-viewer").join("unified-presets"))
+    app_data_path("unified-presets")
 }
 
 /// Ensure the presets folder exists

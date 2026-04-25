@@ -1,8 +1,9 @@
 //! Tauri commands for settings preset management
 //!
 //! This module provides commands for saving, loading, and managing
-//! user settings presets stored in ~/.claude-history-viewer/presets/
+//! user settings presets stored in ~/.echo-profile/presets/
 
+use crate::app_dirs::app_data_path;
 use crate::models::UserSettings;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -37,10 +38,9 @@ pub struct PresetInput {
     pub settings: String, // JSON string of UserSettings
 }
 
-/// Get the presets folder path (~/.claude-history-viewer/presets)
+/// Get the presets folder path (~/.echo-profile/presets)
 fn get_presets_folder() -> Result<PathBuf, String> {
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
-    Ok(home.join(".claude-history-viewer").join("presets"))
+    app_data_path("presets")
 }
 
 /// Ensure the presets folder exists and is a directory
@@ -275,9 +275,7 @@ mod tests {
     fn test_get_presets_folder() {
         let _temp = setup_test_env();
         let folder = get_presets_folder().unwrap();
-        assert!(folder
-            .to_string_lossy()
-            .contains(".claude-history-viewer/presets"));
+        assert!(folder.to_string_lossy().contains(".echo-profile/presets"));
     }
 
     #[test]

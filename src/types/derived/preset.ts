@@ -4,7 +4,7 @@
  * Consolidated preset type definitions for configuration management.
  * Combines settings presets, MCP presets, and unified presets into one coherent system.
  *
- * Location: ~/.claude-history-viewer/unified-presets/
+ * Location: ~/.echo-profile/unified-presets/
  */
 
 import type {

@@ -103,6 +103,11 @@ export default defineConfig(async () => {
             return "search-vendor";
           }
 
+          // Archive/zip processing used by figure pool import/export
+          if (id.includes("jszip")) {
+            return "zip-vendor";
+          }
+
           // Data/state management bundle
           if (
             id.includes("zustand") ||

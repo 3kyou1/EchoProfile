@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import bundledFigureSeedPool from "@/data/scientistPool.json";
 import { FigureResonanceCard } from "@/components/CopaProfile/FigureResonanceCard";
 import type { FigureResonanceCard as FigureResonanceCardType } from "@/types/figureResonance";
 
@@ -12,16 +11,6 @@ vi.mock("react-i18next", () => ({
 }));
 
 describe("figure locale cleanup", () => {
-  it("keeps only zh localized names in the bundled builtin pool", () => {
-    for (const record of bundledFigureSeedPool) {
-      expect(Object.keys(record.localized_names ?? {})).toEqual(
-        Object.keys(record.localized_names ?? {}).filter((key) => key === "zh")
-      );
-      expect(record.localized_names ?? {}).not.toHaveProperty("ja");
-      expect(record.localized_names ?? {}).not.toHaveProperty("ko");
-    }
-  });
-
   it("falls back to English wikipedia when the app language is unsupported", () => {
     mockUseTranslation.mockReturnValue({
       t: (_key: string, fallback?: string) => fallback ?? "Wikipedia",

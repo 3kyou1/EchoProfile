@@ -60,6 +60,7 @@ import {
 import type { FigurePoolZipInspection } from "@/types/figurePool";
 
 const MAX_PROMPT_SIGNALS = 300;
+const FIGURE_POOL_IMPORT_MAX_BYTES = 100 * 1024 * 1024;
 type CopaSubview = "profile" | "resonance" | "pools";
 
 interface PendingFigurePoolImport {
@@ -722,6 +723,11 @@ export function CopaProfilePage() {
     setFigurePoolImportError("");
   };
 
+  const presentFigurePoolImportError = (message: string) => {
+    setFigurePoolImportError(message);
+    toast.error(message);
+  };
+
   const completeFigurePoolImport = async (archive: Uint8Array, name?: string) => {
     const imported = await importFigurePoolFromZip(archive, name ? { name } : undefined);
     await refreshFigurePools();
@@ -731,14 +737,28 @@ export function CopaProfilePage() {
   };
 
   const handleImportFigurePool = async () => {
+    setFigurePoolImportError("");
+
     try {
-      const archive = await openBinaryFileDialog({
+      const selectedArchive = await openBinaryFileDialog({
         filters: [{ name: "ZIP", extensions: ["zip"] }],
       });
 
-      if (!archive) {
+      if (!selectedArchive) {
         return;
       }
+
+      if (selectedArchive.size > FIGURE_POOL_IMPORT_MAX_BYTES) {
+        presentFigurePoolImportError(
+          t(
+            "common.copa.resonance.pool.importTooLarge",
+            "Cannot import files larger than 100 MB."
+          )
+        );
+        return;
+      }
+
+      const archive = selectedArchive.data;
 
       const inspection = await inspectFigurePoolZip(archive);
       if (inspection.hasNameConflict) {
@@ -750,7 +770,9 @@ export function CopaProfilePage() {
 
       await completeFigurePoolImport(archive);
     } catch (figurePoolError) {
-      setError(figurePoolError instanceof Error ? figurePoolError.message : String(figurePoolError));
+      presentFigurePoolImportError(
+        figurePoolError instanceof Error ? figurePoolError.message : String(figurePoolError)
+      );
     }
   };
 
@@ -776,7 +798,7 @@ export function CopaProfilePage() {
         pendingFigurePoolImportName.trim()
       );
     } catch (figurePoolError) {
-      setFigurePoolImportError(
+      presentFigurePoolImportError(
         figurePoolError instanceof Error ? figurePoolError.message : String(figurePoolError)
       );
     }
@@ -1157,6 +1179,10 @@ export function CopaProfilePage() {
               pools={figurePools}
               selectedPoolId={selectedPoolId}
               importSummaryPool={importSummaryPool}
+              importHint={(i18n.resolvedLanguage || i18n.language || "en").toLowerCase().startsWith("zh")
+                ? "ZIP 导入上限：100 MB。"
+                : "ZIP import limit: 100 MB."}
+              importError={figurePoolImportError}
               onSelectPool={setSelectedPoolId}
               onImport={handleImportFigurePool}
               onExport={handleExportFigurePool}
@@ -1642,17 +1668,13 @@ export function CopaProfilePage() {
               <>
                 {activeSubview === "profile" ? (
                   <>
-                    {isProfileGenerationView ? (
-                      null
-                    ) : (
-                      <>
-                        <section className="grid gap-4 xl:grid-cols-2">
-                          {Object.values(interactiveSnapshot.factors).map((factor) => (
-                            <CopaFactorCard key={factor.code} factor={factor} />
-                          ))}
-                        </section>
-                      </>
-                    )}
+                    {!isProfileGenerationView && interactiveSnapshot ? (
+                      <section className="grid gap-4 xl:grid-cols-2">
+                        {Object.values(interactiveSnapshot.factors).map((factor) => (
+                          <CopaFactorCard key={factor.code} factor={factor} />
+                        ))}
+                      </section>
+                    ) : null}
 
                   </>
                 ) : (

@@ -134,6 +134,11 @@ pub fn build_router(state: Arc<AppState>, host: &str, port: u16, dist_dir: Optio
         .route("/load_presets", post(h::load_presets))
         .route("/get_preset", post(h::get_preset))
         .route("/delete_preset", post(h::delete_preset))
+        // Figure pool repo commands
+        .route("/list_figure_pool_entries", post(h::list_figure_pool_entries))
+        .route("/save_figure_pool", post(h::save_figure_pool))
+        .route("/delete_figure_pool", post(h::delete_figure_pool))
+        .route("/read_figure_pool_portrait", post(h::read_figure_pool_portrait))
         // MCP preset commands
         .route("/save_mcp_preset", post(h::save_mcp_preset))
         .route("/load_mcp_presets", post(h::load_mcp_presets))

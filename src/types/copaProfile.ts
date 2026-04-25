@@ -8,7 +8,6 @@ export interface CopaFactor {
   title: string;
   description: string;
   user_profile_description: string;
-  response_strategy: string[];
 }
 
 export interface CopaFactors {
@@ -41,6 +40,7 @@ export interface CopaLlmConfigState {
     enabled: boolean;
     config: CopaModelConfig;
   };
+  pasteLikeSignalLength?: number;
 }
 
 export interface CopaScopeRef {

@@ -1,4 +1,5 @@
 import { loadFigurePool } from "@/services/figurePoolService";
+import { persistLlmDebugLog } from "@/services/llmDebugLogger";
 import { storageAdapter } from "@/services/storage";
 import type { FigurePool, FigurePoolRecord } from "@/types/figurePool";
 import type { CopaModelConfig, CopaSnapshot } from "@/types/copaProfile";
@@ -17,6 +18,51 @@ const RECENT_WINDOW = 12;
 const RECENT_MIN_MESSAGES = 4;
 const MAX_POOL_AXES = 4;
 
+const FIGURE_RESONANCE_CARD_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    slug: { type: "string" },
+    reason: { type: "string" },
+    resonance_axes: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+  required: ["slug", "reason", "resonance_axes"],
+};
+
+const FIGURE_RESONANCE_RESPONSE_FORMAT = {
+  type: "json_schema",
+  json_schema: {
+    name: "figure_resonance",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        long_term: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            primary: FIGURE_RESONANCE_CARD_SCHEMA,
+            secondary: {
+              type: "array",
+              items: FIGURE_RESONANCE_CARD_SCHEMA,
+            },
+          },
+          required: ["primary", "secondary"],
+        },
+        recent_state: {
+          anyOf: [FIGURE_RESONANCE_CARD_SCHEMA, { type: "null" }],
+        },
+      },
+      required: ["long_term", "recent_state"],
+    },
+  },
+};
+
+const FIGURE_RESONANCE_JSON_OBJECT_RESPONSE_FORMAT = { type: "json_object" } as const;
+
 interface PoolContext {
   pool: FigurePool;
   allRecordsBySlug: Map<string, FigurePoolRecord>;
@@ -33,6 +79,20 @@ function stripFence(value: string): string {
   const lines = trimmed.split("\n");
   const body = lines.slice(1, lines[lines.length - 1]?.trim() === "```" ? -1 : undefined);
   return body.join("\n").trim();
+}
+
+function shouldFallbackToJsonObject(status: number, detail: string): boolean {
+  if (status !== 400) {
+    return false;
+  }
+
+  const normalized = detail.toLowerCase();
+  return (
+    normalized.includes("json_schema") ||
+    normalized.includes("response_format") ||
+    normalized.includes("not supported") ||
+    normalized.includes("unsupported")
+  );
 }
 
 function normalizeLanguage(language: string): string {
@@ -442,6 +502,43 @@ function collectSignalText(profileMarkdown: string, recentMessages: string[]): s
   return chunks.join("\n\n").trim();
 }
 
+function diagnoseResonancePayload(
+  parsed: Record<string, unknown>,
+  longTerm: FigureResonancePayload["long_term"],
+  recentState: FigureResonanceCard | null,
+  allowRecentState: boolean
+): Record<string, unknown> {
+  const longTermPayload =
+    parsed.long_term && typeof parsed.long_term === "object"
+      ? (parsed.long_term as Record<string, unknown>)
+      : null;
+  const primaryPayload =
+    longTermPayload?.primary && typeof longTermPayload.primary === "object"
+      ? (longTermPayload.primary as Record<string, unknown>)
+      : null;
+  const secondaryPayload = Array.isArray(longTermPayload?.secondary)
+    ? longTermPayload.secondary
+    : [];
+
+  return {
+    hasLongTermPrimary:
+      typeof primaryPayload?.slug === "string" && primaryPayload.slug.trim().length > 0,
+    secondaryCount: secondaryPayload.length,
+    allowRecentState,
+    hasRecentStatePayload: parsed.recent_state != null,
+    usedLongTermHeuristicFill:
+      secondaryPayload.length < longTerm.secondary.length ||
+      !(
+        typeof primaryPayload?.slug === "string" &&
+        primaryPayload.slug.trim().length > 0
+      ),
+    usedRecentStateFallback:
+      allowRecentState && parsed.recent_state != null && recentState != null
+        ? !(typeof (parsed.recent_state as Record<string, unknown>).slug === "string")
+        : false,
+  };
+}
+
 function buildFigurePrompt(
   profileMarkdown: string,
   recentMessages: string[],
@@ -515,39 +612,154 @@ async function requestFigureResonanceFromLlm(
   }
 
   const prompt = buildFigurePrompt(profileMarkdown, recentMessages, language, context);
-  const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
+  await persistLlmDebugLog({
+    category: "resonance",
+    stage: "request",
+    payload: {
+      baseUrl: config.baseUrl,
       model: config.model,
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: prompt.system },
-        { role: "user", content: prompt.user },
-      ],
-    }),
+      language,
+      responseFormat: FIGURE_RESONANCE_RESPONSE_FORMAT.type,
+      recentMessageCount: recentMessages.length,
+      figurePoolId: context.pool.id,
+      figurePoolName: context.pool.name,
+      systemPrompt: prompt.system,
+      userPrompt: prompt.user,
+    },
   });
+  let response: Response | null = null;
+  for (const responseFormat of [FIGURE_RESONANCE_RESPONSE_FORMAT, FIGURE_RESONANCE_JSON_OBJECT_RESPONSE_FORMAT]) {
+    try {
+      response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          temperature: 0.3,
+          response_format: responseFormat,
+          messages: [
+            { role: "system", content: prompt.system },
+            { role: "user", content: prompt.user },
+          ],
+        }),
+      });
+    } catch (error) {
+      await persistLlmDebugLog({
+        category: "resonance",
+        stage: "network_error",
+        level: "warn",
+        payload: {
+          error: error instanceof Error ? error.message : String(error),
+          responseFormat: responseFormat.type,
+        },
+      });
+      throw error;
+    }
 
-  if (!response.ok) {
+    await persistLlmDebugLog({
+      category: "resonance",
+      stage: "fetch_resolved",
+      payload: {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        responseFormat: responseFormat.type,
+      },
+    });
+
+    if (response.ok) {
+      break;
+    }
+
     const detail = await response.text();
+    if (
+      responseFormat.type === "json_schema" &&
+      shouldFallbackToJsonObject(response.status, detail)
+    ) {
+      await persistLlmDebugLog({
+        category: "resonance",
+        stage: "schema_fallback",
+        level: "warn",
+        payload: {
+          from: "json_schema",
+          to: "json_object",
+          status: response.status,
+          statusText: response.statusText,
+          detail,
+        },
+      });
+      response = null;
+      continue;
+    }
+
+    await persistLlmDebugLog({
+      category: "resonance",
+      stage: "http_error",
+      level: "warn",
+      payload: {
+        status: response.status,
+        statusText: response.statusText,
+        detail,
+        responseFormat: responseFormat.type,
+      },
+    });
     throw new Error(detail || `Figure resonance generation failed (${response.status})`);
   }
 
-  const payload = (await response.json()) as {
+  if (!response) {
+    throw new Error("Figure resonance generation failed before receiving a response.");
+  }
+
+  let payload: {
     choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
   };
+  try {
+    payload = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
+    };
+  } catch (error) {
+    await persistLlmDebugLog({
+      category: "resonance",
+      stage: "response_json_error",
+      level: "warn",
+      payload: {
+        status: response.status,
+        statusText: response.statusText,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    throw error;
+  }
   const content = payload.choices?.[0]?.message?.content;
   const rawContent = Array.isArray(content)
     ? content.map((item) => (typeof item?.text === "string" ? item.text : "")).join("\n")
     : typeof content === "string"
       ? content
       : "";
+  await persistLlmDebugLog({
+    category: "resonance",
+    stage: "response",
+    payload: { rawContent },
+  });
 
-  const parsed = JSON.parse(stripFence(rawContent)) as Record<string, unknown>;
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(stripFence(rawContent)) as Record<string, unknown>;
+  } catch (error) {
+    await persistLlmDebugLog({
+      category: "resonance",
+      stage: "parse_error",
+      level: "warn",
+      payload: {
+        rawContent,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    throw error;
+  }
   const allowRecent = recentMessages.length >= RECENT_MIN_MESSAGES;
   const longTerm = enrichLongTermWithSecondary(
     normalizeLongTermPayload(parsed.long_term, context),
@@ -566,6 +778,12 @@ async function requestFigureResonanceFromLlm(
         context,
       }) as FigureResonanceCard)
     : null;
+
+  await persistLlmDebugLog({
+    category: "resonance",
+    stage: "diagnosis",
+    payload: diagnoseResonancePayload(parsed, longTerm, recentState, allowRecent),
+  });
 
   return { long_term: longTerm, recent_state: recentState };
 }
@@ -717,7 +935,17 @@ export async function generateFigureResonance(input: {
       input.language,
       context
     );
-  } catch {
+  } catch (error) {
+    await persistLlmDebugLog({
+      category: "resonance",
+      stage: "diagnosis",
+      level: "warn",
+      payload: {
+        source: "heuristic",
+        reason: "llm_request_failed",
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
     source = "heuristic";
     payload = {
       long_term: heuristicMatch(signalText, {

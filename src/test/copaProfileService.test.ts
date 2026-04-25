@@ -1,5 +1,14 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ClaudeMessage } from "@/types";
+
+const { mockPersistLlmDebugLog } = vi.hoisted(() => ({
+  mockPersistLlmDebugLog: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/services/llmDebugLogger", () => ({
+  persistLlmDebugLog: mockPersistLlmDebugLog,
+}));
+
 import {
   buildCopaPrompt,
   buildScopeKey,
@@ -8,6 +17,7 @@ import {
   extractUserSignals,
   loadCopaConfig,
   normalizeCopaResponse,
+  requestCopaProfile,
   renderCopaMarkdown,
   resolveResonanceModelConfig,
   saveCopaSnapshot,
@@ -18,6 +28,7 @@ import type { CopaSnapshot } from "@/types/copaProfile";
 
 describe("copaProfileService", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     const backing = new Map<string, string>();
     Object.defineProperty(globalThis, "localStorage", {
       configurable: true,
@@ -120,19 +131,59 @@ describe("copaProfileService", () => {
     expect(result.stats.dedupedMessages).toBe(1);
   });
 
+  test("extractUserSignals respects a configurable paste-like length threshold", () => {
+    const pastedLog = Array.from(
+      { length: 6 },
+      (_, index) => `Error: request failed ${index}\n    at module${index}.ts:10:5`
+    ).join("\n");
+
+    expect(pastedLog.length).toBeGreaterThan(50);
+    expect(pastedLog.length).toBeLessThan(400);
+
+    const withStrictThreshold = extractUserSignals(
+      [
+        {
+          uuid: "u-log",
+          sessionId: "s1",
+          timestamp: "2026-04-22T00:04:00Z",
+          type: "user",
+          role: "user",
+          content: pastedLog,
+        },
+      ],
+      50
+    );
+
+    const withLooseThreshold = extractUserSignals(
+      [
+        {
+          uuid: "u-log",
+          sessionId: "s1",
+          timestamp: "2026-04-22T00:04:00Z",
+          type: "user",
+          role: "user",
+          content: pastedLog,
+        },
+      ],
+      400
+    );
+
+    expect(withStrictThreshold.messages).toEqual([]);
+    expect(withLooseThreshold.messages).toEqual([pastedLog.replace(/\s+/g, " ").trim()]);
+  });
+
   test("normalizeCopaResponse fills missing factors with defaults", () => {
     const result = normalizeCopaResponse({
       factors: {
         CT: {
           user_profile_description: "The user wants evidence.",
-          response_strategy: ["Show sources."],
         },
       },
       prompt_summary: "Prioritize evidence and practical context.",
     });
 
     expect(result.factors.CT.user_profile_description).toContain("evidence");
-    expect(result.factors.SA.response_strategy.length).toBeGreaterThan(0);
+    expect(result.factors.SA.user_profile_description.length).toBeGreaterThan(0);
     expect(result.promptSummary).toContain("Prioritize");
   });
 
@@ -141,15 +192,53 @@ describe("copaProfileService", () => {
       factors: {
         "Cognitive Trust": {
           user_profile_description: "Wants claims backed by evidence.",
-          response_strategy: ["Cite concrete evidence."],
         },
       },
       prompt_summary: "Lead with evidence.",
     });
 
     expect(result.factors.CT.user_profile_description).toContain("evidence");
-    expect(result.factors.CT.response_strategy).toEqual(["Cite concrete evidence."]);
     expect(result.promptSummary).toBe("Lead with evidence.");
+  });
+
+  test("normalizeCopaResponse accepts factors returned as an array with factor_name labels", () => {
+    const result = normalizeCopaResponse(
+      {
+        factors: [
+          {
+            factor_name: "认知信任",
+            user_profile_description: "用户重视可验证的证据。",
+          },
+          {
+            factor_name: "情境锚定",
+            user_profile_description: "回答要贴合当前任务。",
+          },
+        ],
+        prompt_summary: "整体偏好高验证性与高情境贴合。",
+      },
+      "zh"
+    );
+
+    expect(result.factors.CT.user_profile_description).toBe("用户重视可验证的证据。");
+    expect(result.factors.SA.user_profile_description).toBe("回答要贴合当前任务。");
+    expect(result.promptSummary).toBe("整体偏好高验证性与高情境贴合。");
+  });
+
+  test("normalizeCopaResponse accepts factors returned as an array with name labels", () => {
+    const result = normalizeCopaResponse(
+      {
+        factors: [
+          {
+            name: "Cognitive Trust",
+            user_profile_description: "Wants evidence-backed claims.",
+          },
+        ],
+        prompt_summary: "Lead with evidence.",
+      },
+      "en"
+    );
+
+    expect(result.factors.CT.user_profile_description).toBe("Wants evidence-backed claims.");
   });
 
   test("buildCopaPrompt localizes the prompt to English and Chinese", () => {
@@ -160,14 +249,303 @@ describe("copaProfileService", () => {
     expect(english.system).toContain("- Cognitive Trust -");
     expect(english.system).not.toContain("CT:");
     expect(english.system).not.toContain("Cognitive Trust (CT)");
+    expect(english.system).toContain("Each factor must contain user_profile_description.");
+    expect(english.system).not.toContain("response_strategy");
     expect(english.user).toContain("Generate a CoPA profile from these user messages only.");
     expect(english.user).toContain("- Please keep this practical.");
 
     expect(chinese.system).toContain("你正在基于仅包含用户消息的互动历史生成 CoPA profile。");
     expect(chinese.system).toContain("- 认知信任 -");
     expect(chinese.system).not.toContain("（CT）");
+    expect(chinese.system).toContain("每个 factor 都必须包含 user_profile_description。");
+    expect(chinese.system).not.toContain("response_strategy");
     expect(chinese.user).toContain("请仅基于这些用户消息生成 CoPA profile。");
     expect(chinese.user).toContain("- 请保持结论简洁。");
+  });
+
+  test("requestCopaProfile logs the prompt input and raw response for debugging", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: "{\"factors\":{},\"prompt_summary\":\"Lead with evidence.\"}",
+              },
+            },
+          ],
+        }),
+      })
+    );
+
+    await requestCopaProfile(
+      ["Please keep this practical."],
+      {
+        baseUrl: "https://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      "en"
+    );
+
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "copa",
+        stage: "request",
+        payload: expect.objectContaining({
+          language: "en",
+          model: "test-model",
+          signalCount: 1,
+          systemPrompt: expect.stringContaining("You are generating a CoPA profile"),
+          userPrompt: expect.stringContaining("- Please keep this practical."),
+        }),
+      })
+    );
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "copa",
+        stage: "response",
+        payload: {
+          rawContent: "{\"factors\":{},\"prompt_summary\":\"Lead with evidence.\"}",
+        },
+      })
+    );
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "copa",
+        stage: "diagnosis",
+        payload: expect.objectContaining({
+          missingFactors: expect.arrayContaining(["CT", "SA", "SC", "CLM", "MS", "AMR"]),
+          usedFallbackPromptSummary: false,
+        }),
+      })
+    );
+  });
+
+  test("requestCopaProfile sends a json_schema response format", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: "{\"factors\":{},\"prompt_summary\":\"Lead with evidence.\"}",
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await requestCopaProfile(
+      ["Please keep this practical."],
+      {
+        baseUrl: "https://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      "en"
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(requestInit?.body ?? "{}")) as {
+      response_format?: { type?: string; json_schema?: { name?: string; schema?: Record<string, unknown> } };
+    };
+
+    expect(body.response_format?.type).toBe("json_schema");
+    expect(body.response_format?.json_schema?.name).toBe("copa_profile");
+    expect(body.response_format?.json_schema?.schema).toEqual(
+      expect.objectContaining({
+        type: "object",
+        required: expect.arrayContaining(["factors", "prompt_summary"]),
+      })
+    );
+  });
+
+  test("requestCopaProfile falls back to json_object when json_schema is unsupported", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        text: async () => "response_format json_schema is not supported for this model",
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: "{\"factors\":{},\"prompt_summary\":\"Lead with evidence.\"}",
+              },
+            },
+          ],
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestCopaProfile(
+      ["Please keep this practical."],
+      {
+        baseUrl: "https://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      "en"
+    );
+
+    const firstBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body ?? "{}")) as {
+      response_format?: { type?: string };
+    };
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body ?? "{}")) as {
+      response_format?: { type?: string };
+    };
+
+    expect(firstBody.response_format?.type).toBe("json_schema");
+    expect(secondBody.response_format?.type).toBe("json_object");
+    expect(result.promptSummary).toBe("Lead with evidence.");
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "copa",
+        stage: "schema_fallback",
+        payload: expect.objectContaining({
+          from: "json_schema",
+          to: "json_object",
+          status: 400,
+        }),
+      })
+    );
+  });
+
+  test("requestCopaProfile throws when the model returns invalid JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: "not valid json",
+              },
+            },
+          ],
+        }),
+      })
+    );
+
+    await expect(
+      requestCopaProfile(
+        ["Please keep this practical."],
+        {
+          baseUrl: "https://example.com/v1",
+          model: "test-model",
+          apiKey: "test-key",
+        },
+        "en"
+      )
+    ).rejects.toThrow("CoPA model returned invalid JSON.");
+
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "copa",
+        stage: "parse_error",
+        level: "warn",
+        payload: expect.objectContaining({
+          rawContent: "not valid json",
+        }),
+      })
+    );
+  });
+
+  test("requestCopaProfile logs http errors before throwing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 504,
+        statusText: "Gateway Timeout",
+        text: async () => "upstream timeout",
+      })
+    );
+
+    await expect(
+      requestCopaProfile(
+        ["Please keep this practical."],
+        {
+          baseUrl: "https://example.com/v1",
+          model: "test-model",
+          apiKey: "test-key",
+        },
+        "en"
+      )
+    ).rejects.toThrow("upstream timeout");
+
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "copa",
+        stage: "fetch_resolved",
+        payload: expect.objectContaining({
+          ok: false,
+          status: 504,
+          statusText: "Gateway Timeout",
+        }),
+      })
+    );
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "copa",
+        stage: "http_error",
+        level: "warn",
+        payload: expect.objectContaining({
+          status: 504,
+          detail: "upstream timeout",
+        }),
+      })
+    );
+  });
+
+  test("requestCopaProfile logs response json errors before throwing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => {
+          throw new Error("unexpected end of json input");
+        },
+      })
+    );
+
+    await expect(
+      requestCopaProfile(
+        ["Please keep this practical."],
+        {
+          baseUrl: "https://example.com/v1",
+          model: "test-model",
+          apiKey: "test-key",
+        },
+        "en"
+      )
+    ).rejects.toThrow("unexpected end of json input");
+
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "copa",
+        stage: "response_json_error",
+        level: "warn",
+        payload: expect.objectContaining({
+          status: 200,
+          error: "unexpected end of json input",
+        }),
+      })
+    );
   });
 
   test("saveCopaSnapshot appends snapshots and loadCopaSnapshots returns latest first", async () => {
@@ -387,6 +765,7 @@ describe("copaProfileService", () => {
     expect(config.copa.model).toBe("legacy-model");
     expect(config.resonance.enabled).toBe(false);
     expect(config.resonance.config.model).toBe("legacy-model");
+    expect(config.pasteLikeSignalLength).toBe(400);
   });
 
   test("resolveResonanceModelConfig falls back to CoPA config until a separate resonance config is enabled", async () => {

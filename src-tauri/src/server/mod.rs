@@ -113,6 +113,7 @@ pub fn build_router(state: Arc<AppState>, host: &str, port: u16, dist_dir: Optio
         .route("/send_feedback", post(h::send_feedback))
         .route("/get_system_info", post(h::get_system_info))
         .route("/open_github_issues", post(h::open_github_issues))
+        .route("/log_frontend_llm_debug", post(h::log_frontend_llm_debug))
         // Metadata commands
         .route(
             "/get_metadata_folder_path",

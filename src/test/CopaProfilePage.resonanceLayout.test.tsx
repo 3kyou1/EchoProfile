@@ -20,6 +20,7 @@ const mockSaveBinaryFileDialog = vi.fn();
 const mockExportFigurePoolToZip = vi.fn();
 const mockImportFigurePoolFromZip = vi.fn();
 const mockInspectFigurePoolZip = vi.fn();
+const mockToastError = vi.fn();
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => mockUseTranslation(),
@@ -31,6 +32,12 @@ vi.mock("@/store/useAppStore", () => ({
 
 vi.mock("@/services/api", () => ({
   api: (...args: unknown[]) => mockApi(...args),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
 }));
 
 vi.mock("@/utils/fileDialog", () => ({
@@ -105,6 +112,19 @@ vi.mock("@/services/figurePoolService", () => ({
 
 describe("CopaProfilePage resonance layout", () => {
   beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, "hasPointerCapture", {
+      configurable: true,
+      value: () => false,
+    });
+    Object.defineProperty(HTMLElement.prototype, "setPointerCapture", {
+      configurable: true,
+      value: () => {},
+    });
+    Object.defineProperty(HTMLElement.prototype, "releasePointerCapture", {
+      configurable: true,
+      value: () => {},
+    });
+
     mockUseTranslation.mockReturnValue({
       t: (
         _key: string,
@@ -163,6 +183,7 @@ describe("CopaProfilePage resonance layout", () => {
     mockExtractUserSignals.mockReset();
     mockSaveCopaSnapshot.mockReset();
     mockApi.mockReset();
+    mockToastError.mockReset();
 
     mockLoadCopaSnapshots.mockResolvedValue([
       {
@@ -208,7 +229,50 @@ describe("CopaProfilePage resonance layout", () => {
           invalidCount: 3,
           errorCount: 3,
         },
-        records: [],
+        records: [
+          {
+            slug: "ada-lovelace",
+            name: "Ada Lovelace",
+            localized_names: { zh: "阿达·洛芙莱斯" },
+            portrait_url: "/ada.png",
+            quote_en: "That brain of mine is more than merely mortal; as time will show.",
+            quote_zh: "我的头脑绝不只是凡人之物，时间会证明这一点。",
+            core_traits: "structured, abstract",
+            thinking_style: "Turns complex systems into clear conceptual models.",
+            temperament_tags: "calm, rigorous",
+            temperament_summary: "Structured and rigorous.",
+            loading_copy_zh: "正在把复杂系统翻译成更清晰的结构...",
+            loading_copy_en: "Translating complex systems into a clearer structure...",
+            bio_zh: "早期计算先驱。",
+            bio_en: "An early computing pioneer.",
+            achievements_zh: ["成就一"],
+            achievements_en: ["Achievement one"],
+            status: "valid",
+            errors: [],
+            updatedAt: "2026-04-23T00:00:00.000Z",
+          },
+          {
+            slug: "grace-hopper",
+            name: "Grace Hopper",
+            localized_names: { zh: "格蕾丝·霍珀" },
+            portrait_url: "/grace.png",
+            quote_en: "The most dangerous phrase is: we've always done it this way.",
+            quote_zh: "最危险的一句话是：我们一直都是这么做的。",
+            core_traits: "pragmatic, precise",
+            thinking_style: "Makes systems executable and debuggable.",
+            temperament_tags: "direct, practical",
+            temperament_summary: "Pragmatic and direct.",
+            loading_copy_zh: "正在把抽象判断压缩成可执行的结构...",
+            loading_copy_en: "Compressing abstract judgment into executable structure...",
+            bio_zh: "编译器先驱。",
+            bio_en: "A compiler pioneer.",
+            achievements_zh: ["成就二"],
+            achievements_en: ["Achievement two"],
+            status: "valid",
+            errors: [],
+            updatedAt: "2026-04-23T00:00:00.000Z",
+          },
+        ],
       },
     ]);
 
@@ -377,6 +441,360 @@ describe("CopaProfilePage resonance layout", () => {
     ).toBeTruthy();
   });
 
+  it("shows an error toast when CoPA generation fails", async () => {
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "load_project_sessions") {
+        return [];
+      }
+      if (command === "load_provider_messages") {
+        return [];
+      }
+      return [];
+    });
+    mockExtractUserSignals.mockReturnValue({
+      messages: ["Please keep this practical."],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
+    mockRequestCopaProfile.mockRejectedValue(new Error("CoPA model returned invalid JSON."));
+
+    render(<CopaProfilePage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("A concise summary.").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate CoPA Profile" }));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("CoPA model returned invalid JSON.");
+    });
+  });
+
+  it("shows a pending profile card and rotating figure loading copy while generating a new CoPA profile", async () => {
+    let resolveProfile: ((value: unknown) => void) | null = null;
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "load_project_sessions") {
+        return [];
+      }
+      if (command === "load_provider_messages") {
+        return [];
+      }
+      return [];
+    });
+    mockExtractUserSignals.mockReturnValue({
+      messages: ["Please keep this practical."],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
+    mockRequestCopaProfile.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveProfile = resolve;
+        })
+    );
+    mockCreateSnapshot.mockReturnValue({
+      id: "snapshot-loading",
+      createdAt: "2026-04-23T01:30:00.000Z",
+      language: "en",
+      scope: {
+        type: "global",
+        ref: "global",
+        label: "Global history",
+        key: "global:global",
+      },
+      providerScope: ["claude"],
+      sourceStats: {
+        projectCount: 1,
+        sessionCount: 1,
+        rawUserMessages: 1,
+        dedupedUserMessages: 1,
+        truncatedMessages: 0,
+      },
+      modelConfig: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        temperature: 0.2,
+      },
+      promptSummary: "Done",
+      factors: {},
+      markdown: "# Profile",
+    });
+    mockSaveCopaSnapshot.mockResolvedValue([
+      {
+        id: "snapshot-loading",
+        createdAt: "2026-04-23T01:30:00.000Z",
+        language: "en",
+        scope: {
+          type: "global",
+          ref: "global",
+          label: "Global history",
+          key: "global:global",
+        },
+        providerScope: ["claude"],
+        sourceStats: {
+          projectCount: 1,
+          sessionCount: 1,
+          rawUserMessages: 1,
+          dedupedUserMessages: 1,
+          truncatedMessages: 0,
+        },
+        modelConfig: {
+          baseUrl: "http://example.com/v1",
+          model: "test-model",
+          temperature: 0.2,
+        },
+        promptSummary: "Done",
+        factors: {},
+        markdown: "# Profile",
+      },
+    ]);
+
+    render(<CopaProfilePage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("A concise summary.").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate CoPA Profile" }));
+
+    expect(await screen.findByText("Generating new Profile")).toBeInTheDocument();
+    expect(screen.getAllByText("Figure loading copy")).toHaveLength(1);
+    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.getByText("Translating complex systems into a clearer structure...")).toBeInTheDocument();
+    expect(screen.queryByText("Prompt summary")).not.toBeInTheDocument();
+    expect(screen.queryByText("2026-04-23T14:40:51.431Z")).not.toBeInTheDocument();
+    const profileTrigger = screen.getByLabelText("Choose profile");
+    expect(profileTrigger.tagName).toBe("BUTTON");
+
+    expect(profileTrigger).toBeInTheDocument();
+
+    resolveProfile?.({
+      promptSummary: "Done",
+      factors: {},
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Generating new Profile")).not.toBeInTheDocument();
+    });
+  });
+
+  it("renders profile history as a compact dropdown selector", async () => {
+    render(<CopaProfilePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Currently selected")).toBeInTheDocument();
+    });
+
+    const selector = screen.getByLabelText("Choose profile");
+    expect(selector).toBeInTheDocument();
+    expect(selector.tagName).toBe("BUTTON");
+
+    expect(screen.getByText("Currently selected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Profile" })).toBeInTheDocument();
+  });
+
+  it("renders resonance history as a compact dropdown selector", async () => {
+    mockLoadFigureResonanceHistory.mockResolvedValue([
+      {
+        id: "result-2",
+        cache_key: "global:global:snapshot-1:en:pool-2",
+        scope_key: "global:global",
+        profile_id: "snapshot-1",
+        pool_id: "pool-2",
+        pool_name_snapshot: "Founders",
+        pool_updated_at_snapshot: "2026-04-23T02:00:00.000Z",
+        generated_at: "2026-04-23T02:00:00.000Z",
+        language: "en",
+        source: "llm",
+        long_term: {
+          primary: {
+            name: "Jeff Bezos",
+            slug: "jeff-bezos",
+            portrait_url: "/jeff.png",
+            hook: "founder",
+            quote_zh: "测试",
+            quote_en: "Test",
+            reason: "Reason",
+            resonance_axes: ["structured"],
+            confidence_style: "strong_resonance",
+            loading_copy_zh: "加载中",
+            loading_copy_en: "Loading",
+            bio_zh: "简介",
+            bio_en: "Bio",
+            achievements_zh: ["成就"],
+            achievements_en: ["Achievement"],
+          },
+          secondary: [],
+        },
+        recent_state: null,
+      },
+      {
+        id: "result-1",
+        cache_key: "global:global:snapshot-1:en:builtin-scientists",
+        scope_key: "global:global",
+        profile_id: "snapshot-1",
+        pool_id: "builtin-scientists",
+        pool_name_snapshot: "Scientists",
+        pool_updated_at_snapshot: "2026-04-23T01:00:00.000Z",
+        generated_at: "2026-04-23T01:00:00.000Z",
+        language: "en",
+        source: "llm",
+        long_term: {
+          primary: {
+            name: "Enrico Fermi",
+            slug: "enrico-fermi",
+            portrait_url: "/fermi.png",
+            hook: "scientist",
+            quote_zh: "测试",
+            quote_en: "Test",
+            reason: "Reason",
+            resonance_axes: ["rigorous"],
+            confidence_style: "strong_resonance",
+            loading_copy_zh: "加载中",
+            loading_copy_en: "Loading",
+            bio_zh: "简介",
+            bio_en: "Bio",
+            achievements_zh: ["成就"],
+            achievements_en: ["Achievement"],
+          },
+          secondary: [],
+        },
+        recent_state: null,
+      },
+    ]);
+
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Thought Echoes" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Choose history result")).toBeInTheDocument();
+    });
+
+    const selector = screen.getByLabelText("Choose history result");
+    expect(selector.tagName).toBe("BUTTON");
+    expect(selector).toHaveTextContent("Scientists");
+    expect(screen.queryByText("Founders")).not.toBeInTheDocument();
+  });
+
+  it("renders the project scope selector as a custom dropdown trigger", async () => {
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /project/i }));
+
+    const projectSelector = await screen.findByLabelText("Project");
+    expect(projectSelector.tagName).toBe("BUTTON");
+    expect(projectSelector).toHaveTextContent("EchoProfile");
+  });
+
+  it("renders the session scope selector as a custom dropdown trigger", async () => {
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "load_project_sessions") {
+        return [
+          {
+            actual_session_id: "session-1",
+            file_path: "/tmp/echoprofile/session-1.jsonl",
+            provider: "claude",
+            summary: "Session 1",
+          },
+        ];
+      }
+      return [];
+    });
+
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /session/i }));
+
+    const projectSelector = await screen.findByLabelText("Project");
+    const sessionSelector = await screen.findByLabelText("Session");
+
+    expect(projectSelector.tagName).toBe("BUTTON");
+    expect(sessionSelector.tagName).toBe("BUTTON");
+    expect(sessionSelector).toHaveTextContent("Session 1");
+  });
+
+  it("shows an error toast when thought echoes fall back to heuristic generation", async () => {
+    const { generateFigureResonance } = await import("@/services/figureResonanceService");
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "load_project_sessions") {
+        return [
+          {
+            actual_session_id: "session-1",
+            file_path: "/tmp/echoprofile/session-1.jsonl",
+            provider: "claude",
+            summary: "Session 1",
+          },
+        ];
+      }
+      if (command === "load_provider_messages") {
+        return [
+          {
+            uuid: "u1",
+            sessionId: "session-1",
+            timestamp: "2026-04-23T00:00:00.000Z",
+            type: "user",
+            role: "user",
+            content: "Please keep this practical.",
+          },
+        ];
+      }
+      return [];
+    });
+    mockExtractUserSignals.mockReturnValue({
+      messages: ["Please keep this practical."],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
+    vi.mocked(generateFigureResonance).mockResolvedValue({
+      id: "result-1",
+      cache_key: "global:global:snapshot-1:en:builtin-scientists",
+      scope_key: "global:global",
+      profile_id: "snapshot-1",
+      pool_id: "builtin-scientists",
+      pool_name_snapshot: "Scientists",
+      pool_updated_at_snapshot: "2026-04-23T00:00:00.000Z",
+      generated_at: "2026-04-23T01:00:00.000Z",
+      language: "en",
+      source: "heuristic",
+      long_term: {
+        primary: {
+          name: "Test Figure",
+          slug: "test-figure",
+          portrait_url: "/test.png",
+          hook: "test",
+          quote_zh: "测试",
+          quote_en: "Test",
+          reason: "Fallback reason",
+          resonance_axes: ["structured"],
+          confidence_style: "strong_resonance",
+          loading_copy_zh: "加载中",
+          loading_copy_en: "Loading",
+          bio_zh: "简介",
+          bio_en: "Bio",
+          achievements_zh: ["成就"],
+          achievements_en: ["Achievement"],
+        },
+        secondary: [],
+      },
+      recent_state: null,
+    });
+
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Thought Echoes" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Figure pool")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Generate Thought Echoes|重新生成/ }));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Thought Echoes LLM generation failed. Showing a heuristic fallback result."
+      );
+    });
+  });
+
   it("shows only pool-management content in the figure pools view", async () => {
     render(<CopaProfilePage />);
 
@@ -477,6 +895,70 @@ describe("CopaProfilePage resonance layout", () => {
     expect(
       screen.getByText("Thought Echoes will use the CoPA configuration until you enable a separate override.")
     ).toBeInTheDocument();
+  });
+
+  it("persists the configurable paste-like filter length from the llm settings panel", async () => {
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
+
+    const input = screen.getByLabelText("Paste-like filter length");
+    fireEvent.change(input, { target: { value: "50" } });
+    fireEvent.blur(input);
+
+    await waitFor(() => {
+      expect(mockSaveCopaConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pasteLikeSignalLength: 50,
+        })
+      );
+    });
+  });
+
+  it("allows editing the paste-like filter length from a leading zero before committing", async () => {
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
+
+    const input = screen.getByLabelText("Paste-like filter length") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "0" } });
+    expect(input.value).toBe("0");
+
+    fireEvent.change(input, { target: { value: "050" } });
+    expect(input.value).toBe("050");
+
+    fireEvent.blur(input);
+
+    await waitFor(() => {
+      expect(mockSaveCopaConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pasteLikeSignalLength: 50,
+        })
+      );
+    });
+  });
+
+  it("allows clearing the paste-like filter length input before typing a new value", async () => {
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
+
+    const input = screen.getByLabelText("Paste-like filter length") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "" } });
+    expect(input.value).toBe("");
+
+    fireEvent.change(input, { target: { value: "200" } });
+    expect(input.value).toBe("200");
+
+    fireEvent.blur(input);
+
+    await waitFor(() => {
+      expect(mockSaveCopaConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pasteLikeSignalLength: 200,
+        })
+      );
+    });
   });
 
   it("opens a rename dialog when an imported pool zip conflicts with an existing pool name", async () => {

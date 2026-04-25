@@ -1,4 +1,5 @@
 import { storageAdapter } from "@/services/storage";
+import { persistLlmDebugLog } from "@/services/llmDebugLogger";
 import type { ClaudeMessage } from "@/types";
 import type {
   CopaFactor,
@@ -17,13 +18,13 @@ const STORE_NAME = "copa-profiles.json";
 const SNAPSHOTS_KEY = "snapshots";
 const CONFIG_KEY = "config";
 const MAX_SIGNAL_LENGTH = 1200;
-const PASTE_LIKE_SIGNAL_LENGTH = 400;
+const DEFAULT_PASTE_LIKE_SIGNAL_LENGTH = 400;
 
 const FACTOR_ORDER: CopaFactorCode[] = ["CT", "SA", "SC", "CLM", "MS", "AMR"];
 
 const FACTOR_SPECS: Record<
   CopaLanguage,
-  Record<CopaFactorCode, { title: string; description: string; fallbackSummary: string; fallbackStrategy: string[] }>
+  Record<CopaFactorCode, { title: string; description: string; fallbackSummary: string }>
 > = {
   en: {
     CT: {
@@ -31,60 +32,36 @@ const FACTOR_SPECS: Record<
       description:
         "How strongly the user expects evidence, source quality, rigor, and trustworthy reasoning.",
       fallbackSummary: "The user shows no strong new trust signal yet.",
-      fallbackStrategy: [
-        "State assumptions clearly before making strong claims.",
-        "Add concrete evidence when the answer could be contested.",
-      ],
     },
     SA: {
       title: "Situational Anchoring (SA)",
       description:
         "How tightly the answer should stay anchored to the user's task, constraints, and real situation.",
       fallbackSummary: "The user shows no strong new situational anchoring signal yet.",
-      fallbackStrategy: [
-        "Keep the answer tied to the user's current task.",
-        "Call out practical constraints before expanding scope.",
-      ],
     },
     SC: {
       title: "Schema Consistency (SC)",
       description:
         "How much the answer should align with the user's vocabulary, mental model, and existing framework.",
       fallbackSummary: "The user shows no strong new schema consistency signal yet.",
-      fallbackStrategy: [
-        "Reuse the user's terminology where possible.",
-        "Bridge new concepts from the user's existing frame of reference.",
-      ],
     },
     CLM: {
       title: "Cognitive Load Management (CLM)",
       description:
         "How much complexity, density, and number of steps the user can comfortably absorb at once.",
       fallbackSummary: "The user shows no strong new cognitive load signal yet.",
-      fallbackStrategy: [
-        "Prefer manageable step sizes over dense explanations.",
-        "Chunk long answers into short sections.",
-      ],
     },
     MS: {
       title: "Metacognitive Scaffolding (MS)",
       description:
         "How much the answer should help the user reason, self-check, debug, and structure decisions.",
       fallbackSummary: "The user shows no strong new metacognitive scaffolding signal yet.",
-      fallbackStrategy: [
-        "Provide a decision or debugging frame when useful.",
-        "Expose the order of reasoning steps instead of only the final answer.",
-      ],
     },
     AMR: {
       title: "Affective and Motivational Resonance (AMR)",
       description:
         "How much tone, encouragement, and support style should match the user's motivation and emotional state.",
       fallbackSummary: "The user shows no strong new motivational tone signal yet.",
-      fallbackStrategy: [
-        "Match the user's tone without becoming flat or overly dramatic.",
-        "Use encouragement when the user seems blocked or uncertain.",
-      ],
     },
   },
   zh: {
@@ -92,55 +69,31 @@ const FACTOR_SPECS: Record<
       title: "认知信任（CT）",
       description: "用户对证据、来源质量、严谨性与可信推理的期待强度。",
       fallbackSummary: "用户暂时没有表现出明显的新信任偏好信号。",
-      fallbackStrategy: [
-        "在做出强判断前先说明关键假设。",
-        "当结论可能有争议时补充具体证据。",
-      ],
     },
     SA: {
       title: "情境锚定（SA）",
       description: "回答需要多紧密地锚定在用户当前任务、约束与真实处境上。",
       fallbackSummary: "用户暂时没有表现出明显的新情境锚定信号。",
-      fallbackStrategy: [
-        "让回答紧扣用户当前任务。",
-        "在扩展范围前先点明现实约束。",
-      ],
     },
     SC: {
       title: "图式一致性（SC）",
       description: "回答需要多大程度贴合用户的术语、心智模型与既有框架。",
       fallbackSummary: "用户暂时没有表现出明显的新图式一致性信号。",
-      fallbackStrategy: [
-        "尽量复用用户已有术语。",
-        "把新概念桥接到用户现有认知框架中。",
-      ],
     },
     CLM: {
       title: "认知负荷管理（CLM）",
       description: "用户一次能舒适吸收的复杂度、信息密度与步骤数量。",
       fallbackSummary: "用户暂时没有表现出明显的新认知负荷信号。",
-      fallbackStrategy: [
-        "优先给出可消化的步长，而不是高密度说明。",
-        "把长回答切成更短的分段。",
-      ],
     },
     MS: {
       title: "元认知支架（MS）",
       description: "回答需要多大程度帮助用户进行推理、自检、调试与结构化决策。",
       fallbackSummary: "用户暂时没有表现出明显的新元认知支架信号。",
-      fallbackStrategy: [
-        "在合适时提供决策框架或调试框架。",
-        "不仅给结论，也暴露推理步骤顺序。",
-      ],
     },
     AMR: {
       title: "情感与动机共振（AMR）",
       description: "语气、鼓励与支持风格需要多大程度贴合用户的动机和情绪状态。",
       fallbackSummary: "用户暂时没有表现出明显的新动机语气信号。",
-      fallbackStrategy: [
-        "匹配用户语气，但不要变得平淡或过度戏剧化。",
-        "当用户受阻或不确定时给出适度鼓励。",
-      ],
     },
   },
 };
@@ -153,7 +106,6 @@ const MARKDOWN_LABELS: Record<
     scope: string;
     definition: string;
     userProfile: string;
-    responseStrategy: string;
     promptSummary: string;
     metadata: string;
     providers: string;
@@ -172,7 +124,6 @@ const MARKDOWN_LABELS: Record<
     scope: "Scope",
     definition: "Definition",
     userProfile: "User profile",
-    responseStrategy: "Response strategy",
     promptSummary: "## Prompt Summary",
     metadata: "## Metadata",
     providers: "Providers",
@@ -190,7 +141,6 @@ const MARKDOWN_LABELS: Record<
     scope: "范围",
     definition: "定义",
     userProfile: "用户画像",
-    responseStrategy: "响应策略",
     promptSummary: "## Prompt 摘要",
     metadata: "## 元数据",
     providers: "Provider",
@@ -203,6 +153,55 @@ const MARKDOWN_LABELS: Record<
     baseUrl: "Base URL",
   },
 };
+
+const COPA_FACTOR_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    user_profile_description: { type: "string" },
+  },
+  required: ["user_profile_description"],
+};
+
+const COPA_RESPONSE_FORMAT = {
+  type: "json_schema",
+  json_schema: {
+    name: "copa_profile",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        factors: {
+          type: "object",
+          additionalProperties: false,
+          properties: Object.fromEntries(
+            FACTOR_ORDER.map((code) => [code, COPA_FACTOR_RESPONSE_SCHEMA])
+          ),
+          required: [...FACTOR_ORDER],
+        },
+        prompt_summary: { type: "string" },
+      },
+      required: ["factors", "prompt_summary"],
+    },
+  },
+};
+
+const COPA_JSON_OBJECT_RESPONSE_FORMAT = { type: "json_object" } as const;
+const COPA_INVALID_JSON_ERROR = "CoPA model returned invalid JSON.";
+
+function shouldFallbackToJsonObject(status: number, detail: string): boolean {
+  if (status !== 400) {
+    return false;
+  }
+
+  const normalized = detail.toLowerCase();
+  return (
+    normalized.includes("json_schema") ||
+    normalized.includes("response_format") ||
+    normalized.includes("not supported") ||
+    normalized.includes("unsupported")
+  );
+}
 
 export const DEFAULT_COPA_MODEL_CONFIG: CopaModelConfig = {
   baseUrl: "http://35.220.164.252:3888/v1",
@@ -217,6 +216,7 @@ export const DEFAULT_COPA_LLM_CONFIG: CopaLlmConfigState = {
     enabled: false,
     config: { ...DEFAULT_COPA_MODEL_CONFIG },
   },
+  pasteLikeSignalLength: DEFAULT_PASTE_LIKE_SIGNAL_LENGTH,
 };
 
 function stripFence(value: string): string {
@@ -264,6 +264,21 @@ function normalizeSignal(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+function normalizePasteLikeSignalLength(value: unknown, fallback = DEFAULT_PASTE_LIKE_SIGNAL_LENGTH): number {
+  const normalized =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : Number.NaN;
+
+  if (!Number.isFinite(normalized)) {
+    return fallback;
+  }
+
+  return Math.min(MAX_SIGNAL_LENGTH, Math.max(10, Math.round(normalized)));
+}
+
 function factorPromptLabel(code: CopaFactorCode, language: CopaLanguage): string {
   return FACTOR_SPECS[language][code].title.replace(/\s*\([A-Z]+\)$|\s*（[A-Z]+）$/g, "").trim();
 }
@@ -272,8 +287,12 @@ function countMatches(value: string, pattern: RegExp): number {
   return value.match(pattern)?.length ?? 0;
 }
 
-function isLikelyPastedContent(rawText: string, normalizedText: string): boolean {
-  if (normalizedText.length <= PASTE_LIKE_SIGNAL_LENGTH) {
+function isLikelyPastedContent(
+  rawText: string,
+  normalizedText: string,
+  pasteLikeSignalLength: number
+): boolean {
+  if (normalizedText.length <= pasteLikeSignalLength) {
     return false;
   }
 
@@ -290,10 +309,11 @@ function isLikelyPastedContent(rawText: string, normalizedText: string): boolean
     /\b(function|const|let|var|import|export|class|public|private|return|console\.log|select\b|insert\b|update\b|delete\b|create table)\b/i.test(
       rawText
     );
-  const jsonLike = /"\w[\w.-]*"\s*:/.test(rawText) || /[\[{]\s*[\s\S]*:\s*[\s\S]*[\]}]/.test(rawText);
+  const jsonLike =
+    /"\w[\w.-]*"\s*:/.test(rawText) || /(?:\{|\[)\s*[\s\S]*:\s*[\s\S]*(?:\}|\])/.test(rawText);
   const htmlLike = /<\/?[a-z][^>]*>/i.test(rawText);
   const urlCount = countMatches(rawText, /https?:\/\/\S+/g);
-  const symbolCount = countMatches(rawText, /[{}[\]<>`;$=|]/g);
+  const symbolCount = countMatches(rawText, /(?:\{|\}|\[|\]|<|>|`|;|\$|=|\|)/g);
   const symbolDensity = symbolCount / Math.max(1, rawText.length);
   const manyStructuredLines = lines.length >= 8 && shortLineCount >= Math.ceil(lines.length * 0.6);
 
@@ -327,8 +347,57 @@ function buildDefaultFactor(code: CopaFactorCode, language: CopaLanguage): CopaF
     title: spec.title,
     description: spec.description,
     user_profile_description: spec.fallbackSummary,
-    response_strategy: [...spec.fallbackStrategy],
   };
+}
+
+function factorLookupKeys(code: CopaFactorCode): string[] {
+  return [
+    code,
+    factorPromptLabel(code, "en"),
+    factorPromptLabel(code, "zh"),
+    FACTOR_SPECS.en[code].title,
+    FACTOR_SPECS.zh[code].title,
+  ];
+}
+
+function pickFactorPayload(
+  factorsValue: Record<string, unknown>,
+  code: CopaFactorCode
+): unknown {
+  for (const key of factorLookupKeys(code)) {
+    if (key in factorsValue) {
+      return factorsValue[key];
+    }
+  }
+
+  return undefined;
+}
+
+function buildFactorRecord(value: unknown): Record<string, unknown> {
+  if (Array.isArray(value)) {
+    return value.reduce((accumulator, item) => {
+      if (!item || typeof item !== "object") {
+        return accumulator;
+      }
+
+      const payload = item as Record<string, unknown>;
+      const factorName =
+        typeof payload.factor_name === "string"
+          ? payload.factor_name.trim()
+          : typeof payload.name === "string"
+            ? payload.name.trim()
+            : "";
+
+      if (!factorName) {
+        return accumulator;
+      }
+
+      accumulator[factorName] = payload;
+      return accumulator;
+    }, {} as Record<string, unknown>);
+  }
+
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
 function normalizeFactor(code: CopaFactorCode, value: unknown, language: CopaLanguage): CopaFactor {
@@ -342,15 +411,7 @@ function normalizeFactor(code: CopaFactorCode, value: unknown, language: CopaLan
     title?: unknown;
     description?: unknown;
     user_profile_description?: unknown;
-    response_strategy?: unknown;
   };
-
-  const responseStrategy = Array.isArray(payload.response_strategy)
-    ? payload.response_strategy
-        .map((item) => (typeof item === "string" ? item.trim() : ""))
-        .filter(Boolean)
-        .slice(0, 4)
-    : [];
 
   return {
     ...fallback,
@@ -364,15 +425,16 @@ function normalizeFactor(code: CopaFactorCode, value: unknown, language: CopaLan
       payload.user_profile_description.trim().length > 0
         ? payload.user_profile_description.trim()
         : fallback.user_profile_description,
-    response_strategy:
-      responseStrategy.length > 0 ? responseStrategy : fallback.response_strategy,
   };
 }
 
 function buildPromptSummary(factors: CopaFactors, language: CopaLanguage): string {
   const parts = ["SA", "CLM", "SC", "MS", "CT", "AMR"].map((code) => {
     const factor = factors[code as keyof CopaFactors];
-    return factor.response_strategy[0]?.replace(/[.;]+$/g, "").trim();
+    return factor.user_profile_description
+      .split(/(?<=[.!?。！？])\s+/)[0]
+      ?.replace(/[.;。；]+$/g, "")
+      .trim();
   });
 
   const compact = parts.filter(Boolean).join("; ");
@@ -413,6 +475,7 @@ function normalizeModelConfig(value: unknown, fallback: CopaModelConfig): CopaMo
 
 function normalizeLlmConfigState(value: unknown): CopaLlmConfigState {
   const payload = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const pasteLikeSignalLength = normalizePasteLikeSignalLength(payload.pasteLikeSignalLength);
 
   if ("copa" in payload) {
     const copa = normalizeModelConfig(payload.copa, DEFAULT_COPA_MODEL_CONFIG);
@@ -427,6 +490,7 @@ function normalizeLlmConfigState(value: unknown): CopaLlmConfigState {
         enabled: resonancePayload.enabled === true,
         config: normalizeModelConfig(resonancePayload.config, copa),
       },
+      pasteLikeSignalLength,
     };
   }
 
@@ -437,6 +501,7 @@ function normalizeLlmConfigState(value: unknown): CopaLlmConfigState {
       enabled: false,
       config: { ...legacyCopa },
     },
+    pasteLikeSignalLength,
   };
 }
 
@@ -483,7 +548,10 @@ export function buildScopeKey(input: {
   return `global:${providers || "all"}`;
 }
 
-export function extractUserSignals(messages: ClaudeMessage[]): ExtractedSignalResult {
+export function extractUserSignals(
+  messages: ClaudeMessage[],
+  pasteLikeSignalLength = DEFAULT_PASTE_LIKE_SIGNAL_LENGTH
+): ExtractedSignalResult {
   const normalized: string[] = [];
   const seen = new Set<string>();
   let userMessages = 0;
@@ -502,7 +570,7 @@ export function extractUserSignals(messages: ClaudeMessage[]): ExtractedSignalRe
       continue;
     }
 
-    if (isLikelyPastedContent(rawText, text)) {
+    if (isLikelyPastedContent(rawText, text, pasteLikeSignalLength)) {
       continue;
     }
 
@@ -547,9 +615,6 @@ function inferSnapshotLanguage(value: {
         typeof payload.title === "string" ? payload.title : "",
         typeof payload.description === "string" ? payload.description : "",
         typeof payload.user_profile_description === "string" ? payload.user_profile_description : "",
-        ...(Array.isArray(payload.response_strategy)
-          ? payload.response_strategy.filter((item): item is string => typeof item === "string")
-          : []),
       ];
     }),
   ].join("\n");
@@ -772,21 +837,12 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
 export function normalizeCopaResponse(value: unknown, language: CopaLanguage = "en"): CopaNormalizedResponse {
   const payload =
     value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-  const factorsValue =
-    payload.factors && typeof payload.factors === "object"
-      ? (payload.factors as Record<string, unknown>)
-      : {};
+  const factorsValue = buildFactorRecord(payload.factors);
 
   const factors = FACTOR_ORDER.reduce((accumulator, code) => {
-    const englishLabel = factorPromptLabel(code, "en");
-    const chineseLabel = factorPromptLabel(code, "zh");
     accumulator[code] = normalizeFactor(
       code,
-      factorsValue[code] ??
-        factorsValue[englishLabel] ??
-        factorsValue[chineseLabel] ??
-        factorsValue[FACTOR_SPECS.en[code].title] ??
-        factorsValue[FACTOR_SPECS.zh[code].title],
+      pickFactorPayload(factorsValue, code),
       language
     );
     return accumulator;
@@ -800,6 +856,47 @@ export function normalizeCopaResponse(value: unknown, language: CopaLanguage = "
   return {
     factors,
     promptSummary,
+  };
+}
+
+function diagnoseCopaResponse(
+  value: unknown,
+  normalized: CopaNormalizedResponse,
+  language: CopaLanguage
+): Record<string, unknown> {
+  const payload =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const factorsValue = buildFactorRecord(payload.factors);
+
+  const missingFactors: CopaFactorCode[] = [];
+  const fallbackFactors: CopaFactorCode[] = [];
+  const providedFactors: CopaFactorCode[] = [];
+
+  for (const code of FACTOR_ORDER) {
+    const factorPayload = pickFactorPayload(factorsValue, code);
+    const fallback = buildDefaultFactor(code, language);
+    const factor = normalized.factors[code];
+
+    if (typeof factorPayload === "undefined") {
+      missingFactors.push(code);
+    } else {
+      providedFactors.push(code);
+    }
+
+    if (
+      factor.user_profile_description === fallback.user_profile_description
+    ) {
+      fallbackFactors.push(code);
+    }
+  }
+
+  return {
+    recognizedFactorKeys: Object.keys(factorsValue),
+    providedFactors,
+    missingFactors,
+    fallbackFactors,
+    usedFallbackPromptSummary:
+      !(typeof payload.prompt_summary === "string" && payload.prompt_summary.trim().length > 0),
   };
 }
 
@@ -861,10 +958,6 @@ export function renderCopaMarkdown(snapshot: Omit<CopaSnapshot, "markdown">): st
     sections.push(`### ${factor.title}`);
     sections.push(`- ${labels.definition}: ${factor.description}`);
     sections.push(`- ${labels.userProfile}: ${factor.user_profile_description}`);
-    sections.push(`- ${labels.responseStrategy}:`);
-    for (const item of factor.response_strategy) {
-      sections.push(`  - ${item}`);
-    }
     sections.push("");
   }
 
@@ -914,17 +1007,18 @@ export function buildCopaPrompt(
     return {
       system: [
         "你正在基于仅包含用户消息的互动历史生成 CoPA profile。",
-        "请推断稳定的回答偏好，而不是暂时性话题。",
+        "请推断稳定的回答偏好，而不是暂时性话题，请你从心理学高维的角度去描述。",
         "只返回严格 JSON，顶层键仅允许为：factors、prompt_summary。",
-        "每个 factor 都必须包含 user_profile_description 和 response_strategy。",
-        "response_strategy 要简短、可执行，并面向后续生成。",
+        "每个 factor 都必须包含 user_profile_description。",
+        "user_profile_description 应该是一个高维的、与具体任务无关的、深挖用户内在稳定倾向的描述。",
+        "请优先描述用户长期稳定的认知风格、判断方式、控制需求、信息处理偏好、动机结构与情绪互动方式。",
+        "不要泛泛复述消息表层主题，不要只总结“用户在做什么”，而要总结“用户是如何思考、判断、感受与推进事情的”。",
         "所有返回内容必须使用中文。",
         "CoPA 因子：",
         factorDescriptions,
       ].join("\n"),
       user: [
         "请仅基于这些用户消息生成 CoPA profile。",
-        "不要提及 assistant 行为或工具输出。",
         "请确保 factors、prompt_summary、各项文案都使用中文。",
         "消息：",
         ...signals.map((signal) => `- ${signal}`),
@@ -935,17 +1029,18 @@ export function buildCopaPrompt(
   return {
     system: [
       "You are generating a CoPA profile from user-only interaction history.",
-      "Infer stable answering preferences, not temporary topics.",
+      "Infer stable answering preferences rather than temporary topics, and describe them from a high-level psychological perspective.",
       "Return strict JSON only with top-level keys: factors, prompt_summary.",
-      "Each factor must contain user_profile_description and response_strategy.",
-      "Keep response_strategy short, practical, and generation-oriented.",
+      "Each factor must contain user_profile_description.",
+      "user_profile_description should be a high-level, task-independent description that deeply captures the user's stable inner tendencies.",
+      "Prioritize the user's long-term cognitive style, judgment patterns, control needs, information-processing preferences, motivational structure, and emotional interaction style.",
+      "Do not merely restate surface topics from the messages; do not only summarize what the user is doing, but how the user tends to think, judge, feel, and move things forward.",
       "All returned content must be written in English.",
       "CoPA factors:",
       factorDescriptions,
     ].join("\n"),
     user: [
       "Generate a CoPA profile from these user messages only.",
-      "Do not mention assistant behavior or tool output.",
       "Ensure factors, prompt_summary, and all descriptive text are written in English.",
       "Messages:",
       ...signals.map((signal) => `- ${signal}`),
@@ -969,31 +1064,125 @@ export async function requestCopaProfile(
   }
 
   const prompt = buildCopaPrompt(signals, language);
-  const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
+  await persistLlmDebugLog({
+    category: "copa",
+    stage: "request",
+    payload: {
+      baseUrl: config.baseUrl,
       model: config.model,
-      temperature: config.temperature ?? 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: prompt.system },
-        { role: "user", content: prompt.user },
-      ],
-    }),
+      language,
+      responseFormat: COPA_RESPONSE_FORMAT.type,
+      signalCount: signals.length,
+      systemPrompt: prompt.system,
+      userPrompt: prompt.user,
+    },
   });
+  let response: Response | null = null;
+  for (const responseFormat of [COPA_RESPONSE_FORMAT, COPA_JSON_OBJECT_RESPONSE_FORMAT]) {
+    try {
+      response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          temperature: config.temperature ?? 0.2,
+          response_format: responseFormat,
+          messages: [
+            { role: "system", content: prompt.system },
+            { role: "user", content: prompt.user },
+          ],
+        }),
+      });
+    } catch (error) {
+      await persistLlmDebugLog({
+        category: "copa",
+        stage: "network_error",
+        level: "warn",
+        payload: {
+          error: error instanceof Error ? error.message : String(error),
+          responseFormat: responseFormat.type,
+        },
+      });
+      throw error;
+    }
 
-  if (!response.ok) {
+    await persistLlmDebugLog({
+      category: "copa",
+      stage: "fetch_resolved",
+      payload: {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        responseFormat: responseFormat.type,
+      },
+    });
+
+    if (response.ok) {
+      break;
+    }
+
     const detail = await response.text();
+    if (
+      responseFormat.type === "json_schema" &&
+      shouldFallbackToJsonObject(response.status, detail)
+    ) {
+      await persistLlmDebugLog({
+        category: "copa",
+        stage: "schema_fallback",
+        level: "warn",
+        payload: {
+          from: "json_schema",
+          to: "json_object",
+          status: response.status,
+          statusText: response.statusText,
+          detail,
+        },
+      });
+      response = null;
+      continue;
+    }
+
+    await persistLlmDebugLog({
+      category: "copa",
+      stage: "http_error",
+      level: "warn",
+      payload: {
+        status: response.status,
+        statusText: response.statusText,
+        detail,
+        responseFormat: responseFormat.type,
+      },
+    });
     throw new Error(detail || `CoPA generation failed (${response.status})`);
   }
 
-  const payload = (await response.json()) as {
+  if (!response) {
+    throw new Error("CoPA generation failed before receiving a response.");
+  }
+
+  let payload: {
     choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
   };
+  try {
+    payload = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
+    };
+  } catch (error) {
+    await persistLlmDebugLog({
+      category: "copa",
+      stage: "response_json_error",
+      level: "warn",
+      payload: {
+        status: response.status,
+        statusText: response.statusText,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    throw error;
+  }
   const content = payload.choices?.[0]?.message?.content;
 
   const rawContent = Array.isArray(content)
@@ -1003,13 +1192,34 @@ export async function requestCopaProfile(
     : typeof content === "string"
       ? content
       : "";
+  await persistLlmDebugLog({
+    category: "copa",
+    stage: "response",
+    payload: { rawContent },
+  });
 
   let parsed: unknown = {};
   try {
     parsed = JSON.parse(stripFence(rawContent));
-  } catch {
-    parsed = {};
+  } catch (error) {
+    await persistLlmDebugLog({
+      category: "copa",
+      stage: "parse_error",
+      level: "warn",
+      payload: {
+        rawContent,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    throw new Error(COPA_INVALID_JSON_ERROR);
   }
 
-  return normalizeCopaResponse(parsed, language);
+  const normalized = normalizeCopaResponse(parsed, language);
+  await persistLlmDebugLog({
+    category: "copa",
+    stage: "diagnosis",
+    payload: diagnoseCopaResponse(parsed, normalized, language),
+  });
+
+  return normalized;
 }

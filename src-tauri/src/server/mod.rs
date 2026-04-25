@@ -34,6 +34,8 @@ use tower_http::services::ServeDir;
 use self::handlers as h;
 use self::state::AppState;
 
+const LARGE_UPLOAD_BODY_LIMIT: usize = 100 * 1024 * 1024;
+
 /// Frontend assets embedded at compile time from the `dist/` directory.
 ///
 /// When building with `cargo build --features webui-server`, the contents of
@@ -135,10 +137,19 @@ pub fn build_router(state: Arc<AppState>, host: &str, port: u16, dist_dir: Optio
         .route("/get_preset", post(h::get_preset))
         .route("/delete_preset", post(h::delete_preset))
         // Figure pool repo commands
-        .route("/list_figure_pool_entries", post(h::list_figure_pool_entries))
-        .route("/save_figure_pool", post(h::save_figure_pool))
+        .route(
+            "/list_figure_pool_entries",
+            post(h::list_figure_pool_entries),
+        )
+        .route(
+            "/save_figure_pool",
+            post(h::save_figure_pool).layer(DefaultBodyLimit::max(LARGE_UPLOAD_BODY_LIMIT)),
+        )
         .route("/delete_figure_pool", post(h::delete_figure_pool))
-        .route("/read_figure_pool_portrait", post(h::read_figure_pool_portrait))
+        .route(
+            "/read_figure_pool_portrait",
+            post(h::read_figure_pool_portrait),
+        )
         // MCP preset commands
         .route("/save_mcp_preset", post(h::save_mcp_preset))
         .route("/load_mcp_presets", post(h::load_mcp_presets))
@@ -162,7 +173,7 @@ pub fn build_router(state: Arc<AppState>, host: &str, port: u16, dist_dir: Optio
         .route("/read_binary_file", post(h::read_binary_file))
         .route(
             "/save_screenshot",
-            post(h::save_screenshot).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
+            post(h::save_screenshot).layer(DefaultBodyLimit::max(LARGE_UPLOAD_BODY_LIMIT)),
         )
         // File watcher (disabled in web mode — SSE replaces it)
         .route("/start_file_watcher", post(h::start_file_watcher))

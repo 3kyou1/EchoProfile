@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import type { ExportFormat } from "@/types/export";
 import type { ClaudeMessage } from "@/types";
 import { useAppStore } from "@/store/useAppStore";
+import { saveFileDialog } from "@/utils/fileDialog";
 
 function sanitizeFilename(name: string): string {
   // Remove filesystem-invalid characters (Windows: <>:"/\|?*, also control chars)
@@ -63,7 +64,6 @@ export function useExport(messages: ClaudeMessage[], sessionName: string) {
           }
         }
 
-        const { saveFileDialog } = await import("@/utils/fileDialog");
         const saved = await saveFileDialog(content, {
           defaultPath,
           mimeType,

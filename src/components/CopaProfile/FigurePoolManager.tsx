@@ -64,6 +64,8 @@ interface FigurePoolManagerProps {
   pools: FigurePool[];
   selectedPoolId: string;
   importSummaryPool: FigurePool | null;
+  importHint?: string;
+  importError?: string;
   onSelectPool: (poolId: string) => void;
   onImport: () => Promise<void> | void;
   onExport: (poolId: string) => Promise<void> | void;
@@ -79,6 +81,8 @@ export function FigurePoolManager({
   pools,
   selectedPoolId,
   importSummaryPool,
+  importHint,
+  importError,
   onSelectPool,
   onImport,
   onExport,
@@ -138,6 +142,16 @@ export function FigurePoolManager({
             {t("common.copa.resonance.pool.import", "Import")}
           </Button>
         </div>
+
+        {importHint ? (
+          <p className="mt-2 text-xs text-muted-foreground">{importHint}</p>
+        ) : null}
+
+        {importError ? (
+          <p className="mt-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {importError}
+          </p>
+        ) : null}
 
         <div className="mt-4 space-y-2">
           {pools.map((pool) => (

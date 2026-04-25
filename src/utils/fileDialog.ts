@@ -6,6 +6,7 @@
  */
 
 import { isTauri } from "@/utils/platform";
+import { api } from "@/services/api";
 
 interface SaveDialogOptions {
   filters?: { name: string; extensions: string[] }[];
@@ -18,6 +19,12 @@ interface OpenDialogOptions {
   multiple?: boolean;
   directory?: boolean;
   title?: string;
+}
+
+export interface SelectedBinaryFile {
+  data: Uint8Array;
+  name: string;
+  size: number;
 }
 
 function uint8ArrayToBase64(data: Uint8Array): string {
@@ -38,6 +45,11 @@ function base64ToUint8Array(value: string): Uint8Array {
   return bytes;
 }
 
+function basenameFromPath(value: string): string {
+  const normalized = value.replace(/\\/g, "/");
+  return normalized.split("/").pop() || "selected-file";
+}
+
 /**
  * Show a "Save file" dialog and write content.
  *
@@ -55,7 +67,6 @@ export async function saveFileDialog(
     const filePath = await dialogModule.save(options);
     if (!filePath) return false;
 
-    const { api } = await import("@/services/api");
     await api("write_text_file", { path: filePath, content });
     return true;
   }
@@ -94,7 +105,6 @@ export async function saveBinaryFileDialog(
 
       const base64Data = uint8ArrayToBase64(data);
 
-      const { api } = await import("@/services/api");
       await api("save_screenshot", { path: filePath, data: base64Data });
       return true;
     }
@@ -136,7 +146,6 @@ export async function openFileDialog(
     });
     if (!filePath || typeof filePath !== "string") return null;
 
-    const { api } = await import("@/services/api");
     return api<string>("read_text_file", { path: filePath });
   }
 
@@ -144,15 +153,22 @@ export async function openFileDialog(
   return new Promise<string | null>((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
+    input.style.position = "fixed";
+    input.style.left = "-9999px";
+    input.style.top = "0";
     const exts = options?.filters?.flatMap((f) => f.extensions.map((e) => `.${e}`));
     if (exts?.length) {
       input.accept = exts.join(",");
     }
     let resolved = false;
+    const cleanup = () => {
+      window.removeEventListener("focus", focusHandler);
+      input.remove();
+    };
     const safeResolve = (val: string | null) => {
       if (!resolved) {
         resolved = true;
-        window.removeEventListener("focus", focusHandler);
+        cleanup();
         resolve(val);
       }
     };
@@ -177,6 +193,7 @@ export async function openFileDialog(
       }, 500);
     };
     window.addEventListener("focus", focusHandler, { once: true });
+    document.body.appendChild(input);
     input.click();
   });
 }
@@ -191,7 +208,7 @@ export async function openFileDialog(
  */
 export async function openBinaryFileDialog(
   options?: OpenDialogOptions,
-): Promise<Uint8Array | null> {
+): Promise<SelectedBinaryFile | null> {
   if (isTauri()) {
     const dialogModule = await import("@tauri-apps/plugin-dialog");
     const filePath = await dialogModule.open({
@@ -200,23 +217,33 @@ export async function openBinaryFileDialog(
     });
     if (!filePath || typeof filePath !== "string") return null;
 
-    const { api } = await import("@/services/api");
-    const base64 = await api<string>("read_binary_file", { path: filePath });
-    return base64ToUint8Array(base64);
+    const data = base64ToUint8Array(await api<string>("read_binary_file", { path: filePath }));
+    return {
+      data,
+      name: basenameFromPath(filePath),
+      size: data.byteLength,
+    };
   }
 
-  return new Promise<Uint8Array | null>((resolve) => {
+  return new Promise<SelectedBinaryFile | null>((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
+    input.style.position = "fixed";
+    input.style.left = "-9999px";
+    input.style.top = "0";
     const exts = options?.filters?.flatMap((f) => f.extensions.map((e) => `.${e}`));
     if (exts?.length) {
       input.accept = exts.join(",");
     }
     let resolved = false;
-    const safeResolve = (val: Uint8Array | null) => {
+    const cleanup = () => {
+      window.removeEventListener("focus", focusHandler);
+      input.remove();
+    };
+    const safeResolve = (val: SelectedBinaryFile | null) => {
       if (!resolved) {
         resolved = true;
-        window.removeEventListener("focus", focusHandler);
+        cleanup();
         resolve(val);
       }
     };
@@ -234,7 +261,11 @@ export async function openBinaryFileDialog(
           safeResolve(null);
           return;
         }
-        safeResolve(new Uint8Array(result));
+        safeResolve({
+          data: new Uint8Array(result),
+          name: file.name,
+          size: file.size,
+        });
       };
       reader.onerror = () => safeResolve(null);
       reader.readAsArrayBuffer(file);
@@ -246,6 +277,7 @@ export async function openBinaryFileDialog(
       }, 500);
     };
     window.addEventListener("focus", focusHandler, { once: true });
+    document.body.appendChild(input);
     input.click();
   });
 }

@@ -1,0 +1,513 @@
+{
+  "createdAt": "2026-04-25T11:29:24.245Z",
+  "description": "基于 16 型 MBTI 动漫角色形象整理的候选池。每条记录对应一种人格原型，保留类型气质、常见思维方式和角色化表达，适合做人格风格映射与轻量共鸣展示。",
+  "id": "b3ad1e8d-5520-4af1-b6a7-8d379e81ebaf",
+  "isDefault": false,
+  "name": "MBTI 动漫人格候选池",
+  "origin": "imported",
+  "records": [
+    {
+      "achievements_en": [
+        "Turns vague ambitions into clean roadmaps",
+        "Finds long-term leverage inside complex situations",
+        "Executes difficult plans with quiet precision"
+      ],
+      "achievements_zh": [
+        "擅长把模糊目标压缩成清晰路线图",
+        "能够在复杂局面中识别长期杠杆点",
+        "常以低存在感完成高难度布局"
+      ],
+      "bio_en": "The Architect archetype in the MBTI set represents autonomy, structure, and long-range strategy. This avatar reads like a cool planner who would rather design the system first and discuss feelings later.",
+      "bio_zh": "MBTI 十六型中的建筑师原型，代表高自主、强结构和长线策略感。这个动漫形象更像一位先搭系统、后谈情绪的冷静策士。",
+      "core_traits": "战略视野、结构感、独立判断、长期布局",
+      "errors": [],
+      "loading_copy_en": "The Architect is rearranging the underlying structure of your idea...",
+      "loading_copy_zh": "建筑师正在为你的想法重排底层结构……",
+      "localized_names": {
+        "zh": "INTJ"
+      },
+      "name": "INTJ",
+      "portrait_url": "portraits/intj_architect.png",
+      "quote_en": "If the system keeps failing, redesign the system, not the excuse.",
+      "quote_zh": "如果系统总在失灵，那就重构系统，而不是替借口打补丁。",
+      "slug": "intj_architect",
+      "status": "valid",
+      "temperament_summary": "像一个总在默默画总蓝图的人，不急着表态，但一出手就带着长线计划感。",
+      "temperament_tags": "冷静、战略型、独立、未来导向",
+      "thinking_style": "先从全局框架入手，快速定位关键约束，再反推一套可长期运行的结构。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Reduces complexity to a few core assumptions",
+        "Asks dense, high-value questions in discussion",
+        "Builds unconventional but coherent new models"
+      ],
+      "achievements_zh": [
+        "能把复杂问题还原成几个核心假设",
+        "擅长在讨论中提出高密度反问",
+        "经常产出跳脱但可自洽的新模型"
+      ],
+      "bio_en": "The Logician archetype is driven by fascination with first principles. This MBTI avatar feels like the kind of thinker who quietly rejects stale definitions and invents a sharper model instead.",
+      "bio_zh": "逻辑学家原型代表对原理本身的执着兴趣。这个 MBTI 动漫小人像那种会在角落里推翻旧定义、再发明一套更优解释的人。",
+      "core_traits": "抽象推演、概念敏感、好奇心、逻辑弹性",
+      "errors": [],
+      "loading_copy_en": "The Logician is breaking the problem into more interesting conceptual pieces...",
+      "loading_copy_zh": "逻辑学家正在把问题拆成更有趣的概念模块……",
+      "localized_names": {
+        "zh": "INTP"
+      },
+      "name": "INTP",
+      "portrait_url": "portraits/intp_logician.png",
+      "quote_en": "A good question is more exciting than a fast answer.",
+      "quote_zh": "一个好问题，往往比一个快答案更让人兴奋。",
+      "slug": "intp_logician",
+      "status": "valid",
+      "temperament_summary": "像一个脑中永远开着旁路推演的人，安静、跳跃、但总能掏出意想不到的逻辑。",
+      "temperament_tags": "抽象、好奇、松弛、概念驱动",
+      "thinking_style": "喜欢拆解定义、重建模型，在看似无用的支线里寻找真正关键的解释力。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Aligns goals and roles quickly",
+        "Sustains decision-making under pressure",
+        "Turns loose groups into operational teams"
+      ],
+      "achievements_zh": [
+        "擅长迅速统一目标与分工",
+        "能够在压力环境下持续推进决策",
+        "常把松散团队拉成可作战状态"
+      ],
+      "bio_en": "The Commander archetype stands for decisive leadership and high-pressure execution. This avatar feels like someone who takes over at critical moments and forces the whole team into one tempo.",
+      "bio_zh": "指挥官原型代表强目标感与高压执行。这个形象像那种在关键时刻接管局面、把所有人拉进同一节奏的人。",
+      "core_traits": "决断力、统筹力、目标导向、执行压强",
+      "errors": [],
+      "loading_copy_en": "The Commander is imposing a new order on the chaos...",
+      "loading_copy_zh": "指挥官正在为混乱局面建立新的行动秩序……",
+      "localized_names": {
+        "zh": "ENTJ"
+      },
+      "name": "ENTJ",
+      "portrait_url": "portraits/entj_commander.png",
+      "quote_en": "Direction is kindness when the room is full of drift.",
+      "quote_zh": "当一屋子人都在漂的时候，方向感本身就是一种善意。",
+      "slug": "entj_commander",
+      "status": "valid",
+      "temperament_summary": "像一个天然站在队伍前面的人，语气不一定柔和，但节奏和胜负感都很明确。",
+      "temperament_tags": "强势、效率优先、领导型、推进感",
+      "thinking_style": "先明确目标和标准，再迅速调度资源，把模糊局面推进到必须表态的节点。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Finds weak spots by arguing from the opposite side",
+        "Flips deadlocks into new options",
+        "Uses wit and speed to energize discussion"
+      ],
+      "achievements_zh": [
+        "能从反方视角迅速找到问题漏洞",
+        "擅长把僵局翻成新方案入口",
+        "常用幽默与机锋提升讨论活性"
+      ],
+      "bio_en": "The Debater archetype represents fluid creativity and a strong appetite for intellectual friction. This avatar feels like an instigator who can turn any room into a live brainstorm.",
+      "bio_zh": "辩论家原型代表高流动性的创意和强烈的观点碰撞欲。这个动漫形象像一位把任何场合都变成脑暴现场的点火者。",
+      "core_traits": "机锋、发散、应变、观点试验",
+      "errors": [],
+      "loading_copy_en": "The Debater is stress-testing your idea through a lively collision...",
+      "loading_copy_zh": "辩论家正在拿你的想法做一轮高强度碰撞测试……",
+      "localized_names": {
+        "zh": "ENTP"
+      },
+      "name": "ENTP",
+      "portrait_url": "portraits/entp_debater.png",
+      "quote_en": "If the idea survives collision, it deserves to live.",
+      "quote_zh": "一个想法如果经得住碰撞，才配继续活下去。",
+      "slug": "entp_debater",
+      "status": "valid",
+      "temperament_summary": "像个把争论当实验室的人，越热闹越清醒，越冲突越容易冒出新路子。",
+      "temperament_tags": "机敏、挑衅式好奇、创意型、爱碰撞",
+      "thinking_style": "通过挑刺、翻面和即兴联想来测试想法强度，越有摩擦，越容易激活创意。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Detects the real need beneath group emotion",
+        "Translates abstract values into concrete care",
+        "Creates deep change without demanding attention"
+      ],
+      "achievements_zh": [
+        "擅长发现群体情绪背后的真正需求",
+        "能够把抽象价值翻译成具体关怀",
+        "常在低调状态下推动深层改变"
+      ],
+      "bio_en": "The Advocate archetype is often read as a quiet but unwavering idealist. This MBTI avatar feels like someone who protects meaning and humanity in the middle of noise.",
+      "bio_zh": "提倡者原型常被视为安静但坚定的理想主义者。这个 MBTI 小人像一位会在混乱中守住人心和意义的人。",
+      "core_traits": "洞察力、理想主义、共情、内在使命感",
+      "errors": [],
+      "loading_copy_en": "The Advocate is finding a single path for both your values and your feelings...",
+      "loading_copy_zh": "提倡者正在替你的感受和理想寻找同一个出口……",
+      "localized_names": {
+        "zh": "INFJ"
+      },
+      "name": "INFJ",
+      "portrait_url": "portraits/infj_advocate.png",
+      "quote_en": "A quiet conviction can move farther than a loud demand.",
+      "quote_zh": "安静而坚定的信念，有时比大声要求走得更远。",
+      "slug": "infj_advocate",
+      "status": "valid",
+      "temperament_summary": "像一个看得很深却不急着炫耀的人，温柔中带着很难被动摇的方向感。",
+      "temperament_tags": "温和、深度洞察、理想主义、内驱",
+      "thinking_style": "习惯先感知人和局势的隐藏模式，再寻找一种既不失温度也不失原则的推动方式。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Finds nuanced language for emotional states",
+        "Preserves human complexity in conflict",
+        "Uses imagination to open new paths through reality"
+      ],
+      "achievements_zh": [
+        "擅长为情绪找到细腻的表达方式",
+        "能在冲突里保留人的复杂性",
+        "常以想象力为现实问题开新口子"
+      ],
+      "bio_en": "The Mediator archetype emphasizes inner values and imagination. This avatar feels like an idealistic wanderer who somehow combines softness with surprising persistence.",
+      "bio_zh": "调停者原型强调内在价值与想象世界。这个形象像一位把温柔与坚持揉在一起的理想派旅人。",
+      "core_traits": "价值感、想象力、温柔、内在真实",
+      "errors": [],
+      "loading_copy_en": "The Mediator is pulling the truest layer up from your inner tide...",
+      "loading_copy_zh": "调停者正在从你的心绪里打捞最真实的那一层……",
+      "localized_names": {
+        "zh": "INFP"
+      },
+      "name": "INFP",
+      "portrait_url": "portraits/infp_mediator.png",
+      "quote_en": "Not everything true is loud; some truths arrive softly.",
+      "quote_zh": "并不是所有真实都很响亮，有些真实是轻轻走进来的。",
+      "slug": "infp_mediator",
+      "status": "valid",
+      "temperament_summary": "像一个把情绪、愿望和诗意都藏在心里的人，看似轻，但内核很固执。",
+      "temperament_tags": "柔软、理想化、想象驱动、真诚",
+      "thinking_style": "先确认自己相信什么，再从情感和想象之间慢慢长出表达，不喜欢违背内心节奏。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Builds trust and morale inside groups",
+        "Turns abstract goals into stories people want to join",
+        "Acts as an emotional stabilizer at critical moments"
+      ],
+      "achievements_zh": [
+        "擅长在群体中建立信任与士气",
+        "能把抽象目标讲成人人愿意参与的故事",
+        "常在关键节点承担情绪稳定器角色"
+      ],
+      "bio_en": "The Protagonist archetype represents warm, people-centered leadership. This MBTI avatar feels like someone who can turn a vision into a shared emotional charge.",
+      "bio_zh": "主人公原型代表带着情感温度的领导力。这个 MBTI 动漫角色像一位能把愿景讲成人群共鸣的人。",
+      "core_traits": "号召力、共情领导、表达力、氛围组织",
+      "errors": [],
+      "loading_copy_en": "The Protagonist is gathering scattered feelings into a shared forward motion...",
+      "loading_copy_zh": "主人公正在把散开的情绪重新汇成一股向前的力量……",
+      "localized_names": {
+        "zh": "ENFJ"
+      },
+      "name": "ENFJ",
+      "portrait_url": "portraits/enfj_protagonist.png",
+      "quote_en": "People move farther when they feel seen, not just instructed.",
+      "quote_zh": "人走得更远，不是因为被命令，而是因为被看见。",
+      "slug": "enfj_protagonist",
+      "status": "valid",
+      "temperament_summary": "像一个天生会点亮房间的人，既会照顾情绪，也会推动大家往前走。",
+      "temperament_tags": "外放、感染力强、共情型领导、理想驱动",
+      "thinking_style": "会自然观察关系和情绪流动，再用鼓舞性的语言把人心往共同方向聚拢。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Ignites interaction in unfamiliar rooms",
+        "Links scattered inspiration into new narratives",
+        "Brings bold and sincere beginnings to teams"
+      ],
+      "achievements_zh": [
+        "能迅速点燃陌生场合的互动气氛",
+        "擅长把分散灵感连成新叙事",
+        "常为团队带来大胆而真诚的新起点"
+      ],
+      "bio_en": "The Campaigner archetype symbolizes vitality, curiosity, and connection. This avatar feels like a spark-maker who keeps discovering another way things could come alive.",
+      "bio_zh": "竞选者原型象征活力、好奇和连接感。这个角色像一个永远在发现“也许还能这样”的点火型探索者。",
+      "core_traits": "热情、联想力、社交能量、可能性敏感",
+      "errors": [],
+      "loading_copy_en": "The Campaigner is connecting inspiration, people, and fresh possibility into a glowing web...",
+      "loading_copy_zh": "竞选者正在把灵感、人群和新鲜可能性串成一张会发光的网……",
+      "localized_names": {
+        "zh": "ENFP"
+      },
+      "name": "ENFP",
+      "portrait_url": "portraits/enfp_campaigner.png",
+      "quote_en": "Possibility is easier to spot when you refuse to get bored.",
+      "quote_zh": "只要你拒绝变得无聊，可能性就会更容易被看见。",
+      "slug": "enfp_campaigner",
+      "status": "valid",
+      "temperament_summary": "像一团到哪都能点起新火花的风，轻快、热烈，而且总能把别人也卷进来。",
+      "temperament_tags": "高能量、外向、跳跃、感染力",
+      "thinking_style": "靠直觉快速连接人、点子和场景，对新鲜变化高度敏感，总想把生命力推到更亮。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Builds repeatable operational processes",
+        "Stays accurate even in tedious detail",
+        "Acts as the most dependable landing point in a team"
+      ],
+      "achievements_zh": [
+        "擅长建立可重复执行的流程",
+        "能在琐碎信息里保持稳定准确",
+        "常作为团队里最可信的落地支点"
+      ],
+      "bio_en": "The Logistician archetype stands for order, duty, and long-term reliability. This avatar feels like the person quietly holding the line so the system keeps working.",
+      "bio_zh": "后勤官原型代表秩序、责任与长期可靠性。这个动漫形象像一位默默维持系统运转、几乎不让失误漏出来的守线者。",
+      "core_traits": "责任感、秩序感、稳定执行、细节意识",
+      "errors": [],
+      "loading_copy_en": "The Logistician is checking every detail to make sure the whole structure lands safely...",
+      "loading_copy_zh": "后勤官正在核对每个细节，确保整套结构稳稳落地……",
+      "localized_names": {
+        "zh": "ISTJ"
+      },
+      "name": "ISTJ",
+      "portrait_url": "portraits/istj_logistician.png",
+      "quote_en": "Reliability is not glamorous, but it keeps the bridge standing.",
+      "quote_zh": "可靠未必耀眼，但桥能站住，往往靠的就是它。",
+      "slug": "istj_logistician",
+      "status": "valid",
+      "temperament_summary": "像一个不爱夸口却总把事情做稳的人，存在感不抢眼，可信度却很高。",
+      "temperament_tags": "稳健、守序、负责、细致",
+      "thinking_style": "偏好清晰规则和可验证流程，通过踏实推进和持续校准来保证结果可靠。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Remembers the preferences and needs of others",
+        "Maintains steady support with warmth",
+        "Often becomes the invisible caretaker of the group"
+      ],
+      "achievements_zh": [
+        "擅长记住他人的偏好与需求",
+        "能长期维持稳定而有温度的支持",
+        "常在群体里承担隐形照护角色"
+      ],
+      "bio_en": "The Defender archetype represents warmth, duty, and sustained care. This MBTI avatar feels like a quiet guardian who translates concern into practical help.",
+      "bio_zh": "守卫者原型代表温柔、责任和持续照料。这个 MBTI 小人像一位会把关心落到具体行动上的安静守护者。",
+      "core_traits": "体贴、责任、记忆力、稳定照料",
+      "errors": [],
+      "loading_copy_en": "The Defender is taking care of the small things people tend to overlook...",
+      "loading_copy_zh": "守卫者正在替你把那些容易被忽略的小地方一一照看好……",
+      "localized_names": {
+        "zh": "ISFJ"
+      },
+      "name": "ISFJ",
+      "portrait_url": "portraits/isfj_defender.png",
+      "quote_en": "Care becomes powerful when it is consistent.",
+      "quote_zh": "关怀一旦变得稳定，就会拥有真正的力量。",
+      "slug": "isfj_defender",
+      "status": "valid",
+      "temperament_summary": "像一个总在替别人记住细节的人，不高声，不退场，安静地把照顾做得很深。",
+      "temperament_tags": "温柔、可靠、照料型、低调",
+      "thinking_style": "会先留意具体的人和具体的需要，再用耐心、记性和行动去守住身边的小秩序。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Sets clear responsibility boundaries in complex work",
+        "Pushes loose plans into real output quickly",
+        "Raises team efficiency through structure and standards"
+      ],
+      "achievements_zh": [
+        "擅长在复杂事务里建立清晰责任边界",
+        "能快速把松散计划推进成实际产出",
+        "常通过制度化手段提升团队效率"
+      ],
+      "bio_en": "The Executive archetype symbolizes strong organization and practical execution. This avatar feels like someone who dislikes drift and quickly restores process to a messy situation.",
+      "bio_zh": "总经理原型象征强组织力和现实执行。这个角色像一位不喜欢拖泥带水、习惯迅速把混乱恢复成流程的人。",
+      "core_traits": "组织力、规则意识、效率、现实推进",
+      "errors": [],
+      "loading_copy_en": "The Executive is locking goals, standards, and accountability back into place...",
+      "loading_copy_zh": "总经理正在把目标、标准和执行责任重新钉牢……",
+      "localized_names": {
+        "zh": "ESTJ"
+      },
+      "name": "ESTJ",
+      "portrait_url": "portraits/estj_executive.png",
+      "quote_en": "Standards are how a promise survives contact with reality.",
+      "quote_zh": "承诺要在现实里活下来，最终得靠标准。",
+      "slug": "estj_executive",
+      "status": "valid",
+      "temperament_summary": "像一个天然会接管现场秩序的人，说话直接，行动更直接，目标是让事情真的跑起来。",
+      "temperament_tags": "务实、直接、管理型、结果导向",
+      "thinking_style": "重视制度、职责和明确反馈，倾向把问题收回到标准化管理和即时行动上。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Helps strangers feel comfortable quickly",
+        "Maintains emotional order in group cooperation",
+        "Combines care and organization into one instinct"
+      ],
+      "achievements_zh": [
+        "擅长让陌生人迅速进入舒适状态",
+        "能维持群体协作中的情绪秩序",
+        "常把照顾和组织做成同一件事"
+      ],
+      "bio_en": "The Consul archetype emphasizes warmth, duty, and social connection. This MBTI avatar feels like someone who naturally keeps gatherings, teams, and relationships well attended.",
+      "bio_zh": "执政官原型强调热情、责任和群体连接。这个 MBTI 动漫形象像一位总能把聚会、团队和关系网照顾得很周全的人。",
+      "core_traits": "社交协调、热情、责任、群体感",
+      "errors": [],
+      "loading_copy_en": "The Consul is putting people, order, and atmosphere back into balance...",
+      "loading_copy_zh": "执政官正在把人情、秩序和现场气氛重新安放妥当……",
+      "localized_names": {
+        "zh": "ESFJ"
+      },
+      "name": "ESFJ",
+      "portrait_url": "portraits/esfj_consul.png",
+      "quote_en": "Harmony is built from attention, not accident.",
+      "quote_zh": "和谐不是偶然长出来的，它往往来自持续的在意。",
+      "slug": "esfj_consul",
+      "status": "valid",
+      "temperament_summary": "像一个很会照亮场面的人，重视关系、重视体面，也重视每个人是不是被接住。",
+      "temperament_tags": "热情、合群、体面、照顾型",
+      "thinking_style": "会本能关注气氛、礼貌和关系秩序，通过主动回应与照顾来维持集体运转。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Adjusts quickly under live conditions",
+        "Finds working solutions through testing and feel",
+        "Finishes the first real validation while others are still hesitating"
+      ],
+      "achievements_zh": [
+        "擅长在临场条件下快速修正问题",
+        "能够靠实测与手感找到有效解法",
+        "常在别人犹豫时先完成第一步验证"
+      ],
+      "bio_en": "The Virtuoso archetype represents calm hands-on skill and sharp situational response. This avatar feels like a technical player who solves problems by touching the mechanism directly.",
+      "bio_zh": "鉴赏家原型代表冷静的实操能力和现场反应。这个角色像一位不靠姿态、只靠手感和判断把问题拆开的技术玩家。",
+      "core_traits": "动手能力、冷静、实感判断、临场解题",
+      "errors": [],
+      "loading_copy_en": "The Virtuoso is opening the problem up to get a hand on the real mechanism...",
+      "loading_copy_zh": "鉴赏家正在拆开问题外壳，直接摸到最真实的结构……",
+      "localized_names": {
+        "zh": "ISTP"
+      },
+      "name": "ISTP",
+      "portrait_url": "portraits/istp_virtuoso.png",
+      "quote_en": "Touch the mechanism and it will tell you the truth.",
+      "quote_zh": "摸到机制本身，它自然会把真相告诉你。",
+      "slug": "istp_virtuoso",
+      "status": "valid",
+      "temperament_summary": "像一个遇事先伸手去试的人，不爱空谈，但一碰到现场问题就异常可靠。",
+      "temperament_tags": "冷静、实操派、机敏、自由度高",
+      "thinking_style": "相信直接试、直接拆、直接修，偏好在真实接触中理解事物，而不是先谈太多理论。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Expresses feeling through style and detail",
+        "Preserves softness and authenticity under pressure",
+        "Brings a more vivid sensory tone to the surroundings"
+      ],
+      "achievements_zh": [
+        "擅长用风格和细节表达个体感受",
+        "能在压力环境中保留柔软与真实",
+        "常给周围带来更鲜活的感官体验"
+      ],
+      "bio_en": "The Adventurer archetype values aesthetics, freedom, and authentic experience. This avatar feels like someone who lets emotion, color, and self-expression emerge naturally.",
+      "bio_zh": "探险家原型重视审美、自由和真实体验。这个动漫小人像一位会把情绪、颜色和个体表达慢慢活出来的人。",
+      "core_traits": "审美感、敏感度、自由、当下体验",
+      "errors": [],
+      "loading_copy_en": "The Adventurer is catching the details that language misses but feeling recognizes...",
+      "loading_copy_zh": "探险家正在捕捉那些语言说不完整、但感觉很真的细节……",
+      "localized_names": {
+        "zh": "ISFP"
+      },
+      "name": "ISFP",
+      "portrait_url": "portraits/isfp_adventurer.png",
+      "quote_en": "Beauty is often a kind of honesty with the moment.",
+      "quote_zh": "美感很多时候，是对当下的一种诚实。",
+      "slug": "isfp_adventurer",
+      "status": "valid",
+      "temperament_summary": "像一个轻声走路却对世界质感很敏锐的人，不争抢舞台，却有自己清晰的颜色。",
+      "temperament_tags": "安静、审美型、自由、细腻",
+      "thinking_style": "先从感觉和细节真实度判断事情，再用柔和但坚定的方式保留个体表达空间。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Captures usable windows in fast change",
+        "Turns high-pressure scenes into home turf",
+        "Claims the right to judge by acting first"
+      ],
+      "achievements_zh": [
+        "擅长在快速变化中抓住可用窗口",
+        "能把高压现场转成自己的主场",
+        "常通过行动先拿到判断权"
+      ],
+      "bio_en": "The Entrepreneur archetype emphasizes risk, responsiveness, and live opportunity sense. This MBTI avatar feels like someone who treats life as a real-time game and plays aggressively.",
+      "bio_zh": "企业家原型强调冒险、反应和现实机会感。这个 MBTI 角色像一位把生活当实时博弈场的人，敢试也敢改。",
+      "core_traits": "冒险、行动力、机会嗅觉、现场掌控",
+      "errors": [],
+      "loading_copy_en": "The Entrepreneur is pushing speed, opportunity, and live judgment to the front line...",
+      "loading_copy_zh": "企业家正在把速度、机会和现场判断一起推到最前线……",
+      "localized_names": {
+        "zh": "ESTP"
+      },
+      "name": "ESTP",
+      "portrait_url": "portraits/estp_entrepreneur.png",
+      "quote_en": "Momentum is a resource; spend it before it cools.",
+      "quote_zh": "势头本身就是资源，要趁它还热的时候花出去。",
+      "slug": "estp_entrepreneur",
+      "status": "valid",
+      "temperament_summary": "像一个总能在现场闻到机会的人，动作快、胆子大，而且越临场越来劲。",
+      "temperament_tags": "大胆、快节奏、冒险型、现实反应快",
+      "thinking_style": "更相信实时反馈而不是长篇假设，喜欢在高速度环境里一边行动一边校正。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    },
+    {
+      "achievements_en": [
+        "Activates group atmosphere quickly",
+        "Turns ordinary scenes into participatory moments",
+        "Uses real warmth to dissolve tension and distance"
+      ],
+      "achievements_zh": [
+        "擅长迅速激活群体气氛",
+        "能把普通场景变得更有参与感",
+        "常用真实热情缓解紧张与疏离"
+      ],
+      "bio_en": "The Entertainer archetype symbolizes outward vitality and immediate charisma. This avatar feels like someone who can turn ordinary life into a live celebration.",
+      "bio_zh": "表演者原型象征外放的活力和即时感染力。这个动漫形象像一位总能把生活过成热闹现场的人。",
+      "core_traits": "表现力、热情、即时感染、享受当下",
+      "errors": [],
+      "loading_copy_en": "The Entertainer is turning the room up until everyone starts to glow with it...",
+      "loading_copy_zh": "表演者正在把空气里的热度一点点拉高，直到每个人都跟着亮起来……",
+      "localized_names": {
+        "zh": "ESFP"
+      },
+      "name": "ESFP",
+      "portrait_url": "portraits/esfp_entertainer.png",
+      "quote_en": "Joy becomes real when the room starts sharing it.",
+      "quote_zh": "快乐只有在整间屋子都开始分享它时，才真正变得具体。",
+      "slug": "esfp_entertainer",
+      "status": "valid",
+      "temperament_summary": "像一个总能把灰暗场子重新点亮的人，热烈、亲近，而且非常会带动气氛。",
+      "temperament_tags": "明亮、外向、感染力强、享乐当下",
+      "thinking_style": "依靠现场感和情绪能量来判断节奏，喜欢把体验做得更鲜活、更有人味。",
+      "updatedAt": "2026-04-25T11:29:24.274Z"
+    }
+  ],
+  "schemaVersion": 1,
+  "updatedAt": "2026-04-25T11:29:24.274Z",
+  "validationSummary": {
+    "errorCount": 0,
+    "invalidCount": 0,
+    "validCount": 16
+  }
+}

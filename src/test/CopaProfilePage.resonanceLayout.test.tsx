@@ -1026,7 +1026,11 @@ describe("CopaProfilePage resonance layout", () => {
         },
         importedPool,
       ]);
-    mockOpenBinaryFileDialog.mockResolvedValue(zipBytes);
+    mockOpenBinaryFileDialog.mockResolvedValue({
+      data: zipBytes,
+      name: "scientists.zip",
+      size: zipBytes.byteLength,
+    });
     mockInspectFigurePoolZip.mockResolvedValue({
       payload: {
         name: "Scientists",
@@ -1066,5 +1070,100 @@ describe("CopaProfilePage resonance layout", () => {
         name: "Scientists Copy",
       });
     });
+  });
+
+  it("shows the import size hint and blocks zip files larger than 100 MB", async () => {
+    const zipBytes = new Uint8Array([7, 7, 7]);
+    mockInspectFigurePoolZip.mockClear();
+    mockImportFigurePoolFromZip.mockClear();
+    mockOpenBinaryFileDialog.mockResolvedValue({
+      data: zipBytes,
+      name: "scientists.zip",
+      size: 101 * 1024 * 1024,
+    });
+
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Figure Pools" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("ZIP import limit: 100 MB.")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Cannot import files larger than 100 MB.")
+      ).toBeInTheDocument();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("Cannot import files larger than 100 MB.");
+    expect(mockInspectFigurePoolZip).not.toHaveBeenCalled();
+    expect(mockImportFigurePoolFromZip).not.toHaveBeenCalled();
+  });
+
+  it("shows the import size hint in Chinese when the UI language is Chinese", async () => {
+    mockUseTranslation.mockReturnValue({
+      t: (
+        _key: string,
+        fallbackOrOptions?: string | { defaultValue?: string },
+        values?: Record<string, string | number>
+      ) => {
+        if (typeof fallbackOrOptions === "string") {
+          return fallbackOrOptions;
+        }
+        if (fallbackOrOptions?.defaultValue) {
+          return fallbackOrOptions.defaultValue;
+        }
+        return values?.defaultValue ? String(values.defaultValue) : _key;
+      },
+      i18n: {
+        resolvedLanguage: "zh-CN",
+        language: "zh-CN",
+      },
+    });
+
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Figure Pools" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("ZIP 导入上限：100 MB。")).toBeInTheDocument();
+    });
+  });
+
+  it("shows pool import failures inline in the pools view", async () => {
+    const zipBytes = new Uint8Array([7, 7, 7]);
+    mockOpenBinaryFileDialog.mockResolvedValue({
+      data: zipBytes,
+      name: "scientists.zip",
+      size: zipBytes.byteLength,
+    });
+    mockInspectFigurePoolZip.mockResolvedValue({
+      payload: {
+        name: "Scientists",
+        description: "Imported pool",
+        records: [],
+      },
+      hasNameConflict: false,
+    });
+    mockImportFigurePoolFromZip.mockRejectedValue(new Error("Import blew up"));
+
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Figure Pools" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Import blew up")).toBeInTheDocument();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("Import blew up");
   });
 });

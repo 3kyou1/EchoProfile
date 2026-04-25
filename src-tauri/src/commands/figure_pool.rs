@@ -58,8 +58,8 @@ pub struct FigurePoolPortraitOutput {
 }
 
 fn resolve_repo_base_dir(current_dir: &Path, manifest_dir: &Path) -> Result<PathBuf, String> {
-    let current_looks_like_repo_root =
-        current_dir.join("package.json").exists() && current_dir.join("src-tauri/Cargo.toml").exists();
+    let current_looks_like_repo_root = current_dir.join("package.json").exists()
+        && current_dir.join("src-tauri/Cargo.toml").exists();
     if current_looks_like_repo_root {
         return Ok(current_dir.to_path_buf());
     }
@@ -76,10 +76,12 @@ fn resolve_repo_base_dir(current_dir: &Path, manifest_dir: &Path) -> Result<Path
         }
     }
 
-    manifest_dir
-        .parent()
-        .map(Path::to_path_buf)
-        .ok_or_else(|| format!("Failed to resolve repository root from {}", manifest_dir.display()))
+    manifest_dir.parent().map(Path::to_path_buf).ok_or_else(|| {
+        format!(
+            "Failed to resolve repository root from {}",
+            manifest_dir.display()
+        )
+    })
 }
 
 fn repo_root() -> Result<PathBuf, String> {
@@ -136,7 +138,10 @@ fn validate_portrait_relative_path(path: &str) -> Result<PathBuf, String> {
 fn ensure_pool_root(root: &Path) -> Result<(), String> {
     if root.exists() {
         if !root.is_dir() {
-            return Err(format!("Figure pool root is not a directory: {}", root.display()));
+            return Err(format!(
+                "Figure pool root is not a directory: {}",
+                root.display()
+            ));
         }
         return Ok(());
     }
@@ -148,8 +153,12 @@ fn atomic_write_string(path: &Path, content: &str) -> Result<(), String> {
     let parent = path
         .parent()
         .ok_or_else(|| format!("Missing parent directory for {}", path.display()))?;
-    fs::create_dir_all(parent)
-        .map_err(|e| format!("Failed to create parent directory {}: {e}", parent.display()))?;
+    fs::create_dir_all(parent).map_err(|e| {
+        format!(
+            "Failed to create parent directory {}: {e}",
+            parent.display()
+        )
+    })?;
 
     let mut temp_file = Builder::new()
         .prefix(".figure-pool-")
@@ -173,8 +182,12 @@ fn atomic_write_bytes(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let parent = path
         .parent()
         .ok_or_else(|| format!("Missing parent directory for {}", path.display()))?;
-    fs::create_dir_all(parent)
-        .map_err(|e| format!("Failed to create parent directory {}: {e}", parent.display()))?;
+    fs::create_dir_all(parent).map_err(|e| {
+        format!(
+            "Failed to create parent directory {}: {e}",
+            parent.display()
+        )
+    })?;
 
     let mut temp_file = Builder::new()
         .prefix(".figure-pool-portrait-")
@@ -215,7 +228,10 @@ fn update_pool_manifest(mut value: Value, final_name: &str) -> Result<(String, b
         .get("isDefault")
         .and_then(Value::as_bool)
         .unwrap_or(false);
-    Ok((serialize_pool_json(&Value::Object(object.clone()))?, is_default))
+    Ok((
+        serialize_pool_json(&Value::Object(object.clone()))?,
+        is_default,
+    ))
 }
 
 fn maybe_clear_default(path: &Path) -> Result<(), String> {
@@ -301,8 +317,12 @@ fn list_figure_pool_entries_in_root(root: &Path) -> Result<Vec<FigurePoolRepoEnt
             continue;
         }
 
-        let pool_json = fs::read_to_string(&manifest_path)
-            .map_err(|e| format!("Failed to read pool manifest {}: {e}", manifest_path.display()))?;
+        let pool_json = fs::read_to_string(&manifest_path).map_err(|e| {
+            format!(
+                "Failed to read pool manifest {}: {e}",
+                manifest_path.display()
+            )
+        })?;
         entries.push(FigurePoolRepoEntry {
             directory_name: entry.file_name().to_string_lossy().to_string(),
             pool_json,
@@ -313,7 +333,10 @@ fn list_figure_pool_entries_in_root(root: &Path) -> Result<Vec<FigurePoolRepoEnt
     Ok(entries)
 }
 
-fn save_figure_pool_in_root(root: &Path, input: SaveFigurePoolInput) -> Result<SaveFigurePoolResult, String> {
+fn save_figure_pool_in_root(
+    root: &Path,
+    input: SaveFigurePoolInput,
+) -> Result<SaveFigurePoolResult, String> {
     ensure_pool_root(root)?;
 
     let requested_name = validate_directory_name(&input.requested_name)?;
@@ -344,15 +367,20 @@ fn save_figure_pool_in_root(root: &Path, input: SaveFigurePoolInput) -> Result<S
         }
     }
 
-    fs::create_dir_all(target_dir.join(PORTRAITS_DIR))
-        .map_err(|e| format!("Failed to create portraits directory {}: {e}", target_dir.display()))?;
+    fs::create_dir_all(target_dir.join(PORTRAITS_DIR)).map_err(|e| {
+        format!(
+            "Failed to create portraits directory {}: {e}",
+            target_dir.display()
+        )
+    })?;
 
     for relative_path in &input.remove_portrait_paths {
         let safe_relative = validate_portrait_relative_path(relative_path)?;
         let portrait_path = target_dir.join(safe_relative);
         if portrait_path.exists() {
-            fs::remove_file(&portrait_path)
-                .map_err(|e| format!("Failed to remove portrait {}: {e}", portrait_path.display()))?;
+            fs::remove_file(&portrait_path).map_err(|e| {
+                format!("Failed to remove portrait {}: {e}", portrait_path.display())
+            })?;
         }
     }
 
@@ -383,8 +411,12 @@ fn delete_figure_pool_in_root(root: &Path, directory_name: &str) -> Result<(), S
     if !target_dir.exists() {
         return Ok(());
     }
-    fs::remove_dir_all(&target_dir)
-        .map_err(|e| format!("Failed to delete pool directory {}: {e}", target_dir.display()))
+    fs::remove_dir_all(&target_dir).map_err(|e| {
+        format!(
+            "Failed to delete pool directory {}: {e}",
+            target_dir.display()
+        )
+    })
 }
 
 fn read_figure_pool_portrait_in_root(
@@ -488,7 +520,11 @@ mod tests {
     #[test]
     fn loads_pool_entries_from_first_level_pool_directories() {
         let tempdir = TempDir::new().expect("tempdir");
-        write_pool(tempdir.path(), "企业家候选池", &pool_json("pool-1", "企业家候选池", true));
+        write_pool(
+            tempdir.path(),
+            "企业家候选池",
+            &pool_json("pool-1", "企业家候选池", true),
+        );
         fs::write(tempdir.path().join("ignore.json"), "{}").expect("write ignored file");
 
         let entries = list_figure_pool_entries_in_root(tempdir.path()).expect("load entries");
@@ -502,8 +538,16 @@ mod tests {
     #[test]
     fn rename_keeps_id_and_auto_suffixes_name_collisions() {
         let tempdir = TempDir::new().expect("tempdir");
-        write_pool(tempdir.path(), "投资人候选池", &pool_json("pool-1", "投资人候选池", true));
-        write_pool(tempdir.path(), "企业家候选池", &pool_json("pool-2", "企业家候选池", false));
+        write_pool(
+            tempdir.path(),
+            "投资人候选池",
+            &pool_json("pool-1", "投资人候选池", true),
+        );
+        write_pool(
+            tempdir.path(),
+            "企业家候选池",
+            &pool_json("pool-2", "企业家候选池", false),
+        );
 
         let result = save_figure_pool_in_root(
             tempdir.path(),
@@ -528,8 +572,16 @@ mod tests {
     #[test]
     fn save_normalizes_default_pool_to_single_true_value() {
         let tempdir = TempDir::new().expect("tempdir");
-        write_pool(tempdir.path(), "候选池甲", &pool_json("pool-1", "候选池甲", true));
-        write_pool(tempdir.path(), "候选池乙", &pool_json("pool-2", "候选池乙", true));
+        write_pool(
+            tempdir.path(),
+            "候选池甲",
+            &pool_json("pool-1", "候选池甲", true),
+        );
+        write_pool(
+            tempdir.path(),
+            "候选池乙",
+            &pool_json("pool-2", "候选池乙", true),
+        );
 
         let _saved = save_figure_pool_in_root(
             tempdir.path(),
@@ -543,12 +595,16 @@ mod tests {
         )
         .expect("save pool");
 
-        let left: Value =
-            serde_json::from_str(&fs::read_to_string(tempdir.path().join("候选池甲").join(POOL_MANIFEST)).expect("read left"))
-                .expect("parse left");
-        let right: Value =
-            serde_json::from_str(&fs::read_to_string(tempdir.path().join("候选池乙").join(POOL_MANIFEST)).expect("read right"))
-                .expect("parse right");
+        let left: Value = serde_json::from_str(
+            &fs::read_to_string(tempdir.path().join("候选池甲").join(POOL_MANIFEST))
+                .expect("read left"),
+        )
+        .expect("parse left");
+        let right: Value = serde_json::from_str(
+            &fs::read_to_string(tempdir.path().join("候选池乙").join(POOL_MANIFEST))
+                .expect("read right"),
+        )
+        .expect("parse right");
 
         assert_eq!(left["isDefault"], false);
         assert_eq!(right["isDefault"], true);
@@ -580,9 +636,14 @@ mod tests {
     #[test]
     fn delete_removes_pool_directory_recursively() {
         let tempdir = TempDir::new().expect("tempdir");
-        write_pool(tempdir.path(), "动漫人格候选池", &pool_json("pool-1", "动漫人格候选池", true));
+        write_pool(
+            tempdir.path(),
+            "动漫人格候选池",
+            &pool_json("pool-1", "动漫人格候选池", true),
+        );
         fs::write(
-            tempdir.path()
+            tempdir
+                .path()
                 .join("动漫人格候选池")
                 .join("portraits")
                 .join("hero.png"),
@@ -614,10 +675,16 @@ mod tests {
         )
         .expect("save pool");
 
-        let portrait =
-            read_figure_pool_portrait_in_root(tempdir.path(), "人物候选池", "portraits/jack_ma.jpg")
-                .expect("read portrait");
+        let portrait = read_figure_pool_portrait_in_root(
+            tempdir.path(),
+            "人物候选池",
+            "portraits/jack_ma.jpg",
+        )
+        .expect("read portrait");
 
-        assert_eq!(BASE64.decode(portrait.data_base64).expect("decode"), vec![7_u8, 8, 9]);
+        assert_eq!(
+            BASE64.decode(portrait.data_base64).expect("decode"),
+            vec![7_u8, 8, 9]
+        );
     }
 }

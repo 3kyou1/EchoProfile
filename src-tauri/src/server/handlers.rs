@@ -361,6 +361,16 @@ pub struct McpScopeParam {
     pub scope: Option<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontendLlmDebugParams {
+    pub category: String,
+    pub stage: String,
+    #[serde(default)]
+    pub level: Option<String>,
+    pub payload: String,
+}
+
 // ─── Handlers: NO PARAMS ──────────────────────────────────────────────────────
 
 handler_no_params!(
@@ -379,6 +389,13 @@ handler_no_params!(
     get_metadata_folder_path,
     commands::metadata::get_metadata_folder_path
 );
+
+pub async fn log_frontend_llm_debug(
+    Json(p): Json<FrontendLlmDebugParams>,
+) -> Result<Json<Value>, ApiError> {
+    commands::debug::log_frontend_llm_debug(p.category, p.stage, p.level, p.payload);
+    Ok(Json(serde_json::json!({ "ok": true })))
+}
 
 /// Note: scope parameter is accepted for API contract compatibility but not used
 /// by the underlying command (it always reads the global MCP config).

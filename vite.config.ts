@@ -146,6 +146,17 @@ export default defineConfig(async () => {
     },
   },
 
+  server: useMock
+    ? undefined
+    : {
+        proxy: {
+          "/api": {
+            target: "http://127.0.0.1:3727",
+            changeOrigin: true,
+          },
+        },
+      },
+
   // Optimize dependencies pre-bundling
   optimizeDeps: {
     include: [

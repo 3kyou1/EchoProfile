@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { mockPersistLlmDebugLog } = vi.hoisted(() => ({
+  mockPersistLlmDebugLog: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/services/llmDebugLogger", () => ({
+  persistLlmDebugLog: mockPersistLlmDebugLog,
+}));
+
 import type { CopaSnapshot } from "@/types/copaProfile";
 import {
   buildFigureResonanceCacheKey,
@@ -38,42 +46,36 @@ const snapshot: CopaSnapshot = {
       title: "Cognitive Trust",
       description: "Trust",
       user_profile_description: "Wants evidence and rigor.",
-      response_strategy: ["Show assumptions clearly."],
     },
     SA: {
       code: "SA",
       title: "Situational Anchoring",
       description: "Context",
       user_profile_description: "Keeps answers tightly scoped.",
-      response_strategy: ["Stay close to task constraints."],
     },
     SC: {
       code: "SC",
       title: "Schema Consistency",
       description: "Schema",
       user_profile_description: "Likes formal abstractions.",
-      response_strategy: ["Reuse the user's terminology."],
     },
     CLM: {
       code: "CLM",
       title: "Cognitive Load Management",
       description: "Load",
       user_profile_description: "Prefers chunked explanations.",
-      response_strategy: ["Break work into smaller steps."],
     },
     MS: {
       code: "MS",
       title: "Metacognitive Scaffolding",
       description: "Scaffold",
       user_profile_description: "Wants reasoning structure.",
-      response_strategy: ["Expose the order of reasoning steps."],
     },
     AMR: {
       code: "AMR",
       title: "Affective and Motivational Resonance",
       description: "Tone",
       user_profile_description: "Prefers calm, focused support.",
-      response_strategy: ["Keep the tone supportive and composed."],
     },
   },
   markdown: "## CoPA Profile\n\n- User profile: Likes formal abstractions, structure compression, calm rigor.",
@@ -82,6 +84,7 @@ const snapshot: CopaSnapshot = {
 describe("figureResonanceService", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     const memory = new Map<string, string>();
     vi.stubGlobal("localStorage", {
       getItem: (key: string) => memory.get(key) ?? null,
@@ -177,6 +180,16 @@ describe("figureResonanceService", () => {
     expect(result.recent_state).not.toBeNull();
     expect(result.pool_id).toBe(imported.id);
     expect(result.pool_name_snapshot).toBe("Operators");
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "resonance",
+        stage: "network_error",
+        level: "warn",
+        payload: expect.objectContaining({
+          error: "network down",
+        }),
+      })
+    );
   });
 
   it("persists generated resonance result in cache", async () => {
@@ -211,6 +224,282 @@ describe("figureResonanceService", () => {
     expect(loaded?.id).toBe(generated.id);
     expect(loaded?.cache_key).toBe(generated.cache_key);
     expect(loaded?.pool_id).toBe(pools[0]!.id);
+  });
+
+  it("logs thought echoes prompt and raw response when llm generation succeeds", async () => {
+    const pools = await loadFigurePools();
+    const validRecords = pools[0]!.records.filter((record) => record.status === "valid");
+    const primary = validRecords[0]!;
+    const secondary = validRecords.slice(1, 3);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  long_term: {
+                    primary: {
+                      slug: primary.slug,
+                      reason: "Matches the user's structured reasoning style.",
+                      resonance_axes: ["structured", "rigorous"],
+                    },
+                    secondary: secondary.map((record) => ({
+                      slug: record.slug,
+                      reason: `Echoes ${record.name}.`,
+                      resonance_axes: ["adjacent"],
+                    })),
+                  },
+                  recent_state: null,
+                }),
+              },
+            },
+          ],
+        }),
+      })
+    );
+
+    await generateFigureResonance({
+      scopeKey: "global:all",
+      poolId: pools[0]!.id,
+      profileSnapshot: snapshot,
+      recentMessages: [
+        "I want a rigorous structure.",
+        "Please show the reasoning steps clearly.",
+      ],
+      config: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      language: "en",
+    });
+
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "resonance",
+        stage: "request",
+        payload: expect.objectContaining({
+          model: "test-model",
+          language: "en",
+          systemPrompt: expect.stringContaining("Generate Thought Echoes"),
+        }),
+      })
+    );
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "resonance",
+        stage: "response",
+        payload: expect.objectContaining({
+          rawContent: expect.stringContaining(primary.slug),
+        }),
+      })
+    );
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "resonance",
+        stage: "diagnosis",
+        payload: expect.objectContaining({
+          hasLongTermPrimary: true,
+          secondaryCount: 2,
+          allowRecentState: false,
+          hasRecentStatePayload: false,
+        }),
+      })
+    );
+  });
+
+  it("sends a json_schema response format for thought echoes generation", async () => {
+    const pools = await loadFigurePools();
+    const validRecords = pools[0]!.records.filter((record) => record.status === "valid");
+    const primary = validRecords[0]!;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                long_term: {
+                  primary: {
+                    slug: primary.slug,
+                    reason: "Matches the user's structured reasoning style.",
+                    resonance_axes: ["structured", "rigorous"],
+                  },
+                  secondary: [],
+                },
+                recent_state: null,
+              }),
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateFigureResonance({
+      scopeKey: "global:all",
+      poolId: pools[0]!.id,
+      profileSnapshot: snapshot,
+      recentMessages: [
+        "I want a rigorous structure.",
+        "Please show the reasoning steps clearly.",
+      ],
+      config: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      language: "en",
+    });
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(requestInit?.body ?? "{}")) as {
+      response_format?: { type?: string; json_schema?: { name?: string; schema?: Record<string, unknown> } };
+    };
+
+    expect(body.response_format?.type).toBe("json_schema");
+    expect(body.response_format?.json_schema?.name).toBe("figure_resonance");
+    expect(body.response_format?.json_schema?.schema).toEqual(
+      expect.objectContaining({
+        type: "object",
+        required: expect.arrayContaining(["long_term", "recent_state"]),
+      })
+    );
+  });
+
+  it("falls back to json_object when json_schema is unsupported for thought echoes generation", async () => {
+    const pools = await loadFigurePools();
+    const validRecords = pools[0]!.records.filter((record) => record.status === "valid");
+    const primary = validRecords[0]!;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        text: async () => "response_format json_schema is not supported for this model",
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  long_term: {
+                    primary: {
+                      slug: primary.slug,
+                      reason: "Matches the user's structured reasoning style.",
+                      resonance_axes: ["structured", "rigorous"],
+                    },
+                    secondary: [],
+                  },
+                  recent_state: null,
+                }),
+              },
+            },
+          ],
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateFigureResonance({
+      scopeKey: "global:all",
+      poolId: pools[0]!.id,
+      profileSnapshot: snapshot,
+      recentMessages: [
+        "I want a rigorous structure.",
+        "Please show the reasoning steps clearly.",
+      ],
+      config: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      language: "en",
+    });
+
+    const firstBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body ?? "{}")) as {
+      response_format?: { type?: string };
+    };
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body ?? "{}")) as {
+      response_format?: { type?: string };
+    };
+
+    expect(firstBody.response_format?.type).toBe("json_schema");
+    expect(secondBody.response_format?.type).toBe("json_object");
+    expect(result.source).toBe("llm");
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "resonance",
+        stage: "schema_fallback",
+        payload: expect.objectContaining({
+          from: "json_schema",
+          to: "json_object",
+          status: 400,
+        }),
+      })
+    );
+  });
+
+  it("logs thought echoes http errors before falling back", async () => {
+    const pools = await loadFigurePools();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+        statusText: "Bad Gateway",
+        text: async () => "bad gateway",
+      })
+    );
+
+    const result = await generateFigureResonance({
+      scopeKey: "global:all",
+      poolId: pools[0]!.id,
+      profileSnapshot: snapshot,
+      recentMessages: [
+        "I want a rigorous structure.",
+        "Please show the reasoning steps clearly.",
+      ],
+      config: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      language: "en",
+    });
+
+    expect(result.source).toBe("heuristic");
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "resonance",
+        stage: "fetch_resolved",
+        payload: expect.objectContaining({
+          ok: false,
+          status: 502,
+          statusText: "Bad Gateway",
+        }),
+      })
+    );
+    expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "resonance",
+        stage: "http_error",
+        level: "warn",
+        payload: expect.objectContaining({
+          status: 502,
+          detail: "bad gateway",
+        }),
+      })
+    );
   });
 
   it("rehydrates cached resonance cards from the latest figure pool data", async () => {

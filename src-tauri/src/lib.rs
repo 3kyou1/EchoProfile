@@ -21,6 +21,7 @@ use crate::commands::{
         get_settings_by_scope, read_binary_file, read_text_file, save_mcp_servers, save_screenshot,
         save_settings, write_text_file,
     },
+    debug::log_frontend_llm_debug,
     feedback::{get_system_info, open_github_issues, send_feedback},
     mcp_presets::{delete_mcp_preset, get_mcp_preset, load_mcp_presets, save_mcp_preset},
     metadata::{
@@ -99,6 +100,12 @@ fn run_tauri() {
 
     #[allow(unused_mut)]
     let mut builder = tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .level_for("frontend_llm", log::LevelFilter::Debug)
+                .build(),
+        )
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -136,6 +143,7 @@ fn run_tauri() {
             send_feedback,
             get_system_info,
             open_github_issues,
+            log_frontend_llm_debug,
             // Metadata commands
             get_metadata_folder_path,
             load_user_metadata,

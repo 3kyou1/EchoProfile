@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Brain, Download, LibraryBig, Loader2, RefreshCw, Settings2, Sparkles, Trash2, X } from "lucide-react";
+import { Brain, ChevronDown, Download, LibraryBig, Loader2, RefreshCw, Settings2, Sparkles, Trash2, X } from "lucide-react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { api } from "@/services/api";
 import { openBinaryFileDialog, saveBinaryFileDialog, saveFileDialog } from "@/utils/fileDialog";
 import { useAppStore } from "@/store/useAppStore";
 import type { ClaudeMessage, ClaudeProject, ClaudeSession } from "@/types";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -65,12 +67,35 @@ interface PendingFigurePoolImport {
   inspection: FigurePoolZipInspection;
 }
 
+interface LoadingFigureCopy {
+  slug: string;
+  name: string;
+  copy: string;
+}
+
 function dedupeProviders(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort();
 }
 
 function providerLabel(t: TFunction, provider: string): string {
   return t(`common.provider.${provider}`, { defaultValue: provider });
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function localizeCopaErrorMessage(t: TFunction, error: unknown): string {
+  const message = getErrorMessage(error);
+
+  if (message === "CoPA model returned invalid JSON.") {
+    return t(
+      "common.copa.error.invalidJson",
+      "CoPA model returned invalid JSON."
+    );
+  }
+
+  return message;
 }
 
 async function loadSessionsForProject(project: ClaudeProject, excludeSidechain: boolean) {
@@ -123,10 +148,15 @@ export function CopaProfilePage() {
   const [resonanceHistory, setResonanceHistory] = useState<FigureResonanceResult[]>([]);
   const [figurePools, setFigurePools] = useState<FigurePool[]>([]);
   const [selectedPoolId, setSelectedPoolId] = useState("");
+  const [preferGeneratingView, setPreferGeneratingView] = useState(false);
   const [importSummaryPool, setImportSummaryPool] = useState<FigurePool | null>(null);
   const [pendingFigurePoolImport, setPendingFigurePoolImport] = useState<PendingFigurePoolImport | null>(null);
   const [pendingFigurePoolImportName, setPendingFigurePoolImportName] = useState("");
   const [figurePoolImportError, setFigurePoolImportError] = useState("");
+  const [loadingFigureIndex, setLoadingFigureIndex] = useState(0);
+  const [pasteLikeSignalLengthInput, setPasteLikeSignalLengthInput] = useState(
+    String(DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 400)
+  );
   const llmConfigPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -146,6 +176,12 @@ export function CopaProfilePage() {
       setSelectedPoolId(defaultPool?.id ?? "");
     });
   }, []);
+
+  useEffect(() => {
+    setPasteLikeSignalLengthInput(
+      String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 400)
+    );
+  }, [config.pasteLikeSignalLength]);
 
   useEffect(() => {
     if (!isLlmConfigOpen) {
@@ -265,11 +301,78 @@ export function CopaProfilePage() {
     () => visibleSnapshots.find((snapshot) => snapshot.id === currentSnapshotId) ?? visibleSnapshots[0] ?? null,
     [currentSnapshotId, visibleSnapshots]
   );
+  const isProfileGenerationView = isGenerating && activeSubview === "profile" && preferGeneratingView;
+  const interactiveSnapshot = isProfileGenerationView ? null : currentSnapshot;
 
   const selectedFigurePool = useMemo(
     () => figurePools.find((pool) => pool.id === selectedPoolId) ?? null,
     [figurePools, selectedPoolId]
   );
+
+  const loadingFigureCopies = useMemo<LoadingFigureCopy[]>(() => {
+    if (!selectedFigurePool) {
+      return [];
+    }
+
+    const language = normalizeCopaLanguage(i18n.resolvedLanguage || i18n.language || "en");
+    return selectedFigurePool.records
+      .filter((record) => record.status === "valid")
+      .map((record) => {
+        const copy = language === "zh" ? record.loading_copy_zh.trim() : record.loading_copy_en.trim();
+        const localizedZh = record.localized_names?.zh?.trim();
+        const name = language === "zh" ? localizedZh || record.name : record.name;
+        return {
+          slug: record.slug,
+          name,
+          copy,
+        };
+      })
+      .filter((record) => record.copy.length > 0);
+  }, [i18n.language, i18n.resolvedLanguage, selectedFigurePool]);
+
+  const activeLoadingFigure =
+    loadingFigureCopies.length > 0 ? loadingFigureCopies[loadingFigureIndex % loadingFigureCopies.length] : null;
+
+  useEffect(() => {
+    setLoadingFigureIndex(0);
+  }, [selectedPoolId, i18n.language, i18n.resolvedLanguage]);
+
+  useEffect(() => {
+    if (!isGenerating || loadingFigureCopies.length <= 1) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setLoadingFigureIndex((current) => (current + 1) % loadingFigureCopies.length);
+    }, 2400);
+
+    return () => window.clearInterval(timer);
+  }, [isGenerating, loadingFigureCopies]);
+
+  const renderLoadingFigureCard = () => {
+    if (!activeLoadingFigure) {
+      return null;
+    }
+
+    return (
+      <div className="rounded-3xl border border-emerald-500/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.08),rgba(255,255,255,0.96))] px-5 py-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+          {t("common.copa.history.loadingFigure", "Figure loading copy")}
+        </p>
+        <div className="mt-3 flex items-start justify-between gap-3">
+          <div className="min-w-0 w-full">
+            <p className="text-xl font-semibold text-foreground">{activeLoadingFigure.name}</p>
+            <p className="mt-2 max-w-3xl text-base leading-8 text-muted-foreground">{activeLoadingFigure.copy}</p>
+          </div>
+          {loadingFigureCopies.length > 1 ? (
+            <span className="rounded-full border border-emerald-500/20 bg-background/80 px-3 py-1 text-xs text-muted-foreground">
+              {loadingFigureIndex % loadingFigureCopies.length + 1}/{loadingFigureCopies.length}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
 
   const isInheritedResonanceConfig = activeLlmConfigSection === "resonance" && !config.resonance.enabled;
   const activeLlmModelConfig =
@@ -350,6 +453,23 @@ export function CopaProfilePage() {
           [key]: value,
         },
       },
+    });
+  };
+
+  const handlePasteLikeSignalLengthCommit = (value: string) => {
+    const nextValue = Number.parseInt(value, 10);
+    if (!Number.isFinite(nextValue)) {
+      setPasteLikeSignalLengthInput(
+        String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 400)
+      );
+      return;
+    }
+    const clampedValue = Math.min(1200, Math.max(10, nextValue));
+    setPasteLikeSignalLengthInput(String(clampedValue));
+
+    persistConfig({
+      ...config,
+      pasteLikeSignalLength: clampedValue,
     });
   };
 
@@ -442,12 +562,13 @@ export function CopaProfilePage() {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setPreferGeneratingView(true);
     setError("");
 
     try {
       const generationLanguage = normalizeCopaLanguage(i18n.resolvedLanguage || i18n.language || "en");
       const collected = await collectScopeMessages();
-      const extracted = extractUserSignals(collected.messages);
+      const extracted = extractUserSignals(collected.messages, config.pasteLikeSignalLength);
       const limitedSignals =
         extracted.messages.length > MAX_PROMPT_SIGNALS
           ? extracted.messages.slice(-MAX_PROMPT_SIGNALS)
@@ -496,8 +617,11 @@ export function CopaProfilePage() {
       const stored = await saveCopaSnapshot(snapshot);
       setSnapshots(stored);
       setCurrentSnapshotId(snapshot.id);
+      setPreferGeneratingView(false);
     } catch (generationError) {
-      setError(generationError instanceof Error ? generationError.message : String(generationError));
+      const message = localizeCopaErrorMessage(t, generationError);
+      toast.error(message);
+      setError(message);
     } finally {
       setIsGenerating(false);
     }
@@ -526,7 +650,7 @@ export function CopaProfilePage() {
         scopeKey: currentScopeKey,
         poolId: selectedFigurePool.id,
         profileSnapshot: currentSnapshot,
-        recentMessages: extractUserSignals(collected.messages).messages,
+        recentMessages: extractUserSignals(collected.messages, config.pasteLikeSignalLength).messages,
         config: resolveResonanceModelConfig(config),
         language: i18n.resolvedLanguage || i18n.language || "zh",
       });
@@ -535,8 +659,18 @@ export function CopaProfilePage() {
         result,
         ...current.filter((item) => item.cache_key !== result.cache_key),
       ]);
+      if (result.source === "heuristic") {
+        const message = t(
+          "common.copa.resonance.error.heuristicFallback",
+          "Thought Echoes LLM generation failed. Showing a heuristic fallback result."
+        );
+        toast.error(message);
+        setResonanceError(message);
+      }
     } catch (generationError) {
-      setResonanceError(generationError instanceof Error ? generationError.message : String(generationError));
+      const message = getErrorMessage(generationError);
+      toast.error(message);
+      setResonanceError(message);
     } finally {
       setIsGeneratingResonance(false);
     }
@@ -699,6 +833,61 @@ export function CopaProfilePage() {
       minute: "2-digit",
     });
   };
+
+  const handleSelectSnapshot = (snapshotId: string) => {
+    setCurrentSnapshotId(snapshotId);
+    if (activeSubview === "profile" && isGenerating) {
+      setPreferGeneratingView(false);
+    }
+  };
+
+  const handleSelectResonanceHistory = (resultId: string) => {
+    const selectedResult = resonanceHistory.find((item) => item.id === resultId);
+    if (selectedResult) {
+      setResonanceResult(selectedResult);
+    }
+  };
+
+  const formatSnapshotPreview = (value: string) => {
+    const normalized = value.replace(/\s+/g, " ").trim();
+    return normalized.length > 72 ? `${normalized.slice(0, 69)}...` : normalized;
+  };
+
+  const formatResonanceHistoryPreview = (result: FigureResonanceResult) => {
+    const primaryName = result.long_term.primary.name;
+    const recentStateLabel = result.recent_state
+      ? t("common.copa.resonance.recentState", "Recent state")
+      : null;
+    const composed = [primaryName, recentStateLabel].filter(Boolean).join(" · ");
+    return composed.length > 72 ? `${composed.slice(0, 69)}...` : composed;
+  };
+
+  const formatScopeOptionLabel = (value: string) => {
+    const normalized = value.replace(/\s+/g, " ").trim();
+    return normalized.length > 56 ? `${normalized.slice(0, 53)}...` : normalized;
+  };
+
+  const selectedProjectOptionLabel = selectedProjectForScope
+    ? formatScopeOptionLabel(
+        `${selectedProjectForScope.name} · ${providerLabel(t, selectedProjectForScope.provider ?? "claude")}`
+      )
+    : t("common.copa.projectPlaceholder", "Select project");
+
+  const selectedSessionOptionLabel = selectedSessionForScope
+    ? formatScopeOptionLabel(selectedSessionForScope.summary || selectedSessionForScope.actual_session_id)
+    : isLoadingSessions
+      ? t("common.copa.sessionLoading", "Loading sessions...")
+      : t("common.copa.sessionPlaceholder", "Select session");
+
+  const currentSnapshotOrdinal = currentSnapshot
+    ? visibleSnapshots.findIndex((snapshot) => snapshot.id === currentSnapshot.id)
+    : -1;
+  const currentSnapshotBadge = currentSnapshotOrdinal >= 0 ? `#${visibleSnapshots.length - currentSnapshotOrdinal}` : "--";
+  const currentResonanceOrdinal = resonanceResult
+    ? resonanceHistory.findIndex((item) => item.id === resonanceResult.id)
+    : -1;
+  const currentResonanceBadge =
+    currentResonanceOrdinal >= 0 ? `#${resonanceHistory.length - currentResonanceOrdinal}` : "--";
 
   return (
     <div className="h-full overflow-auto">
@@ -912,6 +1101,38 @@ export function CopaProfilePage() {
                           />
                         </label>
                       </div>
+                      <label htmlFor="copa-paste-like-signal-length" className="mt-4 block">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          {t("common.copa.signalFilter.length", "Paste-like filter length")}
+                        </span>
+                        <input
+                          id="copa-paste-like-signal-length"
+                          aria-label={t("common.copa.signalFilter.length", "Paste-like filter length")}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={pasteLikeSignalLengthInput}
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            if (/^\d*$/.test(nextValue)) {
+                              setPasteLikeSignalLengthInput(nextValue);
+                            }
+                          }}
+                          onBlur={(event) => handlePasteLikeSignalLengthCommit(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              handlePasteLikeSignalLengthCommit(event.currentTarget.value);
+                            }
+                          }}
+                          className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground"
+                        />
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {t(
+                            "common.copa.signalFilter.description",
+                            "Only messages longer than this length will be checked as possible pasted content."
+                          )}
+                        </p>
+                      </label>
                     </div>
                   ) : null}
                 </div>
@@ -970,17 +1191,46 @@ export function CopaProfilePage() {
                       <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                         {t("common.copa.project", "Project")}
                       </span>
-                      <select
+                      <Select
                         value={projectPath}
-                        onChange={(event) => setProjectPath(event.target.value)}
-                        className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground"
+                        onValueChange={setProjectPath}
                       >
-                        {projects.map((project) => (
-                          <option key={project.path} value={project.path}>
-                            {project.name} · {providerLabel(t, project.provider ?? "claude")}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger
+                          aria-label={t("common.copa.project", "Project")}
+                          className="[&>svg]:hidden mt-2 h-auto min-h-[50px] rounded-xl border-border/70 bg-white px-3 py-2.5 shadow-sm"
+                        >
+                          <div className="flex w-full items-center gap-3 text-left">
+                            <div className="min-w-0 flex-1">
+                              <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-foreground">
+                                {selectedProjectOptionLabel}
+                              </p>
+                            </div>
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                              <ChevronDown className="h-4 w-4" />
+                            </div>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent
+                          position="popper"
+                          className="max-h-[300px] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] rounded-[18px] border border-border/70 bg-white p-1.5 text-foreground shadow-[0_16px_42px_rgba(15,23,42,0.12)]"
+                        >
+                          {projects.map((project) => (
+                            <SelectItem
+                              key={project.path}
+                              value={project.path}
+                              className="rounded-[14px] px-3 py-2.5 pr-9 focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-muted/50"
+                            >
+                              <div className="min-w-0 w-full">
+                                <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground">
+                                  {formatScopeOptionLabel(
+                                    `${project.name} · ${providerLabel(t, project.provider ?? "claude")}`
+                                  )}
+                                </p>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </label>
                   )}
 
@@ -989,18 +1239,45 @@ export function CopaProfilePage() {
                       <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                         {t("common.copa.session", "Session")}
                       </span>
-                      <select
+                      <Select
                         value={sessionPath}
-                        onChange={(event) => setSessionPath(event.target.value)}
+                        onValueChange={setSessionPath}
                         disabled={isLoadingSessions || sessionsForScope.length === 0}
-                        className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {sessionsForScope.map((session) => (
-                          <option key={session.file_path} value={session.file_path}>
-                            {session.summary || session.actual_session_id}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger
+                          aria-label={t("common.copa.session", "Session")}
+                          className="[&>svg]:hidden mt-2 h-auto min-h-[50px] rounded-xl border-border/70 bg-white px-3 py-2.5 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <div className="flex w-full items-center gap-3 text-left">
+                            <div className="min-w-0 flex-1">
+                              <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-foreground">
+                                {selectedSessionOptionLabel}
+                              </p>
+                            </div>
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                              <ChevronDown className="h-4 w-4" />
+                            </div>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent
+                          position="popper"
+                          className="max-h-[300px] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] rounded-[18px] border border-border/70 bg-white p-1.5 text-foreground shadow-[0_16px_42px_rgba(15,23,42,0.12)]"
+                        >
+                          {sessionsForScope.map((session) => (
+                            <SelectItem
+                              key={session.file_path}
+                              value={session.file_path}
+                              className="rounded-[14px] px-3 py-2.5 pr-9 focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-muted/50"
+                            >
+                              <div className="min-w-0 w-full">
+                                <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground">
+                                  {formatScopeOptionLabel(session.summary || session.actual_session_id)}
+                                </p>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </label>
                   )}
 
@@ -1052,7 +1329,7 @@ export function CopaProfilePage() {
                     <button
                       type="button"
                       onClick={() => void handleExportMarkdown()}
-                      disabled={!currentSnapshot}
+                      disabled={!interactiveSnapshot}
                       className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/80 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Download className="h-4 w-4" />
@@ -1061,7 +1338,7 @@ export function CopaProfilePage() {
                     <button
                       type="button"
                       onClick={() => void handleExportJson()}
-                      disabled={!currentSnapshot}
+                      disabled={!interactiveSnapshot}
                       className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/80 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Download className="h-4 w-4" />
@@ -1100,89 +1377,244 @@ export function CopaProfilePage() {
                   </p>
                 </div>
                 <div className="rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">
-                  {visibleSnapshots.length}{" "}
-                  {t("common.copa.historyCount", "Profiles")}
+                  {isGenerating
+                    ? t("common.copa.history.generatingBadge", "NEW")
+                    : `${visibleSnapshots.length} ${t("common.copa.historyCount", "Profiles")}`}
                 </div>
               </div>
 
               <div className="mt-4 space-y-2">
-                {visibleSnapshots.length === 0 ? (
+                {isGenerating ? (
+                  <>
+                    <div className="rounded-2xl border border-foreground/20 bg-foreground/5">
+                      <div className="flex items-start justify-between gap-3 px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
+                              {t("common.copa.history.generatingBadge", "NEW")}
+                            </span>
+                            <span className="text-sm font-semibold text-foreground">
+                              {t("common.copa.history.generatingTitle", "Generating new Profile")}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                            {t(
+                              "common.copa.history.generatingDescription",
+                              "This run will be saved as a new Profile version for the current scope."
+                            )}
+                          </p>
+                        </div>
+                        <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                      </div>
+                    </div>
+
+                    {renderLoadingFigureCard()}
+                  </>
+                ) : null}
+
+                {visibleSnapshots.length === 0 && !isGenerating ? (
                   <p className="rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground">
                     {t("common.copa.historyEmpty", "No Profiles for this scope yet.")}
                   </p>
                 ) : (
-                  visibleSnapshots.map((snapshot, index) => (
-                    <div
-                      key={snapshot.id}
-                      className={`rounded-2xl border transition-colors ${
-                        currentSnapshot?.id === snapshot.id
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border/70 bg-background text-foreground"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3 px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => setCurrentSnapshotId(snapshot.id)}
-                          className="min-w-0 flex-1 text-left"
+                  <>
+                    <div className="rounded-[28px] border border-border/60 bg-white/95 p-4 shadow-sm">
+                      <label
+                        htmlFor="copa-profile-history-select"
+                        className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground"
+                      >
+                        {t("common.copa.history.select", "Choose profile")}
+                      </label>
+                      <Select
+                        value={currentSnapshot?.id ?? ""}
+                        onValueChange={handleSelectSnapshot}
+                      >
+                        <SelectTrigger
+                          id="copa-profile-history-select"
+                          aria-label={t("common.copa.history.select", "Choose profile")}
+                          className="[&>svg]:hidden mt-3 h-auto min-h-[76px] rounded-[24px] border border-slate-800 bg-slate-900/92 px-4 py-3 text-background shadow-[0_10px_24px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-900 focus:border-slate-700 focus:ring-0"
                         >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                currentSnapshot?.id === snapshot.id
-                                  ? "bg-background/15 text-background"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              #{visibleSnapshots.length - index}
-                            </span>
-                            <span className="text-sm font-semibold">{snapshot.scope.label}</span>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[11px] ${
-                                currentSnapshot?.id === snapshot.id
-                                  ? "bg-background/15 text-background/80"
-                                  : "bg-background/80 text-muted-foreground"
-                              }`}
-                            >
-                              {snapshot.sourceStats.rawUserMessages}{" "}
-                              {t("common.copa.summary.userMessages", "user messages")}
-                            </span>
+                          <div className="flex min-h-[50px] w-full items-center gap-3 text-left">
+                            <div className="flex h-11 min-w-11 items-center justify-center rounded-full bg-white/92 px-3 text-xs font-semibold text-slate-900">
+                              {currentSnapshotBadge}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-white/65">
+                                <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 font-semibold normal-case tracking-normal text-white/90">
+                                  {currentSnapshot?.scope.label ?? t("common.copa.history.current", "Currently selected")}
+                                </span>
+                                {currentSnapshot ? <span>{formatSnapshotTime(currentSnapshot.createdAt)}</span> : null}
+                              </div>
+                              <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap pr-4 text-sm font-medium text-white">
+                                {currentSnapshot
+                                  ? formatSnapshotPreview(currentSnapshot.promptSummary)
+                                  : t("common.copa.history.current", "Currently selected")}
+                              </p>
+                              {currentSnapshot ? (
+                                <p className="mt-1 text-xs text-white/65">
+                                  {currentSnapshot.sourceStats.rawUserMessages}{" "}
+                                  {t("common.copa.summary.userMessages", "user messages")} ·{" "}
+                                  {currentSnapshot.modelConfig.model}
+                                </p>
+                              ) : null}
+                            </div>
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/85">
+                              <ChevronDown className="h-4 w-4" />
+                            </div>
                           </div>
-                          <p
-                            className={`mt-2 text-xs leading-5 ${
-                              currentSnapshot?.id === snapshot.id ? "text-background/80" : "text-muted-foreground"
-                            }`}
-                          >
-                            {snapshot.promptSummary}
-                          </p>
-                          <p
-                            className={`mt-2 text-[11px] ${
-                              currentSnapshot?.id === snapshot.id ? "text-background/70" : "text-muted-foreground"
-                            }`}
-                          >
-                            {formatSnapshotTime(snapshot.createdAt)} · {snapshot.modelConfig.model}
-                          </p>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => void handleDeleteSnapshot(snapshot.id)}
-                          className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors ${
-                            currentSnapshot?.id === snapshot.id
-                              ? "border-background/15 bg-background/10 text-background hover:bg-background/15"
-                              : "border-border/70 bg-background/80 text-muted-foreground hover:bg-background"
-                          }`}
-                          aria-label={t("common.copa.deleteProfile", "Delete Profile")}
-                          title={t("common.copa.deleteProfile", "Delete Profile")}
+                        </SelectTrigger>
+                        <SelectContent
+                          position="popper"
+                          className="max-h-[360px] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] rounded-[20px] border border-border/70 bg-white p-1.5 text-foreground shadow-[0_20px_60px_rgba(15,23,42,0.14)]"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                          {visibleSnapshots.map((snapshot, index) => (
+                            <SelectItem
+                              key={snapshot.id}
+                              value={snapshot.id}
+                              className="rounded-[16px] px-3 py-2.5 pr-9 focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-muted/50"
+                            >
+                              <div className="min-w-0 w-full">
+                                <div className="flex min-w-0 max-w-full items-center gap-2 text-[12px] font-semibold text-foreground">
+                                  <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                                    #{visibleSnapshots.length - index}
+                                  </span>
+                                  <span className="shrink-0">{formatSnapshotTime(snapshot.createdAt)}</span>
+                                  <span className="min-w-0 truncate text-muted-foreground">
+                                    {snapshot.sourceStats.rawUserMessages}{" "}
+                                    {t("common.copa.summary.userMessages", "user messages")}
+                                  </span>
+                                </div>
+                                <p className="mt-1 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-foreground/88">
+                                  {formatSnapshotPreview(snapshot.promptSummary)}
+                                </p>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {isProfileGenerationView ? (
+                        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                          {t(
+                            "common.copa.history.generatingHint",
+                            "You can switch to an older Profile from the dropdown while this generation continues."
+                          )}
+                        </p>
+                      ) : currentSnapshot && activeSubview === "profile" ? (
+                        <div className="mt-3 rounded-[22px] border border-border/60 bg-white/90 px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                  {t("common.copa.history.current", "Currently selected")}
+                                </p>
+                                <span className="rounded-full bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
+                                  {currentSnapshotBadge}
+                                </span>
+                                <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                  {currentSnapshot.scope.label}
+                                </span>
+                                <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+                                  {currentSnapshot.sourceStats.rawUserMessages} {t("common.copa.summary.userMessages", "user messages")}
+                                </span>
+                              </div>
+                              <p className="mt-3 text-sm leading-6 text-foreground">{currentSnapshot.promptSummary}</p>
+                              <p className="mt-2 text-[11px] text-muted-foreground">
+                                {formatSnapshotTime(currentSnapshot.createdAt)} · {currentSnapshot.modelConfig.model}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteSnapshot(currentSnapshot.id)}
+                              className="inline-flex h-10 items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3 text-rose-600 transition-colors hover:bg-rose-100"
+                              aria-label={t("common.copa.deleteProfile", "Delete Profile")}
+                              title={t("common.copa.deleteProfile", "Delete Profile")}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
-                  ))
+                  </>
                 )}
               </div>
             </section>
+
+            {activeSubview === "resonance" && resonanceHistory.length > 0 ? (
+              <section className="rounded-3xl border border-border/60 bg-card/90 p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {t("common.copa.resonance.history", "Thought echoes history")}
+                </p>
+                <div className="mt-3 rounded-[24px] border border-border/60 bg-white/95 p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                  <label
+                    htmlFor="copa-resonance-history-select"
+                    className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                  >
+                    {t("common.copa.resonance.history.select", "Choose history result")}
+                  </label>
+                  <Select
+                    value={resonanceResult?.id ?? resonanceHistory[0]?.id ?? ""}
+                    onValueChange={handleSelectResonanceHistory}
+                  >
+                    <SelectTrigger
+                      id="copa-resonance-history-select"
+                      aria-label={t("common.copa.resonance.history.select", "Choose history result")}
+                      className="[&>svg]:hidden mt-3 h-auto min-h-[72px] rounded-[20px] border border-border/70 bg-white px-4 py-3 text-left shadow-none transition-colors focus:border-foreground/20 focus:ring-0"
+                    >
+                      <div className="flex min-h-[48px] w-full items-center gap-3 text-left">
+                        <div className="flex h-10 min-w-10 items-center justify-center rounded-full bg-muted px-3 text-xs font-semibold text-foreground">
+                          {currentResonanceBadge}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                            <span className="rounded-full bg-muted px-2 py-1 font-semibold normal-case tracking-normal text-foreground">
+                              {resonanceResult?.pool_name_snapshot ??
+                                t("common.copa.resonance.history.current", "Currently selected")}
+                            </span>
+                            {resonanceResult ? <span>{formatSnapshotTime(resonanceResult.generated_at)}</span> : null}
+                          </div>
+                          <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap pr-4 text-sm font-medium text-foreground">
+                            {resonanceResult
+                              ? formatResonanceHistoryPreview(resonanceResult)
+                              : t("common.copa.resonance.history.current", "Currently selected")}
+                          </p>
+                        </div>
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/80 text-foreground">
+                          <ChevronDown className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent
+                      position="popper"
+                      className="max-h-[320px] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] rounded-[20px] border border-border/70 bg-white p-1.5 text-foreground shadow-[0_20px_60px_rgba(15,23,42,0.14)]"
+                    >
+                      {resonanceHistory.map((item, index) => (
+                        <SelectItem
+                          key={item.id}
+                          value={item.id}
+                          className="rounded-[16px] px-3 py-2.5 pr-9 focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-muted/50"
+                        >
+                          <div className="min-w-0 w-full">
+                            <div className="flex min-w-0 max-w-full items-center gap-2 text-[12px] font-semibold text-foreground">
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                                #{resonanceHistory.length - index}
+                              </span>
+                              <span className="min-w-0 truncate">{item.pool_name_snapshot}</span>
+                              <span className="shrink-0 text-muted-foreground">
+                                {formatSnapshotTime(item.generated_at)}
+                              </span>
+                            </div>
+                            <p className="mt-1 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-foreground/88">
+                              {formatResonanceHistoryPreview(item)}
+                            </p>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </section>
+            ) : null}
 
             {activeSubview === "profile" && error && (
               <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -1196,53 +1628,21 @@ export function CopaProfilePage() {
               </div>
             )}
 
-            {currentSnapshot ? (
+            {interactiveSnapshot || isProfileGenerationView ? (
               <>
                 {activeSubview === "profile" ? (
                   <>
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      <div className="rounded-2xl border border-border/60 bg-card p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          {t("common.copa.summary.scope", "Scope")}
-                        </p>
-                        <p className="mt-2 text-lg font-semibold text-foreground">{currentSnapshot.scope.label}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{currentSnapshot.createdAt}</p>
-                      </div>
-                      <div className="rounded-2xl border border-border/60 bg-card p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          {t("common.copa.summary.sessions", "Sessions")}
-                        </p>
-                        <p className="mt-2 text-lg font-semibold text-foreground">
-                          {currentSnapshot.sourceStats.sessionCount}
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {currentSnapshot.sourceStats.rawUserMessages}{" "}
-                          {t("common.copa.summary.userMessages", "user messages")}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-border/60 bg-card p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          {t("common.copa.summary.providers", "Providers")}
-                        </p>
-                        <p className="mt-2 text-lg font-semibold text-foreground">
-                          {currentSnapshot.providerScope.map((provider) => providerLabel(t, provider)).join(", ")}
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">{currentSnapshot.modelConfig.model}</p>
-                      </div>
-                    </div>
-
-                    <section className="rounded-3xl border border-border/60 bg-card/90 p-5 shadow-sm">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        {t("common.copa.promptSummary", "Prompt summary")}
-                      </p>
-                      <p className="mt-3 text-sm leading-7 text-foreground">{currentSnapshot.promptSummary}</p>
-                    </section>
-
-                    <section className="grid gap-4 xl:grid-cols-2">
-                      {Object.values(currentSnapshot.factors).map((factor) => (
-                        <CopaFactorCard key={factor.code} factor={factor} />
-                      ))}
-                    </section>
+                    {isProfileGenerationView ? (
+                      null
+                    ) : (
+                      <>
+                        <section className="grid gap-4 xl:grid-cols-2">
+                          {Object.values(interactiveSnapshot.factors).map((factor) => (
+                            <CopaFactorCard key={factor.code} factor={factor} />
+                          ))}
+                        </section>
+                      </>
+                    )}
 
                   </>
                 ) : (
@@ -1302,28 +1702,6 @@ export function CopaProfilePage() {
                     </div>
 
                     {resonanceResult ? (
-                      <div className="mt-3 rounded-2xl border border-border/60 bg-background/50 p-3.5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          {t("common.copa.resonance.viewingState", "Currently viewing")}
-                        </p>
-                        <p className="mt-1.5 text-sm font-medium text-foreground">
-                          {t("common.copa.resonance.viewingStateValue", "{{name}} history result", {
-                            name: resonanceResult.pool_name_snapshot,
-                            defaultValue: `${resonanceResult.pool_name_snapshot} history result`,
-                          })}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {formatSnapshotTime(resonanceResult.generated_at)}
-                          {resonanceResult.pool_deleted
-                            ? ` · ${t("common.copa.resonance.pool.deleted", "Original pool deleted")}`
-                            : resonanceResult.pool_updated
-                              ? ` · ${t("common.copa.resonance.pool.updated", "Pool has changed since generation")}`
-                              : ""}
-                        </p>
-                      </div>
-                    ) : null}
-
-                    {resonanceResult ? (
                       <div className="mt-4 space-y-5">
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -1377,42 +1755,6 @@ export function CopaProfilePage() {
                           </div>
                         )}
 
-                        {resonanceHistory.length > 0 ? (
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                              {t("common.copa.resonance.history", "Thought echoes history")}
-                            </p>
-                            <div className="mt-3 space-y-2">
-                              {resonanceHistory.map((item) => (
-                                <button
-                                  key={item.id}
-                                  type="button"
-                                  onClick={() => setResonanceResult(item)}
-                                  className={`w-full rounded-2xl border p-3 text-left transition-colors ${
-                                    resonanceResult.id === item.id
-                                      ? "border-emerald-500/40 bg-emerald-500/10"
-                                      : "border-border/60 bg-background/60 hover:bg-background"
-                                  }`}
-                                >
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-sm font-semibold text-foreground">
-                                      {item.pool_name_snapshot}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {formatSnapshotTime(item.generated_at)}
-                                    </p>
-                                  </div>
-                                  <p className="mt-1 text-xs text-muted-foreground">
-                                    {item.long_term.primary.name}
-                                    {item.recent_state
-                                      ? ` · ${t("common.copa.resonance.recentState", "Recent state")}`
-                                      : ""}
-                                  </p>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
                       </div>
                     ) : (
                       <div className="mt-5 rounded-2xl border border-dashed border-border/70 bg-background/60 px-4 py-5 text-sm text-muted-foreground">

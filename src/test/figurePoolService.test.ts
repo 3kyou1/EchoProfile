@@ -1,6 +1,148 @@
 import JSZip from "jszip";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const repoMock = vi.hoisted(() => {
+  interface RepoEntry {
+    directoryName: string;
+    poolJson: string;
+    portraits: Record<string, string>;
+  }
+
+  let entries: RepoEntry[] = [];
+
+  const cloneEntries = () =>
+    entries.map((entry) => ({
+      directoryName: entry.directoryName,
+      poolJson: entry.poolJson,
+      portraits: { ...entry.portraits },
+    }));
+
+  const normalizeName = (value: string) => value.trim().toLocaleLowerCase();
+
+  const resolveUniqueName = (requestedName: string, previousDirectoryName?: string) => {
+    const base = requestedName.trim() || "Imported pool";
+    const taken = new Set(
+      entries
+        .filter((entry) => entry.directoryName !== previousDirectoryName)
+        .map((entry) => normalizeName(entry.directoryName))
+    );
+
+    if (!taken.has(normalizeName(base))) {
+      return base;
+    }
+
+    let index = 2;
+    while (true) {
+      const candidate = `${base} (${index})`;
+      if (!taken.has(normalizeName(candidate))) {
+        return candidate;
+      }
+      index += 1;
+    }
+  };
+
+  const rewritePoolName = (poolJson: string, name: string) => {
+    const parsed = JSON.parse(poolJson) as Record<string, unknown>;
+    parsed.name = name;
+    return JSON.stringify(parsed, null, 2);
+  };
+
+  const clearOtherDefaults = (targetDirectoryName: string) => {
+    entries = entries.map((entry) => {
+      if (entry.directoryName === targetDirectoryName) {
+        return entry;
+      }
+
+      const parsed = JSON.parse(entry.poolJson) as Record<string, unknown>;
+      if (parsed.isDefault !== true) {
+        return entry;
+      }
+      parsed.isDefault = false;
+      return {
+        ...entry,
+        poolJson: JSON.stringify(parsed, null, 2),
+      };
+    });
+  };
+
+  return {
+    reset: () => {
+      entries = [];
+    },
+    setEntries: (nextEntries: RepoEntry[]) => {
+      entries = nextEntries.map((entry) => ({
+        directoryName: entry.directoryName,
+        poolJson: entry.poolJson,
+        portraits: { ...entry.portraits },
+      }));
+    },
+    listEntries: vi.fn(async () =>
+      cloneEntries().map(({ directoryName, poolJson }) => ({ directoryName, poolJson }))
+    ),
+    savePool: vi.fn(async (input: {
+      requestedName: string;
+      poolJson: string;
+      previousDirectoryName?: string;
+      portraits?: Array<{ relativePath: string; dataBase64: string }>;
+      removePortraitPaths?: string[];
+    }) => {
+      const finalName = resolveUniqueName(input.requestedName, input.previousDirectoryName);
+      const poolJson = rewritePoolName(input.poolJson, finalName);
+      const parsed = JSON.parse(poolJson) as Record<string, unknown>;
+      const previous = input.previousDirectoryName
+        ? entries.find((entry) => entry.directoryName === input.previousDirectoryName)
+        : undefined;
+
+      const nextEntry: RepoEntry = {
+        directoryName: finalName,
+        poolJson,
+        portraits: previous ? { ...previous.portraits } : {},
+      };
+
+      for (const relativePath of input.removePortraitPaths ?? []) {
+        delete nextEntry.portraits[relativePath];
+      }
+
+      for (const portrait of input.portraits ?? []) {
+        nextEntry.portraits[portrait.relativePath] = portrait.dataBase64;
+      }
+
+      entries = entries.filter((entry) => entry.directoryName !== input.previousDirectoryName);
+      entries = entries.filter((entry) => entry.directoryName !== finalName);
+      entries.push(nextEntry);
+
+      if (parsed.isDefault === true) {
+        clearOtherDefaults(finalName);
+      }
+
+      return {
+        directoryName: finalName,
+        poolJson,
+      };
+    }),
+    deletePool: vi.fn(async (directoryName: string) => {
+      entries = entries.filter((entry) => entry.directoryName !== directoryName);
+    }),
+    readPortrait: vi.fn(async (input: { directoryName: string; relativePath: string }) => {
+      const entry = entries.find((item) => item.directoryName === input.directoryName);
+      const dataBase64 = entry?.portraits[input.relativePath];
+      if (!dataBase64) {
+        throw new Error(`Portrait not found: ${input.directoryName}/${input.relativePath}`);
+      }
+      return { dataBase64 };
+    }),
+  };
+});
+
+vi.mock("@/services/figurePoolApi", () => ({
+  figurePoolApi: {
+    listEntries: repoMock.listEntries,
+    savePool: repoMock.savePool,
+    deletePool: repoMock.deletePool,
+    readPortrait: repoMock.readPortrait,
+  },
+}));
+
 import type { FigurePoolImportPayload, FigureRecordInput } from "@/types/figurePool";
 import {
   deleteFigurePool,
@@ -12,98 +154,12 @@ import {
   updateFigureRecord,
 } from "@/services/figurePoolService";
 
-interface FakeIdbRecord {
-  id: string;
-  value: string;
-}
-
-function installFakeIndexedDb() {
-  const stores = new Map<string, Map<string, FakeIdbRecord>>();
-
-  const createRequest = <T,>() => {
-    const request = {
-      result: undefined as T | undefined,
-      error: null as Error | null,
-      onsuccess: null as ((event: Event) => void) | null,
-      onerror: null as ((event: Event) => void) | null,
-      onupgradeneeded: null as ((event: Event) => void) | null,
-    };
-    return request;
-  };
-
-  const database = {
-    objectStoreNames: {
-      contains: (name: string) => stores.has(name),
-    },
-    createObjectStore: (name: string) => {
-      if (!stores.has(name)) {
-        stores.set(name, new Map());
-      }
-      return {};
-    },
-    transaction: (name: string) => {
-      if (!stores.has(name)) {
-        stores.set(name, new Map());
-      }
-      const store = stores.get(name)!;
-      return {
-        objectStore: () => ({
-          get: (id: string) => {
-            const request = createRequest<FakeIdbRecord | undefined>();
-            queueMicrotask(() => {
-              request.result = store.get(id);
-              request.onsuccess?.({} as Event);
-            });
-            return request;
-          },
-          put: (value: FakeIdbRecord) => {
-            const request = createRequest<FakeIdbRecord>();
-            queueMicrotask(() => {
-              store.set(value.id, value);
-              request.result = value;
-              request.onsuccess?.({} as Event);
-            });
-            return request;
-          },
-        }),
-      };
-    },
-  };
-
-  const indexedDb = {
-    open: (..._args: [string, (number | undefined)?]) => {
-      void _args;
-      const request = createRequest<typeof database>();
-      queueMicrotask(() => {
-        request.result = database;
-        request.onupgradeneeded?.({} as Event);
-        request.onsuccess?.({} as Event);
-      });
-      return request;
-    },
-  };
-
-  Object.defineProperty(globalThis, "indexedDB", {
-    configurable: true,
-    writable: true,
-    value: indexedDb,
-  });
-
-  if (typeof window !== "undefined") {
-    Object.defineProperty(window, "indexedDB", {
-      configurable: true,
-      writable: true,
-      value: indexedDb,
-    });
-  }
-}
-
 function buildRecord(overrides: Partial<FigureRecordInput> = {}): FigureRecordInput {
   return {
     slug: "grace_hopper",
     name: "Grace Hopper",
     localized_names: { zh: "格蕾丝·霍珀" },
-    portrait_url: "/scientist-portraits/grace_hopper.jpg",
+    portrait_url: "portraits/grace_hopper.jpg",
     quote_en: "The most dangerous phrase is 'We've always done it this way.'",
     quote_zh: "最危险的一句话是：我们一直都是这么做的。",
     core_traits: "系统化、工程直觉、语言设计",
@@ -118,6 +174,38 @@ function buildRecord(overrides: Partial<FigureRecordInput> = {}): FigureRecordIn
     achievements_en: ["Advanced COBOL", "Compiler pioneer", "Rear admiral"],
     ...overrides,
   };
+}
+
+function buildStoredPool(
+  overrides: Partial<{
+    id: string;
+    name: string;
+    isDefault: boolean;
+    records: FigureRecordInput[];
+    description: string;
+  }> = {}
+) {
+  return JSON.stringify(
+    {
+      id: overrides.id ?? "pool-1",
+      name: overrides.name ?? "Scientists",
+      description: overrides.description ?? "Bundled pool",
+      origin: "imported",
+      isDefault: overrides.isDefault ?? true,
+      createdAt: "2026-04-25T00:00:00.000Z",
+      updatedAt: "2026-04-25T00:00:00.000Z",
+      schemaVersion: 1,
+      validationSummary: { validCount: 1, invalidCount: 0, errorCount: 0 },
+      records: (overrides.records ?? [buildRecord()]).map((record) => ({
+        ...record,
+        status: "valid",
+        errors: [],
+        updatedAt: "2026-04-25T00:00:00.000Z",
+      })),
+    },
+    null,
+    2,
+  );
 }
 
 async function buildPoolZip(
@@ -135,63 +223,49 @@ async function buildPoolZip(
 describe("figurePoolService", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    const memory = new Map<string, string>();
-    Object.defineProperty(globalThis, "indexedDB", {
-      configurable: true,
-      writable: true,
-      value: undefined,
-    });
-    if (typeof window !== "undefined") {
-      Object.defineProperty(window, "indexedDB", {
-        configurable: true,
-        writable: true,
-        value: undefined,
-      });
-    }
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => memory.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        memory.set(key, value);
-      },
-      removeItem: (key: string) => {
-        memory.delete(key);
-      },
-      clear: () => {
-        memory.clear();
-      },
-    });
+    repoMock.reset();
   });
 
-  it("seeds a builtin default pool from the bundled scientist data", async () => {
+  it("loads repo-backed pool entries and makes the first one default when none is marked", async () => {
+    repoMock.setEntries([
+      {
+        directoryName: "企业家候选池",
+        poolJson: JSON.stringify({
+          name: "企业家候选池",
+          description: "Legacy payload",
+          records: [buildRecord({ slug: "jack_ma", name: "Jack Ma" })],
+        }),
+        portraits: {},
+      },
+    ]);
+
     const pools = await loadFigurePools();
 
     expect(pools).toHaveLength(1);
-    expect(pools[0]?.origin).toBe("builtin");
+    expect(pools[0]?.name).toBe("企业家候选池");
     expect(pools[0]?.isDefault).toBe(true);
-    expect(pools[0]?.records.length).toBeGreaterThan(10);
-    expect(pools[0]?.validationSummary.invalidCount).toBe(0);
+    expect(pools[0]?.id).toBe("legacy-pool");
   });
 
-  it("imports a pool and keeps invalid records excluded while valid ones remain usable", async () => {
-    const payload: FigurePoolImportPayload = {
+  it("imports a pool, auto-suffixes name collisions, and keeps invalid records excluded while valid ones remain usable", async () => {
+    repoMock.setEntries([
+      {
+        directoryName: "Entrepreneurs",
+        poolJson: buildStoredPool({ id: "pool-existing", name: "Entrepreneurs", isDefault: true }),
+        portraits: {},
+      },
+    ]);
+
+    const imported = await importFigurePool({
       name: "Entrepreneurs",
       description: "Imported pool",
       records: [
-        buildRecord({
-          slug: "steve_jobs",
-          name: "Steve Jobs",
-        }),
-        buildRecord({
-          slug: "broken-founder",
-          name: "Broken Founder",
-          portrait_url: "",
-        }),
+        buildRecord({ slug: "steve_jobs", name: "Steve Jobs" }),
+        buildRecord({ slug: "broken-founder", name: "Broken Founder", portrait_url: "" }),
       ],
-    };
+    });
 
-    const imported = await importFigurePool(payload);
-
-    expect(imported.name).toBe("Entrepreneurs");
+    expect(imported.name).toBe("Entrepreneurs (2)");
     expect(imported.validationSummary.validCount).toBe(1);
     expect(imported.validationSummary.invalidCount).toBe(1);
     expect(imported.records.find((record) => record.slug === "steve_jobs")?.status).toBe("valid");
@@ -210,7 +284,7 @@ describe("figurePoolService", () => {
     });
 
     const updated = await updateFigureRecord(imported.id, "broken-operator", {
-      portrait_url: "/portraits/operator.jpg",
+      portrait_url: "portraits/operator.jpg",
     });
 
     expect(updated.slug).toBe("broken-operator");
@@ -223,38 +297,38 @@ describe("figurePoolService", () => {
   });
 
   it("falls back to another available pool as default when the current default is deleted", async () => {
-    const imported = await importFigurePool({
-      name: "Investors",
-      records: [buildRecord({ slug: "charlie_munger", name: "Charlie Munger" })],
-    });
+    repoMock.setEntries([
+      {
+        directoryName: "Scientists",
+        poolJson: buildStoredPool({ id: "pool-1", name: "Scientists", isDefault: true }),
+        portraits: {},
+      },
+      {
+        directoryName: "Investors",
+        poolJson: buildStoredPool({ id: "pool-2", name: "Investors", isDefault: false }),
+        portraits: {},
+      },
+    ]);
 
-    await deleteFigurePool("builtin-scientists");
+    await deleteFigurePool("pool-1");
 
     const pools = await loadFigurePools();
-    expect(pools.find((pool) => pool.id === imported.id)?.isDefault).toBe(true);
+    expect(pools.find((pool) => pool.id === "pool-2")?.isDefault).toBe(true);
   });
 
-  it("exports a pool as a zip with pool.json and bundled portraits", async () => {
-    const portraitBytes = new Uint8Array([1, 2, 3, 4]);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "Content-Type": "image/jpeg" }),
-        arrayBuffer: async () => portraitBytes.buffer.slice(0),
-      }),
-    );
+  it("exports a pool as a zip with pool.json and repo-local portraits without fetching them", async () => {
+    repoMock.setEntries([
+      {
+        directoryName: "Operators",
+        poolJson: buildStoredPool({ id: "pool-1", name: "Operators", isDefault: true }),
+        portraits: {
+          "portraits/grace_hopper.jpg": btoa(String.fromCharCode(1, 2, 3, 4)),
+        },
+      },
+    ]);
+    vi.stubGlobal("fetch", vi.fn());
 
-    const imported = await importFigurePool({
-      name: "Operators",
-      records: [
-        buildRecord({
-          portrait_url: "/figure-portraits/grace_hopper.jpg",
-        }),
-      ],
-    });
-
-    const zipBytes = await exportFigurePoolToZip(imported.id);
+    const zipBytes = await exportFigurePoolToZip("pool-1");
     const zip = await JSZip.loadAsync(zipBytes);
     const poolManifest = JSON.parse(
       await zip.file("pool.json")!.async("string"),
@@ -262,11 +336,21 @@ describe("figurePoolService", () => {
 
     expect(poolManifest.name).toBe("Operators");
     expect(poolManifest.records[0]?.portrait_url).toBe("portraits/grace_hopper.jpg");
-    expect(await zip.file("portraits/grace_hopper.jpg")!.async("uint8array")).toEqual(portraitBytes);
-    expect(fetch).toHaveBeenCalledWith("/figure-portraits/grace_hopper.jpg");
+    expect(await zip.file("portraits/grace_hopper.jpg")!.async("uint8array")).toEqual(
+      new Uint8Array([1, 2, 3, 4]),
+    );
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("inspects a zip and reports pool-name conflicts before import", async () => {
+  it("inspects a zip and pre-resolves a suffixed pool name instead of surfacing a manual conflict", async () => {
+    repoMock.setEntries([
+      {
+        directoryName: "Scientists",
+        poolJson: buildStoredPool({ id: "pool-1", name: "Scientists", isDefault: true }),
+        portraits: {},
+      },
+    ]);
+
     const zipBytes = await buildPoolZip(
       {
         name: "Scientists",
@@ -283,12 +367,11 @@ describe("figurePoolService", () => {
 
     const inspection = await inspectFigurePoolZip(zipBytes);
 
-    expect(inspection.payload.name).toBe("Scientists");
-    expect(inspection.hasNameConflict).toBe(true);
-    expect(inspection.conflictingPoolId).toBe("builtin-scientists");
+    expect(inspection.payload.name).toBe("Scientists (2)");
+    expect(inspection.hasNameConflict).toBe(false);
   });
 
-  it("imports a pool zip, rewrites portraits, and keeps invalid records excluded", async () => {
+  it("imports a pool zip, rewrites portraits into pool-local paths, and keeps invalid records excluded", async () => {
     const zipBytes = await buildPoolZip(
       {
         name: "Entrepreneurs",
@@ -315,13 +398,21 @@ describe("figurePoolService", () => {
     expect(imported.name).toBe("Entrepreneurs");
     expect(imported.validationSummary.validCount).toBe(1);
     expect(imported.validationSummary.invalidCount).toBe(1);
-    expect(imported.records.find((record) => record.slug === "steve_jobs")?.portrait_url).toMatch(
-      /^data:image\/jpeg;base64,/,
+    expect(imported.records.find((record) => record.slug === "steve_jobs")?.portrait_url).toBe(
+      "portraits/steve_jobs.jpg",
     );
     expect(imported.records.find((record) => record.slug === "broken-founder")?.status).toBe("invalid");
   });
 
-  it("imports a conflicting zip with a user-provided replacement name", async () => {
+  it("imports a conflicting zip with a user-provided replacement name and still auto-suffixes when needed", async () => {
+    repoMock.setEntries([
+      {
+        directoryName: "Scientists Copy",
+        poolJson: buildStoredPool({ id: "pool-1", name: "Scientists Copy", isDefault: true }),
+        portraits: {},
+      },
+    ]);
+
     const zipBytes = await buildPoolZip(
       {
         name: "Scientists",
@@ -340,39 +431,6 @@ describe("figurePoolService", () => {
       name: "Scientists Copy",
     });
 
-    expect(imported.name).toBe("Scientists Copy");
-  });
-
-  it("persists imported zip pools even when web localStorage is full", async () => {
-    installFakeIndexedDb();
-
-    vi.stubGlobal("localStorage", {
-      getItem: vi.fn(() => null),
-      setItem: vi.fn(() => {
-        throw new Error("QuotaExceededError");
-      }),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-    });
-
-    const zipBytes = await buildPoolZip(
-      {
-        name: "Imported Operators",
-        records: [
-          buildRecord({
-            portrait_url: "portraits/grace_hopper.jpg",
-          }),
-        ],
-      },
-      {
-        "portraits/grace_hopper.jpg": new Uint8Array([4, 3, 2, 1]),
-      },
-    );
-
-    const imported = await importFigurePoolFromZip(zipBytes);
-    const pools = await loadFigurePools();
-
-    expect(imported.name).toBe("Imported Operators");
-    expect(pools.some((pool) => pool.id === imported.id)).toBe(true);
+    expect(imported.name).toBe("Scientists Copy (2)");
   });
 });

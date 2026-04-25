@@ -4,8 +4,99 @@ const { mockPersistLlmDebugLog } = vi.hoisted(() => ({
   mockPersistLlmDebugLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+const repoMock = vi.hoisted(() => {
+  interface RepoEntry {
+    directoryName: string;
+    poolJson: string;
+  }
+
+  let entries: RepoEntry[] = [];
+
+  const normalizeName = (value: string) => value.trim().toLocaleLowerCase();
+
+  const resolveUniqueName = (requestedName: string, previousDirectoryName?: string) => {
+    const base = requestedName.trim() || "Imported pool";
+    const taken = new Set(
+      entries
+        .filter((entry) => entry.directoryName !== previousDirectoryName)
+        .map((entry) => normalizeName(entry.directoryName))
+    );
+    if (!taken.has(normalizeName(base))) {
+      return base;
+    }
+
+    let index = 2;
+    while (true) {
+      const candidate = `${base} (${index})`;
+      if (!taken.has(normalizeName(candidate))) {
+        return candidate;
+      }
+      index += 1;
+    }
+  };
+
+  const clearOtherDefaults = (targetDirectoryName: string) => {
+    entries = entries.map((entry) => {
+      if (entry.directoryName === targetDirectoryName) {
+        return entry;
+      }
+      const parsed = JSON.parse(entry.poolJson) as Record<string, unknown>;
+      if (parsed.isDefault !== true) {
+        return entry;
+      }
+      parsed.isDefault = false;
+      return { ...entry, poolJson: JSON.stringify(parsed, null, 2) };
+    });
+  };
+
+  return {
+    reset: () => {
+      entries = [];
+    },
+    setEntries: (nextEntries: RepoEntry[]) => {
+      entries = nextEntries.map((entry) => ({ ...entry }));
+    },
+    listEntries: vi.fn(async () => entries.map((entry) => ({ ...entry }))),
+    savePool: vi.fn(async (input: {
+      requestedName: string;
+      poolJson: string;
+      previousDirectoryName?: string;
+    }) => {
+      const finalName = resolveUniqueName(input.requestedName, input.previousDirectoryName);
+      const parsed = JSON.parse(input.poolJson) as Record<string, unknown>;
+      parsed.name = finalName;
+      const poolJson = JSON.stringify(parsed, null, 2);
+
+      entries = entries.filter((entry) => entry.directoryName !== input.previousDirectoryName);
+      entries = entries.filter((entry) => entry.directoryName !== finalName);
+      entries.push({ directoryName: finalName, poolJson });
+
+      if (parsed.isDefault === true) {
+        clearOtherDefaults(finalName);
+      }
+
+      return { directoryName: finalName, poolJson };
+    }),
+    deletePool: vi.fn(async (directoryName: string) => {
+      entries = entries.filter((entry) => entry.directoryName !== directoryName);
+    }),
+    readPortrait: vi.fn(async () => {
+      throw new Error("Portrait reads are not used in figureResonanceService tests");
+    }),
+  };
+});
+
 vi.mock("@/services/llmDebugLogger", () => ({
   persistLlmDebugLog: mockPersistLlmDebugLog,
+}));
+
+vi.mock("@/services/figurePoolApi", () => ({
+  figurePoolApi: {
+    listEntries: repoMock.listEntries,
+    savePool: repoMock.savePool,
+    deletePool: repoMock.deletePool,
+    readPortrait: repoMock.readPortrait,
+  },
 }));
 
 import type { CopaSnapshot } from "@/types/copaProfile";
@@ -81,10 +172,71 @@ const snapshot: CopaSnapshot = {
   markdown: "## CoPA Profile\n\n- User profile: Likes formal abstractions, structure compression, calm rigor.",
 };
 
+function buildStoredPoolJson(overrides: Partial<{ id: string; name: string; isDefault: boolean }> = {}) {
+  return JSON.stringify(
+    {
+      id: overrides.id ?? "pool-default",
+      name: overrides.name ?? "Scientists",
+      description: "Default repo-backed pool",
+      origin: "imported",
+      isDefault: overrides.isDefault ?? true,
+      createdAt: "2026-04-25T00:00:00.000Z",
+      updatedAt: "2026-04-25T00:00:00.000Z",
+      schemaVersion: 1,
+      validationSummary: { validCount: 2, invalidCount: 0, errorCount: 0 },
+      records: [
+        {
+          slug: "herbert_simon",
+          name: "Herbert A. Simon",
+          localized_names: { zh: "赫伯特·西蒙" },
+          portrait_url: "portraits/herbert_simon.png",
+          quote_en: "A wealth of information creates a poverty of attention.",
+          quote_zh: "信息的丰富，造成了注意力的贫乏。",
+          core_traits: "bounded rationality, systems",
+          thinking_style: "Builds decision models and bounded-rational frameworks.",
+          temperament_tags: "structured, analytical",
+          temperament_summary: "Systematic and decision-oriented.",
+          loading_copy_zh: "正在对齐他的决策模型...",
+          loading_copy_en: "Aligning his decision models...",
+          bio_zh: "决策科学家。", bio_en: "Decision scientist.",
+          achievements_zh: ["有限理性"], achievements_en: ["Bounded rationality"],
+          status: "valid", errors: [], updatedAt: "2026-04-25T00:00:00.000Z",
+        },
+        {
+          slug: "grace_hopper",
+          name: "Grace Hopper",
+          localized_names: { zh: "格蕾丝·霍珀" },
+          portrait_url: "portraits/grace_hopper.png",
+          quote_en: "We've always done it this way is dangerous.",
+          quote_zh: "我们一直这么做很危险。",
+          core_traits: "systems, engineering",
+          thinking_style: "Turns abstractions into operational layers.",
+          temperament_tags: "clear, practical",
+          temperament_summary: "Systematic and applied.",
+          loading_copy_zh: "正在对齐她的工程化思维...",
+          loading_copy_en: "Aligning her engineering mind...",
+          bio_zh: "编译器先驱。", bio_en: "Compiler pioneer.",
+          achievements_zh: ["COBOL"], achievements_en: ["COBOL"],
+          status: "valid", errors: [], updatedAt: "2026-04-25T00:00:00.000Z",
+        },
+      ],
+    },
+    null,
+    2,
+  );
+}
+
 describe("figureResonanceService", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+    repoMock.reset();
+    repoMock.setEntries([
+      {
+        directoryName: "Scientists",
+        poolJson: buildStoredPoolJson(),
+      },
+    ]);
     const memory = new Map<string, string>();
     vi.stubGlobal("localStorage", {
       getItem: (key: string) => memory.get(key) ?? null,
@@ -98,6 +250,26 @@ describe("figureResonanceService", () => {
         memory.clear();
       },
     });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const href = String(input);
+        if (href.startsWith("http://example.com")) {
+          return {
+            ok: false,
+            status: 500,
+            statusText: "Test fetch not configured",
+            text: async () => "Test fetch not configured",
+          };
+        }
+
+        return {
+          ok: true,
+          headers: new Headers({ "Content-Type": "image/png" }),
+          arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer.slice(0),
+        };
+      })
+    );
   });
 
   it("normalizes cache key by language", () => {
@@ -304,7 +476,7 @@ describe("figureResonanceService", () => {
         stage: "diagnosis",
         payload: expect.objectContaining({
           hasLongTermPrimary: true,
-          secondaryCount: 2,
+          secondaryCount: 1,
           allowRecentState: false,
           hasRecentStatePayload: false,
         }),

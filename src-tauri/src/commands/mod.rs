@@ -2,6 +2,7 @@ pub mod archive;
 pub mod claude_settings;
 pub mod debug;
 pub mod feedback;
+pub mod figure_pool;
 pub mod fs_utils;
 pub mod mcp_presets;
 pub mod metadata;

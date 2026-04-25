@@ -380,6 +380,10 @@ handler_no_params!(
 handler_no_params!(get_system_info, commands::feedback::get_system_info);
 handler_no_params!(detect_providers, commands::multi_provider::detect_providers);
 handler_no_params!(load_presets, commands::settings::load_presets);
+handler_no_params!(
+    list_figure_pool_entries,
+    commands::figure_pool::list_figure_pool_entries
+);
 handler_no_params!(load_mcp_presets, commands::mcp_presets::load_mcp_presets);
 handler_no_params!(
     load_unified_presets,
@@ -578,6 +582,44 @@ handler_json!(
 pub struct SavePresetParams {
     pub input: crate::commands::settings::PresetInput,
 }
+
+#[derive(Deserialize)]
+pub struct SaveFigurePoolParams {
+    pub input: crate::commands::figure_pool::SaveFigurePoolInput,
+}
+
+handler_json!(
+    save_figure_pool,
+    SaveFigurePoolParams,
+    |p: SaveFigurePoolParams| async move { commands::figure_pool::save_figure_pool(p.input).await }
+);
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteFigurePoolParams {
+    pub directory_name: String,
+}
+
+handler_json!(
+    delete_figure_pool,
+    DeleteFigurePoolParams,
+    |p: DeleteFigurePoolParams| async move {
+        commands::figure_pool::delete_figure_pool(p.directory_name).await
+    }
+);
+
+#[derive(Deserialize)]
+pub struct ReadFigurePoolPortraitParams {
+    pub input: crate::commands::figure_pool::ReadFigurePoolPortraitInput,
+}
+
+handler_json!(
+    read_figure_pool_portrait,
+    ReadFigurePoolPortraitParams,
+    |p: ReadFigurePoolPortraitParams| async move {
+        commands::figure_pool::read_figure_pool_portrait(p.input).await
+    }
+);
 
 handler_json!(
     save_preset,

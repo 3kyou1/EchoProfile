@@ -1,7 +1,6 @@
 import JSZip from "jszip";
 
-import bundledFigureSeedData from "@/data/scientistPool.json";
-import { storageAdapter } from "@/services/storage";
+import { figurePoolApi } from "@/services/figurePoolApi";
 import type {
   FigurePool,
   FigurePoolImportPayload,
@@ -13,10 +12,7 @@ import type {
   FigureRecordValidationIssue,
 } from "@/types/figurePool";
 
-const STORE_NAME = "figure-pools.json";
-const POOLS_KEY = "pools";
 const SCHEMA_VERSION = 1;
-const BUILTIN_POOL_ID = "builtin-scientists";
 const ZIP_POOL_MANIFEST = "pool.json";
 const ZIP_PORTRAIT_FOLDER = "portraits";
 
@@ -37,6 +33,16 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".webp": "image/webp",
 };
+
+interface RepoPoolContext {
+  directoryName: string;
+  pool: FigurePool;
+}
+
+interface MaterializedPortrait {
+  relativePath: string;
+  dataBase64: string;
+}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -106,6 +112,15 @@ function uint8ArrayToBase64(data: Uint8Array): string {
   return btoa(binary);
 }
 
+function base64ToUint8Array(value: string): Uint8Array {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
 function buildDataUrl(data: Uint8Array, mimeType: string): string {
   return `data:${mimeType};base64,${uint8ArrayToBase64(data)}`;
 }
@@ -134,23 +149,9 @@ function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; mimeType: string }
   };
 }
 
-function resolveBundledPortraitPath(value: string): string | null {
+function isPoolRelativePortraitPath(value: string): boolean {
   const trimmed = normalizeString(value);
-  if (!trimmed) {
-    return null;
-  }
-
-  if (
-    trimmed.startsWith("/") ||
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("data:") ||
-    trimmed.startsWith("blob:")
-  ) {
-    return null;
-  }
-
-  return trimmed.replace(/^\.?\//, "");
+  return trimmed.startsWith(`${ZIP_PORTRAIT_FOLDER}/`) && !trimmed.includes("..");
 }
 
 async function fetchPortraitBundle(
@@ -212,20 +213,20 @@ async function resolveImportedZipPayload(
   const records = await Promise.all(
     payload.records.map(async (record) => {
       const cloned = cloneRecord(record);
-      const bundledPortraitPath = resolveBundledPortraitPath(cloned.portrait_url);
+      const portraitPath = normalizeString(cloned.portrait_url);
 
-      if (!bundledPortraitPath) {
+      if (!isPoolRelativePortraitPath(portraitPath)) {
         return cloned;
       }
 
-      const portraitFile = zip.file(bundledPortraitPath);
+      const portraitFile = zip.file(portraitPath);
       if (!portraitFile) {
         cloned.portrait_url = "";
         return cloned;
       }
 
       const bytes = await portraitFile.async("uint8array");
-      cloned.portrait_url = buildDataUrl(bytes, inferMimeTypeFromPath(bundledPortraitPath));
+      cloned.portrait_url = buildDataUrl(bytes, inferMimeTypeFromPath(portraitPath));
       return cloned;
     })
   );
@@ -235,13 +236,6 @@ async function resolveImportedZipPayload(
     description: normalizeString(payload.description) || undefined,
     records,
   };
-}
-
-async function findPoolNameConflict(name: string): Promise<FigurePool | null> {
-  const pools = await loadFigurePools();
-  const normalizedName = normalizePoolName(name);
-
-  return pools.find((pool) => normalizePoolName(pool.name) === normalizedName) ?? null;
 }
 
 function validateRecord(
@@ -336,6 +330,7 @@ function buildPool(input: {
   isDefault: boolean;
   records: FigureRecordInput[];
   createdAt?: string;
+  updatedAt?: string;
 }): FigurePool {
   const createdAt = input.createdAt ?? nowIso();
   const records = validatePoolRecords(input.records);
@@ -347,38 +342,11 @@ function buildPool(input: {
     origin: input.origin,
     isDefault: input.isDefault,
     createdAt,
-    updatedAt: nowIso(),
+    updatedAt: input.updatedAt ?? nowIso(),
     schemaVersion: SCHEMA_VERSION,
     validationSummary: buildValidationSummary(records),
     records,
   };
-}
-
-function builtinSeedPool(): FigurePool {
-  return buildPool({
-    id: BUILTIN_POOL_ID,
-    name: "Scientists",
-    description: "Bundled built-in figure pool",
-    origin: "builtin",
-    isDefault: true,
-    records: bundledFigureSeedData as FigureRecordInput[],
-    createdAt: "2026-04-23T00:00:00.000Z",
-  });
-}
-
-async function loadStore() {
-  return storageAdapter.load(STORE_NAME, {
-    defaults: {
-      [POOLS_KEY]: [],
-    },
-    autoSave: true,
-  });
-}
-
-async function savePools(pools: FigurePool[]): Promise<void> {
-  const store = await loadStore();
-  await store.set(POOLS_KEY, pools);
-  await store.save();
 }
 
 function ensureSingleDefault(pools: FigurePool[]): FigurePool[] {
@@ -407,28 +375,168 @@ function ensureSingleDefault(pools: FigurePool[]): FigurePool[] {
   return normalized;
 }
 
-export async function loadFigurePools(): Promise<FigurePool[]> {
-  const store = await loadStore();
-  const stored = (await store.get<FigurePool[]>(POOLS_KEY)) ?? [];
-
-  if (stored.length > 0) {
-    return ensureSingleDefault(stored);
+function resolveUniquePoolName(existingNames: string[], requestedName: string): string {
+  const trimmedRequested = normalizeString(requestedName) || "Imported pool";
+  const normalizedExisting = new Set(existingNames.map((name) => normalizePoolName(name)));
+  if (!normalizedExisting.has(normalizePoolName(trimmedRequested))) {
+    return trimmedRequested;
   }
 
-  const seeded = [builtinSeedPool()];
-  await savePools(seeded);
-  return seeded;
+  let index = 2;
+  while (true) {
+    const candidate = `${trimmedRequested} (${index})`;
+    if (!normalizedExisting.has(normalizePoolName(candidate))) {
+      return candidate;
+    }
+    index += 1;
+  }
 }
 
-export async function loadFigurePool(poolId: string): Promise<FigurePool | null> {
-  const pools = await loadFigurePools();
-  const pool = pools.find((item) => item.id === poolId);
-  return pool ? clonePool(pool) : null;
+function extractIdFromLegacyEntry(value: string): string {
+  const sanitized = value
+    .normalize("NFKD")
+    .replace(/[^\w\-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLocaleLowerCase();
+  return `legacy-${sanitized || "pool"}`;
 }
 
-export async function importFigurePool(payload: FigurePoolImportPayload): Promise<FigurePool> {
-  const pools = await loadFigurePools();
+function parseRepoPool(directoryName: string, poolJson: string): FigurePool {
+  const parsed = JSON.parse(poolJson) as
+    | FigurePool
+    | FigurePoolImportPayload
+    | FigureRecordInput[];
+
+  if (Array.isArray(parsed)) {
+    return buildPool({
+      id: extractIdFromLegacyEntry(directoryName),
+      name: directoryName,
+      origin: "imported",
+      isDefault: false,
+      records: parsed,
+    });
+  }
+
+  const payloadLike = parsed as Partial<FigurePoolImportPayload & FigurePool>;
+  const id = normalizeString(payloadLike.id) || extractIdFromLegacyEntry(directoryName);
+  const name = normalizeString(payloadLike.name) || directoryName;
+  const records = Array.isArray(payloadLike.records) ? payloadLike.records : [];
+  const origin = payloadLike.origin === "builtin" ? "builtin" : "imported";
+  const isDefault = payloadLike.isDefault === true;
+
+  return buildPool({
+    id,
+    name,
+    description: normalizeString(payloadLike.description) || undefined,
+    origin,
+    isDefault,
+    records,
+    createdAt: normalizeString(payloadLike.createdAt) || undefined,
+    updatedAt: normalizeString(payloadLike.updatedAt) || undefined,
+  });
+}
+
+async function loadRepoPools(): Promise<RepoPoolContext[]> {
+  const entries = await figurePoolApi.listEntries();
+  const pools = entries.map((entry) => ({
+    directoryName: entry.directoryName,
+    pool: parseRepoPool(entry.directoryName, entry.poolJson),
+  }));
+
+  const normalizedPools = ensureSingleDefault(pools.map((item) => item.pool));
+  return normalizedPools.map((pool) => ({
+    directoryName: pools.find((item) => item.pool.id === pool.id)?.directoryName ?? pool.name,
+    pool,
+  }));
+}
+
+async function findRepoPoolById(poolId: string): Promise<RepoPoolContext | null> {
+  const pools = await loadRepoPools();
+  return pools.find((item) => item.pool.id === poolId) ?? null;
+}
+
+async function readRepoRelativePortrait(
+  directoryName: string,
+  relativePath: string
+): Promise<Uint8Array> {
+  const portrait = await figurePoolApi.readPortrait({
+    directoryName,
+    relativePath,
+  });
+  return base64ToUint8Array(portrait.dataBase64);
+}
+
+async function materializePoolPortraits(
+  pool: FigurePool,
+  previousPool?: FigurePool
+): Promise<{ records: FigureRecordInput[]; portraits: MaterializedPortrait[]; removePortraitPaths: string[] }> {
+  const portraits: MaterializedPortrait[] = [];
+  const records = await Promise.all(
+    pool.records.map(async (record) => {
+      const cloned = cloneRecord(record);
+      const portraitUrl = normalizeString(cloned.portrait_url);
+
+      if (!portraitUrl || isPoolRelativePortraitPath(portraitUrl)) {
+        return cloned;
+      }
+
+      const bundledPortrait = await fetchPortraitBundle(portraitUrl, cloned.slug || cloned.name);
+      cloned.portrait_url = bundledPortrait.path;
+      portraits.push({
+        relativePath: bundledPortrait.path,
+        dataBase64: uint8ArrayToBase64(bundledPortrait.bytes),
+      });
+      return cloned;
+    })
+  );
+
+  const previousPaths = new Set(
+    (previousPool?.records ?? [])
+      .map((record) => normalizeString(record.portrait_url))
+      .filter(isPoolRelativePortraitPath)
+  );
+  const nextPaths = new Set(
+    records.map((record) => normalizeString(record.portrait_url)).filter(isPoolRelativePortraitPath)
+  );
+
+  const removePortraitPaths = [...previousPaths].filter((path) => !nextPaths.has(path));
+
+  return {
+    records,
+    portraits,
+    removePortraitPaths,
+  };
+}
+
+async function persistPool(
+  pool: FigurePool,
+  previousDirectoryName?: string,
+  previousPool?: FigurePool
+): Promise<RepoPoolContext> {
+  const { records, portraits, removePortraitPaths } = await materializePoolPortraits(pool, previousPool);
   const nextPool = buildPool({
+    ...pool,
+    records,
+    createdAt: pool.createdAt,
+    updatedAt: nowIso(),
+  });
+
+  const result = await figurePoolApi.savePool({
+    requestedName: nextPool.name,
+    previousDirectoryName,
+    poolJson: JSON.stringify(nextPool, null, 2),
+    portraits,
+    removePortraitPaths,
+  });
+
+  return {
+    directoryName: result.directoryName,
+    pool: parseRepoPool(result.directoryName, result.poolJson),
+  };
+}
+
+function buildImportedPool(payload: FigurePoolImportPayload, pools: FigurePool[]): FigurePool {
+  return buildPool({
     id:
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
@@ -436,13 +544,26 @@ export async function importFigurePool(payload: FigurePoolImportPayload): Promis
     name: payload.name,
     description: payload.description,
     origin: "imported",
-    isDefault: false,
+    isDefault: pools.length === 0,
     records: payload.records,
   });
+}
 
-  const nextPools = ensureSingleDefault([...pools, nextPool]);
-  await savePools(nextPools);
-  return nextPools.find((pool) => pool.id === nextPool.id) ?? nextPool;
+export async function loadFigurePools(): Promise<FigurePool[]> {
+  const pools = await loadRepoPools();
+  return pools.map((item) => clonePool(item.pool));
+}
+
+export async function loadFigurePool(poolId: string): Promise<FigurePool | null> {
+  const pool = await findRepoPoolById(poolId);
+  return pool ? clonePool(pool.pool) : null;
+}
+
+export async function importFigurePool(payload: FigurePoolImportPayload): Promise<FigurePool> {
+  const pools = await loadFigurePools();
+  const nextPool = buildImportedPool(payload, pools);
+  const persisted = await persistPool(nextPool);
+  return clonePool(persisted.pool);
 }
 
 export async function importFigurePoolFromJson(content: string): Promise<FigurePool> {
@@ -457,13 +578,17 @@ export async function importFigurePoolFromJson(content: string): Promise<FigureP
 export async function inspectFigurePoolZip(data: Uint8Array): Promise<FigurePoolZipInspection> {
   const { zip, payload } = await parseFigurePoolZip(data);
   const resolvedPayload = await resolveImportedZipPayload(payload, zip);
-  const conflict = await findPoolNameConflict(resolvedPayload.name);
+  const existingPools = await loadFigurePools();
 
   return {
-    payload: resolvedPayload,
-    hasNameConflict: conflict != null,
-    conflictingPoolId: conflict?.id,
-    conflictingPoolName: conflict?.name,
+    payload: {
+      ...resolvedPayload,
+      name: resolveUniquePoolName(
+        existingPools.map((pool) => pool.name),
+        resolvedPayload.name
+      ),
+    },
+    hasNameConflict: false,
   };
 }
 
@@ -471,17 +596,12 @@ export async function importFigurePoolFromZip(
   data: Uint8Array,
   options?: FigurePoolZipImportOptions
 ): Promise<FigurePool> {
-  const inspection = await inspectFigurePoolZip(data);
-  const nextName = normalizeString(options?.name) || inspection.payload.name;
-  const conflict = await findPoolNameConflict(nextName);
-
-  if (conflict) {
-    throw new Error(`Figure pool name already exists: ${nextName}`);
-  }
+  const { zip, payload } = await parseFigurePoolZip(data);
+  const resolvedPayload = await resolveImportedZipPayload(payload, zip);
 
   return importFigurePool({
-    ...inspection.payload,
-    name: nextName,
+    ...resolvedPayload,
+    name: normalizeString(options?.name) || resolvedPayload.name,
   });
 }
 
@@ -499,6 +619,11 @@ export async function exportFigurePool(poolId: string): Promise<FigurePoolImport
 }
 
 export async function exportFigurePoolToZip(poolId: string): Promise<Uint8Array> {
+  const repoPool = await findRepoPoolById(poolId);
+  if (!repoPool) {
+    throw new Error(`Figure pool not found: ${poolId}`);
+  }
+
   const payload = await exportFigurePool(poolId);
   const zip = new JSZip();
   const records = await Promise.all(
@@ -507,6 +632,12 @@ export async function exportFigurePoolToZip(poolId: string): Promise<Uint8Array>
       const portraitUrl = normalizeString(cloned.portrait_url);
 
       if (!portraitUrl) {
+        return cloned;
+      }
+
+      if (isPoolRelativePortraitPath(portraitUrl)) {
+        const bytes = await readRepoRelativePortrait(repoPool.directoryName, portraitUrl);
+        zip.file(portraitUrl, bytes);
         return cloned;
       }
 
@@ -534,61 +665,63 @@ export async function exportFigurePoolToZip(poolId: string): Promise<Uint8Array>
 }
 
 export async function renameFigurePool(poolId: string, name: string): Promise<FigurePool> {
-  const pools = await loadFigurePools();
-  const nextPools = pools.map((pool) =>
-    pool.id === poolId
-      ? {
-          ...pool,
-          name: name.trim(),
-          updatedAt: nowIso(),
-        }
-      : pool
-  );
-  const normalized = ensureSingleDefault(nextPools);
-  await savePools(normalized);
-  const updated = normalized.find((pool) => pool.id === poolId);
-  if (!updated) {
+  const repoPool = await findRepoPoolById(poolId);
+  if (!repoPool) {
     throw new Error(`Figure pool not found: ${poolId}`);
   }
-  return updated;
+
+  const persisted = await persistPool(
+    {
+      ...repoPool.pool,
+      name: name.trim(),
+    },
+    repoPool.directoryName,
+    repoPool.pool
+  );
+
+  return clonePool(persisted.pool);
 }
 
 export async function setDefaultFigurePool(poolId: string): Promise<FigurePool[]> {
-  const pools = await loadFigurePools();
-  const nextPools = pools.map((pool) => ({
-    ...pool,
-    isDefault: pool.id === poolId,
-  }));
-  const normalized = ensureSingleDefault(nextPools);
-  await savePools(normalized);
-  return normalized;
+  const repoPool = await findRepoPoolById(poolId);
+  if (!repoPool) {
+    throw new Error(`Figure pool not found: ${poolId}`);
+  }
+
+  await persistPool(
+    {
+      ...repoPool.pool,
+      isDefault: true,
+    },
+    repoPool.directoryName,
+    repoPool.pool
+  );
+
+  return loadFigurePools();
 }
 
 export async function createFigureRecord(
   poolId: string,
   record: FigureRecordInput
 ): Promise<FigurePoolRecord> {
-  const pools = await loadFigurePools();
-  const pool = pools.find((item) => item.id === poolId);
+  const repoPool = await findRepoPoolById(poolId);
 
-  if (!pool) {
+  if (!repoPool) {
     throw new Error(`Figure pool not found: ${poolId}`);
   }
 
-  const nextPool = buildPool({
-    ...pool,
-    records: [...pool.records.map((item) => cloneRecord(item)), record],
-    createdAt: pool.createdAt,
-  });
-
-  const nextPools = ensureSingleDefault(
-    pools.map((item) => (item.id === poolId ? nextPool : item))
+  const persisted = await persistPool(
+    buildPool({
+      ...repoPool.pool,
+      records: [...repoPool.pool.records.map((item) => cloneRecord(item)), record],
+      createdAt: repoPool.pool.createdAt,
+      updatedAt: repoPool.pool.updatedAt,
+    }),
+    repoPool.directoryName,
+    repoPool.pool
   );
-  await savePools(nextPools);
 
-  const created = nextPools
-    .find((item) => item.id === poolId)
-    ?.records.find((item) => item.slug === record.slug);
+  const created = persisted.pool.records.find((item) => item.slug === record.slug);
   if (!created) {
     throw new Error(`Figure record not found after create: ${record.slug}`);
   }
@@ -618,14 +751,13 @@ export async function updateFigureRecord(
   slug: string,
   patch: Partial<FigureRecordInput>
 ): Promise<FigurePoolRecord> {
-  const pools = await loadFigurePools();
-  const pool = pools.find((item) => item.id === poolId);
+  const repoPool = await findRepoPoolById(poolId);
 
-  if (!pool) {
+  if (!repoPool) {
     throw new Error(`Figure pool not found: ${poolId}`);
   }
 
-  const records = pool.records.map((record) =>
+  const records = repoPool.pool.records.map((record) =>
     record.slug === slug
       ? ({
           ...cloneRecord(record),
@@ -638,19 +770,20 @@ export async function updateFigureRecord(
       : cloneRecord(record)
   );
 
-  const nextPool = buildPool({
-    ...pool,
-    records,
-    createdAt: pool.createdAt,
-  });
-  const nextPools = ensureSingleDefault(
-    pools.map((item) => (item.id === poolId ? nextPool : item))
+  const persisted = await persistPool(
+    buildPool({
+      ...repoPool.pool,
+      records,
+      createdAt: repoPool.pool.createdAt,
+      updatedAt: repoPool.pool.updatedAt,
+    }),
+    repoPool.directoryName,
+    repoPool.pool
   );
-  await savePools(nextPools);
 
-  const updated = nextPools
-    .find((item) => item.id === poolId)
-    ?.records.find((record) => record.slug === (patch.slug?.trim() || slug));
+  const updated = persisted.pool.records.find(
+    (record) => record.slug === (patch.slug?.trim() || slug)
+  );
 
   if (!updated) {
     throw new Error(`Figure record not found after update: ${slug}`);
@@ -660,35 +793,47 @@ export async function updateFigureRecord(
 }
 
 export async function deleteFigureRecord(poolId: string, slug: string): Promise<FigurePool> {
-  const pools = await loadFigurePools();
-  const pool = pools.find((item) => item.id === poolId);
+  const repoPool = await findRepoPoolById(poolId);
 
-  if (!pool) {
+  if (!repoPool) {
     throw new Error(`Figure pool not found: ${poolId}`);
   }
 
-  const nextPool = buildPool({
-    ...pool,
-    records: pool.records
-      .filter((record) => record.slug !== slug)
-      .map((record) => cloneRecord(record)),
-    createdAt: pool.createdAt,
-  });
-  const nextPools = ensureSingleDefault(
-    pools.map((item) => (item.id === poolId ? nextPool : item))
+  const persisted = await persistPool(
+    buildPool({
+      ...repoPool.pool,
+      records: repoPool.pool.records
+        .filter((record) => record.slug !== slug)
+        .map((record) => cloneRecord(record)),
+      createdAt: repoPool.pool.createdAt,
+      updatedAt: repoPool.pool.updatedAt,
+    }),
+    repoPool.directoryName,
+    repoPool.pool
   );
-  await savePools(nextPools);
 
-  const updated = nextPools.find((item) => item.id === poolId);
-  if (!updated) {
-    throw new Error(`Figure pool not found after delete: ${poolId}`);
-  }
-  return updated;
+  return clonePool(persisted.pool);
 }
 
 export async function deleteFigurePool(poolId: string): Promise<FigurePool[]> {
-  const pools = await loadFigurePools();
-  const nextPools = ensureSingleDefault(pools.filter((pool) => pool.id !== poolId));
-  await savePools(nextPools);
-  return nextPools;
+  const repoPool = await findRepoPoolById(poolId);
+  if (!repoPool) {
+    return loadFigurePools();
+  }
+
+  await figurePoolApi.deletePool(repoPool.directoryName);
+
+  const remaining = await loadRepoPools();
+  if (repoPool.pool.isDefault && remaining.length > 0) {
+    await persistPool(
+      {
+        ...remaining[0]!.pool,
+        isDefault: true,
+      },
+      remaining[0]!.directoryName,
+      remaining[0]!.pool
+    );
+  }
+
+  return loadFigurePools();
 }

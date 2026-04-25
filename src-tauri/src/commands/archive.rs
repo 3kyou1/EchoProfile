@@ -1,8 +1,9 @@
 //! Tauri commands for managing session archives
 //!
 //! This module provides commands for creating, listing, and managing
-//! archived sessions stored in ~/.claude-history-viewer/archives/
+//! archived sessions stored in ~/.echo-profile/archives/
 
+use crate::app_dirs::app_data_path;
 use crate::models::ClaudeSession;
 use crate::utils::find_subagent_files;
 use chrono::Utc;
@@ -131,10 +132,9 @@ pub struct ExportResult {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/// Returns the archives base directory path: `~/.claude-history-viewer/archives/`
+/// Returns the archives base directory path: `~/.echo-profile/archives/`
 fn get_archives_dir() -> Result<PathBuf, String> {
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
-    Ok(home.join(".claude-history-viewer").join("archives"))
+    app_data_path("archives")
 }
 
 /// Ensures the archives base directory exists.
@@ -531,7 +531,7 @@ fn jsonl_to_json_array(path: &Path) -> Result<String, String> {
 // Tauri commands
 // ---------------------------------------------------------------------------
 
-/// Returns the base path for archive storage: `~/.claude-history-viewer/archives/`
+/// Returns the base path for archive storage: `~/.echo-profile/archives/`
 #[tauri::command]
 #[allow(clippy::unused_async)]
 pub async fn get_archive_base_path() -> Result<String, String> {
@@ -1694,7 +1694,7 @@ mod tests {
     async fn test_get_archive_base_path() {
         let _temp = setup_test_env();
         let path = get_archive_base_path().await.unwrap();
-        assert!(path.contains(".claude-history-viewer"));
+        assert!(path.contains(".echo-profile"));
         assert!(path.contains("archives"));
     }
 

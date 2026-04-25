@@ -25,7 +25,7 @@ import type {
 
 /**
  * Unified preset data structure
- * Stored in ~/.claude-history-viewer/unified-presets/*.json
+ * Stored in ~/.echo-profile/unified-presets/*.json
  */
 export interface UnifiedPresetData {
   /** Unique identifier (UUID) */

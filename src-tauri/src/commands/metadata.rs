@@ -1,8 +1,9 @@
 //! Tauri commands for user metadata management
 //!
 //! This module provides commands for loading, saving, and updating
-//! user metadata stored in ~/.claude-history-viewer/user-data.json
+//! user metadata stored in ~/.echo-profile/user-data.json
 
+use crate::app_dirs::app_data_dir;
 use crate::models::{ProjectMetadata, SessionMetadata, UserMetadata, UserSettings};
 use std::fs;
 use std::io::Write;
@@ -55,13 +56,12 @@ impl Default for MetadataState {
     }
 }
 
-/// Get the metadata folder path (~/.claude-history-viewer)
+/// Get the metadata folder path (~/.echo-profile)
 fn get_metadata_folder() -> Result<PathBuf, String> {
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
-    Ok(home.join(".claude-history-viewer"))
+    app_data_dir()
 }
 
-/// Get the user data file path (~/.claude-history-viewer/user-data.json)
+/// Get the user data file path (~/.echo-profile/user-data.json)
 pub(crate) fn get_user_data_path() -> Result<PathBuf, String> {
     Ok(get_metadata_folder()?.join("user-data.json"))
 }
@@ -331,7 +331,7 @@ mod tests {
     fn test_get_metadata_folder() {
         let (_guard, _temp) = setup_test_env();
         let folder = get_metadata_folder().unwrap();
-        assert!(folder.to_string_lossy().contains(".claude-history-viewer"));
+        assert!(folder.to_string_lossy().contains(".echo-profile"));
     }
 
     #[test]
@@ -346,7 +346,7 @@ mod tests {
         let (_guard, temp) = setup_test_env();
 
         // Manually create the metadata folder since HOME is mocked
-        let metadata_folder = temp.path().join(".claude-history-viewer");
+        let metadata_folder = temp.path().join(".echo-profile");
         fs::create_dir_all(&metadata_folder).unwrap();
 
         let metadata = UserMetadata::new();

@@ -1,3 +1,4 @@
+pub mod app_dirs;
 pub mod commands;
 pub mod models;
 pub mod providers;
@@ -57,6 +58,10 @@ use crate::commands::{
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if let Err(error) = crate::app_dirs::ensure_app_data_ready() {
+        eprintln!("⚠ Failed to prepare app data directory: {error}");
+    }
+
     // Check for --serve flag (WebUI server mode)
     #[cfg(feature = "webui-server")]
     {
@@ -334,8 +339,7 @@ fn resolve_auth_token(args: &[String]) -> Option<(String, AuthTokenSource)> {
 /// Persist auto-generated token to a local file instead of logging the full secret.
 #[cfg(feature = "webui-server")]
 fn write_generated_token_file(token: &str) -> Option<std::path::PathBuf> {
-    let home = dirs::home_dir()?;
-    let dir = home.join(".claude-history-viewer");
+    let dir = crate::app_dirs::app_data_dir().ok()?;
     std::fs::create_dir_all(&dir).ok()?;
     let path = dir.join("webui-token.txt");
     std::fs::write(&path, format!("{token}\n")).ok()?;
@@ -420,7 +424,8 @@ fn collect_watch_paths() -> Vec<std::path::PathBuf> {
         }
 
         // Load custom Claude paths from user-data.json
-        let user_data_path = home.join(".claude-history-viewer").join("user-data.json");
+        let user_data_path = crate::app_dirs::app_data_path("user-data.json")
+            .unwrap_or_else(|_| home.join(".echo-profile").join("user-data.json"));
         if let Ok(content) = std::fs::read_to_string(&user_data_path) {
             if let Ok(metadata) = serde_json::from_str::<serde_json::Value>(&content) {
                 if let Some(custom_paths) = metadata

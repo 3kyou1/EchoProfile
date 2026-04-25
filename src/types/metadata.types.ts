@@ -5,7 +5,7 @@
  *
  * This module contains data structures for user-specific metadata
  * that is stored separately from Claude Code's original data.
- * Location: ~/.claude-history-viewer/user-data.json
+ * Location: ~/.echo-profile/user-data.json
  *
  * @see src/types/core/project.ts for the canonical implementation
  */

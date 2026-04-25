@@ -611,7 +611,13 @@ pub(crate) fn is_safe_path(path: &Path) -> Result<(), String> {
     let home = strip_windows_prefix(&home);
     // Use known-folder APIs to support Windows folder redirection (e.g. OneDrive).
     // Fall back to home-relative paths when the API returns None.
-    let mut allowed_dirs = vec![home.join(".claude-history-viewer").join("exports")];
+    let app_data_root = crate::app_dirs::app_data_dir()?
+        .canonicalize()
+        .unwrap_or_else(|_| {
+            crate::app_dirs::app_data_dir().unwrap_or_else(|_| home.join(".echo-profile"))
+        });
+    let app_data_root = strip_windows_prefix(&app_data_root);
+    let mut allowed_dirs = vec![app_data_root.join("exports")];
     for (api_dir, fallback_name) in [
         (dirs::download_dir(), "Downloads"),
         (dirs::document_dir(), "Documents"),

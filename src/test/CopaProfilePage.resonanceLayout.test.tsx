@@ -713,6 +713,17 @@ describe("CopaProfilePage resonance layout", () => {
     expect(sessionSelector).toHaveTextContent("Session 1");
   });
 
+  it("renders the figure pool selector as a custom dropdown trigger", async () => {
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Thought Echoes" }));
+
+    const poolSelector = await screen.findByLabelText("Figure pool");
+
+    expect(poolSelector.tagName).toBe("BUTTON");
+    expect(poolSelector).toHaveTextContent("Scientists");
+  });
+
   it("shows an error toast when thought echoes fall back to heuristic generation", async () => {
     const { generateFigureResonance } = await import("@/services/figureResonanceService");
     mockApi.mockImplementation(async (command: string) => {

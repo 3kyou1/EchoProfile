@@ -867,6 +867,16 @@ export function CopaProfilePage() {
     return normalized.length > 56 ? `${normalized.slice(0, 53)}...` : normalized;
   };
 
+  const formatFigurePoolOptionLabel = (pool: FigurePool) =>
+    formatScopeOptionLabel(
+      t("common.copa.resonance.pool.selectionStateValue", {
+        name: pool.name,
+        valid: pool.validationSummary.validCount,
+        invalid: pool.validationSummary.invalidCount,
+        defaultValue: `${pool.name} (${pool.validationSummary.validCount} usable / ${pool.validationSummary.invalidCount} invalid)`,
+      })
+    );
+
   const selectedProjectOptionLabel = selectedProjectForScope
     ? formatScopeOptionLabel(
         `${selectedProjectForScope.name} · ${providerLabel(t, selectedProjectForScope.provider ?? "claude")}`
@@ -1659,17 +1669,46 @@ export function CopaProfilePage() {
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                             {t("common.copa.resonance.pool.select", "Figure pool")}
                           </p>
-                          <select
+                          <Select
                             value={selectedPoolId}
-                            onChange={(event) => setSelectedPoolId(event.target.value)}
-                            className="mt-2 h-12 w-full rounded-2xl border border-border/70 bg-background px-3 text-sm text-foreground"
+                            onValueChange={setSelectedPoolId}
                           >
-                            {figurePools.map((pool) => (
-                              <option key={pool.id} value={pool.id}>
-                                {`${pool.name} (${pool.validationSummary.validCount} 可用 / ${pool.validationSummary.invalidCount} 无效)`}
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger
+                              aria-label={t("common.copa.resonance.pool.select", "Figure pool")}
+                              className="[&>svg]:hidden mt-2 h-auto min-h-[50px] rounded-xl border-border/70 bg-white px-3 py-2.5 shadow-sm"
+                            >
+                              <div className="flex w-full items-center gap-3 text-left">
+                                <div className="min-w-0 flex-1">
+                                  <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-foreground">
+                                    {selectedFigurePool
+                                      ? formatFigurePoolOptionLabel(selectedFigurePool)
+                                      : t("common.copa.resonance.pool.select", "Figure pool")}
+                                  </p>
+                                </div>
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                                  <ChevronDown className="h-4 w-4" />
+                                </div>
+                              </div>
+                            </SelectTrigger>
+                            <SelectContent
+                              position="popper"
+                              className="max-h-[300px] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] rounded-[18px] border border-border/70 bg-white p-1.5 text-foreground shadow-[0_16px_42px_rgba(15,23,42,0.12)]"
+                            >
+                              {figurePools.map((pool) => (
+                                <SelectItem
+                                  key={pool.id}
+                                  value={pool.id}
+                                  className="rounded-[14px] px-3 py-2.5 pr-9 focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-muted/50"
+                                >
+                                  <div className="min-w-0 w-full">
+                                    <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground">
+                                      {formatFigurePoolOptionLabel(pool)}
+                                    </p>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <p className="mt-2 text-xs text-muted-foreground">
                             {selectedFigurePool
                               ? t(

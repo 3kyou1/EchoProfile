@@ -1,7 +1,43 @@
+# VCS and local tool state
 .git
-node_modules
-target
-dist
-*.tar.gz
+.github
 .claude
+.codex-logs
+.serena
+.worktrees
+.playwright-mcp
 .omc
+
+# Dependencies and build outputs
+node_modules
+.pnp
+.pnp.js
+dist
+dist-ssr
+src-tauri/target
+src-tauri/gen
+target
+coverage
+*.tsbuildinfo
+
+# Local configuration and secrets
+.env
+.env.*
+*.local
+
+# Logs and archives
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tar.gz
+*.zip
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+*.sw?

@@ -41,7 +41,8 @@
     "updater": {
       "active": false,
       "endpoints": [],
-      "dialog": false
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVGOUE0QjU0MzhDRUY2MDYKUldRRzlzNDRWRXVhN3hwRkJwMldSMjRjYkprdmYyRHFtYlEzN1hhSis0aE1TYkF2SDh6Y09LOVkK"
     }
   },
   "bundle": {

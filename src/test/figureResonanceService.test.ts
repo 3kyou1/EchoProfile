@@ -8,6 +8,7 @@ const repoMock = vi.hoisted(() => {
   interface RepoEntry {
     directoryName: string;
     poolJson: string;
+    portraits?: Record<string, string>;
   }
 
   let entries: RepoEntry[] = [];
@@ -54,7 +55,7 @@ const repoMock = vi.hoisted(() => {
       entries = [];
     },
     setEntries: (nextEntries: RepoEntry[]) => {
-      entries = nextEntries.map((entry) => ({ ...entry }));
+      entries = nextEntries.map((entry) => ({ ...entry, portraits: { ...entry.portraits } }));
     },
     listEntries: vi.fn(async () => entries.map((entry) => ({ ...entry }))),
     savePool: vi.fn(async (input: {
@@ -80,8 +81,13 @@ const repoMock = vi.hoisted(() => {
     deletePool: vi.fn(async (directoryName: string) => {
       entries = entries.filter((entry) => entry.directoryName !== directoryName);
     }),
-    readPortrait: vi.fn(async () => {
-      throw new Error("Portrait reads are not used in figureResonanceService tests");
+    readPortrait: vi.fn(async (input: { directoryName: string; relativePath: string }) => {
+      const entry = entries.find((item) => item.directoryName === input.directoryName);
+      const dataBase64 = entry?.portraits?.[input.relativePath];
+      if (!dataBase64) {
+        throw new Error(`Portrait not found: ${input.directoryName}/${input.relativePath}`);
+      }
+      return { dataBase64 };
     }),
   };
 });
@@ -104,6 +110,7 @@ import {
   buildFigureResonanceCacheKey,
   deleteFigureResonanceResultsForProfile,
   generateFigureResonance,
+  loadFigureResonanceHistory,
   loadFigureResonanceResult,
 } from "@/services/figureResonanceService";
 import { deleteFigurePool, importFigurePool, loadFigurePools } from "@/services/figurePoolService";
@@ -235,6 +242,10 @@ describe("figureResonanceService", () => {
       {
         directoryName: "Scientists",
         poolJson: buildStoredPoolJson(),
+        portraits: {
+          "portraits/herbert_simon.png": btoa(String.fromCharCode(1, 2, 3, 4)),
+          "portraits/grace_hopper.png": btoa(String.fromCharCode(5, 6, 7, 8)),
+        },
       },
     ]);
     const memory = new Map<string, string>();
@@ -733,7 +744,57 @@ describe("figureResonanceService", () => {
     expect(loaded?.long_term.primary.slug).toBe("herbert_simon");
     expect(loaded?.long_term.primary.reason).toBe("cached reason");
     expect(loaded?.long_term.primary.quote_zh).toBe("信息的丰富，造成了注意力的贫乏。");
+    expect(loaded?.long_term.primary.portrait_url).toBe("data:image/png;base64,AQIDBA==");
     expect(localStorage.getItem("webui:figure-resonance.json:results")).not.toBeNull();
+  });
+
+  it("rehydrates legacy cached resonance cards without pool metadata by matching figure slugs", async () => {
+    localStorage.setItem(
+      "webui:figure-resonance.json:results",
+      JSON.stringify([
+        {
+          id: "legacy-cached-1",
+          cache_key: "legacy-cache-key",
+          scope_key: "global:all",
+          profile_id: snapshot.id,
+          generated_at: "2026-04-22T12:00:00.000Z",
+          language: "zh",
+          source: "heuristic",
+          long_term: {
+            primary: {
+              name: "Herbert A. Simon",
+              slug: "herbert_simon",
+              portrait_url: "/scientist-portraits/herbert_simon.png",
+              hook: "old hook",
+              quote_zh: "old quote",
+              quote_en: "old quote",
+              reason: "cached reason",
+              resonance_axes: ["工程理性"],
+              confidence_style: "strong_resonance",
+              loading_copy_zh: "",
+              loading_copy_en: "",
+              bio_zh: "old bio",
+              bio_en: "old bio",
+              achievements_zh: ["old"],
+              achievements_en: ["old"],
+            },
+            secondary: [],
+          },
+          recent_state: null,
+        },
+      ])
+    );
+
+    const history = await loadFigureResonanceHistory({
+      scopeKey: "global:all",
+      profileId: snapshot.id,
+      language: "zh-CN",
+    });
+
+    expect(history[0]?.pool_id).toBe("pool-default");
+    expect(history[0]?.pool_name_snapshot).toBe("Scientists");
+    expect(history[0]?.long_term.primary.quote_zh).toBe("信息的丰富，造成了注意力的贫乏。");
+    expect(history[0]?.long_term.primary.portrait_url).toBe("data:image/png;base64,AQIDBA==");
   });
 
   it("keeps stored pool metadata after the source pool is deleted", async () => {

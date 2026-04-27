@@ -1,4 +1,4 @@
-import { loadFigurePool } from "@/services/figurePoolService";
+import { loadFigurePool, loadFigurePools } from "@/services/figurePoolService";
 import { persistLlmDebugLog } from "@/services/llmDebugLogger";
 import { storageAdapter } from "@/services/storage";
 import type { FigurePool, FigurePoolRecord } from "@/types/figurePool";
@@ -181,6 +181,10 @@ async function loadPoolContext(poolId: string): Promise<PoolContext> {
     throw new Error(`Figure pool not found: ${poolId}`);
   }
 
+  return buildPoolContext(pool);
+}
+
+function buildPoolContext(pool: FigurePool): PoolContext {
   const allRecordsBySlug = new Map(pool.records.map((record) => [record.slug, record]));
   const validRecords = pool.records.filter((record) => record.status === "valid");
   const validRecordsBySlug = new Map(validRecords.map((record) => [record.slug, record]));
@@ -305,10 +309,15 @@ function rehydrateStoredResult(
   result: FigureResonanceResult,
   context: PoolContext | null
 ): FigureResonanceResult {
+  const poolUpdatedAtSnapshot = result.pool_updated_at_snapshot || context?.pool.updatedAt || "";
+
   return {
     ...result,
+    pool_id: result.pool_id || context?.pool.id || "",
+    pool_name_snapshot: result.pool_name_snapshot || context?.pool.name || "",
+    pool_updated_at_snapshot: poolUpdatedAtSnapshot,
     pool_deleted: context ? false : true,
-    pool_updated: context ? result.pool_updated_at_snapshot !== context.pool.updatedAt : false,
+    pool_updated: context ? poolUpdatedAtSnapshot !== context.pool.updatedAt : false,
     long_term: {
       primary: rehydrateStoredCard(result.long_term.primary, "strong_resonance", context),
       secondary: result.long_term.secondary.map((card) =>
@@ -319,6 +328,18 @@ function rehydrateStoredResult(
       ? rehydrateStoredCard(result.recent_state, "phase_resonance", context)
       : null,
   };
+}
+
+function resultSlugs(result: FigureResonanceResult): string[] {
+  return [
+    result.long_term.primary.slug,
+    ...result.long_term.secondary.map((card) => card.slug),
+    result.recent_state?.slug ?? "",
+  ].filter(Boolean);
+}
+
+function contextMatchesResult(context: PoolContext, result: FigureResonanceResult): boolean {
+  return resultSlugs(result).some((slug) => context.allRecordsBySlug.has(slug));
 }
 
 function normalizeLongTermPayload(
@@ -845,14 +866,7 @@ export async function loadFigureResonanceResult(input: {
   }
 
   const pool = await loadFigurePool(input.poolId);
-  const context = pool
-    ? {
-        pool,
-        allRecordsBySlug: new Map(pool.records.map((record) => [record.slug, record])),
-        validRecords: pool.records.filter((record) => record.status === "valid"),
-        validRecordsBySlug: new Map(pool.records.filter((record) => record.status === "valid").map((record) => [record.slug, record])),
-      }
-    : null;
+  const context = pool ? buildPoolContext(pool) : null;
 
   return rehydrateStoredResult(matched, context);
 }
@@ -871,21 +885,24 @@ export async function loadFigureResonanceHistory(input: {
       item.language === normalizedLanguage
   );
 
+  let fallbackContexts: PoolContext[] | null = null;
+  const loadFallbackContexts = async (): Promise<PoolContext[]> => {
+    if (!fallbackContexts) {
+      fallbackContexts = (await loadFigurePools()).map(buildPoolContext);
+    }
+    return fallbackContexts;
+  };
+
   const rehydrated = await Promise.all(
     scoped.map(async (item) => {
-      const pool = await loadFigurePool(item.pool_id);
-      const context = pool
-        ? {
-            pool,
-            allRecordsBySlug: new Map(pool.records.map((record) => [record.slug, record])),
-            validRecords: pool.records.filter((record) => record.status === "valid"),
-            validRecordsBySlug: new Map(
-              pool.records
-                .filter((record) => record.status === "valid")
-                .map((record) => [record.slug, record])
-            ),
-          }
-        : null;
+      const pool =
+        typeof item.pool_id === "string" && item.pool_id.trim().length > 0
+          ? await loadFigurePool(item.pool_id)
+          : null;
+      const context =
+        pool
+          ? buildPoolContext(pool)
+          : (await loadFallbackContexts()).find((candidate) => contextMatchesResult(candidate, item)) ?? null;
       return rehydrateStoredResult(item, context);
     })
   );

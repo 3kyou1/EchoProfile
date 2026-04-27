@@ -59,7 +59,7 @@ describe('Tauri Configuration Tests', () => {
 
     it('should have valid app identifier in reverse domain notation', () => {
       expect(config.identifier).toMatch(/^[a-zA-Z0-9.-]+$/);
-      expect(config.identifier).toBe('com.echoprofile.app');
+      expect(config.identifier).toBe('com.3kyou1.echoprofile');
       expect(config.identifier.split('.').length).toBeGreaterThanOrEqual(3);
     });
 
@@ -255,11 +255,15 @@ describe('Tauri Configuration Tests', () => {
       });
 
       it('should have valid minisign public key', () => {
-        expect(config.plugins.updater.pubkey).toBeUndefined();
+        expect(config.plugins.updater.pubkey).toMatch(/^[A-Za-z0-9+/=\n]+$/);
+        const decoded = Buffer.from(config.plugins.updater.pubkey, 'base64').toString('utf-8');
+        expect(decoded).toContain('minisign public key');
       });
 
       it('should not expose private keys or secrets', () => {
-        expect(config.plugins.updater.pubkey).toBeUndefined();
+        expect(config.plugins.updater.pubkey).toBeDefined();
+        expect(config.plugins.updater.privateKey).toBeUndefined();
+        expect(config.plugins.updater.password).toBeUndefined();
       });
     });
   });
@@ -420,8 +424,8 @@ describe('Tauri Configuration Tests', () => {
       const parts = config.identifier.split('.');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[0]).toBe('com'); // Proper reverse domain
-      expect(parts[1]).toBe('echoprofile');
-      expect(parts[2]).toBe('app');
+      expect(parts[1]).toBe('3kyou1');
+      expect(parts[2]).toBe('echoprofile');
     });
 
     it('should not expose sensitive information', () => {
@@ -438,8 +442,10 @@ describe('Tauri Configuration Tests', () => {
       });
     });
 
-    it('should not configure updater secrets while updates are disabled', () => {
-      expect(config.plugins.updater.pubkey).toBeUndefined();
+    it('should not configure updater private secrets while updates are disabled', () => {
+      expect(config.plugins.updater.pubkey).toBeDefined();
+      expect(config.plugins.updater.privateKey).toBeUndefined();
+      expect(config.plugins.updater.password).toBeUndefined();
     });
   });
 });

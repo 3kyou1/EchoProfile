@@ -71,7 +71,7 @@ pub async fn get_system_info() -> Result<SystemInfo, String> {
 
 #[tauri::command]
 pub async fn open_github_issues(feedback: Option<FeedbackData>) -> Result<(), String> {
-    let base_url = "https://github.com/<your-account>/echoprofile/issues/new";
+    let base_url = "https://github.com/3kyou1/EchoProfile/issues/new";
 
     let github_url = match feedback {
         Some(fb) => {

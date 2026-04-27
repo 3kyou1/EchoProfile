@@ -33,8 +33,8 @@ This rebrand is the first step toward a more focused product identity.
 
 ## Attribution
 
-EchoProfile is an independent open-source project initially derived from `Claude Code History Viewer`, released under the MIT License.
-The original copyright notice and license are preserved in `LICENSE`.
+EchoProfile is an independent open-source project released under the Apache License 2.0.
+It was initially derived from `Claude Code History Viewer`; the original MIT copyright notice and license text are preserved in `NOTICE`.
 
 ## Next Steps
 

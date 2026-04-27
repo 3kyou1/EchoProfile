@@ -1,5 +1,6 @@
 export type CopaFactorCode = "CT" | "SA" | "SC" | "CLM" | "MS" | "AMR";
 export type CopaLanguage = "zh" | "en";
+export type CopaProfileMode = "serious" | "fun";
 
 export type CopaScopeType = "session" | "project" | "global";
 
@@ -55,12 +56,14 @@ export interface CopaSnapshot {
   id: string;
   createdAt: string;
   language: CopaLanguage;
+  profileMode?: CopaProfileMode;
   scope: CopaScopeRef;
   providerScope: string[];
   sourceStats: CopaSourceStats;
   modelConfig: Omit<CopaModelConfig, "apiKey">;
   promptSummary: string;
   factors: CopaFactors;
+  funProfileText?: string;
   markdown: string;
 }
 
@@ -72,6 +75,7 @@ export interface CopaStoredState {
 export interface CopaNormalizedResponse {
   factors: CopaFactors;
   promptSummary: string;
+  funProfileText?: string;
 }
 
 export interface ExtractedSignalResult {

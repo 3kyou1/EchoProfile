@@ -9,6 +9,7 @@ import type {
   CopaLlmConfigState,
   CopaModelConfig,
   CopaNormalizedResponse,
+  CopaProfileMode,
   CopaSnapshot,
   CopaStoredState,
   ExtractedSignalResult,
@@ -187,6 +188,22 @@ const COPA_RESPONSE_FORMAT = {
   },
 };
 
+const COPA_FUN_RESPONSE_FORMAT = {
+  type: "json_schema",
+  json_schema: {
+    name: "copa_fun_profile",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        profile_text: { type: "string" },
+      },
+      required: ["title", "profile_text"],
+    },
+  },
+};
+
 const COPA_JSON_OBJECT_RESPONSE_FORMAT = { type: "json_object" } as const;
 const COPA_INVALID_JSON_ERROR = "CoPA model returned invalid JSON.";
 
@@ -230,6 +247,72 @@ function stripFence(value: string): string {
   const lines = trimmed.split("\n");
   const body = lines.slice(1, lines[lines.length - 1]?.trim() === "```" ? -1 : undefined);
   return body.join("\n").trim();
+}
+
+function repairMissingJsonClosers(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{")) {
+    return null;
+  }
+
+  const closers: string[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (const char of trimmed) {
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") {
+      closers.push("}");
+      continue;
+    }
+
+    if (char === "[") {
+      closers.push("]");
+      continue;
+    }
+
+    if (char === "}" || char === "]") {
+      if (closers.pop() !== char) {
+        return null;
+      }
+    }
+  }
+
+  if (inString || escaped || closers.length === 0) {
+    return null;
+  }
+
+  return `${trimmed}${closers.reverse().join("")}`;
+}
+
+function parseCopaJsonContent(rawContent: string): unknown {
+  const content = stripFence(rawContent);
+
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    const repaired = repairMissingJsonClosers(content);
+    if (!repaired) {
+      throw error;
+    }
+
+    return JSON.parse(repaired);
+  }
 }
 
 function contentToText(content: ClaudeMessage["content"]): string {
@@ -361,6 +444,10 @@ function containsHanCharacters(value: string): boolean {
 
 export function normalizeCopaLanguage(language?: string | null): CopaLanguage {
   return typeof language === "string" && language.toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+function normalizeCopaProfileMode(value: unknown): CopaProfileMode {
+  return value === "fun" ? "fun" : "serious";
 }
 
 function buildDefaultFactor(code: CopaFactorCode, language: CopaLanguage): CopaFactor {
@@ -670,9 +757,15 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
     {
       factors: payload.factors,
       prompt_summary: payload.promptSummary,
+      profile_text: payload.funProfileText,
     },
-    language
+    language,
+    normalizeCopaProfileMode(payload.profileMode)
   );
+  const funProfileText =
+    typeof payload.funProfileText === "string" && payload.funProfileText.trim().length > 0
+      ? payload.funProfileText.trim()
+      : normalized.funProfileText;
 
   return {
     id: typeof payload.id === "string" && payload.id.trim().length > 0 ? payload.id : `copa-${Date.now()}`,
@@ -681,6 +774,7 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
         ? payload.createdAt
         : new Date(0).toISOString(),
     language,
+    profileMode: normalizeCopaProfileMode(payload.profileMode),
     scope:
       payload.scope && typeof payload.scope === "object"
         ? {
@@ -766,6 +860,7 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
           },
     promptSummary: normalized.promptSummary,
     factors: normalized.factors,
+    funProfileText,
     markdown:
       typeof payload.markdown === "string" && payload.markdown.trim().length > 0
         ? payload.markdown
@@ -779,6 +874,7 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
                 ? payload.createdAt
                 : new Date(0).toISOString(),
             language,
+            profileMode: normalizeCopaProfileMode(payload.profileMode),
             scope:
               payload.scope && typeof payload.scope === "object"
                 ? {
@@ -864,11 +960,16 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
                   },
             promptSummary: normalized.promptSummary,
             factors: normalized.factors,
+            funProfileText,
           }),
   };
 }
 
-export function normalizeCopaResponse(value: unknown, language: CopaLanguage = "en"): CopaNormalizedResponse {
+export function normalizeCopaResponse(
+  value: unknown,
+  language: CopaLanguage = "en",
+  profileMode: CopaProfileMode = "serious"
+): CopaNormalizedResponse {
   const payload =
     value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const factorsValue = buildFactorRecord(payload.factors);
@@ -882,14 +983,25 @@ export function normalizeCopaResponse(value: unknown, language: CopaLanguage = "
     return accumulator;
   }, {} as CopaFactors);
 
+  const funProfileText =
+    typeof payload.profile_text === "string" && payload.profile_text.trim().length > 0
+      ? payload.profile_text.trim()
+      : undefined;
+  const title =
+    typeof payload.title === "string" && payload.title.trim().length > 0
+      ? payload.title.trim()
+      : undefined;
   const promptSummary =
-    typeof payload.prompt_summary === "string" && payload.prompt_summary.trim().length > 0
-      ? payload.prompt_summary.trim()
-      : buildPromptSummary(factors, language);
+    profileMode === "fun" && (title || funProfileText)
+      ? (title ?? funProfileText ?? "").trim()
+      : typeof payload.prompt_summary === "string" && payload.prompt_summary.trim().length > 0
+        ? payload.prompt_summary.trim()
+        : buildPromptSummary(factors, language);
 
   return {
     factors,
     promptSummary,
+    funProfileText,
   };
 }
 
@@ -987,17 +1099,22 @@ export function renderCopaMarkdown(snapshot: Omit<CopaSnapshot, "markdown">): st
     "",
   ];
 
-  for (const code of FACTOR_ORDER) {
-    const factor = snapshot.factors[code];
-    sections.push(`### ${factor.title}`);
-    sections.push(`- ${labels.definition}: ${factor.description}`);
-    sections.push(`- ${labels.userProfile}: ${factor.user_profile_description}`);
+  if (snapshot.profileMode === "fun" && snapshot.funProfileText) {
+    sections.push(snapshot.funProfileText);
+    sections.push("");
+  } else {
+    for (const code of FACTOR_ORDER) {
+      const factor = snapshot.factors[code];
+      sections.push(`### ${factor.title}`);
+      sections.push(`- ${labels.definition}: ${factor.description}`);
+      sections.push(`- ${labels.userProfile}: ${factor.user_profile_description}`);
+      sections.push("");
+    }
+
+    sections.push(labels.promptSummary);
+    sections.push(snapshot.promptSummary);
     sections.push("");
   }
-
-  sections.push(labels.promptSummary);
-  sections.push(snapshot.promptSummary);
-  sections.push("");
   sections.push(labels.metadata);
   sections.push(`- ${labels.providers}: ${snapshot.providerScope.join(", ") || "none"}`);
   sections.push(`- ${labels.projects}: ${snapshot.sourceStats.projectCount}`);
@@ -1030,7 +1147,8 @@ export function createSnapshot(input: Omit<CopaSnapshot, "id" | "createdAt" | "m
 
 export function buildCopaPrompt(
   signals: string[],
-  language: CopaLanguage = "en"
+  language: CopaLanguage = "en",
+  profileMode: CopaProfileMode = "serious"
 ): { system: string; user: string } {
   const factorDescriptions = FACTOR_ORDER.map((code) => {
     const spec = FACTOR_SPECS[language][code];
@@ -1038,44 +1156,96 @@ export function buildCopaPrompt(
   }).join("\n");
 
   if (language === "zh") {
+    const modeInstructions =
+      profileMode === "fun"
+        ? [
+            "你的角色不是心理测评师，也不是咨询师，而是一个很懂用户、嘴很毒但没有恶意的朋友：像脱口秀演员 + 互联网锐评博主 + 熟人局吐槽大师的混合体。",
+            "请只基于用户消息里真实出现的表达习惯、反复出现的需求、做事方式、焦虑点、控制欲、审美偏好、沟通风格和思维惯性来写。允许轻微夸张、比喻、梗感、反差和角色卡风格，但不要编造用户消息中不存在的经历、身份、职业、关系或具体偏好。",
+            "不要写研究报告，不要写心理测评说明书，不要用“该用户表现出……”这种学术腔。要像一个朋友看完聊天记录后忍不住锐评：“这个人一看就是……”那种感觉。",
+            "写法要求：",
+            "- 要好笑、贴脸、有画面感。",
+            "- 可以犀利，但不能恶毒。",
+            "- 可以吐槽，但底层要是善意和准确。",
+            "- 多用具体比喻，不要抽象空话。",
+            "- 避免安全无聊的总结句，比如“你是一个注重效率的人”。",
+            "- 更像“这个人是把人生当成待优化系统的产品经理”，而不是“用户偏好结构化表达”。",
+          ]
+        : ["这是严肃版 profile：保持研究报告式的严谨、克制和稳定分析。"];
     return {
       system: [
-        "你正在基于仅包含用户消息的互动历史生成 CoPA profile。",
+        profileMode === "fun"
+          ? "你正在基于仅包含用户消息的互动历史生成 profile。"
+          : "你正在基于仅包含用户消息的互动历史生成 CoPA profile。",
+        ...modeInstructions,
         "请推断稳定的回答偏好，而不是暂时性话题，请你从心理学高维的角度去描述。",
-        "只返回严格 JSON，顶层键仅允许为：factors、prompt_summary。",
-        "每个 factor 都必须包含 user_profile_description。",
-        "user_profile_description 应该是一个高维的、与具体任务无关的、深挖用户内在稳定倾向的描述。",
-        "请优先描述用户长期稳定的认知风格、判断方式、控制需求、信息处理偏好、动机结构与情绪互动方式。",
-        "不要泛泛复述消息表层主题，不要只总结“用户在做什么”，而要总结“用户是如何思考、判断、感受与推进事情的”。",
+        ...(profileMode === "fun"
+          ? [
+              "只返回严格 JSON，顶层键仅允许为：title、profile_text。",
+              "title 是一个短标题；profile_text 是一段完整、有趣、可直接展示的中文 profile。",
+            ]
+          : [
+              "只返回严格 JSON，顶层键仅允许为：factors、prompt_summary。",
+              "每个 factor 都必须包含 user_profile_description。",
+              "user_profile_description 应该是一个高维的、与具体任务无关的、深挖用户内在稳定倾向的描述。",
+              "请优先描述用户长期稳定的认知风格、判断方式、控制需求、信息处理偏好、动机结构与情绪互动方式。",
+              "不要泛泛复述消息表层主题，不要只总结“用户在做什么”，而要总结“用户是如何思考、判断、感受与推进事情的”。",
+            ]),
         "所有返回内容必须使用中文。",
-        "CoPA 因子：",
-        factorDescriptions,
+        ...(profileMode === "fun" ? [] : ["CoPA 因子：", factorDescriptions]),
       ].join("\n"),
       user: [
         "请仅基于这些用户消息生成 CoPA profile。",
-        "请确保 factors、prompt_summary、各项文案都使用中文。",
+        profileMode === "fun"
+          ? "请确保 title、profile_text 都使用中文。"
+          : "请确保 factors、prompt_summary、各项文案都使用中文。",
         "消息：",
         ...signals.map((signal) => `- ${signal}`),
       ].join("\n"),
     };
   }
 
+  const modeInstructions =
+    profileMode === "fun"
+      ? [
+          "Your role is not a psychologist, therapist, or evaluator. You are a sharp but kind friend: part stand-up comic, part internet commentator, part 'I know you too well' roastmaster.",
+          "Base the profile only on real signals from the user's messages: recurring phrasing, repeated needs, working style, anxieties, control patterns, taste, communication habits, and thinking loops. You may use light exaggeration, metaphors, meme-like phrasing, contrast, and character-card energy, but do not invent experiences, identities, jobs, relationships, or specific preferences that are not supported by the messages.",
+          "Do not write a research report. Do not sound like a psychometric manual. Avoid phrases like 'the user demonstrates...' Make it feel like a friend read the chat history and immediately went: 'This person is absolutely the type who...'",
+          "Writing requirements:",
+          "- Make it funny, specific, vivid, and easy to picture.",
+          "- Be sharp, but not cruel.",
+          "- Roast the pattern, but keep the foundation kind and accurate.",
+          "- Use concrete metaphors instead of abstract summaries.",
+          "- Avoid safe, boring lines like 'you value efficiency.'",
+          "- Prefer lines like 'this person treats life like a product backlog waiting to be optimized' over 'the user prefers structured expression.'",
+        ]
+      : ["This is a serious profile: keep the tone rigorous, restrained, and analysis-oriented."];
   return {
     system: [
-      "You are generating a CoPA profile from user-only interaction history.",
+      profileMode === "fun"
+        ? "You are generating a profile from user-only interaction history."
+        : "You are generating a CoPA profile from user-only interaction history.",
+      ...modeInstructions,
       "Infer stable answering preferences rather than temporary topics, and describe them from a high-level psychological perspective.",
-      "Return strict JSON only with top-level keys: factors, prompt_summary.",
-      "Each factor must contain user_profile_description.",
-      "user_profile_description should be a high-level, task-independent description that deeply captures the user's stable inner tendencies.",
-      "Prioritize the user's long-term cognitive style, judgment patterns, control needs, information-processing preferences, motivational structure, and emotional interaction style.",
-      "Do not merely restate surface topics from the messages; do not only summarize what the user is doing, but how the user tends to think, judge, feel, and move things forward.",
+      ...(profileMode === "fun"
+        ? [
+            "Return strict JSON only with top-level keys: title, profile_text.",
+            "title is a short title; profile_text is one complete, entertaining profile paragraph ready to display.",
+          ]
+        : [
+            "Return strict JSON only with top-level keys: factors, prompt_summary.",
+            "Each factor must contain user_profile_description.",
+            "user_profile_description should be a high-level, task-independent description that deeply captures the user's stable inner tendencies.",
+            "Prioritize the user's long-term cognitive style, judgment patterns, control needs, information-processing preferences, motivational structure, and emotional interaction style.",
+            "Do not merely restate surface topics from the messages; do not only summarize what the user is doing, but how the user tends to think, judge, feel, and move things forward.",
+          ]),
       "All returned content must be written in English.",
-      "CoPA factors:",
-      factorDescriptions,
+      ...(profileMode === "fun" ? [] : ["CoPA factors:", factorDescriptions]),
     ].join("\n"),
     user: [
       "Generate a CoPA profile from these user messages only.",
-      "Ensure factors, prompt_summary, and all descriptive text are written in English.",
+      profileMode === "fun"
+        ? "Ensure title and profile_text are written in English."
+        : "Ensure factors, prompt_summary, and all descriptive text are written in English.",
       "Messages:",
       ...signals.map((signal) => `- ${signal}`),
     ].join("\n"),
@@ -1085,7 +1255,8 @@ export function buildCopaPrompt(
 export async function requestCopaProfile(
   signals: string[],
   config: CopaModelConfig,
-  language: CopaLanguage = "en"
+  language: CopaLanguage = "en",
+  profileMode: CopaProfileMode = "serious"
 ): Promise<CopaNormalizedResponse> {
   if (!config.apiKey?.trim()) {
     throw new Error("Missing API key");
@@ -1097,7 +1268,7 @@ export async function requestCopaProfile(
     throw new Error("No user signals available");
   }
 
-  const prompt = buildCopaPrompt(signals, language);
+  const prompt = buildCopaPrompt(signals, language, profileMode);
   await persistLlmDebugLog({
     category: "copa",
     stage: "request",
@@ -1105,6 +1276,7 @@ export async function requestCopaProfile(
       baseUrl: config.baseUrl,
       model: config.model,
       language,
+      profileMode,
       responseFormat: COPA_RESPONSE_FORMAT.type,
       signalCount: signals.length,
       systemPrompt: prompt.system,
@@ -1112,7 +1284,8 @@ export async function requestCopaProfile(
     },
   });
   let response: Response | null = null;
-  for (const responseFormat of [COPA_RESPONSE_FORMAT, COPA_JSON_OBJECT_RESPONSE_FORMAT]) {
+  const primaryResponseFormat = profileMode === "fun" ? COPA_FUN_RESPONSE_FORMAT : COPA_RESPONSE_FORMAT;
+  for (const responseFormat of [primaryResponseFormat, COPA_JSON_OBJECT_RESPONSE_FORMAT]) {
     try {
       response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
         method: "POST",
@@ -1234,7 +1407,7 @@ export async function requestCopaProfile(
 
   let parsed: unknown = {};
   try {
-    parsed = JSON.parse(stripFence(rawContent));
+    parsed = parseCopaJsonContent(rawContent);
   } catch (error) {
     await persistLlmDebugLog({
       category: "copa",
@@ -1248,7 +1421,7 @@ export async function requestCopaProfile(
     throw new Error(COPA_INVALID_JSON_ERROR);
   }
 
-  const normalized = normalizeCopaResponse(parsed, language);
+  const normalized = normalizeCopaResponse(parsed, language, profileMode);
   await persistLlmDebugLog({
     category: "copa",
     stage: "diagnosis",

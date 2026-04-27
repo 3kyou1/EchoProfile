@@ -78,7 +78,7 @@ export const initialRecentEditsPagination: RecentEditsPagination =
   createInitialRecentEditsPagination();
 
 export const initialAnalyticsState: AnalyticsState = {
-  currentView: 'messages',
+  currentView: 'copaProfile',
   statsMode: "billing_total",
   metricMode: "tokens",
   projectSummary: null,

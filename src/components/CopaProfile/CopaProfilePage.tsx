@@ -924,10 +924,10 @@ export function CopaProfilePage() {
   return (
     <div className="h-full overflow-auto">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 md:p-6">
-        <section className="rounded-3xl border border-border/60 bg-[linear-gradient(135deg,rgba(22,163,74,0.12),rgba(255,255,255,0.92))] p-6 shadow-sm">
+        <section className="rounded-3xl border border-slate-300/70 bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.14),transparent_34%),radial-gradient(circle_at_60%_35%,rgba(148,163,184,0.12),transparent_40%),linear-gradient(135deg,rgba(248,250,252,0.96),rgba(255,255,255,0.92))] p-6 shadow-[0_20px_50px_rgba(148,163,184,0.18)] backdrop-blur-sm">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-8">
             <div className="max-w-3xl xl:min-w-0 xl:flex-1">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-slate-50/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700 shadow-[0_8px_20px_rgba(148,163,184,0.12)]">
                 <Brain className="h-3.5 w-3.5" />
                 {t("common.copa.badge", "User-only inference")}
               </div>
@@ -961,7 +961,7 @@ export function CopaProfilePage() {
                     className={`inline-flex items-center gap-2 rounded-2xl border border-border/60 px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
                       activeSubview === "profile"
                         ? "bg-foreground text-background"
-                        : "bg-background/80 text-foreground hover:bg-background"
+                        : "bg-white/80 text-foreground hover:bg-slate-50"
                     }`}
                   >
                     <Sparkles className="h-4 w-4" />
@@ -973,7 +973,7 @@ export function CopaProfilePage() {
                     className={`inline-flex items-center gap-2 rounded-2xl border border-border/60 px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
                       activeSubview === "resonance"
                         ? "bg-foreground text-background"
-                        : "bg-background/80 text-foreground hover:bg-background"
+                        : "bg-white/80 text-foreground hover:bg-slate-50"
                     }`}
                   >
                     <RefreshCw className="h-4 w-4" />
@@ -985,7 +985,7 @@ export function CopaProfilePage() {
                     className={`inline-flex items-center gap-2 rounded-2xl border border-border/60 px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
                       activeSubview === "pools"
                         ? "bg-foreground text-background"
-                        : "bg-background/80 text-foreground hover:bg-background"
+                        : "bg-white/80 text-foreground hover:bg-slate-50"
                     }`}
                   >
                     <LibraryBig className="h-4 w-4" />
@@ -1004,7 +1004,7 @@ export function CopaProfilePage() {
                     aria-expanded={isLlmConfigOpen}
                     aria-controls="copa-llm-config-panel"
                     onClick={() => setIsLlmConfigOpen((current) => !current)}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/80 text-foreground shadow-sm transition-colors hover:bg-background"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-white/80 text-foreground shadow-sm transition-colors hover:bg-slate-50"
                   >
                     {isLlmConfigOpen ? <X className="h-5 w-5" /> : <Settings2 className="h-5 w-5" />}
                   </button>

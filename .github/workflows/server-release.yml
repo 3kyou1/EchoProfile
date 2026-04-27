@@ -1,8 +1,6 @@
-# Build and release the WebUI server binary (headless mode for VPS/remote servers)
-# Triggered alongside the main desktop release when a version tag is pushed.
-#
-# The server binary embeds frontend assets via rust-embed, producing a single
-# self-contained file with no external dependencies on dist/.
+# Build and upload EchoProfile WebUI server binaries.
+# The server binary embeds frontend assets via rust-embed, so each archive contains
+# one executable named echo-profile and does not require a separate dist/ folder.
 name: Server Release
 
 on:
@@ -21,17 +19,17 @@ jobs:
         include:
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            artifact: cchv-server-linux-x64
+            artifact: echo-profile-linux-x64
           - platform: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
-            artifact: cchv-server-linux-arm64
+            artifact: echo-profile-linux-arm64
             cross: true
           - platform: macos-14
             target: aarch64-apple-darwin
-            artifact: cchv-server-macos-arm64
+            artifact: echo-profile-macos-arm64
           - platform: macos-14
             target: x86_64-apple-darwin
-            artifact: cchv-server-macos-x64
+            artifact: echo-profile-macos-x64
 
     runs-on: ${{ matrix.platform }}
 
@@ -48,16 +46,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install dependencies (ubuntu x64)
+      - name: Install Linux build dependencies
         if: matrix.platform == 'ubuntu-22.04' && !matrix.cross
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Install cross-compilation tools (linux-arm64)
+      - name: Install Linux arm64 cross-compilation tools
         if: matrix.cross
         run: |
           sudo dpkg --add-architecture arm64
@@ -67,20 +65,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           sudo apt-get install -y libwebkit2gtk-4.1-dev:arm64 libssl-dev:arm64 libglib2.0-dev:arm64 libappindicator3-dev:arm64 librsvg2-dev:arm64 patchelf
+          mkdir -p ~/.cargo
           echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config.toml
           echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config.toml
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> $GITHUB_ENV
-          echo "PKG_CONFIG_SYSROOT_DIR=/" >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_SYSROOT_DIR=/" >> "$GITHUB_ENV"
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-
-      - name: Add macOS x86_64 target
-        if: matrix.target == 'x86_64-apple-darwin'
-        run: rustup target add x86_64-apple-darwin
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
@@ -90,111 +85,57 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build frontend (rust-embed requires dist/ at compile time)
+      - name: Build frontend
         run: just frontend-build
 
       - name: Build server binary
-        run: cd src-tauri && cargo build --release --features webui-server --target ${{ matrix.target }}
+        working-directory: src-tauri
+        run: cargo build --release --features webui-server --target ${{ matrix.target }}
 
-      - name: Package single binary
+      - name: Package server binary
         run: |
           mkdir -p release
-          cp src-tauri/target/${{ matrix.target }}/release/claude-code-history-viewer release/cchv-server
-          cd release && tar czf ../${{ matrix.artifact }}.tar.gz cchv-server
+          cp "src-tauri/target/${{ matrix.target }}/release/echo-profile" release/echo-profile
+          chmod +x release/echo-profile
+          tar -C release -czf "${{ matrix.artifact }}.tar.gz" echo-profile
 
       - name: Wait for release to be published
         run: |
-          echo "Waiting for release ${GITHUB_REF_NAME} to be published (non-draft)..."
+          echo "Waiting for release ${GITHUB_REF_NAME} to be available..."
           for i in $(seq 1 60); do
-            DRAFT=$(gh api "repos/${{ github.repository }}/releases/tags/${GITHUB_REF_NAME}" --jq '.draft' 2>/dev/null || echo "not_found")
-            if [ "$DRAFT" = "false" ]; then
-              echo "Release ${GITHUB_REF_NAME} is published!"
-              break
-            elif [ "$DRAFT" = "not_found" ]; then
-              echo "Release not found yet... (attempt $i/60)"
-            else
-              echo "Release is still draft... (attempt $i/60)"
+            if gh api "repos/${{ github.repository }}/releases/tags/${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+              echo "Release ${GITHUB_REF_NAME} is available."
+              exit 0
             fi
+            echo "Release not found yet... (attempt $i/60)"
             sleep 10
           done
+          echo "Release was not created by another workflow; creating it now."
+          gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes "EchoProfile ${GITHUB_REF_NAME}"
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Upload to release
+      - name: Upload server archive
         run: gh release upload "${GITHUB_REF_NAME}" "${{ matrix.artifact }}.tar.gz" --clobber
         env:
           GH_TOKEN: ${{ github.token }}
 
-  # Update Homebrew formula SHA256 hashes after all builds complete
-  update-homebrew:
+  publish-checksums:
     needs: build-server
     runs-on: ubuntu-latest
-    steps:
-      - name: Get version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Download release assets and compute SHA256
+    steps:
+      - name: Download release assets and compute checksums
         run: |
-          BASE="https://github.com/jhlee0409/claude-code-history-viewer/releases/download/${GITHUB_REF_NAME}"
+          BASE="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
           : > CHECKSUMS.sha256
-          for asset in cchv-server-macos-arm64 cchv-server-macos-x64 cchv-server-linux-arm64 cchv-server-linux-x64; do
+          for asset in echo-profile-macos-arm64 echo-profile-macos-x64 echo-profile-linux-arm64 echo-profile-linux-x64; do
             curl -fsSL -o "${asset}.tar.gz" "${BASE}/${asset}.tar.gz"
             sha=$(sha256sum "${asset}.tar.gz" | cut -d' ' -f1)
             printf "%s  %s\n" "${sha}" "${asset}.tar.gz" >> CHECKSUMS.sha256
-            asset_var=$(echo "${asset}" | tr '-' '_')
-            echo "${asset_var}=${sha}" >> "$GITHUB_ENV"
           done
 
       - name: Upload checksums
+        run: gh release upload "${GITHUB_REF_NAME}" CHECKSUMS.sha256 --clobber -R "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${GITHUB_REF_NAME}" CHECKSUMS.sha256 --clobber -R "${{ github.repository }}"
-
-      - name: Update Homebrew formula
-        env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-
-          # Fetch current formula
-          gh api repos/jhlee0409/homebrew-tap/contents/Formula/cchv-server.rb \
-            --jq '.content' | base64 -d > cchv-server.rb
-
-          FILE_SHA=$(gh api repos/jhlee0409/homebrew-tap/contents/Formula/cchv-server.rb --jq '.sha')
-
-          # Replace version and SHA256 placeholders/values
-          sed -i "s/version \".*\"/version \"${VERSION}\"/" cchv-server.rb
-          sed -i "s/sha256 \".*_MACOS_ARM64\"/sha256 \"${cchv_server_macos_arm64}\"/" cchv-server.rb
-          sed -i "s/sha256 \".*_MACOS_X64\"/sha256 \"${cchv_server_macos_x64}\"/" cchv-server.rb
-          sed -i "s/sha256 \".*_LINUX_ARM64\"/sha256 \"${cchv_server_linux_arm64}\"/" cchv-server.rb
-          sed -i "s/sha256 \".*_LINUX_X64\"/sha256 \"${cchv_server_linux_x64}\"/" cchv-server.rb
-
-          # Also handle non-placeholder SHA256 (for subsequent releases)
-          # Use line-based replacement: find the url line, then replace the next sha256 line
-          python3 -c "
-          import re, os
-          with open('cchv-server.rb') as f:
-              content = f.read()
-          v = os.environ['VERSION']
-          pairs = [
-              ('macos-arm64', os.environ.get('cchv_server_macos_arm64', '')),
-              ('macos-x64', os.environ.get('cchv_server_macos_x64', '')),
-              ('linux-arm64', os.environ.get('cchv_server_linux_arm64', '')),
-              ('linux-x64', os.environ.get('cchv_server_linux_x64', '')),
-          ]
-          for asset, sha in pairs:
-              if sha:
-                  pattern = r'(url \".*' + re.escape(asset) + r'.*\"\n\s+sha256 \")([a-fA-F0-9]+|PLACEHOLDER\w*)(\")'
-                  content = re.sub(pattern, r'\g<1>' + sha + r'\3', content)
-          content = re.sub(r'version \".*?\"', f'version \"{v}\"', content, count=1)
-          with open('cchv-server.rb', 'w') as f:
-              f.write(content)
-          "
-
-          # Push updated formula
-          gh api repos/jhlee0409/homebrew-tap/contents/Formula/cchv-server.rb \
-            -X PUT \
-            -f message="chore: update cchv-server to v${VERSION}" \
-            -f content="$(base64 -w0 < cchv-server.rb)" \
-            -f sha="${FILE_SHA}"

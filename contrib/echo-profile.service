@@ -1,0 +1,54 @@
+# systemd service unit for EchoProfile WebUI server mode.
+#
+# Installation:
+#   sudo cp contrib/echo-profile.service /etc/systemd/system/echo-profile.service
+#   sudo systemctl edit --full echo-profile.service
+#   sudo systemctl enable --now echo-profile.service
+#   sudo systemctl status echo-profile.service
+#   journalctl -u echo-profile.service -f
+
+[Unit]
+Description=EchoProfile WebUI Server
+Documentation=https://github.com/jhlee0409/echo-profile
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Change this to the Linux user whose AI chat history directories should be read.
+User=YOUR_USERNAME_HERE
+Group=YOUR_USERNAME_HERE
+WorkingDirectory=/home/YOUR_USERNAME_HERE
+
+Environment=PORT=3727
+# Recommended: set a stable secret token before exposing the service beyond localhost.
+# Environment=ECHOPROFILE_TOKEN=replace-with-a-long-random-token
+
+ExecStart=/usr/local/bin/echo-profile --serve --host 127.0.0.1 --port ${PORT}
+Restart=on-failure
+RestartSec=5
+
+# Security hardening. EchoProfile needs read access to the service user's home directory.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/YOUR_USERNAME_HERE/.echo-profile
+PrivateTmp=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+
+# Resource limits.
+MemoryMax=512M
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

@@ -1,12 +1,20 @@
 services:
-  webui:
-    build: .
+  echo-profile:
+    build:
+      context: .
+      args:
+        PROXY_URL: ${PROXY_URL:-}
     ports:
-      - "127.0.0.1:3727:3727"
+      # Bind to localhost by default. Change 127.0.0.1 to 0.0.0.0 only behind a reverse proxy or firewall.
+      - "127.0.0.1:${ECHOPROFILE_PORT:-3727}:3727"
+    environment:
+      # Set ECHOPROFILE_TOKEN in your shell or .env file to require a stable login token.
+      ECHOPROFILE_TOKEN: ${ECHOPROFILE_TOKEN:-}
     volumes:
-      - ${HOME}/.claude:/home/cchv/.claude:ro
-      - ${HOME}/.codex:/home/cchv/.codex:ro
-      - ${HOME}/.local/share/opencode:/home/cchv/.local/share/opencode:ro
+      - ${HOME}/.claude:/home/echoprofile/.claude:ro
+      - ${HOME}/.codex:/home/echoprofile/.codex:ro
+      - ${HOME}/.local/share/opencode:/home/echoprofile/.local/share/opencode:ro
+      - echo-profile-data:/home/echoprofile/.echo-profile
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -14,9 +22,13 @@ services:
       resources:
         limits:
           memory: 512M
-          cpus: '1.0'
+          cpus: "1.0"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3727/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3727/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 10s
+
+volumes:
+  echo-profile-data:

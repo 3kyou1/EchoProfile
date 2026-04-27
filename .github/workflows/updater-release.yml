@@ -108,6 +108,10 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: install macOS universal Rust targets
+        if: matrix.platform == 'macos-14'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
       - name: cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:

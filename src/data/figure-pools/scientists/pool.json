@@ -1,6 +1,6 @@
 {
   "id": "scientists",
-  "name": "科学家候选池",
+  "name": "scientists",
   "description": "从旧 scientistPool.json 与 scientist-portraits 迁移打包。 文案已强化为更有智性气质、问题意识和方法感的展示版本。",
   "origin": "imported",
   "isDefault": false,

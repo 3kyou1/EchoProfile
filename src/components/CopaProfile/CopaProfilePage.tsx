@@ -75,6 +75,14 @@ interface LoadingFigureCopy {
   copy: string;
 }
 
+function sanitizeEnglishLoadingCopy(value: string): string {
+  return value
+    .replace(/[\u3400-\u9fff]+/g, "")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function dedupeProviders(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort();
 }
@@ -360,7 +368,8 @@ export function CopaProfilePage() {
     return selectedFigurePool.records
       .filter((record) => record.status === "valid")
       .map((record) => {
-        const copy = language === "zh" ? record.loading_copy_zh.trim() : record.loading_copy_en.trim();
+        const rawCopy = language === "zh" ? record.loading_copy_zh.trim() : record.loading_copy_en.trim();
+        const copy = language === "zh" ? rawCopy : sanitizeEnglishLoadingCopy(rawCopy);
         const localizedZh = record.localized_names?.zh?.trim();
         const name = language === "zh" ? localizedZh || record.name : record.name;
         return {

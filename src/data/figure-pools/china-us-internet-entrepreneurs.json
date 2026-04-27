@@ -16,7 +16,7 @@
       "temperament_tags": "舞台感强、外放、商业浪潮感、极强鼓动性",
       "temperament_summary": "像一个最早把中国互联网江湖讲成大时代的人，话一出口，生意场的风向都像要跟着转。",
       "loading_copy_zh": "马云正在把一堆零碎生意讲成下一轮大潮……",
-      "loading_copy_en": "Jack Ma is turning scattered trades into the outline of the next big wave...",
+      "loading_copy_en": "Tuning into Jack Ma's stage presence signal, aligning outward, market-wave instinct, and the noise of the market...",
       "bio_zh": "中国企业家，阿里巴巴集团创始人之一，是中国互联网草莽年代里最会“起势”的人物之一。他把小商家、支付、物流和全球化想象卷进同一场大潮，最后连时代叙事都成了他的工具。",
       "bio_en": "A Chinese entrepreneur and co-founder of Alibaba, and one of the first builders to turn commerce into a story about an era. He did not just assemble a platform; he created the climate in which countless small merchants could find their place in the same rising tide.",
       "achievements_zh": [
@@ -29,7 +29,11 @@
         "Built Taobao and Tmall into dominant platforms",
         "Helped shape the infrastructure of China's internet commerce"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/jack_ma.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/jack_ma.jpg",
+      "core_traits_en": "visionary storytelling, commercial instinct, organizational mobilization, global ambition",
+      "temperament_tags_en": "stage presence, outward, market-wave instinct, mobilizing force",
+      "thinking_style_en": "Approaches problems through visionary storytelling, commercial instinct, organizational mobilization, global ambition, with a working style marked by stage presence, outward, market-wave instinct, mobilizing force.",
+      "temperament_summary_en": "Feels like Jack Ma channels stage presence, outward, market-wave instinct, mobilizing force: a distinctive presence shaped by visionary storytelling, commercial instinct, organizational mobilization, global ambition."
     },
     {
       "slug": "pony_ma",
@@ -44,7 +48,7 @@
       "temperament_tags": "低调、工程派、克制、生态型",
       "temperament_summary": "像一个珠江边安静下棋的人，不高声，但棋盘越铺越大，最后半个江湖都在他的局里。",
       "loading_copy_zh": "马化腾正在把关系、支付和流量悄悄接进更深的一张网……",
-      "loading_copy_en": "Pony Ma is quietly wiring relationships, payments, and traffic into a deeper network...",
+      "loading_copy_en": "Tuning into Pony Ma's low-key signal, aligning engineering-minded, restrained, and the noise of the market...",
       "bio_zh": "中国企业家，腾讯主要创始人之一，是中国互联网从即时通讯走向超级生态的关键人物。他不像最会喊话的那一个，却常常是最后把关系链、流量口和支付水路都接到自己这边的人。",
       "bio_en": "A Chinese entrepreneur and principal co-founder of Tencent, and the sort of builder who rarely claims center stage yet keeps placing decisive pieces deep inside the system. From social to payments, from gaming to content, he slowly turned entry points into an ecosystem.",
       "achievements_zh": [
@@ -57,7 +61,11 @@
         "Expanded the QQ and WeChat ecosystems",
         "Helped build China's payment and content infrastructure"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/pony_ma.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/pony_ma.jpg",
+      "core_traits_en": "product restraint, engineering steadiness, ecosystem orchestration, long-term expansion",
+      "temperament_tags_en": "low-key, engineering-minded, restrained, ecosystem-oriented",
+      "thinking_style_en": "Approaches problems through product restraint, engineering steadiness, ecosystem orchestration, long-term expansion, with a working style marked by low-key, engineering-minded, restrained, ecosystem-oriented.",
+      "temperament_summary_en": "Feels like Pony Ma channels low-key, engineering-minded, restrained, ecosystem-oriented: a distinctive presence shaped by product restraint, engineering steadiness, ecosystem orchestration, long-term expansion."
     },
     {
       "slug": "zhang_yiming",
@@ -72,7 +80,7 @@
       "temperament_tags": "冷静、抽象、系统控、全球视野",
       "temperament_summary": "像一个新一代流量秩序的改朝换代者，不靠江湖姿态，靠的是机器重新分封注意力。",
       "loading_copy_zh": "张一鸣正在让机器重新决定什么值得被放大……",
-      "loading_copy_en": "Zhang Yiming is letting the machine decide what deserves to spread...",
+      "loading_copy_en": "Tuning into Zhang Yiming's calm signal, aligning abstract, systems-driven, and the noise of the market...",
       "bio_zh": "中国企业家，字节跳动创始人，是移动互联网下半场最能改写分发规则的人之一。他接过的不是门户时代的话语权，而是算法时代的闸门，于是内容江湖的牌桌也被重新洗了一遍。",
       "bio_en": "A Chinese entrepreneur and founder of ByteDance, and one of the clearest rewriters of distribution rules in the modern internet era. He was less interested in judging content than in trusting machines to reorder attention, and the industry’s power boundaries moved with that bet.",
       "achievements_zh": [
@@ -85,7 +93,11 @@
         "Built Toutiao and Douyin into major platforms",
         "Scaled TikTok into a global product"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/zhang_yiming.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/zhang_yiming.jpg",
+      "core_traits_en": "algorithmic distribution, cool abstraction, global product sense, efficiency-first",
+      "temperament_tags_en": "calm, abstract, systems-driven, global perspective",
+      "thinking_style_en": "Approaches problems through algorithmic distribution, cool abstraction, global product sense, efficiency-first, with a working style marked by calm, abstract, systems-driven, global perspective.",
+      "temperament_summary_en": "Feels like Zhang Yiming channels calm, abstract, systems-driven, global perspective: a distinctive presence shaped by algorithmic distribution, cool abstraction, global product sense, efficiency-first."
     },
     {
       "slug": "colin_huang",
@@ -100,7 +112,7 @@
       "temperament_tags": "克制、算账能力强、系统派、反传统",
       "temperament_summary": "像一个不爱抛头露面、却能在后台把整张生意账算到变天的人。",
       "loading_copy_zh": "黄峥正在把价格、供给和欲望重算成一条更狠的公式……",
-      "loading_copy_en": "Colin Huang is reworking price, supply, and desire into a harsher equation...",
+      "loading_copy_en": "Tuning into Colin Huang's restrained signal, aligning sharp commercial arithmetic, systems-minded, and the noise of the market...",
       "bio_zh": "中国企业家，拼多多创始人，是中国电商红海里最像“后厨高手”的人物之一。他不和你争台前风头，却会悄悄改掉价格、供给和人性的算法，最后把大盘都带偏。",
       "bio_en": "A Chinese entrepreneur and founder of Pinduoduo, and one of the founders who feels most like a designer of mechanisms. He did not win by being loud, but by quietly rewriting price, supply, and incentives until the old order cracked open before others fully noticed.",
       "achievements_zh": [
@@ -113,7 +125,11 @@
         "Scaled social commerce to the mass market",
         "Reshaped low-price supply chains and agricultural e-commerce"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/colin_huang.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/colin_huang.jpg",
+      "core_traits_en": "system efficiency, low-price mechanism design, game design, organizational abstraction",
+      "temperament_tags_en": "restrained, sharp commercial arithmetic, systems-minded, unconventional",
+      "thinking_style_en": "Approaches problems through system efficiency, low-price mechanism design, game design, organizational abstraction, with a working style marked by restrained, sharp commercial arithmetic, systems-minded, unconventional.",
+      "temperament_summary_en": "Feels like Colin Huang channels restrained, sharp commercial arithmetic, systems-minded, unconventional: a distinctive presence shaped by system efficiency, low-price mechanism design, game design, organizational abstraction."
     },
     {
       "slug": "robin_li",
@@ -128,7 +144,7 @@
       "temperament_tags": "技术派、稳、长期下注、理性",
       "temperament_summary": "像一个在中文互联网旧王朝里守过城、也在 AI 新战场上继续埋桩的人。",
       "loading_copy_zh": "李彦宏正在从搜索框往下一代智能入口继续深挖……",
-      "loading_copy_en": "Robin Li is digging from the search box toward the next intelligent entry point...",
+      "loading_copy_en": "Tuning into Robin Li's technical signal, aligning steady, long-term bettor, and the noise of the market...",
       "bio_zh": "中国企业家，百度创始人之一，是中文搜索时代和 AI 长线布局都绕不开的人物。从当年抢搜索入口，到后来押自动驾驶和大模型，他一直守着“下一代技术门槛”这条线。",
       "bio_en": "A Chinese entrepreneur and co-founder of Baidu, indispensable to both the Chinese search era and the country’s long arc of AI investment. He carries an engineer’s patience: build the technical floor thick enough first, then wait for the next entry point to reveal itself.",
       "achievements_zh": [
@@ -141,7 +157,11 @@
         "Built a leading Chinese search platform",
         "Sustained major bets on autonomous driving and AI"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/robin_li.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/robin_li.jpg",
+      "core_traits_en": "search engineering, technical long-termism, platform patience, AI foresight",
+      "temperament_tags_en": "technical, steady, long-term bettor, rational",
+      "thinking_style_en": "Approaches problems through search engineering, technical long-termism, platform patience, AI foresight, with a working style marked by technical, steady, long-term bettor, rational.",
+      "temperament_summary_en": "Feels like Robin Li channels technical, steady, long-term bettor, rational: a distinctive presence shaped by search engineering, technical long-termism, platform patience, AI foresight."
     },
     {
       "slug": "william_ding",
@@ -156,7 +176,7 @@
       "temperament_tags": "稳、产品派、慢热、耐久",
       "temperament_summary": "像一个不爱把江湖话说满的人， quietly 种田，结果一抬头发现园子已经做得很深。",
       "loading_copy_zh": "丁磊正在把产品手感、内容和耐心生意重新配平……",
-      "loading_copy_en": "William Ding is rebalancing product feel, content, and patient business...",
+      "loading_copy_en": "Tuning into William Ding's steady signal, aligning product-minded, slow-burn, and the noise of the market...",
       "bio_zh": "中国企业家，网易创始人，是中国门户时代一路活到内容、游戏与音乐时代的老派经营者代表。他不总冲在风口最前面，却总能把业务熬成时间站队的一边。",
       "bio_en": "A Chinese entrepreneur and founder of NetEase, and one of the rarer durable operators in China’s internet history. He never seemed desperate to seize every passing wind, yet repeatedly turned products, content, and cash flow into assets that could survive time.",
       "achievements_zh": [
@@ -169,7 +189,11 @@
         "Built a leading Chinese gaming business",
         "Expanded content platforms such as NetEase Cloud Music"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/william_ding.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/william_ding.jpg",
+      "core_traits_en": "product taste, long-term operation, content commercialization, steady iteration",
+      "temperament_tags_en": "steady, product-minded, slow-burn, durable",
+      "thinking_style_en": "Approaches problems through product taste, long-term operation, content commercialization, steady iteration, with a working style marked by steady, product-minded, slow-burn, durable.",
+      "temperament_summary_en": "Feels like William Ding channels steady, product-minded, slow-burn, durable: a distinctive presence shaped by product taste, long-term operation, content commercialization, steady iteration."
     },
     {
       "slug": "zhou_hongyi",
@@ -184,7 +208,7 @@
       "temperament_tags": "好斗、锋利、流量战、强势",
       "temperament_summary": "像个永远不肯把刀收回鞘里的人，哪怕一桌人都坐下了，他也得先看看谁会先动手。",
       "loading_copy_zh": "周鸿祎正在把风险、注意力和冲突一起拖到台前……",
-      "loading_copy_en": "Zhou Hongyi is dragging risk, attention, and conflict into the spotlight...",
+      "loading_copy_en": "Tuning into Zhou Hongyi's combative signal, aligning sharp, traffic warfare, and the noise of the market...",
       "bio_zh": "中国企业家，360 集团创始人之一，是中国互联网混战年代最具火药味的人物之一。安全、浏览器、流量口、水面下的攻防，他几乎把每一场仗都打成了公开江湖。",
       "bio_en": "A Chinese entrepreneur and founder of 360, and one of the most combative and controversial founders in the Chinese internet. In his world, security is not merely a defensive posture but a language of war for taking entry points, attention, and narrative control.",
       "achievements_zh": [
@@ -197,7 +221,11 @@
         "Popularized free security software",
         "Played a major role in China's battles over internet entry points"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/zhou_hongyi.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/zhou_hongyi.jpg",
+      "core_traits_en": "aggressive competition, security instinct, traffic instinct, forceful expression",
+      "temperament_tags_en": "combative, sharp, traffic warfare, forceful",
+      "thinking_style_en": "Approaches problems through aggressive competition, security instinct, traffic instinct, forceful expression, with a working style marked by combative, sharp, traffic warfare, forceful.",
+      "temperament_summary_en": "Feels like Zhou Hongyi channels combative, sharp, traffic warfare, forceful: a distinctive presence shaped by aggressive competition, security instinct, traffic instinct, forceful expression."
     },
     {
       "slug": "lei_jun",
@@ -212,7 +240,7 @@
       "temperament_tags": "高能量、会战役、产品营销、执行派",
       "temperament_summary": "像一个最会在风口上排兵布阵的人，台上像演说家，台下像军需官。",
       "loading_copy_zh": "雷军正在把风口、供应链和掌声重新排成一场发布战役……",
-      "loading_copy_en": "Lei Jun is lining up timing, supply chain, and applause for another launch campaign...",
+      "loading_copy_en": "Tuning into Lei Jun's high-energy signal, aligning campaign-minded, product marketing, and the noise of the market...",
       "bio_zh": "中国企业家，小米集团创始人，是中国移动互联网与硬件创业交汇处最会造势、也最会落地的人物之一。从软件、手机到 IoT，他把一波波浪头都打成了发布会和供应链共同推进的战役。",
       "bio_en": "A Chinese entrepreneur and founder of Xiaomi, and one of the founders best able to turn a trend into a campaign. He tightened supply chains, product launches, community momentum, and pricing until what emerged was not only a product, but a tempo of business.",
       "achievements_zh": [
@@ -225,7 +253,11 @@
         "Built an integrated smartphone and IoT ecosystem",
         "Developed a powerful launch and community-marketing machine"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/lei_jun.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/lei_jun.jpg",
+      "core_traits_en": "execution speed, supply-chain organization, product marketing, opportunity judgment",
+      "temperament_tags_en": "high-energy, campaign-minded, product marketing, execution-driven",
+      "thinking_style_en": "Approaches problems through execution speed, supply-chain organization, product marketing, opportunity judgment, with a working style marked by high-energy, campaign-minded, product marketing, execution-driven.",
+      "temperament_summary_en": "Feels like Lei Jun channels high-energy, campaign-minded, product marketing, execution-driven: a distinctive presence shaped by execution speed, supply-chain organization, product marketing, opportunity judgment."
     },
     {
       "slug": "wang_xing",
@@ -240,7 +272,7 @@
       "temperament_tags": "冷、硬、理性、结构型",
       "temperament_summary": "像一个总在饭局散场后还盯着结构图的人，热闹归别人，地盘归他。",
       "loading_copy_zh": "王兴正在在情绪之前，先把市场结构又算了一遍……",
-      "loading_copy_en": "Wang Xing is recalculating market structure before emotion gets a vote...",
+      "loading_copy_en": "Tuning into Wang Xing's cool signal, aligning hard-edged, rational, and the noise of the market...",
       "bio_zh": "中国企业家，美团创始人之一，是团购大战之后真正把本地生活做成基础设施的人。他不像最爱讲故事的那一个，却常常是最后把最重、最苦、最难履约的那一层吃下来的人。",
       "bio_en": "A Chinese entrepreneur and co-founder of Meituan, and one of the purest structural competitors in China’s internet economy. He has little interest in theatrical stories; his strength lies in seeing how a market will eventually consolidate and building the heaviest, hardest, most decisive layer ahead of time.",
       "achievements_zh": [
@@ -253,7 +285,11 @@
         "Scaled local services into a platform business",
         "Built major delivery and instant-retail fulfillment networks"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/wang_xing.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/wang_xing.jpg",
+      "core_traits_en": "structural judgment, cool-headed expansion, local-services network thinking, persistent competition",
+      "temperament_tags_en": "cool, hard-edged, rational, structural",
+      "thinking_style_en": "Approaches problems through structural judgment, cool-headed expansion, local-services network thinking, persistent competition, with a working style marked by cool, hard-edged, rational, structural.",
+      "temperament_summary_en": "Feels like Wang Xing channels cool, hard-edged, rational, structural: a distinctive presence shaped by structural judgment, cool-headed expansion, local-services network thinking, persistent competition."
     },
     {
       "slug": "allen_zhang",
@@ -268,7 +304,7 @@
       "temperament_tags": "克制、极简、产品原教旨、细节控",
       "temperament_summary": "像一个在喧闹中国互联网里坚持做减法的人，越不吵，越显得异类。",
       "loading_copy_zh": "张小龙正在再删掉一层多余的声音……",
-      "loading_copy_en": "Allen Zhang is stripping away one more unnecessary layer of noise...",
+      "loading_copy_en": "Tuning into Allen Zhang's restrained signal, aligning minimalist, product purist, and the noise of the market...",
       "bio_zh": "中国企业家与产品人，Foxmail 创始人、微信核心缔造者之一，是中国互联网最有个人产品气质的人物之一。从 PC 时代邮件工具，到移动时代社交基础设施，他一路都在和“多余”作战。",
       "bio_en": "A Chinese entrepreneur and product builder, founder of Foxmail and one of the central creators of WeChat, and the kind of figure who wrote a private product aesthetic into the skeleton of a national-scale application. He is often most powerful not when adding something, but when removing it.",
       "achievements_zh": [
@@ -281,7 +317,11 @@
         "Led the growth of WeChat's product system",
         "Helped define mobile social product design in China"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/allen_zhang.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/allen_zhang.jpg",
+      "core_traits_en": "product minimalism, user sensitivity, anti-interruption instinct, detail obsession",
+      "temperament_tags_en": "restrained, minimalist, product purist, detail-obsessed",
+      "thinking_style_en": "Approaches problems through product minimalism, user sensitivity, anti-interruption instinct, detail obsession, with a working style marked by restrained, minimalist, product purist, detail-obsessed.",
+      "temperament_summary_en": "Feels like Allen Zhang channels restrained, minimalist, product purist, detail-obsessed: a distinctive presence shaped by product minimalism, user sensitivity, anti-interruption instinct, detail obsession."
     },
     {
       "slug": "richard_liu",
@@ -296,7 +336,7 @@
       "temperament_tags": "硬执行、纪律强、重模式、掌控欲",
       "temperament_summary": "像一个宁可自己下苦工，也不肯把命门交出去的人，路修得很重，但越走越像官道。",
       "loading_copy_zh": "刘强东正在从仓、配和信任链条反推这门生意……",
-      "loading_copy_en": "Richard Liu is working backward from warehousing, delivery, and trust...",
+      "loading_copy_en": "Tuning into Richard Liu's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，京东集团创始人之一，是电商江湖里最典型的重模式硬派人物。从仓到配、从时效到售后，他把本来最笨的那条路硬生生修成了护城河。",
       "bio_en": "A Chinese entrepreneur and founder of JD.com, and one of the clearest trust-first builders in Chinese internet retail. He would rather make warehousing, logistics, speed, and service heavier than outsource certainty, and in doing so turned reliability itself into a brand.",
       "achievements_zh": [
@@ -309,7 +349,11 @@
         "Built a major in-house logistics system",
         "Advanced a service-heavy model for Chinese e-commerce"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/richard_liu.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/richard_liu.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Richard Liu channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "wang_xiaochuan",
@@ -324,7 +368,7 @@
       "temperament_tags": "技术派、表达强、理性、语言接口",
       "temperament_summary": "像中文互联网里少数一直盯着“语言入口”不放的人，看上去总比时代快半步。",
       "loading_copy_zh": "王小川正在沿着语言接口一路摸向更远的智能边界……",
-      "loading_copy_en": "Wang Xiaochuan is following the language interface toward a farther edge of intelligence...",
+      "loading_copy_en": "Tuning into Wang Xiaochuan's technical signal, aligning rational, signal, and the noise of the market...",
       "bio_zh": "中国企业家与工程师，搜狗创始团队核心人物之一，是中文输入、搜索和语言 AI 这条暗线上的代表人物。从输入法时代到大模型时代，他几乎一直守在汉字与机器交界的地方。",
       "bio_en": "A Chinese entrepreneur and engineer central to Sogou’s founding team, and one of the few Chinese founders who stayed focused on language technology over the long run. From input methods to search and then large models, his recurring concern has been how humans and machines might speak to each other more naturally.",
       "achievements_zh": [
@@ -337,7 +381,11 @@
         "Helped build Sogou's search business",
         "Continued to invest in language technology and foundation-model ventures"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/wang_xiaochuan.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/wang_xiaochuan.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "technical, rational",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by technical, rational.",
+      "temperament_summary_en": "Feels like Wang Xiaochuan channels technical, rational: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "su_hua",
@@ -352,7 +400,7 @@
       "temperament_tags": "温和、技术派、普惠、社区型",
       "temperament_summary": "像一个始终记得普通人也该有镜头的人，语气不重，但立场很硬。",
       "loading_copy_zh": "宿华正在把门槛再放低一点，让更多普通人能被看见……",
-      "loading_copy_en": "Su Hua is lowering the threshold so more ordinary people can be seen...",
+      "loading_copy_en": "Tuning into Su Hua's gentle signal, aligning technical, signal, and the noise of the market...",
       "bio_zh": "中国企业家，快手联合创始人之一，是短视频江湖里“老铁气”和普惠表达路线最鲜明的人物之一。在流量越来越头部化的年代，他仍坚持让更多普通人的生活也能占据屏幕。",
       "bio_en": "A Chinese entrepreneur and co-founder of Kuaishou, and one of the clearest representatives of an inclusive-expression philosophy in short video. His attention never rested only on top creators, but on whether technology could gently move those without a stage into view.",
       "achievements_zh": [
@@ -365,7 +413,11 @@
         "Helped grow a major short-video creator ecosystem",
         "Emphasized inclusive distribution and community retention"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/su_hua.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/su_hua.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "gentle, technical",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by gentle, technical.",
+      "temperament_summary_en": "Feels like Su Hua channels gentle, technical: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "cheng_yixiao",
@@ -380,7 +432,7 @@
       "temperament_tags": "朴素、耐心、社区直觉、低姿态",
       "temperament_summary": "像一个更信烟火气而不是精装修的人，平台在他手里总带着点真实土壤的味道。",
       "loading_copy_zh": "程一笑正在让社区从最朴素的一次表达里慢慢长大……",
-      "loading_copy_en": "Cheng Yixiao is letting the community grow from the smallest act of expression...",
+      "loading_copy_en": "Tuning into Cheng Yixiao's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，快手联合创始人之一，是平台早期社区气质的重要塑造者。他代表的是另一条中国互联网路径：不是先造精英产品，而是先让真实生活自己长成网络。",
       "bio_en": "A Chinese entrepreneur and co-founder of Kuaishou, and an important shaper of its early community character. He represents a path that is plain yet rare: do not first design an ideal user, but trust real users to raise the platform into being over time.",
       "achievements_zh": [
@@ -393,7 +445,11 @@
         "Shaped its early short-video community culture",
         "Helped the platform evolve from tool to network"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/cheng_yixiao.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/cheng_yixiao.jpg",
+      "core_traits_en": "platform patience",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through platform patience, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Cheng Yixiao channels strategic, market-aware, operator-minded: a distinctive presence shaped by platform patience."
     },
     {
       "slug": "cheng_wei",
@@ -408,7 +464,7 @@
       "temperament_tags": "硬、打仗型、调度脑、执行压强大",
       "temperament_summary": "像一个在城市缝隙里排兵的人，白天看路况，夜里还得看战争地图。",
       "loading_copy_zh": "程维正在把城市、司机和时间压力一起塞进调度网……",
-      "loading_copy_en": "Cheng Wei is feeding cities, drivers, and time pressure into one dispatch grid...",
+      "loading_copy_en": "Tuning into Cheng Wei's hard-edged signal, aligning pattern, signal, and the noise of the market...",
       "bio_zh": "中国企业家，滴滴出行创始人之一，是网约车大战和城市出行平台化进程中的核心人物之一。在补贴、运力、监管和对手夹击里，他硬是把一套调度系统推成了城市基础设施。",
       "bio_en": "A Chinese entrepreneur and founder of Didi, central to China’s ride-hailing wars and the platformization of urban mobility. What he truly built was not just an app, but a dispatch system capable of forcing a chaotic offline world into something like order.",
       "achievements_zh": [
@@ -421,7 +477,11 @@
         "Helped scale ride-hailing into a platform business",
         "Built large urban mobility dispatch networks"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/cheng_wei.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/cheng_wei.jpg",
+      "core_traits_en": "execution pressure",
+      "temperament_tags_en": "hard-edged",
+      "thinking_style_en": "Approaches problems through execution pressure, with a working style marked by hard-edged.",
+      "temperament_summary_en": "Feels like Cheng Wei channels hard-edged: a distinctive presence shaped by execution pressure."
     },
     {
       "slug": "charles_zhang",
@@ -436,7 +496,7 @@
       "temperament_tags": "先锋、媒体感强、公开表达、时代感",
       "temperament_summary": "像门户年代留下来的老江湖，知道流量怎么来，也知道镜头该打在哪。",
       "loading_copy_zh": "张朝阳正在唤醒那种早期门户时代的流量嗅觉……",
-      "loading_copy_en": "Charles Zhang is waking up the old portal instinct for traffic and stage presence...",
+      "loading_copy_en": "Tuning into Charles Zhang's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，搜狐创始人之一，是中国门户时代最具辨识度的创业者之一。那是个谁先占住首页、谁就更像山头掌门的年代，而他一直都在那个画面中央。",
       "bio_en": "A Chinese entrepreneur and founder of Sohu, and one of the most recognizable founders of China’s portal era. He has always carried the scent of that early internet generation: fluent in traffic, fluent in media, and always aware of what a stage can do.",
       "achievements_zh": [
@@ -449,7 +509,11 @@
         "Helped commercialize China's portal-media model",
         "Played a major role in the early competitive shape of China's internet"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/charles_zhang.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/charles_zhang.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Charles Zhang channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "chen_tianqiao",
@@ -464,7 +528,7 @@
       "temperament_tags": "胆大、时代卡位、资本感强、冒险",
       "temperament_summary": "像一个最懂窗口期有多短的人，一旦闻到机会，下注时手不会抖。",
       "loading_copy_zh": "陈天桥正在把又一个时代性赌注推上桌面……",
-      "loading_copy_en": "Chen Tianqiao is pushing another era-sized bet onto the table...",
+      "loading_copy_en": "Tuning into Chen Tianqiao's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，盛大网络创始人之一，是中国互联网娱乐、游戏与资本化浪潮里极具时代赌性的人物之一。在那个野蛮生长的年份里，他是最敢把筹码推到桌子中央的人之一。",
       "bio_en": "A Chinese entrepreneur and founder of Shanda, central to China’s internet entertainment and capitalization wave. What stands out most in him is a gambler’s willingness to push heavy chips into the center of the table when the window opens.",
       "achievements_zh": [
@@ -477,7 +541,11 @@
         "Expanded China's online gaming industry",
         "Became an emblematic early figure in internet-era capitalization in China"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/chen_tianqiao.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/chen_tianqiao.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Chen Tianqiao channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "charles_chao",
@@ -492,7 +560,7 @@
       "temperament_tags": "稳、经营型、媒体脑、低调",
       "temperament_summary": "像一个总在风浪边上扶船的人，不抢高光，但很少让船真翻。",
       "loading_copy_zh": "曹国伟正在重新给热度、秩序和平台生存找平衡……",
-      "loading_copy_en": "Charles Chao is finding a new balance between heat, order, and platform survival...",
+      "loading_copy_en": "Tuning into Charles Chao's steady signal, aligning low-key, signal, and the noise of the market...",
       "bio_zh": "中国企业家，新浪与微博体系的重要掌舵者之一，是门户向社交媒体转身过程中的关键经营者。江湖上最热的往往不是他本人，但很多最难熬的周期，偏偏要靠他这种人撑过去。",
       "bio_en": "A Chinese entrepreneur and key leader within Sina and Weibo, and an archetypal operator in the shift from portals to social media. His talent lies not in manufacturing myth, but in keeping an always-unsteady platform turning through its cycles.",
       "achievements_zh": [
@@ -505,7 +573,11 @@
         "Helped scale Weibo",
         "Managed the shift from portal media to social media"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/charles_chao.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/charles_chao.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "steady, low-key",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by steady, low-key.",
+      "temperament_summary_en": "Feels like Charles Chao channels steady, low-key: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "gong_yu",
@@ -520,7 +592,7 @@
       "temperament_tags": "耐心、经营派、内容平台、克制",
       "temperament_summary": "像个内容生意里的老掌柜，知道热闹能带客，也知道账本才决定店能开多久。",
       "loading_copy_zh": "龚宇正在把片库、版权和会员生意重新拧紧……",
-      "loading_copy_en": "Gong Yu is tightening catalog, rights, and membership economics back together...",
+      "loading_copy_en": "Tuning into Gong Yu's restrained signal, aligning pattern, signal, and the noise of the market...",
       "bio_zh": "中国企业家，爱奇艺创始人之一，是长视频大战里最典型的内容经营派人物。流量可以起伏，爆款可以轮换，但片库、版权和会员这几本账，他得一页页亲自算清。",
       "bio_en": "A Chinese entrepreneur and founder of iQIYI, and one of the figures in Chinese long-video most recognizably shaped like a content operator. His long struggle has been with a business that is expensive and slow: how to keep catalog, rights, and membership economics holding up the same platform at once.",
       "achievements_zh": [
@@ -533,7 +605,11 @@
         "Helped mature subscription video in China",
         "Built a long-form platform around rights and content operations"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/gong_yu.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/gong_yu.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "restrained",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by restrained.",
+      "temperament_summary_en": "Feels like Gong Yu channels restrained: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "victor_koo",
@@ -548,7 +624,7 @@
       "temperament_tags": "先锋、内容感强、冒险、早期互联网浪漫",
       "temperament_summary": "像中国视频互联网最早一批追梦的人，身上一直带着点“先拍了再说”的浪漫。",
       "loading_copy_zh": "古永锵正在把视频文化重新拼回互联网的未来里……",
-      "loading_copy_en": "Victor Koo is splicing video culture back into the future of the internet...",
+      "loading_copy_en": "Tuning into Victor Koo's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，优酷创始人之一，是在线视频最早的旗帜性创业者之一。在土豆和优酷还在抢跑的年代，他已经认定视频会吃掉越来越多的互联网时间和文化注意力。",
       "bio_en": "A Chinese entrepreneur and founder of Youku, and one of the earliest banner founders in Chinese online video. His importance lies not only in arriving early, but in believing sooner than most that video would eventually swallow a large share of internet time.",
       "achievements_zh": [
@@ -561,7 +637,11 @@
         "Helped form China's online video platform market",
         "Shaped habits around internet video consumption"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/victor_koo.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/victor_koo.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Victor Koo channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "yao_jinbo",
@@ -576,7 +656,7 @@
       "temperament_tags": "务实、下沉、撮合型、交易感",
       "temperament_summary": "像一个肯蹲在生活细处捡金子的人，越是琐碎，越觉得里面藏着平台生意。",
       "loading_copy_zh": "姚劲波正在把生活里的琐碎混乱重新整理成交易信号……",
-      "loading_copy_en": "Yao Jinbo is sorting everyday chaos into tradable signals...",
+      "loading_copy_en": "Tuning into Yao Jinbo's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，58 同城创始人之一，是分类信息和本地撮合平台最典型的创业者之一。租房、招聘、转让、家政，这些不够体面的需求，最后都能在他手里长成一门大生意。",
       "bio_en": "A Chinese entrepreneur and founder of 58.com, and a classic builder in classifieds and local matching. His gift is not making a business sound lofty, but organizing the most mundane, realistic, and troublesome needs into scale.",
       "achievements_zh": [
@@ -589,7 +669,11 @@
         "Scaled online classifieds into a platform model",
         "Focused on local services, jobs, and housing transactions"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/yao_jinbo.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/yao_jinbo.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Yao Jinbo channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "li_xiang",
@@ -604,7 +688,7 @@
       "temperament_tags": "直白、产品狂热、问题导向、持续修正",
       "temperament_summary": "像一个把产品复盘当家常便饭的人，嘴很直，刀也很快，但始终是冲着问题去。",
       "loading_copy_zh": "李想正在拿真实家庭问题一条条拷打产品……",
-      "loading_copy_en": "Li Xiang is pressure-testing the product against real family pain points...",
+      "loading_copy_en": "Tuning into Li Xiang's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，汽车之家与理想汽车创始人之一，是中国互联网创业者里极少见的高密度公开复盘型产品人。他一路从论坛、媒体走到智能汽车，身上的互联网产品脾气始终没变。",
       "bio_en": "A Chinese entrepreneur behind Autohome and Li Auto, and a rare founder who publicly revises his product thinking at high frequency. He does not fear changing his judgment; what he fears is product self-deception, which is why he keeps pressing every question back toward the real user.",
       "achievements_zh": [
@@ -617,7 +701,11 @@
         "Founded Li Auto",
         "Built a strong user-problem-oriented product methodology"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/li_xiang.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/li_xiang.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Li Xiang channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "he_xiaopeng",
@@ -632,7 +720,7 @@
       "temperament_tags": "技术乐观、产品脑、连续创业、升级派",
       "temperament_summary": "像一个从移动互联网闯出来、又不甘心只留在屏幕里的人。",
       "loading_copy_zh": "何小鹏正在把软件逻辑继续压进更重的机器里……",
-      "loading_copy_en": "He Xiaopeng is pushing software logic deeper into a heavier machine...",
+      "loading_copy_en": "Tuning into He Xiaopeng's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，UC 体系重要人物之一，也是小鹏汽车创始人之一，代表了那代互联网产品人向更重工业世界外溢的路径。从浏览器到智能车机，他始终在押软件会重新定义硬件。",
       "bio_en": "A Chinese entrepreneur once central to UC and later founder of XPeng, representing a clear path from internet product building into heavier industry. He has consistently believed that software will, sooner or later, rewrite the temperament of hardware.",
       "achievements_zh": [
@@ -645,7 +733,11 @@
         "Founded XPeng",
         "Advanced the narrative of software-defined products"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/he_xiaopeng.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/he_xiaopeng.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like He Xiaopeng channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "yu_yongfu",
@@ -660,7 +752,7 @@
       "temperament_tags": "流量脑、移动时代、转场能力、平台型",
       "temperament_summary": "像个专盯路口的人，风往哪吹不一定准，但流量往哪过，他常常先闻见。",
       "loading_copy_zh": "俞永福正在闻下一处流量咽喉会长在哪里……",
-      "loading_copy_en": "Yu Yongfu is sniffing out where the next traffic choke point will emerge...",
+      "loading_copy_en": "Tuning into Yu Yongfu's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，UC 浏览器核心创始人之一，也是阿里移动业务的重要人物之一，是移动互联网入口争夺战里的关键角色。在浏览器、分发和本地生活之间，他一直围着“谁站住路口”这件事打转。",
       "bio_en": "A Chinese entrepreneur central to UC Browser and later to Alibaba’s mobile strategy, and a key figure in China’s struggle over mobile internet entry points. His sharpest instinct is a nose for where the next traffic choke point is beginning to form.",
       "achievements_zh": [
@@ -673,7 +765,11 @@
         "Played a major role in Alibaba's mobile strategy",
         "Held a key position in the battle for mobile entry points"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/yu_yongfu.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/yu_yongfu.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Yu Yongfu channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "fu_sheng",
@@ -688,7 +784,7 @@
       "temperament_tags": "快、工具派、竞争性强、出海意识",
       "temperament_summary": "像一个知道工具产品也能打硬仗的人，先抓痛点，再一路把刀磨快。",
       "loading_copy_zh": "傅盛正在把焦虑和便利重新锻造成新的工具入口……",
-      "loading_copy_en": "Fu Sheng is forging fear and convenience into a new utility entry point...",
+      "loading_copy_en": "Tuning into Fu Sheng's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，猎豹移动创始团队核心人物之一，是移动工具、安全产品和出海浪潮中的代表人物之一。中国互联网曾经有一批人靠“小工具”杀出国门，他就是其中最有代表性的一个。",
       "bio_en": "A Chinese entrepreneur central to Cheetah Mobile and a representative figure in mobile tools, security products, and the globalization wave. He is especially skilled at forging the most immediate anxieties into an entry point frequent enough to scale.",
       "achievements_zh": [
@@ -701,7 +797,11 @@
         "Focused on security and utility products",
         "Took part in China's mobile-tools globalization wave"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/fu_sheng.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/fu_sheng.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Fu Sheng channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "chen_ou",
@@ -716,7 +816,7 @@
       "temperament_tags": "前台感强、营销型、曝光度高、消费互联网",
       "temperament_summary": "像把自己也一起推上柜台的人，货、品牌和老板的脸，最好同时被看见。",
       "loading_copy_zh": "陈欧正在把创始人魅力重新接回转化链路……",
-      "loading_copy_en": "Chen Ou is wiring founder charisma back into the conversion chain...",
+      "loading_copy_en": "Tuning into Chen Ou's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，聚美优品创始人之一，是消费互联网时代“创始人即品牌”的鲜明样本之一。在那个广告词能一夜刷屏的年代，他很懂怎么把自己也变成生意的一部分。",
       "bio_en": "A Chinese entrepreneur and founder of Jumei, and one of the clearest examples of the founder-as-brand model in the consumer internet era. By pushing himself to the front of the stage, he bound brand, traffic, and conversion to the same face.",
       "achievements_zh": [
@@ -729,7 +829,11 @@
         "Made founder branding a visible marketing engine",
         "Competed in the early consumer e-commerce wave"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/chen_ou.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/chen_ou.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Chen Ou channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "li_guoqing",
@@ -744,7 +848,7 @@
       "temperament_tags": "争议、直给、零售脑、表达欲强",
       "temperament_summary": "像个永远舍不得退场的老江湖，生意做着，嘴仗也不能落下。",
       "loading_copy_zh": "李国庆正在把零售判断和下一场公开争论拧到一起……",
-      "loading_copy_en": "Li Guoqing is mixing retail instinct with one more public argument...",
+      "loading_copy_en": "Tuning into Li Guoqing's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，当当网创始人之一，是中国图书电商与早期 B2C 零售的重要人物之一。他身上那股书生气和江湖气总是混在一起，所以商业判断和公共表达很少真正分家。",
       "bio_en": "A Chinese entrepreneur and co-founder of Dangdang, important to Chinese online books and early B2C retail. What is distinctive about him is how business judgment and public expression almost always arrive together, rarely separating into different personas.",
       "achievements_zh": [
@@ -757,7 +861,11 @@
         "Helped scale online book retail",
         "Competed in China's early B2C commerce era"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/li_guoqing.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/li_guoqing.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Li Guoqing channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "wang_wei_tudou",
@@ -772,7 +880,7 @@
       "temperament_tags": "文艺、先锋、内容理想主义、冒险",
       "temperament_summary": "像一个更想给一代网民留下一种文化气味的人，不只是想把流量生意做大。",
       "loading_copy_zh": "王微正在把互联网重新画成一种视频化的文化生活……",
-      "loading_copy_en": "Wang Wei is sketching the internet as a video-shaped cultural life...",
+      "loading_copy_en": "Tuning into Wang Wei's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "中国企业家，土豆网创始人之一，是在线视频最早的标志性人物之一。那是个视频刚开始长出文化影响力的年代，而他更像在试着给中国互联网留下一个更文艺、更视频化的侧面。",
       "bio_en": "A Chinese entrepreneur and founder of Tudou, and one of the earliest symbolic figures in Chinese online video. His weight lies less in commercial ruthlessness than in a strong idealism about video culture; he was never trying to build only a traffic business.",
       "achievements_zh": [
@@ -785,7 +893,11 @@
         "Competed in China's early online video market",
         "Helped make video a mainstream internet format"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/wang_wei_tudou.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/wang_wei_tudou.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Wang Wei channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "steve_jobs",
@@ -800,7 +912,7 @@
       "temperament_tags": "强控制、审美型、戏剧感、产品极致",
       "temperament_summary": "像一个把产品做成审美命题、再把审美做成商业统治力的人。",
       "loading_copy_zh": "乔布斯正在把技术一层层磨到“理所当然”的样子……",
-      "loading_copy_en": "Steve Jobs is sanding technology down until it feels inevitable...",
+      "loading_copy_en": "Tuning into Steve Jobs' strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家，苹果公司联合创始人之一，是现代消费科技史上最能塑形的人物之一。他不只是造产品，更像在反复训练世界重新学习什么叫“好的东西”。",
       "bio_en": "An American entrepreneur and co-founder of Apple, and one of the most shape-defining figures in the history of consumer technology. He did not merely build products; he kept training the world to relearn what “good” could feel like.",
       "achievements_zh": [
@@ -813,7 +925,11 @@
         "Led the creation of the Macintosh, iPhone, and iPad",
         "Reshaped consumer electronics and digital media industries"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/steve_jobs.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/steve_jobs.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Steve Jobs channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "bill_gates",
@@ -828,7 +944,7 @@
       "temperament_tags": "强理性、平台派、竞争纪律、长期主义",
       "temperament_summary": "像一个总在更高一层看产业格局的人，强理性、强纪律，也极少天真。",
       "loading_copy_zh": "比尔·盖茨正在围绕标准、平台和控制力重画棋盘……",
-      "loading_copy_en": "Bill Gates is redrawing the board around standards, platforms, and leverage...",
+      "loading_copy_en": "Tuning into Bill Gates' strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家，微软联合创始人之一，是 PC 软件平台时代最强势的统治者之一。他真正厉害的地方，不只是写软件，而是把标准、开发者和产业秩序一并握进手里。",
       "bio_en": "An American entrepreneur and co-founder of Microsoft, and one of the hardest-edged rulers of the PC software era. His deeper strength was not only in software itself, but in holding standards, developers, and industrial order in the same grip.",
       "achievements_zh": [
@@ -841,7 +957,11 @@
         "Scaled Windows and Office globally",
         "Built dominant software-platform and developer ecosystems"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/bill_gates.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/bill_gates.jpg",
+      "core_traits_en": "long-range planning",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through long-range planning, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Bill Gates channels strategic, market-aware, operator-minded: a distinctive presence shaped by long-range planning."
     },
     {
       "slug": "jeff_bezos",
@@ -856,7 +976,7 @@
       "temperament_tags": "冷硬、长期主义、执行狂、系统机器",
       "temperament_summary": "像一个把公司当成飞轮来设计的人，冷静、耐心，而且几乎残酷地重视效率。",
       "loading_copy_zh": "杰夫·贝索斯正在让飞轮再多转一圈……",
-      "loading_copy_en": "Jeff Bezos is giving the flywheel one more turn...",
+      "loading_copy_en": "Tuning into Jeff Bezos' strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家，亚马逊创始人之一，是互联网商业里最像系统经营者的人物之一。他把客户体验、成本结构和组织纪律接成一个飞轮，最后公司本身也像机器一样开始自我增压。",
       "bio_en": "An American entrepreneur and founder of Amazon, and one of the figures in internet business who feels most like a systems operator. He connected customer experience, cost structure, and organizational discipline into a flywheel until the company itself began to build pressure like a machine.",
       "achievements_zh": [
@@ -869,7 +989,11 @@
         "Built AWS",
         "Advanced modern e-commerce fulfillment and membership economics"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/jeff_bezos.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/jeff_bezos.jpg",
+      "core_traits_en": "system efficiency",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through system efficiency, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Jeff Bezos channels strategic, market-aware, operator-minded: a distinctive presence shaped by system efficiency."
     },
     {
       "slug": "larry_page",
@@ -884,7 +1008,7 @@
       "temperament_tags": "技术理想主义、抽象、平台派、安静",
       "temperament_summary": "像一个把技术理想主义和平台扩张天然视为同一件事的人。",
       "loading_copy_zh": "拉里·佩奇正在从更深的技术洞见里推演更大的平台……",
-      "loading_copy_en": "Larry Page is deriving a bigger platform from a deeper technical insight...",
+      "loading_copy_en": "Tuning into Larry Page's abstract signal, aligning pattern, signal, and the noise of the market...",
       "bio_zh": "美国企业家，谷歌联合创始人之一，是把搜索工程一路推成全球平台霸权的关键人物。他身上同时有研究者的抽象和平台扩张者的雄心。",
       "bio_en": "An American entrepreneur and co-founder of Google, pivotal in pushing search engineering into global platform dominance. He combines a researcher’s abstraction with the ambition of a platform expansionist.",
       "achievements_zh": [
@@ -897,7 +1021,11 @@
         "Built dominant search and advertising platforms",
         "Pushed outward into the broader Alphabet technology portfolio"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/larry_page.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/larry_page.jpg",
+      "core_traits_en": "search engineering",
+      "temperament_tags_en": "abstract",
+      "thinking_style_en": "Approaches problems through search engineering, with a working style marked by abstract.",
+      "temperament_summary_en": "Feels like Larry Page channels abstract: a distinctive presence shaped by search engineering."
     },
     {
       "slug": "sergey_brin",
@@ -912,7 +1040,7 @@
       "temperament_tags": "实验派、技术浪漫、好奇心重、平台型",
       "temperament_summary": "像一个总在被技术可能性牵着往前走的人，理工气很重，也更爱实验。",
       "loading_copy_zh": "谢尔盖·布林正在跟着好奇心继续往已知地图外面走……",
-      "loading_copy_en": "Sergey Brin is following curiosity beyond the edge of the known map...",
+      "loading_copy_en": "Tuning into Sergey Brin's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家，谷歌联合创始人之一，是 Google 早期技术探索精神最鲜明的体现者之一。他的重要性，在于总能把公司的视线继续往搜索之外推一点、再推一点。",
       "bio_en": "An American entrepreneur and co-founder of Google, and one of the clearest embodiments of its early exploratory engineering spirit. His importance lies in repeatedly nudging the company’s gaze a little farther beyond search.",
       "achievements_zh": [
@@ -925,7 +1053,11 @@
         "Helped build its search-algorithm advantage",
         "Supported expansion into frontier technology bets"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/sergey_brin.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/sergey_brin.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Sergey Brin channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "mark_zuckerberg",
@@ -940,7 +1072,7 @@
       "temperament_tags": "强控制、野心大、平台型、冷硬",
       "temperament_summary": "像一个总想从产品走向秩序的人，控制欲强，耐心也强。",
       "loading_copy_zh": "马克·扎克伯格正在沿着连接关系一层层收紧注意力控制……",
-      "loading_copy_en": "Mark Zuckerberg is tightening control over attention one connection at a time...",
+      "loading_copy_en": "Tuning into Mark Zuckerberg's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家，Meta 创始人之一，是全球社交平台权力结构最重要的塑造者之一。他做的不只是产品，而是在争夺人与人之间连接关系的主导权。",
       "bio_en": "An American entrepreneur and founder of Meta, and one of the major architects of power in global social platforms. What he builds is not merely product, but leverage over the very structure of human connection.",
       "achievements_zh": [
@@ -953,7 +1085,11 @@
         "Brought Instagram and WhatsApp into the platform portfolio",
         "Defined long-running competition in global social platforms"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/mark_zuckerberg.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/mark_zuckerberg.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Mark Zuckerberg channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "elon_musk",
@@ -968,7 +1104,7 @@
       "temperament_tags": "高压、愿景型、极端、跨界",
       "temperament_summary": "像一个把工程、战争感和公众戏剧性同时拉满的人，常常让组织处在接近过载的状态。",
       "loading_copy_zh": "埃隆·马斯克正在把愿景、钢铁、代码和压强一起点燃……",
-      "loading_copy_en": "Elon Musk is forcing vision, steel, code, and pressure into ignition...",
+      "loading_copy_en": "Tuning into Elon Musk's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家，横跨支付、汽车、航天、社交与 AI，是当代最具戏剧性和扩张性的科技创业者之一。他的真正标志，不只是跨界，而是把许多人嘴上的狂想硬压成现实。",
       "bio_en": "An American entrepreneur spanning payments, automobiles, space, social media, and AI, and one of the most theatrical and expansive founders of the modern age. His deeper signature is not merely range, but the force with which he drives spoken fantasy into material reality.",
       "achievements_zh": [
@@ -981,7 +1117,11 @@
         "Scaled Tesla and SpaceX",
         "Continues to shape debate across social platforms and AI"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/elon_musk.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/elon_musk.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Elon Musk channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "sam_altman",
@@ -996,7 +1136,7 @@
       "temperament_tags": "前瞻、资源整合、叙事强、速度快",
       "temperament_summary": "像一个总在平台切换前夜提前占位的人，表面平静，实则推进极快。",
       "loading_copy_zh": "萨姆·奥尔特曼正在趁窗口完全打开前先把人才、资本和算力聚拢……",
-      "loading_copy_en": "Sam Altman is gathering talent, capital, and compute before the window fully opens...",
+      "loading_copy_en": "Tuning into Sam Altman's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家与投资人，OpenAI 核心领导者之一，是生成式 AI 从研究议题变成平台竞赛的关键人物。他擅长的，是在窗口完全打开之前，就先把人才、资本和叙事聚到同一处。",
       "bio_en": "An American entrepreneur and investor, central to OpenAI and to the shift of generative AI from research topic to platform contest. His gift is gathering talent, capital, and narrative into one place before the window is fully open.",
       "achievements_zh": [
@@ -1009,7 +1149,11 @@
         "Helped mainstream generative AI products",
         "Long connected startup, capital, and technology networks"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/sam_altman.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/sam_altman.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Sam Altman channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "reed_hastings",
@@ -1024,7 +1168,7 @@
       "temperament_tags": "稳、制度型、转型高手、长期经营",
       "temperament_summary": "像一个知道公司升级必须先改制度的人，冷静、耐心，而且非常会做长期转场。",
       "loading_copy_zh": "里德·哈斯廷斯正在同时改写商业模式和组织规则……",
-      "loading_copy_en": "Reed Hastings is rewriting the business model and the organization in the same move...",
+      "loading_copy_en": "Tuning into Reed Hastings' steady signal, aligning long-term operation, signal, and the noise of the market...",
       "bio_zh": "美国企业家，Netflix 联合创始人之一，是内容分发模式重构最成功的创业者之一。他不只改写了一门生意，也改写了那家公司该如何被组织。",
       "bio_en": "An American entrepreneur and co-founder of Netflix, and one of the most successful restructurers of content distribution. He did not only rewrite a business model; he rewrote how the company itself needed to be organized.",
       "achievements_zh": [
@@ -1037,7 +1181,11 @@
         "Shifted the business from DVD rental to streaming",
         "Built a global subscription video platform"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/reed_hastings.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/reed_hastings.jpg",
+      "core_traits_en": "long-term operation",
+      "temperament_tags_en": "steady, long-term operation",
+      "thinking_style_en": "Approaches problems through long-term operation, with a working style marked by steady, long-term operation.",
+      "temperament_summary_en": "Feels like Reed Hastings channels steady, long-term operation: a distinctive presence shaped by long-term operation."
     },
     {
       "slug": "jack_dorsey",
@@ -1052,7 +1200,7 @@
       "temperament_tags": "极简、怪才、接口意识、实验性强",
       "temperament_summary": "像一个既想把产品做得极简，又总带着一点异质感和个人怪癖的人。",
       "loading_copy_zh": "杰克·多西正在把表达压缩成更小、更快的一次动作……",
-      "loading_copy_en": "Jack Dorsey is compressing expression into the smallest possible gesture...",
+      "loading_copy_en": "Tuning into Jack Dorsey's minimalist signal, aligning pattern, signal, and the noise of the market...",
       "bio_zh": "美国企业家，Twitter 与 Square/Block 重要创始人之一，是互联网表达接口与支付接口两条主线上的关键人物。他的作品看起来常常很薄，却总能留下很深的文化痕迹。",
       "bio_en": "An American entrepreneur central to Twitter and Square/Block, and a key figure on both the expression interface and the payments interface of the internet. His products often look thin on the surface, yet leave unusually deep cultural marks.",
       "achievements_zh": [
@@ -1065,7 +1213,11 @@
         "Co-founded Square/Block",
         "Popularized short-form social posting and merchant payment tools"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/jack_dorsey.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/jack_dorsey.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "minimalist",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by minimalist.",
+      "temperament_summary_en": "Feels like Jack Dorsey channels minimalist: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "evan_spiegel",
@@ -1080,7 +1232,7 @@
       "temperament_tags": "年轻感、反主流、设计敏感、产品直觉",
       "temperament_summary": "像一个特别懂年轻人如何表达、又不想被永久定义的人，敏锐而带点反主流。",
       "loading_copy_zh": "埃文·斯皮格尔正在把年轻人的别扭情绪翻译成产品直觉……",
-      "loading_copy_en": "Evan Spiegel is turning awkward youth emotion into product instinct...",
+      "loading_copy_en": "Tuning into Evan Spiegel's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家，Snap 共同创始人之一，是把“轻、快、会消失”的表达方式做成主流社交语法的人之一。他抓住的从来不只是功能，而是一代人对身份压力的处理方式。",
       "bio_en": "An American entrepreneur and co-founder of Snap, and one of the builders who made light, fast, disappearing expression into a mainstream social grammar. What he captured was never just a feature, but a generation’s way of handling identity pressure.",
       "achievements_zh": [
@@ -1093,7 +1245,11 @@
         "Popularized ephemeral social communication",
         "Made AR lenses a mainstream product experience"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/evan_spiegel.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/evan_spiegel.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Evan Spiegel channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "brian_chesky",
@@ -1108,7 +1264,7 @@
       "temperament_tags": "设计型、用户敏感、品牌感、社区信任",
       "temperament_summary": "像一个把平台生意做得带点款待感和设计洁癖的人。",
       "loading_copy_zh": "布莱恩·切斯基正在把信任包进设计里，让停留更像款待……",
-      "loading_copy_en": "Brian Chesky is wrapping trust in design until the stay feels like hospitality...",
+      "loading_copy_en": "Tuning into Brian Chesky's user sensitivity signal, aligning pattern, signal, and the noise of the market...",
       "bio_zh": "美国企业家，Airbnb 联合创始人之一，是把共享住宿做出品牌气味和生活方式想象的人之一。他最特别的地方，是让平台交易看起来像被设计过的款待。",
       "bio_en": "An American entrepreneur and co-founder of Airbnb, and one of the figures who gave shared accommodation a brand atmosphere and lifestyle imagination. His distinctive move was making platform transactions feel almost like designed hospitality.",
       "achievements_zh": [
@@ -1121,7 +1277,11 @@
         "Globalized the shared-accommodation platform model",
         "Put design and community trust at the center of the product"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/brian_chesky.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/brian_chesky.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "user sensitivity",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by user sensitivity.",
+      "temperament_summary_en": "Feels like Brian Chesky channels user sensitivity: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "stewart_butterfield",
@@ -1136,7 +1296,7 @@
       "temperament_tags": "协作型、审美感、工具思维、转型能力",
       "temperament_summary": "像一个专门在信息混乱里打磨沟通秩序的人，机智、克制，也很会转身。",
       "loading_copy_zh": "斯图尔特·巴特菲尔德正在把工作里丢失的上下文一段段接回去……",
-      "loading_copy_en": "Stewart Butterfield is restoring lost context to the middle of work...",
+      "loading_copy_en": "Tuning into Stewart Butterfield's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家，Flickr 与 Slack 重要创始人之一，是那种特别会把“副产品”重新做成主平台的人。他总能从信息混乱里，嗅到新的协作秩序。",
       "bio_en": "An American entrepreneur behind Flickr and Slack, and one of the rare founders especially gifted at turning “side-products” into central platforms. Again and again, he has sensed a new collaborative order inside information chaos.",
       "achievements_zh": [
@@ -1149,7 +1309,11 @@
         "Founded Slack",
         "Made team communication software mainstream infrastructure for work"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/stewart_butterfield.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/stewart_butterfield.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Stewart Butterfield channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "eric_yuan",
@@ -1164,7 +1328,7 @@
       "temperament_tags": "温和、工程派、体验驱动、企业服务",
       "temperament_summary": "像一个把复杂通信工具一路磨到足够顺手才肯停的人，温和但很有韧性。",
       "loading_copy_zh": "袁征正在把沟通体验继续磨到近乎无摩擦……",
-      "loading_copy_en": "Eric Yuan is sanding communication down until it feels almost frictionless...",
+      "loading_copy_en": "Tuning into Eric Yuan's gentle signal, aligning engineering-minded, signal, and the noise of the market...",
       "bio_zh": "美国华裔企业家，Zoom 创始人之一，是把视频会议从企业 IT 工具做成日常工作基础设施的关键人物之一。他最厉害的地方，是把复杂技术磨成普通人也愿意天天使用的顺手体验。",
       "bio_en": "A Chinese-American entrepreneur and founder of Zoom, central to turning video conferencing from enterprise IT software into everyday work infrastructure. His signature strength is sanding complex technology into an ease that ordinary people willingly use every day.",
       "achievements_zh": [
@@ -1177,7 +1341,11 @@
         "Mainstreamed video conferencing",
         "Made usability a core advantage in enterprise software"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/eric_yuan.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/eric_yuan.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "gentle, engineering-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by gentle, engineering-minded.",
+      "temperament_summary_en": "Feels like Eric Yuan channels gentle, engineering-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "travis_kalanick",
@@ -1192,7 +1360,7 @@
       "temperament_tags": "好斗、推进凶猛、灰度、战争型",
       "temperament_summary": "像一个把创业理解成持续进攻的人，冲得猛，也因此争议极大。",
       "loading_copy_zh": "特拉维斯·卡兰尼克正在让增长引擎在每座城市继续红线运转……",
-      "loading_copy_en": "Travis Kalanick is redlining the engine of growth one market at a time...",
+      "loading_copy_en": "Tuning into Travis Kalanick's combative signal, aligning pattern, signal, and the noise of the market...",
       "bio_zh": "美国企业家，Uber 关键创始人之一，是平台扩张史上最典型的战争型创业者之一。他代表着一种粗粝、强硬、争议不断却极有推进力的增长哲学。",
       "bio_en": "An American entrepreneur and key founder of Uber, and one of the clearest wartime founders in platform history. He embodies a growth philosophy that is abrasive, forceful, endlessly controversial, and undeniably propulsive.",
       "achievements_zh": [
@@ -1205,7 +1373,11 @@
         "Drove global ride-hailing expansion",
         "Defined a high-pressure style of growth-stage platform building"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/travis_kalanick.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/travis_kalanick.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "combative",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by combative.",
+      "temperament_summary_en": "Feels like Travis Kalanick channels combative: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "drew_houston",
@@ -1220,7 +1392,7 @@
       "temperament_tags": "务实、工具派、体验顺滑、稳定",
       "temperament_summary": "像一个喜欢把复杂系统藏在顺滑动作背后的人，务实，也很克制。",
       "loading_copy_zh": "德鲁·休斯顿正在把沉重基础设施继续藏进一个顺手动作背后……",
-      "loading_copy_en": "Drew Houston is hiding heavy infrastructure behind a single natural gesture...",
+      "loading_copy_en": "Tuning into Drew Houston's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家，Dropbox 创始人之一，是把云存储和文件同步这种隐形复杂性做成主流互联网体验的关键人物之一。他总能把很重的底层能力，藏进一个很轻的动作里。",
       "bio_en": "An American entrepreneur and founder of Dropbox, central to turning the invisible complexity of cloud storage and file sync into a mainstream internet experience. He repeatedly hides very heavy infrastructure inside an action that feels very light.",
       "achievements_zh": [
@@ -1233,7 +1405,11 @@
         "Popularized cloud storage tools",
         "Made file sync a mainstream internet experience"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/drew_houston.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/drew_houston.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Drew Houston channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "reid_hoffman",
@@ -1248,7 +1424,7 @@
       "temperament_tags": "网络型、思辨、平台派、投资者气质",
       "temperament_summary": "像一个天生按网络图而不是单品图理解商业的人，思辨感很强。",
       "loading_copy_zh": "里德·霍夫曼正在把更多节点拖进同一张增长网络……",
-      "loading_copy_en": "Reid Hoffman is expanding the network by pulling more nodes into orbit...",
+      "loading_copy_en": "Tuning into Reid Hoffman's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家与投资人，LinkedIn 联合创始人之一，是硅谷网络效应思维最典型的传播者之一。他的影响力既来自做平台，也来自解释平台为什么会赢。",
       "bio_en": "An American entrepreneur and investor, co-founder of LinkedIn, and one of Silicon Valley’s clearest translators of network-effects thinking. His influence comes both from building platforms and from explaining why platforms win.",
       "achievements_zh": [
@@ -1261,7 +1437,11 @@
         "Scaled professional networking into a platform business",
         "Played a deep role in Silicon Valley startup investing"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/reid_hoffman.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/reid_hoffman.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Reid Hoffman channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "peter_thiel",
@@ -1276,7 +1456,7 @@
       "temperament_tags": "反共识、锋利、垄断思维、资本感",
       "temperament_summary": "像一个总想从更高层绕开竞争的人，冷、锋利，而且反直觉。",
       "loading_copy_zh": "彼得·蒂尔正在寻找如何离开竞争，而不是如何坐稳其中……",
-      "loading_copy_en": "Peter Thiel is looking for the exit from competition, not the best seat inside it...",
+      "loading_copy_en": "Tuning into Peter Thiel's sharp signal, aligning pattern, signal, and the noise of the market...",
       "bio_zh": "美国企业家与投资人，PayPal 联合创始人之一，也是硅谷最具反共识攻击性的思想型资本人物之一。他不只是投公司，更像在不断输出一整套关于垄断、权力和技术未来的冷硬判断。",
       "bio_en": "An American entrepreneur and investor, co-founder of PayPal, and one of Silicon Valley’s most combative contrarian capital thinkers. He does not merely back companies; he keeps exporting a hard-edged worldview about monopoly, power, and the technological future.",
       "achievements_zh": [
@@ -1289,7 +1469,11 @@
         "Made early investments in companies such as Facebook",
         "Popularized monopoly-oriented startup thinking"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/peter_thiel.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/peter_thiel.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "sharp",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by sharp.",
+      "temperament_summary_en": "Feels like Peter Thiel channels sharp: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "marc_andreessen",
@@ -1304,7 +1488,7 @@
       "temperament_tags": "布道型、前瞻、资本网络、软件原教旨",
       "temperament_summary": "像一个把布道、投资和趋势放大器三种角色同时做在身上的人。",
       "loading_copy_zh": "马克·安德森正在把下一轮软件浪潮先写成共识……",
-      "loading_copy_en": "Marc Andreessen is writing the next software wave into consensus...",
+      "loading_copy_en": "Tuning into Marc Andreessen's strategic signal, aligning market-aware, operator-minded, and the noise of the market...",
       "bio_zh": "美国企业家与投资人，从 Netscape 到 Andreessen Horowitz，一直是“软件扩张主义”最强的布道者之一。他的影响力不只来自投中了什么，更来自他总能先把趋势写成话语。",
       "bio_en": "An American entrepreneur and investor who moved from Netscape to Andreessen Horowitz while becoming one of the loudest evangelists of software expansion. His influence comes not only from what he backed, but from how often he wrote the trend into language first.",
       "achievements_zh": [
@@ -1317,7 +1501,11 @@
         "Co-founded Andreessen Horowitz",
         "Coined the influential thesis that software is eating the world"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/marc_andreessen.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/marc_andreessen.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "strategic, market-aware, operator-minded",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by strategic, market-aware, operator-minded.",
+      "temperament_summary_en": "Feels like Marc Andreessen channels strategic, market-aware, operator-minded: a distinctive presence shaped by market instinct, product judgment, operating style."
     },
     {
       "slug": "ben_silbermann",
@@ -1332,7 +1520,7 @@
       "temperament_tags": "温和、审美型、灵感驱动、消费意图",
       "temperament_summary": "像一个总在把兴趣、欲望和生活方式拼成视觉秩序的人，温和但很有辨识度。",
       "loading_copy_zh": "本·西尔伯曼正在把欲望、审美和未来生活排成一张安静的图……",
-      "loading_copy_en": "Ben Silbermann is arranging desire, taste, and future life on one quiet board...",
+      "loading_copy_en": "Tuning into Ben Silbermann's gentle signal, aligning pattern, signal, and the noise of the market...",
       "bio_zh": "美国企业家，Pinterest 联合创始人之一，是少数把“灵感”和“消费意图”做成平台主轴的人物之一。他做的不是信息流，而更像是一面温柔、安静、却极具诱惑力的生活愿望墙。",
       "bio_en": "An American entrepreneur and co-founder of Pinterest, and one of the few founders to make inspiration and consumer intent the main axis of a platform. What he built is not merely a feed, but something closer to a gentle, quiet, and deeply seductive wall of desired life.",
       "achievements_zh": [
@@ -1345,7 +1533,11 @@
         "Defined an inspiration-first platform experience",
         "Linked content discovery with consumer intent"
       ],
-      "portrait_url": "/figure-portraits/entrepreneurs/ben_silbermann.jpg"
+      "portrait_url": "/figure-portraits/entrepreneurs/ben_silbermann.jpg",
+      "core_traits_en": "market instinct, product judgment, operating style",
+      "temperament_tags_en": "gentle",
+      "thinking_style_en": "Approaches problems through market instinct, product judgment, operating style, with a working style marked by gentle.",
+      "temperament_summary_en": "Feels like Ben Silbermann channels gentle: a distinctive presence shaped by market instinct, product judgment, operating style."
     }
   ],
   "origin": "imported",

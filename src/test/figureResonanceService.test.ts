@@ -855,6 +855,157 @@ describe("figureResonanceService", () => {
     expect(loaded?.pool_deleted).toBe(true);
   });
 
+  it("uses English-specific thinking style for English fallback reasons", async () => {
+    const imported = await importFigurePool({
+      name: "MBTI 动漫人格候选池",
+      records: [
+        {
+          slug: "intj_architect",
+          name: "Architect (INTJ)",
+          localized_names: { zh: "建筑师（INTJ）" },
+          portrait_url: "/intj.png",
+          quote_en: "If the system keeps failing, redesign the system.",
+          quote_zh: "如果系统总在失灵，那就重构系统。",
+          core_traits: "战略视野、结构感",
+          thinking_style: "先从全局框架入手，快速定位关键约束，再反推一套可长期运行的结构。",
+          thinking_style_en: "Starts from the global framework, identifies key constraints, then derives a durable operating structure.",
+          temperament_tags: "冷静、战略型、独立",
+          temperament_summary: "像一个总在默默画总蓝图的人。",
+          temperament_summary_en: "Feels like a quiet systems planner who starts with the blueprint before making a move.",
+          loading_copy_zh: "正在调亮建筑师频率...",
+          loading_copy_en: "Brightening the Architect signal...",
+          bio_zh: "建筑师原型代表高自主、强结构和长线策略感。",
+          bio_en: "The Architect archetype represents autonomy, structure, and long-range strategy.",
+          achievements_zh: ["把模糊目标整理成路线图"],
+          achievements_en: ["Turns vague ambitions into clean roadmaps"],
+        },
+      ],
+    });
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+
+    const result = await generateFigureResonance({
+      scopeKey: "global:all",
+      poolId: imported.id,
+      profileSnapshot: snapshot,
+      recentMessages: [
+        "I like structured roadmaps.",
+        "I prefer long-term systems.",
+        "I need clear constraints.",
+        "I value calm planning.",
+      ],
+      config: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      language: "en-US",
+    });
+
+    expect(result.long_term.primary.reason).toContain("Your long-term archetype");
+    expect(result.long_term.primary.reason).toContain("Starts from the global framework");
+    expect(result.long_term.primary.reason).not.toContain("先从全局框架");
+    expect(result.long_term.primary.hook).toContain("quiet systems planner");
+  });
+
+  it("rehydrates cached English cards with English-specific reasons when old cache stored Chinese text", async () => {
+    repoMock.setEntries([
+      {
+        directoryName: "MBTI",
+        poolJson: JSON.stringify({
+          id: "mbti",
+          name: "MBTI",
+          origin: "imported",
+          isDefault: true,
+          createdAt: "2026-04-25T00:00:00.000Z",
+          updatedAt: "2026-04-25T00:00:00.000Z",
+          schemaVersion: 1,
+          validationSummary: { validCount: 1, invalidCount: 0, errorCount: 0 },
+          records: [
+            {
+              slug: "intj_architect",
+              name: "Architect (INTJ)",
+              portrait_url: "portraits/intj.png",
+              quote_en: "If the system keeps failing, redesign the system.",
+              quote_zh: "如果系统总在失灵，那就重构系统。",
+              core_traits: "战略视野、结构感",
+              core_traits_en: "strategic vision, structural sense",
+              thinking_style: "先从全局框架入手。",
+              thinking_style_en: "Starts from the global framework.",
+              temperament_tags: "冷静、战略型",
+              temperament_tags_en: "calm, strategic",
+              temperament_summary: "像一个总在默默画总蓝图的人。",
+              temperament_summary_en: "Feels like a quiet systems planner.",
+              loading_copy_zh: "正在调亮建筑师频率...",
+              loading_copy_en: "Brightening the Architect signal...",
+              bio_zh: "建筑师原型。",
+              bio_en: "Architect archetype.",
+              achievements_zh: ["整理路线图"],
+              achievements_en: ["Creates roadmaps"],
+            },
+          ],
+        }),
+        portraits: { "portraits/intj.png": btoa(String.fromCharCode(1, 2, 3, 4)) },
+      },
+    ]);
+    const cacheKey = buildFigureResonanceCacheKey({
+      scopeKey: "global:all",
+      profileId: snapshot.id,
+      language: "en-US",
+      poolId: "mbti",
+    });
+
+    localStorage.setItem(
+      "webui:scientist-resonance.json:results",
+      JSON.stringify([
+        {
+          id: "cached-en",
+          cache_key: cacheKey,
+          scope_key: "global:all",
+          profile_id: snapshot.id,
+          generated_at: "2026-04-22T12:00:00.000Z",
+          language: "en",
+          pool_id: "mbti",
+          pool_name_snapshot: "MBTI",
+          pool_updated_at_snapshot: "2026-04-25T00:00:00.000Z",
+          source: "heuristic",
+          long_term: {
+            primary: {
+              name: "Architect (INTJ)",
+              slug: "intj_architect",
+              portrait_url: "/old.png",
+              hook: "old hook",
+              quote_zh: "old quote zh",
+              quote_en: "old quote en",
+              reason: "你长期更像 Architect (INTJ)：先从全局框架入手。",
+              resonance_axes: ["战略视野"],
+              confidence_style: "strong_resonance",
+              loading_copy_zh: "",
+              loading_copy_en: "",
+              bio_zh: "old bio zh",
+              bio_en: "old bio en",
+              achievements_zh: ["old zh"],
+              achievements_en: ["old en"],
+            },
+            secondary: [],
+          },
+          recent_state: null,
+        },
+      ])
+    );
+
+    const loaded = await loadFigureResonanceResult({
+      scopeKey: "global:all",
+      profileId: snapshot.id,
+      language: "en-US",
+      poolId: "mbti",
+    });
+
+    expect(loaded?.long_term.primary.reason).toContain("Your long-term archetype");
+    expect(loaded?.long_term.primary.reason).toContain("Starts from the global framework.");
+    expect(loaded?.long_term.primary.reason).not.toContain("你长期更像");
+  });
+
   it("deletes cached resonance results for a profile", async () => {
     const pools = await loadFigurePools();
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));

@@ -15,6 +15,10 @@ export interface FigureResonanceCard {
   reason: string;
   resonance_axes: string[];
   confidence_style: FigureConfidenceStyle;
+  core_traits_en?: string;
+  thinking_style_en?: string;
+  temperament_tags_en?: string;
+  temperament_summary_en?: string;
   loading_copy_zh: string;
   loading_copy_en: string;
   bio_zh: string;

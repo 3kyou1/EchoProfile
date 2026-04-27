@@ -4,7 +4,7 @@
   "analytics.activityHeatmap": "Activity Heatmap",
   "analytics.activityHeatmapTitle": "Activity Heatmap",
   "analytics.activityPeriod": "Activity Period",
-  "analytics.activityTooltip": "{{day}}\nActivity: {{count}} times\nTokens: {{tokens}}",
+  "analytics.activityTooltip": "{{day}} {{hour}}:00\nActivity: {{count}} times\nTokens: {{tokens}}",
   "analytics.Analytics Dashboard": "Analytics Dashboard",
   "analytics.andMoreSessions": "... and {{count}} more sessions",
   "analytics.Avg Session Time": "Avg Session Time",

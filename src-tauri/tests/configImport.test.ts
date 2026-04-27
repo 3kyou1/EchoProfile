@@ -23,7 +23,7 @@ describe('Tauri Configuration Import Tests', () => {
     expect(tauriConfig.productName).toBe('EchoProfile');
     // Version should match semver format (stable or prerelease)
     expect(tauriConfig.version).toMatch(/^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$/);
-    expect(tauriConfig.identifier).toBe('com.echoprofile.app');
+    expect(tauriConfig.identifier).toBe('com.3kyou1.echoprofile');
   });
 
   it('should preserve nested object structure', () => {

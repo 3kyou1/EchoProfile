@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "EchoProfile",
-  "version": "1.11.0",
-  "identifier": "com.echoprofile.app",
+  "version": "0.1.0",
+  "identifier": "com.3kyou1.echoprofile",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",

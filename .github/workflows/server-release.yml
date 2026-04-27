@@ -126,12 +126,18 @@ jobs:
 
     steps:
       - name: Download release assets and compute checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          BASE="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
+          mkdir -p assets
           : > CHECKSUMS.sha256
           for asset in echo-profile-macos-arm64 echo-profile-macos-x64 echo-profile-linux-arm64 echo-profile-linux-x64; do
-            curl -fsSL -o "${asset}.tar.gz" "${BASE}/${asset}.tar.gz"
-            sha=$(sha256sum "${asset}.tar.gz" | cut -d' ' -f1)
+            gh release download "${GITHUB_REF_NAME}" \
+              --repo "${{ github.repository }}" \
+              --pattern "${asset}.tar.gz" \
+              --dir assets \
+              --clobber
+            sha=$(sha256sum "assets/${asset}.tar.gz" | cut -d' ' -f1)
             printf "%s  %s\n" "${sha}" "${asset}.tar.gz" >> CHECKSUMS.sha256
           done
 

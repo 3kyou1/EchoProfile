@@ -44,24 +44,19 @@ const createStorageMock = (): Storage => {
   };
 };
 
-if (
-  typeof globalThis.localStorage === 'undefined' ||
-  typeof globalThis.localStorage.clear !== 'function'
-) {
-  const storage = createStorageMock();
+const storage = createStorageMock();
 
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    writable: true,
-    value: storage,
-  });
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  writable: true,
+  value: storage,
+});
 
-  Object.defineProperty(window, 'localStorage', {
-    configurable: true,
-    writable: true,
-    value: storage,
-  });
-}
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  writable: true,
+  value: storage,
+});
 
 // Mock matchMedia for components that use media queries
 Object.defineProperty(window, 'matchMedia', {

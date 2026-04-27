@@ -288,6 +288,23 @@ describe("CopaProfilePage resonance layout", () => {
     });
   });
 
+  it("uses a frosted blue hero palette instead of the old emerald wash", async () => {
+    render(<CopaProfilePage />);
+
+    const badge = await screen.findByText("User-only inference");
+    const hero = badge.closest("section");
+
+    expect(hero).not.toBeNull();
+    expect(hero?.className).toContain("96,165,250");
+    expect(hero?.className).toContain("148,163,184");
+    expect(hero?.className).not.toContain("22,163,74");
+
+    expect(badge.className).toContain("border-sky-500/20");
+    expect(badge.className).toContain("bg-slate-50/80");
+    expect(badge.className).toContain("text-slate-700");
+    expect(badge.className).not.toContain("emerald");
+  });
+
   it("passes the normalized UI language into CoPA generation and snapshot creation", async () => {
     mockUseTranslation.mockReturnValue({
       t: (
@@ -832,8 +849,12 @@ describe("CopaProfilePage resonance layout", () => {
     expect(poolsTab).toHaveClass("bg-foreground", "text-background");
   });
 
-  it("renders the top navigation as individually framed buttons and keeps the hero description on one line", () => {
+  it("renders the top navigation as individually framed buttons and keeps the hero description on one line", async () => {
     render(<CopaProfilePage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("A concise summary.").length).toBeGreaterThan(0);
+    });
 
     const profileTab = screen.getByRole("button", { name: "CoPA Profile" });
     const resonanceTab = screen.getByRole("button", { name: "Thought Echoes" });
@@ -895,6 +916,10 @@ describe("CopaProfilePage resonance layout", () => {
 
   it("shows a compact llm config trigger that opens the shared settings panel on demand", async () => {
     render(<CopaProfilePage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("A concise summary.").length).toBeGreaterThan(0);
+    });
 
     expect(screen.queryByText("LLM config")).not.toBeInTheDocument();
 

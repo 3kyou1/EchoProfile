@@ -174,6 +174,34 @@ For WebUI Server development:
 just serve-dev
 ```
 
+### Docker WebUI mode
+
+Docker runs the WebUI Server, not the desktop client. For first-time setup, copy the environment template:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set at least:
+
+```bash
+ECHOPROFILE_TOKEN=your-secret-token
+```
+
+Start the WebUI container:
+
+```bash
+docker compose up -d --build
+```
+
+Open after startup:
+
+```text
+http://127.0.0.1:3727/?token=your-secret-token
+```
+
+By default Docker mounts `~/.claude`, `~/.codex`, and `~/.local/share/opencode`. If your remote Linux host uses different paths, set `CLAUDE_HOME`, `CODEX_HOME`, or `OPENCODE_HOME` in `.env`.
+
 ### Frontend-only debugging
 
 ```bash

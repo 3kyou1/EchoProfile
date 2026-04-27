@@ -353,7 +353,7 @@
   "webSearchResultRenderer.title": "Web Search Results",
   "webSearchRenderer.duration": "Search Duration",
   "webSearchRenderer.query": "Search Query",
-  "webSearchRenderer.results": "Search Results",
+  "webSearchRenderer.results": "Search results ({{count}}):",
   "webSearchRenderer.seconds": "seconds",
   "webSearchRenderer.title": "Web Search",
   "webSearchRenderer.unknownResultFormat": "Unknown result format",

@@ -1,4 +1,34 @@
-# EchoProfile
+<div align="center">
+  <img src="public/app-icon.png" alt="EchoProfile paper plane icon" width="120" />
+
+  <h1>EchoProfile</h1>
+
+  <p><strong>Turn your AI conversation history into a personal AI profile.</strong></p>
+
+  <p>
+    <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white" />
+    <img alt="React" src="https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white" />
+    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+    <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" />
+    <img alt="Release" src="https://img.shields.io/badge/release-v1.11.0-2EA043?style=flat-square" />
+    <a href="https://arxiv.org/abs/2604.14773"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2604.14773-b31b1b?style=flat-square" /></a>
+  </p>
+
+  <p>
+    <a href="#what-can-it-do-today">Features</a> ·
+    <a href="#quick-start">Quick Start</a> ·
+    <a href="#custom-figure-pools-create-your-own-reference-system-with-a-skill">Figure Pools</a> ·
+    <a href="#coming-next">Roadmap</a> ·
+    <a href="#good-first-contribution-areas">Contributing</a>
+  </p>
+
+  <p>
+    <a href="README.md">English</a> ·
+    <a href="README.zh-CN.md">中文</a>
+  </p>
+</div>
+
+---
 
 > 🪞 Your AI conversations are becoming a second profile of you.
 

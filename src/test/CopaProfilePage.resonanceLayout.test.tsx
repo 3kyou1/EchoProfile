@@ -70,6 +70,8 @@ vi.mock("@/services/copaProfileService", () => ({
         temperature: 0.2,
       },
     },
+    discardSignalLength: 50,
+    pasteLikeSignalLength: 40,
   },
   buildScopeKey: ({ type, ref }: { type: string; ref: string }) => `${type}:${ref}`,
   createSnapshot: (...args: unknown[]) => mockCreateSnapshot(...args),
@@ -175,8 +177,11 @@ describe("CopaProfilePage resonance layout", () => {
           temperature: 0.2,
         },
       },
+      discardSignalLength: 50,
+      pasteLikeSignalLength: 40,
     });
 
+    mockSaveCopaConfig.mockReset();
     mockSaveCopaConfig.mockImplementation(async (next) => next);
     mockRequestCopaProfile.mockReset();
     mockCreateSnapshot.mockReset();
@@ -933,53 +938,82 @@ describe("CopaProfilePage resonance layout", () => {
     ).toBeInTheDocument();
   });
 
-  it("persists the configurable paste-like filter length from the llm settings panel", async () => {
+  it("keeps llm settings as a draft until the user confirms them", async () => {
     render(<CopaProfilePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
 
-    const input = screen.getByLabelText("Paste-like filter length");
-    fireEvent.change(input, { target: { value: "50" } });
-    fireEvent.blur(input);
+    const baseUrlInput = screen.getByDisplayValue("http://example.com/v1");
+    fireEvent.change(baseUrlInput, { target: { value: "http://draft.example.com/v1" } });
+
+    expect(mockSaveCopaConfig).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirm LLM settings" }));
 
     await waitFor(() => {
       expect(mockSaveCopaConfig).toHaveBeenCalledWith(
         expect.objectContaining({
-          pasteLikeSignalLength: 50,
+          copa: expect.objectContaining({
+            baseUrl: "http://draft.example.com/v1",
+          }),
         })
       );
     });
   });
 
-  it("allows editing the paste-like filter length from a leading zero before committing", async () => {
+  it("persists the configurable discard threshold from the llm settings panel", async () => {
     render(<CopaProfilePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
 
-    const input = screen.getByLabelText("Paste-like filter length") as HTMLInputElement;
+    const input = screen.getByLabelText("Discard threshold");
+    fireEvent.change(input, { target: { value: "80" } });
+    fireEvent.blur(input);
+
+    expect(mockSaveCopaConfig).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm LLM settings" }));
+
+    await waitFor(() => {
+      expect(mockSaveCopaConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          discardSignalLength: 80,
+        })
+      );
+    });
+  });
+
+  it("persists the configurable filter threshold below the discard threshold after confirmation", async () => {
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
+
+    const input = screen.getByLabelText("Filter threshold") as HTMLInputElement;
     fireEvent.change(input, { target: { value: "0" } });
     expect(input.value).toBe("0");
 
-    fireEvent.change(input, { target: { value: "050" } });
-    expect(input.value).toBe("050");
+    fireEvent.change(input, { target: { value: "030" } });
+    expect(input.value).toBe("030");
 
     fireEvent.blur(input);
+
+    expect(mockSaveCopaConfig).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm LLM settings" }));
 
     await waitFor(() => {
       expect(mockSaveCopaConfig).toHaveBeenCalledWith(
         expect.objectContaining({
-          pasteLikeSignalLength: 50,
+          pasteLikeSignalLength: 30,
         })
       );
     });
   });
 
-  it("allows clearing the paste-like filter length input before typing a new value", async () => {
+  it("clamps the filter threshold below the discard threshold before saving", async () => {
     render(<CopaProfilePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
 
-    const input = screen.getByLabelText("Paste-like filter length") as HTMLInputElement;
+    const input = screen.getByLabelText("Filter threshold") as HTMLInputElement;
     fireEvent.change(input, { target: { value: "" } });
     expect(input.value).toBe("");
 
@@ -988,10 +1022,14 @@ describe("CopaProfilePage resonance layout", () => {
 
     fireEvent.blur(input);
 
+    expect(mockSaveCopaConfig).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm LLM settings" }));
+
     await waitFor(() => {
       expect(mockSaveCopaConfig).toHaveBeenCalledWith(
         expect.objectContaining({
-          pasteLikeSignalLength: 200,
+          discardSignalLength: 50,
+          pasteLikeSignalLength: 49,
         })
       );
     });

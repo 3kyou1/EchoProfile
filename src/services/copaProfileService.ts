@@ -18,7 +18,8 @@ const STORE_NAME = "copa-profiles.json";
 const SNAPSHOTS_KEY = "snapshots";
 const CONFIG_KEY = "config";
 const MAX_SIGNAL_LENGTH = 1200;
-const DEFAULT_PASTE_LIKE_SIGNAL_LENGTH = 400;
+const DEFAULT_DISCARD_SIGNAL_LENGTH = 50;
+const DEFAULT_PASTE_LIKE_SIGNAL_LENGTH = 40;
 
 const FACTOR_ORDER: CopaFactorCode[] = ["CT", "SA", "SC", "CLM", "MS", "AMR"];
 
@@ -216,6 +217,7 @@ export const DEFAULT_COPA_LLM_CONFIG: CopaLlmConfigState = {
     enabled: false,
     config: { ...DEFAULT_COPA_MODEL_CONFIG },
   },
+  discardSignalLength: DEFAULT_DISCARD_SIGNAL_LENGTH,
   pasteLikeSignalLength: DEFAULT_PASTE_LIKE_SIGNAL_LENGTH,
 };
 
@@ -264,7 +266,7 @@ function normalizeSignal(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function normalizePasteLikeSignalLength(value: unknown, fallback = DEFAULT_PASTE_LIKE_SIGNAL_LENGTH): number {
+function normalizeSignalLengthThreshold(value: unknown, fallback: number, minimum = 1): number {
   const normalized =
     typeof value === "number"
       ? value
@@ -276,7 +278,28 @@ function normalizePasteLikeSignalLength(value: unknown, fallback = DEFAULT_PASTE
     return fallback;
   }
 
-  return Math.min(MAX_SIGNAL_LENGTH, Math.max(10, Math.round(normalized)));
+  return Math.min(MAX_SIGNAL_LENGTH, Math.max(minimum, Math.round(normalized)));
+}
+
+function normalizeSignalThresholds(input: {
+  discardSignalLength?: unknown;
+  pasteLikeSignalLength?: unknown;
+}): { discardSignalLength: number; pasteLikeSignalLength: number } {
+  const discardSignalLength = normalizeSignalLengthThreshold(
+    input.discardSignalLength,
+    DEFAULT_DISCARD_SIGNAL_LENGTH,
+    2
+  );
+  const rawPasteLikeSignalLength = normalizeSignalLengthThreshold(
+    input.pasteLikeSignalLength,
+    DEFAULT_PASTE_LIKE_SIGNAL_LENGTH,
+    1
+  );
+
+  return {
+    discardSignalLength,
+    pasteLikeSignalLength: Math.min(rawPasteLikeSignalLength, discardSignalLength - 1),
+  };
 }
 
 function factorPromptLabel(code: CopaFactorCode, language: CopaLanguage): string {
@@ -475,7 +498,10 @@ function normalizeModelConfig(value: unknown, fallback: CopaModelConfig): CopaMo
 
 function normalizeLlmConfigState(value: unknown): CopaLlmConfigState {
   const payload = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-  const pasteLikeSignalLength = normalizePasteLikeSignalLength(payload.pasteLikeSignalLength);
+  const signalThresholds = normalizeSignalThresholds({
+    discardSignalLength: payload.discardSignalLength,
+    pasteLikeSignalLength: payload.pasteLikeSignalLength,
+  });
 
   if ("copa" in payload) {
     const copa = normalizeModelConfig(payload.copa, DEFAULT_COPA_MODEL_CONFIG);
@@ -490,7 +516,7 @@ function normalizeLlmConfigState(value: unknown): CopaLlmConfigState {
         enabled: resonancePayload.enabled === true,
         config: normalizeModelConfig(resonancePayload.config, copa),
       },
-      pasteLikeSignalLength,
+      ...signalThresholds,
     };
   }
 
@@ -501,7 +527,7 @@ function normalizeLlmConfigState(value: unknown): CopaLlmConfigState {
       enabled: false,
       config: { ...legacyCopa },
     },
-    pasteLikeSignalLength,
+    ...signalThresholds,
   };
 }
 
@@ -550,8 +576,12 @@ export function buildScopeKey(input: {
 
 export function extractUserSignals(
   messages: ClaudeMessage[],
-  pasteLikeSignalLength = DEFAULT_PASTE_LIKE_SIGNAL_LENGTH
+  options: number | { pasteLikeSignalLength?: number; discardSignalLength?: number } = {}
 ): ExtractedSignalResult {
+  const { discardSignalLength, pasteLikeSignalLength } =
+    typeof options === "number"
+      ? normalizeSignalThresholds({ pasteLikeSignalLength: options })
+      : normalizeSignalThresholds(options);
   const normalized: string[] = [];
   const seen = new Set<string>();
   let userMessages = 0;
@@ -567,6 +597,10 @@ export function extractUserSignals(
     const rawText = contentToText(message.content);
     const text = normalizeSignal(rawText);
     if (!text) {
+      continue;
+    }
+
+    if (text.length > discardSignalLength) {
       continue;
     }
 

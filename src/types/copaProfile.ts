@@ -40,6 +40,7 @@ export interface CopaLlmConfigState {
     enabled: boolean;
     config: CopaModelConfig;
   };
+  discardSignalLength?: number;
   pasteLikeSignalLength?: number;
 }
 

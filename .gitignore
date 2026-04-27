@@ -82,3 +82,6 @@ docs/
 
 # Local git worktrees
 .worktrees/
+
+# Local Superpowers tool state
+.superpowers/

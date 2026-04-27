@@ -55,7 +55,7 @@ describe("copaProfileService", () => {
         timestamp: "2026-04-22T00:00:00Z",
         type: "user",
         role: "user",
-        content: "Explain this like I know the basics but not the details.",
+        content: "Explain with a checklist.",
       },
       {
         uuid: "a1",
@@ -89,7 +89,7 @@ describe("copaProfileService", () => {
     const result = extractUserSignals(messages);
 
     expect(result.messages).toEqual([
-      "Explain this like I know the basics but not the details.",
+      "Explain with a checklist.",
       "Please give me a checklist.",
       "ok",
     ]);
@@ -105,24 +105,27 @@ describe("copaProfileService", () => {
     const longPreference =
       "我希望你回答时先给结论，再补关键依据，并且尽量贴近我的实际限制，不要把重点淹没在背景介绍里。".repeat(10);
 
-    const result = extractUserSignals([
-      {
-        uuid: "u-long-log",
-        sessionId: "s1",
-        timestamp: "2026-04-22T00:04:00Z",
-        type: "user",
-        role: "user",
-        content: pastedLog,
-      },
-      {
-        uuid: "u-long-pref",
-        sessionId: "s1",
-        timestamp: "2026-04-22T00:05:00Z",
-        type: "user",
-        role: "user",
-        content: longPreference,
-      },
-    ]);
+    const result = extractUserSignals(
+      [
+        {
+          uuid: "u-long-log",
+          sessionId: "s1",
+          timestamp: "2026-04-22T00:04:00Z",
+          type: "user",
+          role: "user",
+          content: pastedLog,
+        },
+        {
+          uuid: "u-long-pref",
+          sessionId: "s1",
+          timestamp: "2026-04-22T00:05:00Z",
+          type: "user",
+          role: "user",
+          content: longPreference,
+        },
+      ],
+      { pasteLikeSignalLength: 400, discardSignalLength: 1200 }
+    );
 
     expect(pastedLog.length).toBeGreaterThan(400);
     expect(longPreference.length).toBeGreaterThan(400);
@@ -151,7 +154,7 @@ describe("copaProfileService", () => {
           content: pastedLog,
         },
       ],
-      50
+      { pasteLikeSignalLength: 50, discardSignalLength: 400 }
     );
 
     const withLooseThreshold = extractUserSignals(
@@ -165,11 +168,43 @@ describe("copaProfileService", () => {
           content: pastedLog,
         },
       ],
-      400
+      { pasteLikeSignalLength: 399, discardSignalLength: 400 }
     );
 
     expect(withStrictThreshold.messages).toEqual([]);
     expect(withLooseThreshold.messages).toEqual([pastedLog.replace(/\s+/g, " ").trim()]);
+  });
+
+  test("extractUserSignals drops messages above the discard threshold before paste-like filtering", () => {
+    const longPreference =
+      "我希望你回答时先给结论，再补关键依据，并且尽量贴近我的实际限制。".repeat(3);
+    const shortStructuredPaste = '{"error":"x","stack":["at a","at b"],"code":500}';
+
+    const result = extractUserSignals(
+      [
+        {
+          uuid: "u-long-pref",
+          sessionId: "s1",
+          timestamp: "2026-04-22T00:05:00Z",
+          type: "user",
+          role: "user",
+          content: longPreference,
+        },
+        {
+          uuid: "u-short-log",
+          sessionId: "s1",
+          timestamp: "2026-04-22T00:06:00Z",
+          type: "user",
+          role: "user",
+          content: shortStructuredPaste,
+        },
+      ],
+      { pasteLikeSignalLength: 20, discardSignalLength: 80 }
+    );
+
+    expect(longPreference.length).toBeGreaterThan(80);
+    expect(shortStructuredPaste.length).toBeLessThanOrEqual(80);
+    expect(result.messages).toEqual([]);
   });
 
   test("normalizeCopaResponse fills missing factors with defaults", () => {
@@ -765,7 +800,29 @@ describe("copaProfileService", () => {
     expect(config.copa.model).toBe("legacy-model");
     expect(config.resonance.enabled).toBe(false);
     expect(config.resonance.config.model).toBe("legacy-model");
-    expect(config.pasteLikeSignalLength).toBe(400);
+    expect(config.discardSignalLength).toBe(50);
+    expect(config.pasteLikeSignalLength).toBe(40);
+  });
+
+  test("saveCopaConfig keeps the paste-like filter threshold below the discard threshold", async () => {
+    const config = await saveCopaConfig({
+      copa: {
+        baseUrl: "https://copa.example.com/v1",
+        model: "copa-model",
+      },
+      resonance: {
+        enabled: false,
+        config: {
+          baseUrl: "https://res.example.com/v1",
+          model: "res-model",
+        },
+      },
+      discardSignalLength: 50,
+      pasteLikeSignalLength: 80,
+    });
+
+    expect(config.discardSignalLength).toBe(50);
+    expect(config.pasteLikeSignalLength).toBe(49);
   });
 
   test("resolveResonanceModelConfig falls back to CoPA config until a separate resonance config is enabled", async () => {

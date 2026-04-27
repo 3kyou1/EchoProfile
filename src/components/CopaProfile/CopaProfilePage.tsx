@@ -60,6 +60,7 @@ import {
 import type { FigurePoolZipInspection } from "@/types/figurePool";
 
 const MAX_PROMPT_SIGNALS = 300;
+const MAX_SIGNAL_THRESHOLD = 1200;
 const FIGURE_POOL_IMPORT_MAX_BYTES = 100 * 1024 * 1024;
 type CopaSubview = "profile" | "resonance" | "pools";
 
@@ -97,6 +98,15 @@ function localizeCopaErrorMessage(t: TFunction, error: unknown): string {
   }
 
   return message;
+}
+
+function clampSignalThreshold(value: string, fallback: number, minimum: number) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(MAX_SIGNAL_THRESHOLD, Math.max(minimum, parsed));
 }
 
 async function loadSessionsForProject(project: ClaudeProject, excludeSidechain: boolean) {
@@ -138,6 +148,7 @@ export function CopaProfilePage() {
   const [activeLlmConfigSection, setActiveLlmConfigSection] = useState<"copa" | "resonance">("copa");
   const [isLlmConfigOpen, setIsLlmConfigOpen] = useState(false);
   const [config, setConfig] = useState<CopaLlmConfigState>(DEFAULT_COPA_LLM_CONFIG);
+  const [draftConfig, setDraftConfig] = useState<CopaLlmConfigState>(DEFAULT_COPA_LLM_CONFIG);
   const [snapshots, setSnapshots] = useState<CopaSnapshot[]>([]);
   const [currentSnapshotId, setCurrentSnapshotId] = useState<string>("");
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
@@ -155,8 +166,11 @@ export function CopaProfilePage() {
   const [pendingFigurePoolImportName, setPendingFigurePoolImportName] = useState("");
   const [figurePoolImportError, setFigurePoolImportError] = useState("");
   const [loadingFigureIndex, setLoadingFigureIndex] = useState(0);
+  const [discardSignalLengthInput, setDiscardSignalLengthInput] = useState(
+    String(DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
+  );
   const [pasteLikeSignalLengthInput, setPasteLikeSignalLengthInput] = useState(
-    String(DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 400)
+    String(DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
   );
   const llmConfigPanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -169,7 +183,10 @@ export function CopaProfilePage() {
   }, [activeProviders, projects, providerOptions, selectedProject?.path, selectedSession?.file_path]);
 
   useEffect(() => {
-    void loadCopaConfig().then(setConfig);
+    void loadCopaConfig().then((storedConfig) => {
+      setConfig(storedConfig);
+      setDraftConfig(storedConfig);
+    });
     void loadCopaSnapshots().then(setSnapshots);
     void loadFigurePools().then((pools) => {
       setFigurePools(pools);
@@ -179,10 +196,13 @@ export function CopaProfilePage() {
   }, []);
 
   useEffect(() => {
-    setPasteLikeSignalLengthInput(
-      String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 400)
+    setDiscardSignalLengthInput(
+      String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
     );
-  }, [config.pasteLikeSignalLength]);
+    setPasteLikeSignalLengthInput(
+      String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
+    );
+  }, [config.discardSignalLength, config.pasteLikeSignalLength]);
 
   useEffect(() => {
     if (!isLlmConfigOpen) {
@@ -193,11 +213,25 @@ export function CopaProfilePage() {
       if (llmConfigPanelRef.current?.contains(event.target as Node)) {
         return;
       }
+      setDraftConfig(config);
+      setDiscardSignalLengthInput(
+        String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
+      );
+      setPasteLikeSignalLengthInput(
+        String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
+      );
       setIsLlmConfigOpen(false);
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        setDraftConfig(config);
+        setDiscardSignalLengthInput(
+          String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
+        );
+        setPasteLikeSignalLengthInput(
+          String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
+        );
         setIsLlmConfigOpen(false);
       }
     };
@@ -209,7 +243,7 @@ export function CopaProfilePage() {
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isLlmConfigOpen]);
+  }, [config, isLlmConfigOpen]);
 
   useEffect(() => {
     if (figurePools.length === 0) {
@@ -375,13 +409,19 @@ export function CopaProfilePage() {
     );
   };
 
-  const isInheritedResonanceConfig = activeLlmConfigSection === "resonance" && !config.resonance.enabled;
+  const isInheritedResonanceConfig = activeLlmConfigSection === "resonance" && !draftConfig.resonance.enabled;
   const activeLlmModelConfig =
     activeLlmConfigSection === "copa"
-      ? config.copa
-      : config.resonance.enabled
-        ? config.resonance.config
-        : resolveCopaModelConfig(config);
+      ? draftConfig.copa
+      : draftConfig.resonance.enabled
+        ? draftConfig.resonance.config
+        : resolveCopaModelConfig(draftConfig);
+  const hasDraftConfigChanges =
+    JSON.stringify(draftConfig) !== JSON.stringify(config) ||
+    discardSignalLengthInput !==
+      String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50) ||
+    pasteLikeSignalLengthInput !==
+      String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40);
 
   useEffect(() => {
     if (!currentSnapshot) {
@@ -418,60 +458,118 @@ export function CopaProfilePage() {
 
   const persistConfig = (next: CopaLlmConfigState) => {
     setConfig(next);
+    setDraftConfig(next);
     void saveCopaConfig(next);
   };
 
   const handleCopaConfigChange = <K extends keyof CopaModelConfig>(key: K, value: CopaModelConfig[K]) => {
-    persistConfig({
-      ...config,
+    setDraftConfig((current) => ({
+      ...current,
       copa: {
-        ...config.copa,
+        ...current.copa,
         [key]: value,
       },
-    });
+    }));
   };
 
   const handleResonanceConfigToggle = (enabled: boolean) => {
-    persistConfig({
-      ...config,
+    setDraftConfig((current) => ({
+      ...current,
       resonance: {
         enabled,
-        config: enabled && !config.resonance.enabled ? { ...resolveCopaModelConfig(config) } : config.resonance.config,
+        config: enabled && !current.resonance.enabled ? { ...resolveCopaModelConfig(current) } : current.resonance.config,
       },
-    });
+    }));
   };
 
   const handleResonanceConfigChange = <K extends keyof CopaModelConfig>(
     key: K,
     value: CopaModelConfig[K]
   ) => {
-    persistConfig({
-      ...config,
+    setDraftConfig((current) => ({
+      ...current,
       resonance: {
-        ...config.resonance,
+        ...current.resonance,
         config: {
-          ...config.resonance.config,
+          ...current.resonance.config,
           [key]: value,
         },
       },
-    });
+    }));
+  };
+
+  const handleDiscardSignalLengthCommit = (value: string) => {
+    const fallback = draftConfig.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50;
+    const clampedValue = clampSignalThreshold(value, fallback, 2);
+    setDiscardSignalLengthInput(String(clampedValue));
+
+    setDraftConfig((current) => ({
+      ...current,
+      discardSignalLength: clampedValue,
+      pasteLikeSignalLength: Math.min(
+        current.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40,
+        clampedValue - 1
+      ),
+    }));
+    setPasteLikeSignalLengthInput((current) =>
+      String(Math.min(clampSignalThreshold(current, DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40, 1), clampedValue - 1))
+    );
   };
 
   const handlePasteLikeSignalLengthCommit = (value: string) => {
-    const nextValue = Number.parseInt(value, 10);
-    if (!Number.isFinite(nextValue)) {
-      setPasteLikeSignalLengthInput(
-        String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 400)
-      );
-      return;
-    }
-    const clampedValue = Math.min(1200, Math.max(10, nextValue));
+    const discardThreshold = draftConfig.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50;
+    const fallback = draftConfig.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40;
+    const clampedValue = Math.min(clampSignalThreshold(value, fallback, 1), discardThreshold - 1);
     setPasteLikeSignalLengthInput(String(clampedValue));
 
-    persistConfig({
-      ...config,
+    setDraftConfig((current) => ({
+      ...current,
       pasteLikeSignalLength: clampedValue,
-    });
+    }));
+  };
+
+  const openLlmConfigPanel = () => {
+    setDraftConfig(config);
+    setDiscardSignalLengthInput(
+      String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
+    );
+    setPasteLikeSignalLengthInput(
+      String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
+    );
+    setIsLlmConfigOpen(true);
+  };
+
+  const closeLlmConfigPanel = () => {
+    setDraftConfig(config);
+    setDiscardSignalLengthInput(
+      String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
+    );
+    setPasteLikeSignalLengthInput(
+      String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
+    );
+    setIsLlmConfigOpen(false);
+  };
+
+  const confirmLlmConfigPanel = () => {
+    const discardSignalLength = clampSignalThreshold(
+      discardSignalLengthInput,
+      config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50,
+      2
+    );
+    const nextConfig = {
+      ...draftConfig,
+      discardSignalLength,
+      pasteLikeSignalLength: Math.min(
+        clampSignalThreshold(
+          pasteLikeSignalLengthInput,
+          config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40,
+          1
+        ),
+        discardSignalLength - 1
+      ),
+    };
+    persistConfig(nextConfig);
+    setIsLlmConfigOpen(false);
   };
 
   const toggleProvider = (provider: string) => {
@@ -569,7 +667,10 @@ export function CopaProfilePage() {
     try {
       const generationLanguage = normalizeCopaLanguage(i18n.resolvedLanguage || i18n.language || "en");
       const collected = await collectScopeMessages();
-      const extracted = extractUserSignals(collected.messages, config.pasteLikeSignalLength);
+      const extracted = extractUserSignals(collected.messages, {
+        discardSignalLength: config.discardSignalLength,
+        pasteLikeSignalLength: config.pasteLikeSignalLength,
+      });
       const limitedSignals =
         extracted.messages.length > MAX_PROMPT_SIGNALS
           ? extracted.messages.slice(-MAX_PROMPT_SIGNALS)
@@ -651,7 +752,10 @@ export function CopaProfilePage() {
         scopeKey: currentScopeKey,
         poolId: selectedFigurePool.id,
         profileSnapshot: currentSnapshot,
-        recentMessages: extractUserSignals(collected.messages, config.pasteLikeSignalLength).messages,
+        recentMessages: extractUserSignals(collected.messages, {
+          discardSignalLength: config.discardSignalLength,
+          pasteLikeSignalLength: config.pasteLikeSignalLength,
+        }).messages,
         config: resolveResonanceModelConfig(config),
         language: i18n.resolvedLanguage || i18n.language || "zh",
       });
@@ -1003,7 +1107,7 @@ export function CopaProfilePage() {
                     }
                     aria-expanded={isLlmConfigOpen}
                     aria-controls="copa-llm-config-panel"
-                    onClick={() => setIsLlmConfigOpen((current) => !current)}
+                    onClick={() => (isLlmConfigOpen ? closeLlmConfigPanel() : openLlmConfigPanel())}
                     className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-white/80 text-foreground shadow-sm transition-colors hover:bg-slate-50"
                   >
                     {isLlmConfigOpen ? <X className="h-5 w-5" /> : <Settings2 className="h-5 w-5" />}
@@ -1031,7 +1135,7 @@ export function CopaProfilePage() {
                         <button
                           type="button"
                           aria-label={t("common.copa.llmConfig.closeAria", "Close LLM settings")}
-                          onClick={() => setIsLlmConfigOpen(false)}
+                          onClick={closeLlmConfigPanel}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-background/70 text-foreground transition-colors hover:bg-background"
                         >
                           <X className="h-4 w-4" />
@@ -1068,13 +1172,13 @@ export function CopaProfilePage() {
                           <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                             <input
                               type="checkbox"
-                              checked={config.resonance.enabled}
+                              checked={draftConfig.resonance.enabled}
                               onChange={(event) => handleResonanceConfigToggle(event.target.checked)}
                               className="h-4 w-4 rounded border-border/70"
                             />
                             {t("common.copa.llmConfig.resonance.toggle", "Use separate Thought Echoes config")}
                           </label>
-                          {!config.resonance.enabled ? (
+                          {!draftConfig.resonance.enabled ? (
                             <p className="mt-2 text-sm text-muted-foreground">
                               {t(
                                 "common.copa.llmConfig.resonance.inherit",
@@ -1133,38 +1237,90 @@ export function CopaProfilePage() {
                           />
                         </label>
                       </div>
-                      <label htmlFor="copa-paste-like-signal-length" className="mt-4 block">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                          {t("common.copa.signalFilter.length", "Paste-like filter length")}
-                        </span>
-                        <input
-                          id="copa-paste-like-signal-length"
-                          aria-label={t("common.copa.signalFilter.length", "Paste-like filter length")}
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={pasteLikeSignalLengthInput}
-                          onChange={(event) => {
-                            const nextValue = event.target.value;
-                            if (/^\d*$/.test(nextValue)) {
-                              setPasteLikeSignalLengthInput(nextValue);
-                            }
-                          }}
-                          onBlur={(event) => handlePasteLikeSignalLengthCommit(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              handlePasteLikeSignalLengthCommit(event.currentTarget.value);
-                            }
-                          }}
-                          className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground"
-                        />
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {t(
-                            "common.copa.signalFilter.description",
-                            "Only messages longer than this length will be checked as possible pasted content."
-                          )}
-                        </p>
-                      </label>
+                      <div className="mt-4 grid gap-3">
+                        <label htmlFor="copa-discard-signal-length" className="block">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            {t("common.copa.signalFilter.discardLength", "Discard threshold")}
+                          </span>
+                          <input
+                            id="copa-discard-signal-length"
+                            aria-label={t("common.copa.signalFilter.discardLength", "Discard threshold")}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={discardSignalLengthInput}
+                            onChange={(event) => {
+                              const nextValue = event.target.value;
+                              if (/^\d*$/.test(nextValue)) {
+                                setDiscardSignalLengthInput(nextValue);
+                              }
+                            }}
+                            onBlur={(event) => handleDiscardSignalLengthCommit(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                handleDiscardSignalLengthCommit(event.currentTarget.value);
+                              }
+                            }}
+                            className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground"
+                          />
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {t(
+                              "common.copa.signalFilter.discardDescription",
+                              "Messages longer than this value are discarded directly."
+                            )}
+                          </p>
+                        </label>
+                        <label htmlFor="copa-paste-like-signal-length" className="block">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            {t("common.copa.signalFilter.length", "Filter threshold")}
+                          </span>
+                          <input
+                            id="copa-paste-like-signal-length"
+                            aria-label={t("common.copa.signalFilter.length", "Filter threshold")}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={pasteLikeSignalLengthInput}
+                            onChange={(event) => {
+                              const nextValue = event.target.value;
+                              if (/^\d*$/.test(nextValue)) {
+                                setPasteLikeSignalLengthInput(nextValue);
+                              }
+                            }}
+                            onBlur={(event) => handlePasteLikeSignalLengthCommit(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                handlePasteLikeSignalLengthCommit(event.currentTarget.value);
+                              }
+                            }}
+                            className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground"
+                          />
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {t(
+                              "common.copa.signalFilter.description",
+                              "Must be smaller than the discard threshold. Remaining longer messages are checked as possible pasted logs, code, JSON, HTML, or URL lists."
+                            )}
+                          </p>
+                        </label>
+                      </div>
+                      <div className="mt-5 flex items-center justify-end gap-2 border-t border-border/60 pt-4">
+                        <button
+                          type="button"
+                          onClick={closeLlmConfigPanel}
+                          className="inline-flex h-10 items-center justify-center rounded-xl border border-border/70 bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
+                        >
+                          {t("common.cancel", "Cancel")}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={t("common.copa.llmConfig.confirmAria", "Confirm LLM settings")}
+                          onClick={confirmLlmConfigPanel}
+                          disabled={!hasDraftConfigChanges}
+                          className="inline-flex h-10 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-medium text-background transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          {t("common.confirm", "Confirm")}
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                 </div>

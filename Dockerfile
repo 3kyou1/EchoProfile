@@ -1,17 +1,33 @@
+# syntax=docker/dockerfile:1.7
 # Multi-stage build for EchoProfile WebUI server mode.
 # The final image runs a single echo-profile binary with embedded frontend assets.
+
+# ---- Shared apt options ------------------------------------------------------
+ARG APT_RETRY_OPTIONS="-o Acquire::Retries=5 -o Acquire::http::Timeout=120 -o Acquire::https::Timeout=120"
 
 # ---- Stage 1: Build frontend -------------------------------------------------
 FROM node:20-slim AS frontend
 
 ARG PROXY_URL
 ENV http_proxy=${PROXY_URL} \
-    https_proxy=${PROXY_URL}
+    https_proxy=${PROXY_URL} \
+    HTTP_PROXY=${PROXY_URL} \
+    HTTPS_PROXY=${PROXY_URL} \
+    no_proxy=localhost,127.0.0.1,::1 \
+    NO_PROXY=localhost,127.0.0.1,::1 \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_mintimeout=20000 \
+    npm_config_fetch_retry_maxtimeout=120000 \
+    npm_config_fetch_timeout=120000
 
 WORKDIR /app
-RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN corepack install && pnpm install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.cache/node/corepack \
+    --mount=type=cache,target=/root/.local/share/pnpm/store \
+    corepack enable \
+    && corepack prepare pnpm@10.13.1 --activate \
+    && pnpm install --frozen-lockfile
 COPY . ./
 RUN pnpm exec tsc --build . && pnpm exec vite build
 
@@ -19,12 +35,19 @@ RUN pnpm exec tsc --build . && pnpm exec vite build
 FROM rust:1-bookworm AS backend
 
 ARG PROXY_URL
+ARG APT_RETRY_OPTIONS
 ENV http_proxy=${PROXY_URL} \
-    https_proxy=${PROXY_URL}
+    https_proxy=${PROXY_URL} \
+    HTTP_PROXY=${PROXY_URL} \
+    HTTPS_PROXY=${PROXY_URL} \
+    no_proxy=localhost,127.0.0.1,::1 \
+    NO_PROXY=localhost,127.0.0.1,::1 \
+    CARGO_NET_RETRY=5 \
+    CARGO_HTTP_TIMEOUT=120
 
 RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
+    && apt-get ${APT_RETRY_OPTIONS} update \
+    && apt-get ${APT_RETRY_OPTIONS} install -y --no-install-recommends \
        libwebkit2gtk-4.1-dev \
        libappindicator3-dev \
        librsvg2-dev \
@@ -41,10 +64,17 @@ RUN cargo build --release --features webui-server
 FROM debian:bookworm-slim
 
 ARG PROXY_URL
-ENV http_proxy=${PROXY_URL}
+ARG APT_RETRY_OPTIONS
+ENV http_proxy=${PROXY_URL} \
+    https_proxy=${PROXY_URL} \
+    HTTP_PROXY=${PROXY_URL} \
+    HTTPS_PROXY=${PROXY_URL} \
+    no_proxy=localhost,127.0.0.1,::1 \
+    NO_PROXY=localhost,127.0.0.1,::1 \
+    DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apt-get ${APT_RETRY_OPTIONS} update \
+    && apt-get ${APT_RETRY_OPTIONS} install -y --no-install-recommends \
        ca-certificates \
        curl \
        libgtk-3-0 \
@@ -56,6 +86,8 @@ RUN apt-get update \
 
 ENV http_proxy= \
     https_proxy= \
+    HTTP_PROXY= \
+    HTTPS_PROXY= \
     PORT=3727
 
 RUN groupadd --system echoprofile \

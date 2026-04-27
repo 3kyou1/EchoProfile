@@ -4,6 +4,10 @@ services:
       context: .
       args:
         PROXY_URL: ${PROXY_URL:-}
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       # Bind to localhost by default. Change 127.0.0.1 to 0.0.0.0 only behind a reverse proxy or firewall.
       - "127.0.0.1:${ECHOPROFILE_PORT:-3727}:3727"
@@ -11,9 +15,12 @@ services:
       # Set ECHOPROFILE_TOKEN in your shell or .env file to require a stable login token.
       ECHOPROFILE_TOKEN: ${ECHOPROFILE_TOKEN:-}
     volumes:
-      - ${HOME}/.claude:/home/echoprofile/.claude:ro
-      - ${HOME}/.codex:/home/echoprofile/.codex:ro
-      - ${HOME}/.local/share/opencode:/home/echoprofile/.local/share/opencode:ro
+      # Override these paths in .env when running on a remote Linux host.
+      # Missing provider directories are mounted as empty folders; EchoProfile
+      # will still show any available provider such as Codex.
+      - ${CLAUDE_HOME:-${HOME}/.claude}:/home/echoprofile/.claude:ro
+      - ${CODEX_HOME:-${HOME}/.codex}:/home/echoprofile/.codex:ro
+      - ${OPENCODE_HOME:-${HOME}/.local/share/opencode}:/home/echoprofile/.local/share/opencode:ro
       - echo-profile-data:/home/echoprofile/.echo-profile
     restart: unless-stopped
     security_opt:

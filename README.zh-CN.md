@@ -144,6 +144,34 @@ just serve
 just serve-dev
 ```
 
+### Docker WebUI 模式
+
+Docker 运行的是 WebUI Server，不是桌面客户端。首次使用建议先复制环境变量模板：
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env`，至少设置：
+
+```bash
+ECHOPROFILE_TOKEN=your-secret-token
+```
+
+启动 WebUI 容器：
+
+```bash
+docker compose up -d --build
+```
+
+启动后访问：
+
+```text
+http://127.0.0.1:3727/?token=your-secret-token
+```
+
+默认会挂载 `~/.claude`、`~/.codex` 和 `~/.local/share/opencode`。如果远程 Linux 主机路径不同，可以在 `.env` 中设置 `CLAUDE_HOME`、`CODEX_HOME` 或 `OPENCODE_HOME`。
+
 ### 仅调试前端界面
 
 ```bash

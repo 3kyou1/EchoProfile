@@ -133,24 +133,53 @@ function candidateSimilarity(left: FigureRecord, right: FigureRecord): number {
   return universe.size === 0 ? 0 : shared / universe.size;
 }
 
+function localizedThinkingStyle(record: FigureRecord, language: string): string {
+  return normalizeLanguage(language) === "zh"
+    ? record.thinking_style
+    : record.thinking_style_en?.trim() || record.thinking_style;
+}
+
+function localizedTemperamentSummary(record: FigureRecord, language: string): string {
+  return normalizeLanguage(language) === "zh"
+    ? record.temperament_summary
+    : record.temperament_summary_en?.trim() || record.temperament_summary;
+}
+
+function localizedCoreTraits(record: FigureRecord, language: string): string {
+  return normalizeLanguage(language) === "zh"
+    ? record.core_traits
+    : record.core_traits_en?.trim() || record.core_traits;
+}
+
+function localizedTemperamentTags(record: FigureRecord, language: string): string {
+  return normalizeLanguage(language) === "zh"
+    ? record.temperament_tags
+    : record.temperament_tags_en?.trim() || record.temperament_tags;
+}
+
+function containsCjk(value: string): boolean {
+  return /[\u3400-\u9fff]/.test(value);
+}
+
 function defaultReason(record: FigureRecord, mode: "long_term" | "recent_state", language: string): string {
+  const thinkingStyle = localizedThinkingStyle(record, language);
   if (normalizeLanguage(language) === "zh") {
     const prefix = mode === "long_term" ? "你长期更像" : "你最近这段时间更像";
-    return `${prefix}${record.name}式研究者：${record.thinking_style}`;
+    return `${prefix}${record.name}式研究者：${thinkingStyle}`;
   }
 
   const prefix = mode === "long_term" ? "Your long-term archetype feels closest to" : "Your recent state feels closest to";
-  return `${prefix} ${record.name}: ${record.thinking_style}`;
+  return `${prefix} ${record.name}: ${thinkingStyle}`;
 }
 
 function scoreFigure(signalText: string, record: FigureRecord): { score: number; resonanceAxes: string[] } {
   const signal = signalText.toLowerCase();
-  const fields = [record.core_traits, record.temperament_tags];
+  const fields = [record.core_traits, record.temperament_tags, record.core_traits_en ?? "", record.temperament_tags_en ?? ""];
   let score = 0;
   const matchedAxes: string[] = [];
 
   for (const field of fields) {
-    for (const raw of field.split("、")) {
+    for (const raw of field.split(/[、,，]/)) {
       const axis = raw.trim();
       if (!axis) {
         continue;
@@ -210,6 +239,7 @@ function heuristicCandidates(
   return [...records]
     .map((record) => {
       const scored = scoreFigure(signalText, record);
+      const fallbackTraits = localizedCoreTraits(record, language);
       return {
         slug: record.slug,
         score: scored.score,
@@ -217,7 +247,7 @@ function heuristicCandidates(
         resonanceAxes:
           scored.resonanceAxes.length > 0
             ? scored.resonanceAxes
-            : uniqueAxes(record.core_traits.split("、").slice(0, 2)),
+            : uniqueAxes(fallbackTraits.split(/[、,，]/).slice(0, 2)),
       };
     })
     .sort((left, right) => {
@@ -234,12 +264,13 @@ function buildCardPayload(
     reason: string;
     resonanceAxes: unknown[];
     confidenceStyle: FigureConfidenceStyle;
+    language: string;
   }
 ): FigureResonanceCard {
   const normalizedAxes = uniqueAxes(options.resonanceAxes).slice(0, MAX_POOL_AXES);
   const fallbackAxes = uniqueAxes([
-    ...record.core_traits.split("、").slice(0, 2),
-    ...record.temperament_tags.split("、").slice(0, 1),
+    ...localizedCoreTraits(record, options.language).split(/[、,，]/).slice(0, 2),
+    ...localizedTemperamentTags(record, options.language).split(/[、,，]/).slice(0, 1),
   ]).slice(0, MAX_POOL_AXES);
 
   return {
@@ -247,12 +278,16 @@ function buildCardPayload(
     localized_names: record.localized_names,
     slug: record.slug,
     portrait_url: record.portrait_url,
-    hook: record.temperament_summary,
+    hook: localizedTemperamentSummary(record, options.language),
     quote_zh: record.quote_zh,
     quote_en: record.quote_en,
-    reason: options.reason.trim() || record.thinking_style,
+    reason: options.reason.trim() || localizedThinkingStyle(record, options.language),
     resonance_axes: normalizedAxes.length > 0 ? normalizedAxes : fallbackAxes,
     confidence_style: options.confidenceStyle,
+    core_traits_en: record.core_traits_en,
+    thinking_style_en: record.thinking_style_en,
+    temperament_tags_en: record.temperament_tags_en,
+    temperament_summary_en: record.temperament_summary_en,
     loading_copy_zh: record.loading_copy_zh,
     loading_copy_en: record.loading_copy_en,
     bio_zh: record.bio_zh,
@@ -267,6 +302,7 @@ function normalizeCardPayload(
   options: {
     confidenceStyle: FigureConfidenceStyle;
     recordsBySlug: Map<string, FigureRecord>;
+    language: string;
   }
 ): FigureResonanceCard | null {
   if (!payload || typeof payload !== "object") {
@@ -281,27 +317,40 @@ function normalizeCardPayload(
   }
 
   const axes = Array.isArray(record.resonance_axes) ? record.resonance_axes : [];
+  const rawReason = typeof record.reason === "string" ? record.reason.trim() : "";
+  const reason =
+    rawReason && !(normalizeLanguage(options.language) === "en" && containsCjk(rawReason))
+      ? rawReason
+      : defaultReason(matchedRecord, options.confidenceStyle === "phase_resonance" ? "recent_state" : "long_term", options.language);
   return buildCardPayload(matchedRecord, {
-    reason: typeof record.reason === "string" ? record.reason : matchedRecord.thinking_style,
+    reason,
     resonanceAxes: axes,
     confidenceStyle: options.confidenceStyle,
+    language: options.language,
   });
 }
 
 function rehydrateStoredCard(
   card: FigureResonanceCard,
   confidenceStyle: FigureConfidenceStyle,
-  context: PoolContext | null
+  context: PoolContext | null,
+  language: string
 ): FigureResonanceCard {
   const matchedRecord = context?.allRecordsBySlug.get(card.slug);
   if (!matchedRecord || matchedRecord.status === "invalid") {
     return card;
   }
 
+  const reason =
+    normalizeLanguage(language) === "en" && containsCjk(card.reason)
+      ? defaultReason(matchedRecord, confidenceStyle === "phase_resonance" ? "recent_state" : "long_term", language)
+      : card.reason;
+
   return buildCardPayload(matchedRecord, {
-    reason: card.reason,
+    reason,
     resonanceAxes: card.resonance_axes,
     confidenceStyle,
+    language,
   });
 }
 
@@ -319,13 +368,13 @@ function rehydrateStoredResult(
     pool_deleted: context ? false : true,
     pool_updated: context ? poolUpdatedAtSnapshot !== context.pool.updatedAt : false,
     long_term: {
-      primary: rehydrateStoredCard(result.long_term.primary, "strong_resonance", context),
+      primary: rehydrateStoredCard(result.long_term.primary, "strong_resonance", context, result.language),
       secondary: result.long_term.secondary.map((card) =>
-        rehydrateStoredCard(card, "strong_resonance", context)
+        rehydrateStoredCard(card, "strong_resonance", context, result.language)
       ),
     },
     recent_state: result.recent_state
-      ? rehydrateStoredCard(result.recent_state, "phase_resonance", context)
+      ? rehydrateStoredCard(result.recent_state, "phase_resonance", context, result.language)
       : null,
   };
 }
@@ -344,7 +393,8 @@ function contextMatchesResult(context: PoolContext, result: FigureResonanceResul
 
 function normalizeLongTermPayload(
   payload: unknown,
-  context: PoolContext
+  context: PoolContext,
+  language: string
 ): FigureResonancePayload["long_term"] | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -355,6 +405,7 @@ function normalizeLongTermPayload(
   const primary = normalizeCardPayload(primaryPayload, {
     confidenceStyle: "strong_resonance",
     recordsBySlug: context.validRecordsBySlug,
+    language,
   });
   if (!primary) {
     return null;
@@ -367,6 +418,7 @@ function normalizeLongTermPayload(
     const normalized = normalizeCardPayload(item, {
       confidenceStyle: "strong_resonance",
       recordsBySlug: context.validRecordsBySlug,
+      language,
     });
     if (!normalized || seen.has(normalized.slug)) {
       continue;
@@ -445,6 +497,7 @@ function heuristicMatch(
     reason: chosenPayload?.reason ?? defaultReason(chosenRecord, options.mode, options.language),
     resonanceAxes: chosenPayload?.resonanceAxes ?? [],
     confidenceStyle: options.mode === "long_term" ? "strong_resonance" : "phase_resonance",
+    language: options.language,
   });
 
   if (options.mode !== "long_term") {
@@ -463,6 +516,7 @@ function heuristicMatch(
             reason: defaultReason(matchedRecord, "long_term", options.language),
             resonanceAxes: candidate.resonanceAxes,
             confidenceStyle: "strong_resonance",
+            language: options.language,
           }),
         ]
       : [];
@@ -504,6 +558,7 @@ function enrichLongTermWithSecondary(
           reason: defaultReason(matchedRecord, "long_term", language),
           resonanceAxes: candidate.resonanceAxes,
           confidenceStyle: "strong_resonance",
+          language,
         }),
       ];
     })
@@ -570,10 +625,10 @@ function buildFigurePrompt(
   const figurePoolPayload = context.validRecords.map((item) => ({
     slug: item.slug,
     name: item.name,
-    core_traits: item.core_traits,
-    thinking_style: item.thinking_style,
-    temperament_tags: item.temperament_tags,
-    temperament_summary: item.temperament_summary,
+    core_traits: localizedCoreTraits(item, language),
+    thinking_style: localizedThinkingStyle(item, language),
+    temperament_tags: localizedTemperamentTags(item, language),
+    temperament_summary: localizedTemperamentSummary(item, language),
   }));
 
   if (normalizeLanguage(language) === "zh") {
@@ -783,7 +838,7 @@ async function requestFigureResonanceFromLlm(
   }
   const allowRecent = recentMessages.length >= RECENT_MIN_MESSAGES;
   const longTerm = enrichLongTermWithSecondary(
-    normalizeLongTermPayload(parsed.long_term, context),
+    normalizeLongTermPayload(parsed.long_term, context, language),
     collectSignalText(profileMarkdown, recentMessages),
     language,
     context
@@ -792,6 +847,7 @@ async function requestFigureResonanceFromLlm(
     ? normalizeCardPayload(parsed.recent_state, {
         confidenceStyle: "phase_resonance",
         recordsBySlug: context.validRecordsBySlug,
+        language,
       }) ??
       (heuristicMatch(recentMessages.join("\n"), {
         mode: "recent_state",

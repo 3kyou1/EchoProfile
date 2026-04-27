@@ -80,4 +80,41 @@ describe("figure locale cleanup", () => {
 
     expect(screen.getByRole("img", { name: "Ada Lovelace" })).not.toHaveClass("grayscale");
   });
+
+  it("uses English-specific figure copy in the English UI", () => {
+    mockUseTranslation.mockReturnValue({
+      t: (_key: string, fallback?: string) => fallback ?? "Wikipedia",
+      i18n: {
+        resolvedLanguage: "en",
+        language: "en",
+      },
+    });
+
+    const card: FigureResonanceCardType = {
+      name: "Architect (INTJ)",
+      localized_names: { zh: "建筑师（INTJ）" },
+      slug: "intj_architect",
+      portrait_url: "/intj.png",
+      hook: "像一个总在默默画总蓝图的人。",
+      quote_zh: "如果系统总在失灵，那就重构系统。",
+      quote_en: "If the system keeps failing, redesign the system.",
+      reason: "你长期更像 Architect (INTJ)：先从全局框架入手。",
+      resonance_axes: ["战略视野"],
+      confidence_style: "strong_resonance",
+      loading_copy_zh: "正在调亮建筑师频率...",
+      loading_copy_en: "Brightening the Architect signal...",
+      bio_zh: "建筑师原型代表高自主、强结构和长线策略感。",
+      bio_en: "The Architect archetype represents autonomy, structure, and long-range strategy.",
+      achievements_zh: ["把模糊目标整理成路线图"],
+      achievements_en: ["Turns vague ambitions into clean roadmaps"],
+    };
+
+    render(<FigureResonanceCard card={card} label="Primary" />);
+
+    expect(screen.getByText("The Architect archetype represents autonomy, structure, and long-range strategy.")).toBeInTheDocument();
+    expect(screen.getByText("Turns vague ambitions into clean roadmaps")).toBeInTheDocument();
+    expect(screen.getByText("If the system keeps failing, redesign the system.")).toBeInTheDocument();
+    expect(screen.queryByText("建筑师原型代表高自主、强结构和长线策略感。")).not.toBeInTheDocument();
+    expect(screen.queryByText("把模糊目标整理成路线图")).not.toBeInTheDocument();
+  });
 });

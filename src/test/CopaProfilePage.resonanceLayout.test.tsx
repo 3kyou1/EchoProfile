@@ -247,7 +247,7 @@ describe("CopaProfilePage resonance layout", () => {
             temperament_tags: "calm, rigorous",
             temperament_summary: "Structured and rigorous.",
             loading_copy_zh: "正在把复杂系统翻译成更清晰的结构...",
-            loading_copy_en: "Translating complex systems into a clearer structure...",
+            loading_copy_en: "Translating 冷静 systems into a clearer structure...",
             bio_zh: "早期计算先驱。",
             bio_en: "An early computing pioneer.",
             achievements_zh: ["成就一"],
@@ -659,7 +659,8 @@ describe("CopaProfilePage resonance layout", () => {
     expect(await screen.findByText("Generating new Profile")).toBeInTheDocument();
     expect(screen.getAllByText("Figure loading copy")).toHaveLength(1);
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
-    expect(screen.getByText("Translating complex systems into a clearer structure...")).toBeInTheDocument();
+    expect(screen.getByText("Translating systems into a clearer structure...")).toBeInTheDocument();
+    expect(screen.queryByText("Translating 冷静 systems into a clearer structure...")).not.toBeInTheDocument();
     expect(screen.queryByText("Prompt summary")).not.toBeInTheDocument();
     expect(screen.queryByText("2026-04-23T14:40:51.431Z")).not.toBeInTheDocument();
     const profileTrigger = screen.getByLabelText("Choose profile");

@@ -6,9 +6,13 @@ export interface FigureRecordInput {
   quote_en: string;
   quote_zh: string;
   core_traits: string;
+  core_traits_en?: string;
   thinking_style: string;
+  thinking_style_en?: string;
   temperament_tags: string;
   temperament_summary: string;
+  temperament_tags_en?: string;
+  temperament_summary_en?: string;
   loading_copy_zh: string;
   loading_copy_en: string;
   bio_zh: string;

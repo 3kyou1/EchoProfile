@@ -85,3 +85,9 @@ docs/
 
 # Local Superpowers tool state
 .superpowers/
+
+# Local AI/tool state
+.claude/
+.serena/
+.playwright-mcp/
+.spec-placeholder

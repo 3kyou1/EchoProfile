@@ -298,6 +298,37 @@ describe("copaProfileService", () => {
     expect(chinese.user).toContain("- 请保持结论简洁。");
   });
 
+  test("buildCopaPrompt supports a lighter entertainment profile mode", () => {
+    const english = buildCopaPrompt(["Please keep this practical."], "en", "fun");
+    const chinese = buildCopaPrompt(["请保持结论简洁。"], "zh", "fun");
+
+    expect(english.system).toContain("You are generating a profile from user-only interaction history.");
+    expect(english.system).toContain("profile_text");
+    expect(english.system).toContain("part stand-up comic");
+    expect(english.system).toContain("product backlog waiting to be optimized");
+    expect(english.system).not.toContain("CoPA factors:");
+    expect(english.user).toContain("Ensure title and profile_text are written in English.");
+    expect(chinese.system).toContain("你正在基于仅包含用户消息的互动历史生成 profile。");
+    expect(chinese.system).toContain("熟人局吐槽大师");
+    expect(chinese.system).toContain("人生当成待优化系统的产品经理");
+    expect(chinese.system).not.toContain("CoPA 因子：");
+    expect(chinese.user).toContain("请确保 title、profile_text 都使用中文。");
+  });
+
+  test("normalizeCopaResponse accepts one-paragraph entertainment profiles", () => {
+    const result = normalizeCopaResponse(
+      {
+        title: "高压锅型架构师",
+        profile_text: "这个人像一台自带报警器的高压锅：能把复杂系统炖成结构化方案。",
+      },
+      "zh",
+      "fun"
+    );
+
+    expect(result.promptSummary).toBe("高压锅型架构师");
+    expect(result.funProfileText).toBe("这个人像一台自带报警器的高压锅：能把复杂系统炖成结构化方案。");
+  });
+
   test("requestCopaProfile logs the prompt input and raw response for debugging", async () => {
     vi.stubGlobal(
       "fetch",
@@ -397,6 +428,76 @@ describe("copaProfileService", () => {
         required: expect.arrayContaining(["factors", "prompt_summary"]),
       })
     );
+  });
+
+  test("requestCopaProfile asks for a one-paragraph schema in entertainment mode", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: "{\"title\":\"Builder gremlin\",\"profile_text\":\"A playful profile.\"}",
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestCopaProfile(
+      ["Please keep this practical."],
+      {
+        baseUrl: "https://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      "en",
+      "fun"
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(requestInit?.body ?? "{}")) as {
+      response_format?: { type?: string; json_schema?: { name?: string; schema?: Record<string, unknown> } };
+    };
+
+    expect(body.response_format?.json_schema?.name).toBe("copa_fun_profile");
+    expect(body.response_format?.json_schema?.schema?.required).toEqual(["title", "profile_text"]);
+    expect(result.promptSummary).toBe("Builder gremlin");
+    expect(result.funProfileText).toBe("A playful profile.");
+  });
+
+  test("requestCopaProfile repairs an entertainment response missing the final object brace", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content:
+                  '{"title":"Builder gremlin","profile_text":"A playful profile with enough closure."',
+              },
+            },
+          ],
+        }),
+      })
+    );
+
+    const result = await requestCopaProfile(
+      ["Please keep this practical."],
+      {
+        baseUrl: "https://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      "en",
+      "fun"
+    );
+
+    expect(result.promptSummary).toBe("Builder gremlin");
+    expect(result.funProfileText).toBe("A playful profile with enough closure.");
   });
 
   test("requestCopaProfile falls back to json_object when json_schema is unsupported", async () => {
@@ -712,6 +813,41 @@ describe("copaProfileService", () => {
     expect(markdown).toContain("## Metadata");
   });
 
+  test("renderCopaMarkdown renders entertainment profiles without factor sections", () => {
+    const markdown = renderCopaMarkdown({
+      id: "snap-fun",
+      createdAt: "2026-04-22T12:00:00.000Z",
+      language: "zh",
+      profileMode: "fun",
+      scope: {
+        type: "global",
+        ref: "global",
+        label: "全局",
+        key: buildScopeKey({ type: "global", ref: "global", providerScope: ["claude"] }),
+      },
+      providerScope: ["claude"],
+      sourceStats: {
+        projectCount: 1,
+        sessionCount: 2,
+        rawUserMessages: 10,
+        dedupedUserMessages: 8,
+        truncatedMessages: 0,
+      },
+      modelConfig: {
+        baseUrl: "https://example.com/v1",
+        model: "gpt-test",
+      },
+      promptSummary: "高压锅型架构师",
+      factors: normalizeCopaResponse({}, "zh").factors,
+      funProfileText: "这个人像一台自带报警器的高压锅。",
+      markdown: "",
+    });
+
+    expect(markdown).toContain("这个人像一台自带报警器的高压锅。");
+    expect(markdown).not.toContain("### 认知信任");
+    expect(markdown).toContain("## 元数据");
+  });
+
   test("createSnapshot freezes the generation language and localized factor copy", () => {
     const normalized = normalizeCopaResponse({}, "zh");
 
@@ -737,9 +873,11 @@ describe("copaProfileService", () => {
       },
       promptSummary: "保持聚焦、简洁和严谨。",
       factors: normalized.factors,
+      profileMode: "fun",
     });
 
     expect(snapshot.language).toBe("zh");
+    expect(snapshot.profileMode).toBe("fun");
     expect(snapshot.factors.CT.title).toBe("认知信任（CT）");
     expect(snapshot.markdown).toContain("## CoPA 画像");
   });

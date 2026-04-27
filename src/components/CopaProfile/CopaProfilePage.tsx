@@ -37,7 +37,7 @@ import {
   saveCopaSnapshot,
   deleteCopaSnapshot,
 } from "@/services/copaProfileService";
-import type { CopaLlmConfigState, CopaModelConfig, CopaSnapshot, CopaScopeType } from "@/types/copaProfile";
+import type { CopaLlmConfigState, CopaModelConfig, CopaProfileMode, CopaSnapshot, CopaScopeType } from "@/types/copaProfile";
 import type { FigureResonanceResult } from "@/types/figureResonance";
 import {
   deleteFigureResonanceResultsForProfile,
@@ -109,6 +109,12 @@ function clampSignalThreshold(value: string, fallback: number, minimum: number) 
   return Math.min(MAX_SIGNAL_THRESHOLD, Math.max(minimum, parsed));
 }
 
+function getProfileModeLabel(t: TFunction, mode?: CopaProfileMode) {
+  return mode === "fun"
+    ? t("common.copa.profileMode.fun", "Fun version")
+    : t("common.copa.profileMode.serious", "Serious version");
+}
+
 async function loadSessionsForProject(project: ClaudeProject, excludeSidechain: boolean) {
   const provider = project.provider ?? "claude";
   return provider !== "claude"
@@ -140,6 +146,7 @@ export function CopaProfilePage() {
   );
 
   const [scopeType, setScopeType] = useState<CopaScopeType>("global");
+  const [profileMode, setProfileMode] = useState<CopaProfileMode>("serious");
   const [projectPath, setProjectPath] = useState("");
   const [sessionPath, setSessionPath] = useState("");
   const [sessionsForScope, setSessionsForScope] = useState<ClaudeSession[]>([]);
@@ -685,10 +692,12 @@ export function CopaProfilePage() {
       const result = await requestCopaProfile(
         limitedSignals,
         resolveCopaModelConfig(config),
-        generationLanguage
+        generationLanguage,
+        profileMode
       );
       const snapshot = createSnapshot({
         language: generationLanguage,
+        profileMode,
         scope: {
           type: scopeType,
           ref: collected.scopeRef,
@@ -714,6 +723,7 @@ export function CopaProfilePage() {
         },
         promptSummary: result.promptSummary,
         factors: result.factors,
+        funProfileText: result.funProfileText,
       });
 
       const stored = await saveCopaSnapshot(snapshot);
@@ -1518,6 +1528,25 @@ export function CopaProfilePage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    <div
+                      className="inline-flex items-center rounded-xl border border-border/70 bg-background/80 p-1 shadow-sm"
+                      aria-label={t("common.copa.profileMode.label", "Profile version")}
+                    >
+                      {(["serious", "fun"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setProfileMode(mode)}
+                          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                            profileMode === mode
+                              ? "bg-foreground text-background"
+                              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                          }`}
+                        >
+                          {getProfileModeLabel(t, mode)}
+                        </button>
+                      ))}
+                    </div>
                     <button
                       type="button"
                       onClick={() => void handleExportMarkdown()}
@@ -1635,6 +1664,11 @@ export function CopaProfilePage() {
                                 <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 font-semibold normal-case tracking-normal text-white/90">
                                   {currentSnapshot?.scope.label ?? t("common.copa.history.current", "Currently selected")}
                                 </span>
+                                {currentSnapshot ? (
+                                  <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 font-semibold normal-case tracking-normal text-white/90">
+                                    {getProfileModeLabel(t, currentSnapshot.profileMode)}
+                                  </span>
+                                ) : null}
                                 {currentSnapshot ? <span>{formatSnapshotTime(currentSnapshot.createdAt)}</span> : null}
                               </div>
                               <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap pr-4 text-sm font-medium text-white">
@@ -1670,6 +1704,9 @@ export function CopaProfilePage() {
                                   <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
                                     #{visibleSnapshots.length - index}
                                   </span>
+                                  <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                                    {getProfileModeLabel(t, snapshot.profileMode)}
+                                  </span>
                                   <span className="shrink-0">{formatSnapshotTime(snapshot.createdAt)}</span>
                                   <span className="min-w-0 truncate text-muted-foreground">
                                     {snapshot.sourceStats.rawUserMessages}{" "}
@@ -1704,6 +1741,9 @@ export function CopaProfilePage() {
                                 </span>
                                 <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                                   {currentSnapshot.scope.label}
+                                </span>
+                                <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                  {getProfileModeLabel(t, currentSnapshot.profileMode)}
                                 </span>
                                 <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
                                   {currentSnapshot.sourceStats.rawUserMessages} {t("common.copa.summary.userMessages", "user messages")}
@@ -1825,11 +1865,22 @@ export function CopaProfilePage() {
                 {activeSubview === "profile" ? (
                   <>
                     {!isProfileGenerationView && interactiveSnapshot ? (
-                      <section className="grid gap-4 xl:grid-cols-2">
-                        {Object.values(interactiveSnapshot.factors).map((factor) => (
-                          <CopaFactorCard key={factor.code} factor={factor} />
-                        ))}
-                      </section>
+                      interactiveSnapshot.profileMode === "fun" && interactiveSnapshot.funProfileText ? (
+                        <section className="rounded-3xl border border-slate-300/70 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-6 shadow-sm">
+                          <div className="mb-4 inline-flex rounded-full border border-amber-300/50 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-800">
+                            {getProfileModeLabel(t, "fun")}
+                          </div>
+                          <p className="whitespace-pre-wrap text-base leading-8 text-foreground">
+                            {interactiveSnapshot.funProfileText}
+                          </p>
+                        </section>
+                      ) : (
+                        <section className="grid gap-4 xl:grid-cols-2">
+                          {Object.values(interactiveSnapshot.factors).map((factor) => (
+                            <CopaFactorCard key={factor.code} factor={factor} />
+                          ))}
+                        </section>
+                      )
                     ) : null}
 
                   </>

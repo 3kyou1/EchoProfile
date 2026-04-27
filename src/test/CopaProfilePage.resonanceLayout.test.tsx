@@ -433,13 +433,91 @@ describe("CopaProfilePage resonance layout", () => {
       expect(mockRequestCopaProfile).toHaveBeenCalledWith(
         ["请保持结构化。"],
         expect.objectContaining({ model: "test-model" }),
-        "zh"
+        "zh",
+        "serious"
       );
     });
 
     expect(mockCreateSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({
         language: "zh",
+        profileMode: "serious",
+      })
+    );
+  });
+
+  it("passes the selected fun profile mode into CoPA generation and snapshot creation", async () => {
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "load_project_sessions") {
+        return [];
+      }
+      if (command === "load_provider_messages") {
+        return [];
+      }
+      return [];
+    });
+    mockExtractUserSignals.mockReturnValue({
+      messages: ["Make this playful."],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
+    mockRequestCopaProfile.mockResolvedValue({
+      promptSummary: "Playful profile.",
+      funProfileText: "A playful one-paragraph profile.",
+      factors: {},
+    });
+    mockCreateSnapshot.mockReturnValue({
+      id: "snapshot-fun",
+      createdAt: "2026-04-23T01:00:00.000Z",
+      language: "en",
+      profileMode: "fun",
+      scope: {
+        type: "global",
+        ref: "global",
+        label: "Global history",
+        key: "global:global",
+      },
+      providerScope: ["claude"],
+      sourceStats: {
+        projectCount: 1,
+        sessionCount: 1,
+        rawUserMessages: 1,
+        dedupedUserMessages: 1,
+        truncatedMessages: 0,
+      },
+      modelConfig: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        temperature: 0.2,
+      },
+      promptSummary: "Playful profile.",
+      funProfileText: "A playful one-paragraph profile.",
+      factors: {},
+      markdown: "# CoPA Profile",
+    });
+    mockSaveCopaSnapshot.mockResolvedValue([]);
+
+    render(<CopaProfilePage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("A concise summary.").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Fun version" }));
+    fireEvent.click(screen.getByRole("button", { name: "Generate CoPA Profile" }));
+
+    await waitFor(() => {
+      expect(mockRequestCopaProfile).toHaveBeenCalledWith(
+        ["Make this playful."],
+        expect.objectContaining({ model: "test-model" }),
+        "en",
+        "fun"
+      );
+    });
+
+    expect(mockCreateSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profileMode: "fun",
+        funProfileText: "A playful one-paragraph profile.",
       })
     );
   });

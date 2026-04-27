@@ -1,67 +1,69 @@
 ---
 name: figure-pool-generator
-description: Use when generating or refreshing an EchoProfile figure pool JSON or zip for a user-specified theme, especially for named groups such as scientists, entrepreneurs, investors, or region/era-biased rosters.
+description: 当用户要为 EchoProfile 按主题生成或刷新人物池 JSON、导入 zip、人物候选池、本地肖像素材，尤其是科学家、企业家、投资人、特定国家/时代/行业/气质权重名单时使用。
 ---
 
-# Figure Pool Generator
+# 人物池生成器
 
-## Overview
+## 概览
 
-This is an EchoProfile project skill for building a usable first-pass figure pool, not a generic research essay. The output must land as local project assets that match the repo's current `FigurePool` expectations and zip import/export behavior.
+这是 EchoProfile 项目内的人物池生成 skill，用来产出可用的第一版人物池，而不是写泛泛的人物研究文章。产物必须落到本仓库的本地资产中，并符合当前 `FigurePool` 预期和 zip 导入/导出行为。
 
-Default target:
+默认目标：
 
-- One themed pool
-- Usually `30-50` people unless the user gives a tighter range
-- Strongly differentiated人物气质，不要把所有人写成同一种腔调
-- Local portraits with consistent dimensions
-- A repo-local JSON source file
-- A compatible zip package when the user asks for importable output
+- 一个主题人物池
+- 通常 `30-50` 人，除非用户给出更明确数量
+- 人物气质要强区分，不要把所有人写成同一种腔调
+- 本地肖像，尺寸尽量一致
+- 仓库内 JSON 源文件
+- 用户要求可导入产物时，额外生成兼容 zip 包
 
-## When To Use
+## 何时使用
 
-Use this when the user asks to:
+用户提出这些需求时使用：
 
-- create a new人物池 / 候选池 / figure pool
-- refresh or expand an existing themed pool
-- generate a JSON file or zip import package for a group of people
-- bias the pool toward a country, era, industry, school, or temperament
+- 创建新人物池 / 候选池 / figure pool
+- 刷新或扩展已有主题人物池
+- 为一组人物生成 JSON 文件或 zip 导入包
+- 按国家、时代、行业、学派、气质倾向调整人物池权重
 
-Do not use this for:
+不要用于：
 
-- editing one or two existing records only
-- generic biography writing unrelated to EchoProfile
-- unrelated asset download tasks
+- 只编辑一两个已有记录
+- 与 EchoProfile 无关的通用传记写作
+- 无关的素材下载任务
 
-## Project Context To Read First
+## 先读取的项目上下文
 
-Before producing anything, inspect the current project reality instead of assuming the schema:
+生成任何内容前，先检查当前仓库真实状态，不要假设 schema：
 
-- Pool system design: `docs/superpowers/specs/2026-04-23-figure-pool-design.md`
-- Material guidance: `docs/superpowers/specs/2026-04-23-figure-pool-material-guidelines-design.md`
-- Generator design: `docs/superpowers/specs/2026-04-23-figure-pool-generator-skill-design.md`
-- Zip implementation reference: `.worktrees/figure-pools/src/services/figurePoolService.ts`
-- Zip behavior tests: `.worktrees/figure-pools/src/test/figurePoolService.test.ts`
+- 人物池系统设计：`skills/figure-pool-generator/references/figure-pool-design.md`
+- 素材标准：`skills/figure-pool-generator/references/figure-pool-material-guidelines-design.md`
+- 生成器设计：`skills/figure-pool-generator/references/figure-pool-generator-skill-design.md`
+- 共享校验/打包工具：`skills/figure-pool-generator/scripts/figure_pool_tools.py`
+- zip 打包器：`skills/figure-pool-generator/scripts/pack_figure_pool_zip.py`
+- 校验器：`skills/figure-pool-generator/scripts/validate_figure_pool.py`
+- 工具行为测试：`skills/figure-pool-generator/tests/`
 
-If the code and docs disagree, follow the code that currently implements import/export.
+如果当前 checkout 里存在应用侧导入/导出实现，用 `rg "pool.json|portrait_url|FigurePool|figure-pools" src src-tauri` 查找，并以当前代码优先于旧文档。如果当前 checkout 没有应用实现，把 bundled scripts 和 tests 当作可执行契约。
 
-## Output Locations
+## 输出位置
 
-Prefer these paths unless the user asks otherwise:
+除非用户另有要求，优先使用这些路径：
 
-- Source JSON: `src/data/figure-pools/<pool-slug>.json`
-- Portraits: `public/figure-portraits/<pool-slug>/`
-- Import zip: `src/data/figure-pools/<pool-slug>.zip`
+- 源 JSON：`src/data/figure-pools/<pool-slug>.json`
+- 肖像目录：`public/figure-portraits/<pool-slug>/`
+- 导入 zip：`zip/<pool-slug>.zip`
 
-Use ASCII filenames and stable slugs.
+文件名使用 ASCII 和稳定 slug。
 
-## Required Record Fields
+## 必需记录字段
 
-Each record must satisfy the current figure-pool schema expectations:
+每条记录必须满足当前人物池 schema 预期：
 
 - `slug`
 - `name`
-- `localized_names` when a stable localized form is available
+- `localized_names`：有稳定本地化名称时填写
 - `portrait_url`
 - `quote_en`
 - `quote_zh`
@@ -76,145 +78,145 @@ Each record must satisfy the current figure-pool schema expectations:
 - `achievements_zh`
 - `achievements_en`
 
-Treat missing portraits, empty required strings, empty achievements arrays, and duplicate `slug` values as hard blockers.
+缺少肖像、必填字符串为空、成就数组为空、`slug` 重复都视为硬阻塞，不能继续声称完成。
 
-## Bundled Tools
+## 内置工具
 
-Use the bundled scripts instead of rewriting one-off validation or packing logic each time:
+重复校验或打包时使用 bundled scripts，不要临时重写一次性逻辑：
 
-- Validate a source pool: `python3 skills/figure-pool-generator/scripts/validate_figure_pool.py --input src/data/figure-pools/<pool-slug>.json`
-- Pack an import zip: `python3 skills/figure-pool-generator/scripts/pack_figure_pool_zip.py --input src/data/figure-pools/<pool-slug>.json --output src/data/figure-pools/<pool-slug>.zip`
+- 校验源人物池：`python3 skills/figure-pool-generator/scripts/validate_figure_pool.py --input src/data/figure-pools/<pool-slug>.json`
+- 打包导入 zip：`python3 skills/figure-pool-generator/scripts/pack_figure_pool_zip.py --input src/data/figure-pools/<pool-slug>.json --output zip/<pool-slug>.zip`
 
-Both scripts resolve `/figure-portraits/...` paths against the repo `public/` directory by default. If you run them outside the repo root, add `--project-root /path/to/EchoProfile`.
+两个脚本默认把 `/figure-portraits/...` 按仓库 `public/` 目录解析。如果不在仓库根目录运行，追加 `--project-root /path/to/EchoProfile`。
 
-## Workflow
+## 工作流程
 
-### 1. Normalize the ask
+### 1. 归一化用户需求
 
-Extract the real constraints from the user request:
+从用户请求中提取真实约束：
 
-- theme and boundary
-- target count
-- must-include people
-- must-exclude people
-- country / era / industry weighting
-- tone requirements for the copy
-- whether zip output is required
+- 主题和边界
+- 目标人数
+- 必须包含的人物
+- 必须排除的人物
+- 国家 / 时代 / 行业权重
+- 文案语气要求
+- 是否需要 zip 输出
 
-If the user gives a final roster, treat it as authoritative. Do not silently add back excluded people.
+如果用户给出最终名单，把它当作权威来源。不要偷偷加回用户排除的人。
 
-### 2. Confirm the active schema and zip format
+### 2. 确认当前 schema 和 zip 格式
 
-Check the current implementation before writing files:
+写文件前检查当前实现：
 
-- `FigureRecord` field expectations
-- whether the repo currently stores a full `FigurePool` object or only import payloads
-- zip layout
+- `FigureRecord` 字段预期
+- 仓库当前保存完整 `FigurePool` 对象，还是只保存导入 payload
+- zip 布局
 
-Current zip behavior from the worktree implementation:
+当前 bundled packer 的 zip 行为：
 
-- zip root contains `pool.json`
-- portraits live under `portraits/`
-- `pool.json` record `portrait_url` values must be rewritten to `portraits/<filename>`
+- zip 根目录包含 `pool.json`
+- 肖像放在 `portraits/` 下
+- `pool.json` 中每条记录的 `portrait_url` 必须重写为 `portraits/<filename>`
 
-The zip payload is an import payload, not an internal storage snapshot.
+zip payload 是导入 payload，不是内部运行态快照。
 
-### 3. Build the roster
+### 3. 构建人物名单
 
-Default roster size is `30-50`.
+默认名单规模为 `30-50` 人。
 
-Selection rules:
+选择规则：
 
-- prioritize representative, high-signal people
-- preserve internal variety; do not stack near-duplicates
-- favor people with enough public material to fill all fields well
-- prefer the user's weighting, e.g. more Chinese and US internet founders
-- if a topic is too narrow, keep quality first and explicitly note compromises
+- 优先代表性强、信号密度高的人物
+- 保持内部差异，不堆叠近似人物
+- 优先选择公开材料足够、能填好所有字段的人物
+- 遵守用户权重，例如更多中国和美国互联网创始人
+- 如果主题过窄，质量优先，并明确说明取舍
 
-### 4. Write the records
+### 4. 写记录
 
-Write for product use, not encyclopedia completeness.
+为产品展示而写，不写百科式简历堆砌。
 
-Field guidance:
+字段指导：
 
-- `quote_zh` / `quote_en`: short, independently readable, temperament-bearing
-- `bio_zh` / `bio_en`: concise display copy, not resume dump
-- `achievements_*`: `2-4` clear, high-recognition items
-- `core_traits`: compressed trait summary
-- `thinking_style`: observer notes about how this person tends to think or operate
-- `temperament_summary`: one compact summary of energy, rhythm, and style
-- `loading_copy_*`: short, vivid loading text tied to the person
+- `quote_zh` / `quote_en`：短、可独立阅读、带人物气质
+- `bio_zh` / `bio_en`：简洁展示文案，不堆履历
+- `achievements_*`：`2-4` 条清晰、高识别度成就
+- `core_traits`：压缩的人格/能力特征
+- `thinking_style`：观察此人如何思考和行动
+- `temperament_summary`：概括能量、节奏、风格
+- `loading_copy_*`：短而生动，并贴合人物
 
-When the user asks for more vivid writing:
+用户要求更生动时：
 
-- increase scene sense, era texture, and strategic flavor
-- keep people distinct from each other
-- avoid machine-flat parallel phrasing
-- for Chinese internet founders, allow stronger江湖感、流量格局、时代气
-- still keep fields concise enough for UI display
+- 增加场景感、时代纹理、战略味道
+- 让人物之间明显不同
+- 避免机器式平行句
+- 仍保持字段适合 UI 展示，不要写太长
 
-Do not make every record stylistically uniform unless the user explicitly asks for consistency.
+除非用户明确要求统一，否则不要让每条记录都像同一个模板。
 
-### 5. Download and normalize portraits
+### 5. 下载并标准化肖像
 
-Portrait rules:
+肖像规则：
 
-- prefer high-resolution, clean single-person photos
-- store locally under `public/figure-portraits/<pool-slug>/`
-- filename should align with `slug`
-- keep dimensions consistent across the pool
-- avoid broken hotlinks; the repo should own the asset locally
+- 优先高清、干净、单人照片
+- 本地保存到 `public/figure-portraits/<pool-slug>/`
+- 文件名和 `slug` 对齐
+- 同一人物池内尺寸尽量一致
+- 避免破损热链；仓库应拥有本地素材
 
-If network is restricted, request approval before downloading.
+如果网络受限，先按当前环境规则处理，不要假设可以下载。
 
-### 6. Write the JSON source
+### 6. 写 JSON 源文件
 
-Create the repo-local source file under `src/data/figure-pools/`.
+在 `src/data/figure-pools/` 下创建仓库内源文件。
 
-If the current in-repo convention uses a full pool object, keep that source shape there. If the user only needs importable output, you may author directly as an import payload.
+如果当前仓库约定使用完整 pool object，就保持该 source shape。如果用户只需要可导入输出，可以直接按导入 payload 编写。
 
-At minimum, ensure the file is internally consistent:
+至少保证文件内部一致：
 
-- pool name and description match the theme
-- record count is correct
-- all portrait paths resolve to local assets
-- all required fields are present
+- pool 名称和描述匹配主题
+- 记录数量正确
+- 所有肖像路径都解析到本地资产
+- 所有必填字段都存在
 
-### 7. Export the zip when needed
+### 7. 需要时导出 zip
 
-When the user asks for a zip, package it to match the implemented importer:
+用户要求 zip 时，按已实现 importer 兼容格式打包，并把最终 `.zip` 文件放到项目根目录的 `zip/` 文件夹：
 
-- create `pool.json` at zip root
-- rewrite every record `portrait_url` to `portraits/<filename>`
-- include portrait files under `portraits/`
-- do not include internal runtime metadata that the importer/exporter does not expect
+- 输出文件路径使用 `zip/<pool-slug>.zip`，必要时先创建 `zip/` 目录
+- 在 zip 包根目录创建 `pool.json`
+- 把每条记录的 `portrait_url` 重写为 `portraits/<filename>`
+- 把肖像文件放入 `portraits/`
+- 不包含 importer/exporter 不需要的内部运行态元数据
 
-Mirror `.worktrees/figure-pools/src/services/figurePoolService.ts` and its tests, not a guessed format.
+以 `skills/figure-pool-generator/scripts/pack_figure_pool_zip.py` 和它的测试为准，不猜格式。
 
-## Validation
+## 验证
 
-Do not claim completion without fresh checks.
+没有新鲜检查结果时，不要声称完成。
 
-Minimum checks:
+最低检查：
 
-- validator script passes
-- record count matches expectation
-- portrait files exist locally
-- no duplicate slugs
-- packer script succeeds
-- zip contains `pool.json`
-- zip portrait count matches record count
-- `pool.json` inside the zip uses `portraits/` paths
+- validator script 通过
+- 记录数量符合预期
+- 肖像文件本地存在
+- 没有重复 slug
+- packer script 成功
+- zip 包含 `pool.json`
+- zip 内肖像数量等于记录数
+- zip 内 `pool.json` 使用 `portraits/` 路径
 
-Useful commands:
+常用命令：
 
 ```bash
 python3 skills/figure-pool-generator/scripts/validate_figure_pool.py --input src/data/figure-pools/<pool-slug>.json
-python3 skills/figure-pool-generator/scripts/pack_figure_pool_zip.py --input src/data/figure-pools/<pool-slug>.json --output src/data/figure-pools/<pool-slug>.zip
+python3 skills/figure-pool-generator/scripts/pack_figure_pool_zip.py --input src/data/figure-pools/<pool-slug>.json --output zip/<pool-slug>.zip
 python3 - <<'PY'
 import json, zipfile
 from pathlib import Path
-z = zipfile.ZipFile(Path("src/data/figure-pools/<pool-slug>.zip"))
+z = zipfile.ZipFile(Path("zip/<pool-slug>.zip"))
 payload = json.loads(z.read("pool.json"))
 print("entries", len(z.namelist()))
 print("records", len(payload["records"]))
@@ -222,15 +224,15 @@ print("portrait_entries", sum(1 for n in z.namelist() if n.startswith("portraits
 PY
 ```
 
-## Reporting Back
+## 回报结果
 
-When finished, report:
+完成后报告：
 
-- JSON path
-- portrait directory
-- zip path if created
-- final record count
-- any user-requested inclusions/exclusions honored
-- any compromises, weak records, or missing assets
+- JSON 路径
+- 肖像目录
+- zip 路径：如果创建了 zip，必须位于 `zip/<pool-slug>.zip`
+- 最终记录数
+- 用户要求的包含/排除名单是否遵守
+- 任何取舍、弱记录、缺失素材
 
-Keep the report factual. Do not say it is complete unless the validation commands were run successfully in the current turn.
+报告要事实化。除非当前回合成功跑过验证命令，否则不要说已经完成。

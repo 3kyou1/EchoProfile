@@ -81,6 +81,18 @@ const isTauriAvailable = () => {
   }
 };
 
+const isClaudeFolderNotFoundError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("CLAUDE_FOLDER_NOT_FOUND:");
+};
+
+const hasAvailableNonClaudeProvider = (
+  providers: FullAppStore["providers"]
+): boolean =>
+  providers.some(
+    (provider) => provider.is_available && provider.id !== DEFAULT_PROVIDER_ID
+  );
+
 // ============================================================================
 // CLAUDE_CONFIG_DIR Auto-detection
 // ============================================================================
@@ -151,9 +163,28 @@ export const createProjectSlice: StateCreator<
         console.log("No saved settings found");
       }
 
-      // Try default path
-      const claudePath = await api<string>("get_claude_folder_path");
-      set({ claudePath });
+      // Try default path. A missing Claude directory should not block
+      // Codex/OpenCode-only installations from appearing in the UI.
+      try {
+        const claudePath = await api<string>("get_claude_folder_path");
+        set({ claudePath });
+      } catch (error) {
+        if (!isClaudeFolderNotFoundError(error)) {
+          throw error;
+        }
+
+        await get().loadMetadata();
+        await get().detectProviders();
+        await autoRegisterConfigDir(get);
+
+        if (hasAvailableNonClaudeProvider(get().providers)) {
+          await get().scanProjects();
+          return;
+        }
+
+        throw error;
+      }
+
       await get().loadMetadata();
       await get().detectProviders();
       await autoRegisterConfigDir(get);
@@ -190,7 +221,6 @@ export const createProjectSlice: StateCreator<
   scanProjects: async () => {
     const requestId = nextRequestId("scanProjects");
     const { claudePath, providers } = get();
-    if (!claudePath) return;
 
     set({ isLoadingProjects: true, error: null });
     try {
@@ -203,9 +233,12 @@ export const createProjectSlice: StateCreator<
       const customClaudePaths = get().userMetadata?.settings?.customClaudePaths;
       const hasCustomPaths = customClaudePaths != null && customClaudePaths.length > 0;
       const settings = get().userMetadata?.settings;
+      if (!claudePath && !hasNonClaudeProviders && !hasCustomPaths) {
+        return;
+      }
       const projects = (hasNonClaudeProviders || hasCustomPaths)
         ? await api<ClaudeProject[]>("scan_all_projects", {
-            claudePath,
+            claudePath: claudePath || undefined,
             activeProviders: scanProviders,
             customClaudePaths: hasCustomPaths ? customClaudePaths : undefined,
             wslEnabled: settings?.wsl?.enabled ?? false,

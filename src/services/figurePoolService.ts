@@ -395,7 +395,7 @@ function resolveUniquePoolName(existingNames: string[], requestedName: string): 
 function extractIdFromLegacyEntry(value: string): string {
   const sanitized = value
     .normalize("NFKD")
-    .replace(/[^\w\-]+/g, "-")
+    .replace(/[^\w-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .toLocaleLowerCase();
   return `legacy-${sanitized || "pool"}`;
@@ -464,6 +464,29 @@ async function readRepoRelativePortrait(
     relativePath,
   });
   return base64ToUint8Array(portrait.dataBase64);
+}
+
+async function resolveDisplayPortraits({ directoryName, pool }: RepoPoolContext): Promise<FigurePool> {
+  const resolved = clonePool(pool);
+  resolved.records = await Promise.all(
+    resolved.records.map(async (record) => {
+      const portraitUrl = normalizeString(record.portrait_url);
+      if (!isPoolRelativePortraitPath(portraitUrl)) {
+        return record;
+      }
+
+      try {
+        const bytes = await readRepoRelativePortrait(directoryName, portraitUrl);
+        return {
+          ...record,
+          portrait_url: buildDataUrl(bytes, inferMimeTypeFromPath(portraitUrl)),
+        };
+      } catch {
+        return record;
+      }
+    })
+  );
+  return resolved;
 }
 
 async function materializePoolPortraits(
@@ -551,12 +574,12 @@ function buildImportedPool(payload: FigurePoolImportPayload, pools: FigurePool[]
 
 export async function loadFigurePools(): Promise<FigurePool[]> {
   const pools = await loadRepoPools();
-  return pools.map((item) => clonePool(item.pool));
+  return Promise.all(pools.map(resolveDisplayPortraits));
 }
 
 export async function loadFigurePool(poolId: string): Promise<FigurePool | null> {
   const pool = await findRepoPoolById(poolId);
-  return pool ? clonePool(pool.pool) : null;
+  return pool ? resolveDisplayPortraits(pool) : null;
 }
 
 export async function importFigurePool(payload: FigurePoolImportPayload): Promise<FigurePool> {
@@ -606,15 +629,15 @@ export async function importFigurePoolFromZip(
 }
 
 export async function exportFigurePool(poolId: string): Promise<FigurePoolImportPayload> {
-  const pool = await loadFigurePool(poolId);
-  if (!pool) {
+  const repoPool = await findRepoPoolById(poolId);
+  if (!repoPool) {
     throw new Error(`Figure pool not found: ${poolId}`);
   }
 
   return {
-    name: pool.name,
-    description: pool.description,
-    records: pool.records.map((record) => cloneRecord(record)),
+    name: repoPool.pool.name,
+    description: repoPool.pool.description,
+    records: repoPool.pool.records.map((record) => cloneRecord(record)),
   };
 }
 
@@ -733,9 +756,9 @@ export async function duplicateFigureRecord(
   slug: string,
   nextSlug: string
 ): Promise<FigurePoolRecord> {
-  const pool = await loadFigurePool(poolId);
-  const record = pool?.records.find((item) => item.slug === slug);
-  if (!pool || !record) {
+  const repoPool = await findRepoPoolById(poolId);
+  const record = repoPool?.pool.records.find((item) => item.slug === slug);
+  if (!repoPool || !record) {
     throw new Error(`Figure record not found: ${slug}`);
   }
 

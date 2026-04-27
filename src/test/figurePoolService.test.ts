@@ -247,6 +247,24 @@ describe("figurePoolService", () => {
     expect(pools[0]?.id).toBe("legacy-pool");
   });
 
+  it("resolves repo-local portrait paths to displayable data URLs when loading pools", async () => {
+    repoMock.setEntries([
+      {
+        directoryName: "Scientists",
+        poolJson: buildStoredPool({ id: "pool-1", name: "Scientists", isDefault: true }),
+        portraits: {
+          "portraits/grace_hopper.jpg": btoa(String.fromCharCode(1, 2, 3, 4)),
+        },
+      },
+    ]);
+
+    const pools = await loadFigurePools();
+
+    expect(pools[0]?.records[0]?.portrait_url).toBe(
+      "data:image/jpeg;base64,AQIDBA=="
+    );
+  });
+
   it("imports a pool, auto-suffixes name collisions, and keeps invalid records excluded while valid ones remain usable", async () => {
     repoMock.setEntries([
       {

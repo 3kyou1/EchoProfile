@@ -10,6 +10,7 @@ import {
   Coins,
   Settings,
   Archive,
+  Fingerprint,
   Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ import { SimpleUpdateManager } from "@/components/SimpleUpdateManager";
 import { SettingsManager } from "@/components/SettingsManager";
 import { SessionBoard } from "@/components/SessionBoard/SessionBoard";
 import { ArchiveManager } from "@/components/ArchiveManager";
+import { MyTracePage } from "@/components/MyTrace";
 import { CopaProfilePage } from "@/components/CopaProfile";
 import { BottomTabBar } from "@/components/mobile/BottomTabBar";
 import { MobileNavigatorSheet } from "@/components/mobile/MobileNavigatorSheet";
@@ -365,6 +367,7 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
               computed.isSettingsView ||
               computed.isBoardView ||
               computed.isArchiveView ||
+              computed.isMyTraceView ||
               computed.isCopaProfileView ||
               (isViewingGlobalStats && !computed.isSettingsView)) && (
               <div className="px-4 py-3 md:px-6 md:py-4 border-b border-border/50 bg-card/50">
@@ -374,6 +377,8 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                       <Database className="w-5 h-5 text-accent" />
                     ) : computed.isArchiveView ? (
                       <Archive className="w-5 h-5 text-accent" />
+                    ) : computed.isMyTraceView ? (
+                      <Fingerprint className="w-5 h-5 text-accent" />
                     ) : computed.isCopaProfileView ? (
                       <Brain className="w-5 h-5 text-accent" />
                     ) : computed.isSettingsView ? (
@@ -394,6 +399,8 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                         ? t("analytics.globalOverview")
                         : computed.isArchiveView
                           ? t("archive.title")
+                        : computed.isMyTraceView
+                          ? t("common.myTrace.title", "My Trace")
                           : computed.isCopaProfileView
                             ? t("common.copa.title", "CoPA Profile")
                           : computed.isSettingsView
@@ -411,6 +418,11 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                         ? globalOverviewDescription
                         : computed.isArchiveView
                           ? t("archive.description")
+                        : computed.isMyTraceView
+                          ? t(
+                              "common.myTrace.description",
+                              "Review your own prompts, questions, and thinking traces across AI conversations."
+                            )
                           : computed.isCopaProfileView
                             ? t("common.copa.description", "Generate a six-factor CoPA profile from historical user messages.")
                           : computed.isSettingsView
@@ -437,6 +449,7 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
               (computed.isAnalyticsView ||
                 computed.isTokenStatsView ||
                 computed.isRecentEditsView ||
+                computed.isMyTraceView ||
                 computed.isCopaProfileView) && (
                 <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border/40 bg-card/30 md:hidden overflow-x-auto">
                   <button
@@ -480,6 +493,19 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                   </button>
                   <button
                     type="button"
+                    onClick={() => analyticsActions.switchToMyTrace()}
+                    className={cn(
+                      "shrink-0 flex items-center gap-1.5 px-3 py-2.5 md:py-1.5 rounded-lg text-xs font-medium transition-colors",
+                      computed.isMyTraceView
+                        ? "bg-accent/15 text-accent border border-accent/30"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <Fingerprint className="w-3.5 h-3.5" />
+                    {t("common.myTrace.shortTitle", "Trace")}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => analyticsActions.switchToCopaProfile()}
                     className={cn(
                       "shrink-0 flex items-center gap-1.5 px-3 py-2.5 md:py-1.5 rounded-lg text-xs font-medium transition-colors",
@@ -504,6 +530,8 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                 </div>
               ) : computed.isCopaProfileView ? (
                 <CopaProfilePage />
+              ) : computed.isMyTraceView ? (
+                <MyTracePage />
               ) : computed.isSettingsView ? (
                 <div className="h-full flex flex-col p-3 md:p-6">
                   <SettingsManager
@@ -716,6 +744,9 @@ export const AppLayout: React.FC<AppLayoutProps> = (props) => {
                   break;
                 case "archive":
                   analyticsActions.switchToArchive();
+                  break;
+                case "myTrace":
+                  analyticsActions.switchToMyTrace();
                   break;
                 case "copaProfile":
                   analyticsActions.switchToCopaProfile();

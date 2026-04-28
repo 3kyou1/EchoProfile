@@ -54,6 +54,11 @@ export function useAnalyticsNavigation() {
     }
   }, [setAnalyticsCurrentView, clearAnalyticsErrors]);
 
+  const switchToMyTrace = useCallback(() => {
+    setAnalyticsCurrentView("myTrace");
+    clearAnalyticsErrors();
+  }, [setAnalyticsCurrentView, clearAnalyticsErrors]);
+
   const switchToCopaProfile = useCallback(() => {
     setAnalyticsCurrentView("copaProfile");
     clearAnalyticsErrors();
@@ -434,6 +439,8 @@ export function useAnalyticsNavigation() {
           await useAppStore.getState().loadArchives();
         }
         break;
+      case "myTrace":
+        break;
       case "copaProfile":
         break;
       default:
@@ -466,6 +473,7 @@ export function useAnalyticsNavigation() {
     switchToSettings,
     switchToBoard,
     switchToArchive,
+    switchToMyTrace,
     switchToCopaProfile,
     setStatsMode,
     setMetricMode,

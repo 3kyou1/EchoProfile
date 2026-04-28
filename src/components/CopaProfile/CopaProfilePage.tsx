@@ -44,6 +44,7 @@ import {
   generateFigureResonance,
   loadFigureResonanceHistory,
 } from "@/services/figureResonanceService";
+import { saveLlmApiKey, type LlmRuntimeConfig } from "@/services/llmProxyService";
 import type { FigurePool, FigureRecordInput } from "@/types/figurePool";
 import {
   createFigureRecord,
@@ -187,6 +188,8 @@ export function CopaProfilePage() {
   const [pasteLikeSignalLengthInput, setPasteLikeSignalLengthInput] = useState(
     String(DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
   );
+  const [draftCopaApiKey, setDraftCopaApiKey] = useState("");
+  const [draftResonanceApiKey, setDraftResonanceApiKey] = useState("");
   const llmConfigPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -432,8 +435,16 @@ export function CopaProfilePage() {
       : draftConfig.resonance.enabled
         ? draftConfig.resonance.config
         : resolveCopaModelConfig(draftConfig);
+  const activeApiKeyDraft =
+    activeLlmConfigSection === "copa" ? draftCopaApiKey : draftResonanceApiKey;
+  const activeHasApiKey =
+    activeLlmConfigSection === "copa"
+      ? config.copa.hasApiKey === true
+      : resolveResonanceModelConfig(config).hasApiKey === true;
   const hasDraftConfigChanges =
     JSON.stringify(draftConfig) !== JSON.stringify(config) ||
+    draftCopaApiKey.trim().length > 0 ||
+    draftResonanceApiKey.trim().length > 0 ||
     discardSignalLengthInput !==
       String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50) ||
     pasteLikeSignalLengthInput !==
@@ -471,6 +482,21 @@ export function CopaProfilePage() {
     () => sessionsForScope.find((session) => session.file_path === sessionPath) ?? null,
     [sessionPath, sessionsForScope]
   );
+
+  const applyRuntimeApiKeyStatus = (next: CopaLlmConfigState, runtime: LlmRuntimeConfig): CopaLlmConfigState => ({
+    ...next,
+    copa: {
+      ...next.copa,
+      hasApiKey: runtime.copa.hasApiKey,
+    },
+    resonance: {
+      ...next.resonance,
+      config: {
+        ...next.resonance.config,
+        hasApiKey: runtime.resonance.hasApiKey,
+      },
+    },
+  });
 
   const persistConfig = (next: CopaLlmConfigState) => {
     setConfig(next);
@@ -546,6 +572,8 @@ export function CopaProfilePage() {
 
   const openLlmConfigPanel = () => {
     setDraftConfig(config);
+    setDraftCopaApiKey("");
+    setDraftResonanceApiKey("");
     setDiscardSignalLengthInput(
       String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
     );
@@ -557,6 +585,8 @@ export function CopaProfilePage() {
 
   const closeLlmConfigPanel = () => {
     setDraftConfig(config);
+    setDraftCopaApiKey("");
+    setDraftResonanceApiKey("");
     setDiscardSignalLengthInput(
       String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
     );
@@ -566,7 +596,7 @@ export function CopaProfilePage() {
     setIsLlmConfigOpen(false);
   };
 
-  const confirmLlmConfigPanel = () => {
+  const confirmLlmConfigPanel = async () => {
     const discardSignalLength = clampSignalThreshold(
       discardSignalLengthInput,
       config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50,
@@ -584,8 +614,29 @@ export function CopaProfilePage() {
         discardSignalLength - 1
       ),
     };
-    persistConfig(nextConfig);
-    setIsLlmConfigOpen(false);
+
+    try {
+      let runtimeConfig: LlmRuntimeConfig | null = null;
+      if (draftCopaApiKey.trim().length > 0) {
+        runtimeConfig = await saveLlmApiKey({
+          purpose: "copa",
+          apiKey: draftCopaApiKey,
+        });
+      }
+      if (draftResonanceApiKey.trim().length > 0) {
+        runtimeConfig = await saveLlmApiKey({
+          purpose: "resonance",
+          apiKey: draftResonanceApiKey,
+        });
+      }
+
+      persistConfig(runtimeConfig ? applyRuntimeApiKeyStatus(nextConfig, runtimeConfig) : nextConfig);
+      setDraftCopaApiKey("");
+      setDraftResonanceApiKey("");
+      setIsLlmConfigOpen(false);
+    } catch (saveError) {
+      toast.error(getErrorMessage(saveError));
+    }
   };
 
   const toggleProvider = (provider: string) => {
@@ -1241,20 +1292,39 @@ export function CopaProfilePage() {
                         </label>
                         <label className="block">
                           <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                            {t("common.copa.apiKey", "API key")}
+                            {activeLlmConfigSection === "copa"
+                              ? t("common.copa.apiKey.copa", "CoPA API Key")
+                              : t("common.copa.apiKey.resonance", "Thought Echoes API Key")}
                           </span>
                           <input
                             type="password"
-                            value={activeLlmModelConfig.apiKey ?? ""}
+                            aria-label={
+                              activeLlmConfigSection === "copa"
+                                ? t("common.copa.apiKey.copa", "CoPA API Key")
+                                : t("common.copa.apiKey.resonance", "Thought Echoes API Key")
+                            }
+                            value={activeApiKeyDraft}
                             onChange={(event) =>
                               activeLlmConfigSection === "copa"
-                                ? handleCopaConfigChange("apiKey", event.target.value)
-                                : handleResonanceConfigChange("apiKey", event.target.value)
+                                ? setDraftCopaApiKey(event.target.value)
+                                : setDraftResonanceApiKey(event.target.value)
+                            }
+                            placeholder={
+                              activeHasApiKey
+                                ? t("common.copa.apiKey.savedPlaceholder", "Saved locally; leave blank to keep")
+                                : t("common.copa.apiKey.placeholder", "Paste API key")
                             }
                             disabled={isInheritedResonanceConfig}
+                            autoComplete="off"
                             className="mt-2 w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70"
                           />
                         </label>
+                        <p className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                          {t(
+                            "common.copa.llmConfig.apiKeyEnvHint",
+                            "API keys are saved by the local backend in ~/.echo-profile/llm-config.json. They are not stored in the frontend config or bundled app assets."
+                          )}
+                        </p>
                       </div>
                       <div className="mt-4 grid gap-3">
                         <label htmlFor="copa-discard-signal-length" className="block">
@@ -1333,7 +1403,7 @@ export function CopaProfilePage() {
                         <button
                           type="button"
                           aria-label={t("common.copa.llmConfig.confirmAria", "Confirm LLM settings")}
-                          onClick={confirmLlmConfigPanel}
+                          onClick={() => void confirmLlmConfigPanel()}
                           disabled={!hasDraftConfigChanges}
                           className="inline-flex h-10 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-medium text-background transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
                         >

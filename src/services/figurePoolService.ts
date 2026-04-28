@@ -52,6 +52,7 @@ function cloneRecord(input: FigureRecordInput): FigureRecordInput {
   return {
     ...input,
     localized_names: input.localized_names ? { ...input.localized_names } : undefined,
+    wikipedia_urls: input.wikipedia_urls ? { ...input.wikipedia_urls } : undefined,
     achievements_zh: [...input.achievements_zh],
     achievements_en: [...input.achievements_en],
   };
@@ -63,6 +64,7 @@ function clonePool(pool: FigurePool): FigurePool {
     records: pool.records.map((record) => ({
       ...record,
       localized_names: record.localized_names ? { ...record.localized_names } : undefined,
+      wikipedia_urls: record.wikipedia_urls ? { ...record.wikipedia_urls } : undefined,
       achievements_zh: [...record.achievements_zh],
       achievements_en: [...record.achievements_en],
       errors: [...record.errors],

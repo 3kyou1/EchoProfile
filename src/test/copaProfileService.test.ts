@@ -5,8 +5,16 @@ const { mockPersistLlmDebugLog } = vi.hoisted(() => ({
   mockPersistLlmDebugLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+const { mockApi } = vi.hoisted(() => ({
+  mockApi: vi.fn(),
+}));
+
 vi.mock("@/services/llmDebugLogger", () => ({
   persistLlmDebugLog: mockPersistLlmDebugLog,
+}));
+
+vi.mock("@/services/api", () => ({
+  api: mockApi,
 }));
 
 import {
@@ -29,6 +37,7 @@ import type { CopaSnapshot } from "@/types/copaProfile";
 describe("copaProfileService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockApi.mockReset();
     const backing = new Map<string, string>();
     Object.defineProperty(globalThis, "localStorage", {
       configurable: true,
@@ -330,20 +339,21 @@ describe("copaProfileService", () => {
   });
 
   test("requestCopaProfile logs the prompt input and raw response for debugging", async () => {
+    mockApi.mockResolvedValue({
+      status: 200,
+      body: {
+        choices: [
+          {
+            message: {
+              content: "{\"factors\":{},\"prompt_summary\":\"Lead with evidence.\"}",
+            },
+          },
+        ],
+      },
+    });
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
-              message: {
-                content: "{\"factors\":{},\"prompt_summary\":\"Lead with evidence.\"}",
-              },
-            },
-          ],
-        }),
-      })
+      vi.fn().mockRejectedValue(new Error("frontend fetch should not be used for LLM calls"))
     );
 
     await requestCopaProfile(
@@ -355,6 +365,17 @@ describe("copaProfileService", () => {
       },
       "en"
     );
+
+    expect(mockApi).toHaveBeenCalledWith(
+      "request_llm_chat_completion",
+      expect.objectContaining({
+        purpose: "copa",
+        baseUrl: "https://example.com/v1",
+        model: "test-model",
+      })
+    );
+    expect(JSON.stringify(mockApi.mock.calls[0]?.[1])).not.toContain("test-key");
+    expect(fetch).not.toHaveBeenCalled();
 
     expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -391,9 +412,10 @@ describe("copaProfileService", () => {
   });
 
   test("requestCopaProfile sends a json_schema response format", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    mockApi.mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      body: {
         choices: [
           {
             message: {
@@ -401,9 +423,8 @@ describe("copaProfileService", () => {
             },
           },
         ],
-      }),
+      },
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     await requestCopaProfile(
       ["Please keep this practical."],
@@ -415,14 +436,13 @@ describe("copaProfileService", () => {
       "en"
     );
 
-    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
-    const body = JSON.parse(String(requestInit?.body ?? "{}")) as {
-      response_format?: { type?: string; json_schema?: { name?: string; schema?: Record<string, unknown> } };
+    const body = mockApi.mock.calls[0]?.[1] as {
+      responseFormat?: { type?: string; json_schema?: { name?: string; schema?: Record<string, unknown> } };
     };
 
-    expect(body.response_format?.type).toBe("json_schema");
-    expect(body.response_format?.json_schema?.name).toBe("copa_profile");
-    expect(body.response_format?.json_schema?.schema).toEqual(
+    expect(body.responseFormat?.type).toBe("json_schema");
+    expect(body.responseFormat?.json_schema?.name).toBe("copa_profile");
+    expect(body.responseFormat?.json_schema?.schema).toEqual(
       expect.objectContaining({
         type: "object",
         required: expect.arrayContaining(["factors", "prompt_summary"]),
@@ -431,9 +451,10 @@ describe("copaProfileService", () => {
   });
 
   test("requestCopaProfile asks for a one-paragraph schema in entertainment mode", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    mockApi.mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      body: {
         choices: [
           {
             message: {
@@ -441,9 +462,8 @@ describe("copaProfileService", () => {
             },
           },
         ],
-      }),
+      },
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     const result = await requestCopaProfile(
       ["Please keep this practical."],
@@ -456,34 +476,31 @@ describe("copaProfileService", () => {
       "fun"
     );
 
-    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
-    const body = JSON.parse(String(requestInit?.body ?? "{}")) as {
-      response_format?: { type?: string; json_schema?: { name?: string; schema?: Record<string, unknown> } };
+    const body = mockApi.mock.calls[0]?.[1] as {
+      responseFormat?: { type?: string; json_schema?: { name?: string; schema?: Record<string, unknown> } };
     };
 
-    expect(body.response_format?.json_schema?.name).toBe("copa_fun_profile");
-    expect(body.response_format?.json_schema?.schema?.required).toEqual(["title", "profile_text"]);
+    expect(body.responseFormat?.json_schema?.name).toBe("copa_fun_profile");
+    expect(body.responseFormat?.json_schema?.schema?.required).toEqual(["title", "profile_text"]);
     expect(result.promptSummary).toBe("Builder gremlin");
     expect(result.funProfileText).toBe("A playful profile.");
   });
 
   test("requestCopaProfile repairs an entertainment response missing the final object brace", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
-              message: {
-                content:
-                  '{"title":"Builder gremlin","profile_text":"A playful profile with enough closure."',
-              },
+    mockApi.mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      body: {
+        choices: [
+          {
+            message: {
+              content:
+                '{"title":"Builder gremlin","profile_text":"A playful profile with enough closure."',
             },
-          ],
-        }),
-      })
-    );
+          },
+        ],
+      },
+    });
 
     const result = await requestCopaProfile(
       ["Please keep this practical."],
@@ -501,19 +518,16 @@ describe("copaProfileService", () => {
   });
 
   test("requestCopaProfile falls back to json_object when json_schema is unsupported", async () => {
-    const fetchMock = vi
-      .fn()
+    mockApi
       .mockResolvedValueOnce({
-        ok: false,
         status: 400,
         statusText: "Bad Request",
-        text: async () => "response_format json_schema is not supported for this model",
+        text: "response_format json_schema is not supported for this model",
       })
       .mockResolvedValueOnce({
-        ok: true,
         status: 200,
         statusText: "OK",
-        json: async () => ({
+        body: {
           choices: [
             {
               message: {
@@ -521,9 +535,8 @@ describe("copaProfileService", () => {
               },
             },
           ],
-        }),
+        },
       });
-    vi.stubGlobal("fetch", fetchMock);
 
     const result = await requestCopaProfile(
       ["Please keep this practical."],
@@ -535,15 +548,15 @@ describe("copaProfileService", () => {
       "en"
     );
 
-    const firstBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body ?? "{}")) as {
-      response_format?: { type?: string };
+    const firstBody = mockApi.mock.calls[0]?.[1] as {
+      responseFormat?: { type?: string };
     };
-    const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body ?? "{}")) as {
-      response_format?: { type?: string };
+    const secondBody = mockApi.mock.calls[1]?.[1] as {
+      responseFormat?: { type?: string };
     };
 
-    expect(firstBody.response_format?.type).toBe("json_schema");
-    expect(secondBody.response_format?.type).toBe("json_object");
+    expect(firstBody.responseFormat?.type).toBe("json_schema");
+    expect(secondBody.responseFormat?.type).toBe("json_object");
     expect(result.promptSummary).toBe("Lead with evidence.");
     expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -559,21 +572,19 @@ describe("copaProfileService", () => {
   });
 
   test("requestCopaProfile throws when the model returns invalid JSON", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
-              message: {
-                content: "not valid json",
-              },
+    mockApi.mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      body: {
+        choices: [
+          {
+            message: {
+              content: "not valid json",
             },
-          ],
-        }),
-      })
-    );
+          },
+        ],
+      },
+    });
 
     await expect(
       requestCopaProfile(
@@ -600,15 +611,11 @@ describe("copaProfileService", () => {
   });
 
   test("requestCopaProfile logs http errors before throwing", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 504,
-        statusText: "Gateway Timeout",
-        text: async () => "upstream timeout",
-      })
-    );
+    mockApi.mockResolvedValue({
+      status: 504,
+      statusText: "Gateway Timeout",
+      text: "upstream timeout",
+    });
 
     await expect(
       requestCopaProfile(
@@ -647,17 +654,11 @@ describe("copaProfileService", () => {
   });
 
   test("requestCopaProfile logs response json errors before throwing", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: "OK",
-        json: async () => {
-          throw new Error("unexpected end of json input");
-        },
-      })
-    );
+    mockApi.mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      text: "",
+    });
 
     await expect(
       requestCopaProfile(
@@ -669,7 +670,7 @@ describe("copaProfileService", () => {
         },
         "en"
       )
-    ).rejects.toThrow("unexpected end of json input");
+    ).rejects.toThrow("Unexpected end of JSON input");
 
     expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -678,7 +679,7 @@ describe("copaProfileService", () => {
         level: "warn",
         payload: expect.objectContaining({
           status: 200,
-          error: "unexpected end of json input",
+          error: "Unexpected end of JSON input",
         }),
       })
     );
@@ -985,7 +986,6 @@ describe("copaProfileService", () => {
     expect(resolveResonanceModelConfig(config)).toMatchObject({
       baseUrl: "https://copa.example.com/v1",
       model: "copa-model",
-      apiKey: "copa-key",
     });
 
     const withSeparateResonance = await saveCopaConfig({
@@ -1004,7 +1004,6 @@ describe("copaProfileService", () => {
     expect(resolveResonanceModelConfig(withSeparateResonance)).toMatchObject({
       baseUrl: "https://res.example.com/v1",
       model: "res-model",
-      apiKey: "res-key",
     });
   });
 });

@@ -40,9 +40,26 @@ function normalizeNameLanguage(language: string): "zh" | "en" {
   return "en";
 }
 
-function buildWikipediaUrl(language: "zh" | "en", title: string): string {
-  const host = language === "en" ? "en.wikipedia.org" : `${language}.wikipedia.org`;
-  return `https://${host}/wiki/${encodeURIComponent(title.replace(/\s+/g, "_"))}`;
+function normalizeExternalUrl(value: string | undefined): string {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+function resolveWikipediaUrl(card: FigureResonanceCardType, language: "zh" | "en"): string {
+  return (
+    normalizeExternalUrl(card.wikipedia_urls?.[language]) ||
+    normalizeExternalUrl(card.wikipedia_url) ||
+    normalizeExternalUrl(card.wikipedia_urls?.en)
+  );
 }
 
 function splitBiography(value: string): string[] {
@@ -78,9 +95,7 @@ export function FigureResonanceCard({ card, label, compact = false }: FigureReso
   const activeQuote =
     activeLanguage === "zh" ? normalizeDisplayQuote(card.quote_zh || card.quote_en) : normalizeDisplayQuote(card.quote_en || card.quote_zh);
   const biography = splitBiography(activeBiography);
-  const wikipediaTitle =
-    activeLanguage === "en" ? englishName : card.localized_names?.[activeLanguage] || englishName;
-  const wikipediaUrl = buildWikipediaUrl(activeLanguage, wikipediaTitle);
+  const wikipediaUrl = resolveWikipediaUrl(card, activeLanguage);
 
   return (
     <article className="overflow-hidden rounded-2xl border border-border/60 bg-card/90 shadow-sm">
@@ -129,7 +144,7 @@ export function FigureResonanceCard({ card, label, compact = false }: FigureReso
             <p className="text-sm leading-6 text-foreground">{activeQuote}</p>
           </div>
 
-          {compact ? (
+          {compact && wikipediaUrl ? (
             <a
               href={wikipediaUrl}
               target="_blank"
@@ -153,14 +168,16 @@ export function FigureResonanceCard({ card, label, compact = false }: FigureReso
                     </p>
                   ))}
                 </div>
-                <a
-                  href={wikipediaUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-4 inline-flex w-fit items-center rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-                >
-                  {t("common.copa.resonance.wikipedia", "Wikipedia")}
-                </a>
+                {wikipediaUrl ? (
+                  <a
+                    href={wikipediaUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex w-fit items-center rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                  >
+                    {t("common.copa.resonance.wikipedia", "Wikipedia")}
+                  </a>
+                ) : null}
               </section>
               <section className="flex h-full flex-col rounded-xl border border-border/50 bg-background/60 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">

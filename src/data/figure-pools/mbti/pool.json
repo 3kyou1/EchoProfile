@@ -2,7 +2,7 @@
   "id": "mbti",
   "name": "mbti",
   "description": "基于 16 型 MBTI 动漫角色形象整理的候选池。每条记录对应一种人格原型，保留类型气质、常见思维方式和角色化表达，适合做人格风格映射与轻量共鸣展示。 文案已强化为更鲜明、更适合动漫人格识别的展示版本。",
-  "origin": "imported",
+  "origin": "builtin",
   "isDefault": true,
   "createdAt": "2026-04-27T06:33:31.769Z",
   "updatedAt": "2026-04-27T06:33:31.769Z",
@@ -43,7 +43,10 @@
       "core_traits_en": "strategic vision, structural sense, independent judgment, long-range planning",
       "temperament_tags_en": "calm, strategic, independent, future-oriented",
       "thinking_style_en": "Works from strategic vision and structural sense, then lets independent judgment and long-range planning shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by calm, strategic, and independent, with strategic vision, structural sense, and independent judgment giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by calm, strategic, and independent, with strategic vision, structural sense, and independent judgment giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/intj-personality"
+      }
     },
     {
       "slug": "intp_logician",
@@ -75,7 +78,10 @@
       "core_traits_en": "abstract reasoning, conceptual sensitivity, curiosity, logical flexibility",
       "temperament_tags_en": "abstract, curious, relaxed, concept-driven",
       "thinking_style_en": "Works from abstract reasoning and conceptual sensitivity, then lets curiosity and logical flexibility shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by abstract, curious, and relaxed, with abstract reasoning, conceptual sensitivity, and curiosity giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by abstract, curious, and relaxed, with abstract reasoning, conceptual sensitivity, and curiosity giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/intp-personality"
+      }
     },
     {
       "slug": "entj_commander",
@@ -107,7 +113,10 @@
       "core_traits_en": "decisiveness, coordination, goal-oriented, execution pressure",
       "temperament_tags_en": "forceful, efficiency-first, leaderly, momentum",
       "thinking_style_en": "Works from decisiveness and coordination, then lets goal-oriented and execution pressure shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by forceful, efficiency-first, and leaderly, with decisiveness, coordination, and goal-oriented giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by forceful, efficiency-first, and leaderly, with decisiveness, coordination, and goal-oriented giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/entj-personality"
+      }
     },
     {
       "slug": "entp_debater",
@@ -139,7 +148,10 @@
       "core_traits_en": "quick wit, divergent thinking, adaptability, idea experimentation",
       "temperament_tags_en": "nimble, provocative curiosity, creative, argument-loving",
       "thinking_style_en": "Works from quick wit and divergent thinking, then lets adaptability and idea experimentation shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by nimble, provocative curiosity, and creative, with quick wit, divergent thinking, and adaptability giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by nimble, provocative curiosity, and creative, with quick wit, divergent thinking, and adaptability giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/entp-personality"
+      }
     },
     {
       "slug": "infj_advocate",
@@ -171,7 +183,10 @@
       "core_traits_en": "insight, idealism, empathy, inner mission",
       "temperament_tags_en": "gentle, deep insight, idealism, internally driven",
       "thinking_style_en": "Works from insight and idealism, then lets empathy and inner mission shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by gentle, deep insight, and idealism, with insight, idealism, and empathy giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by gentle, deep insight, and idealism, with insight, idealism, and empathy giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/infj-personality"
+      }
     },
     {
       "slug": "infp_mediator",
@@ -203,7 +218,10 @@
       "core_traits_en": "values focus, imagination, softness, inner authenticity",
       "temperament_tags_en": "soft, idealistic, imagination-driven, sincere",
       "thinking_style_en": "Works from values focus and imagination, then lets softness and inner authenticity shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by soft, idealistic, and imagination-driven, with values focus, imagination, and softness giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by soft, idealistic, and imagination-driven, with values focus, imagination, and softness giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/infp-personality"
+      }
     },
     {
       "slug": "enfj_protagonist",
@@ -235,7 +253,10 @@
       "core_traits_en": "mobilizing power, empathetic leadership, expressiveness, atmosphere shaping",
       "temperament_tags_en": "outward, highly contagious energy, empathetic leadership, ideal-driven",
       "thinking_style_en": "Works from mobilizing power and empathetic leadership, then lets expressiveness and atmosphere shaping shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by outward, highly contagious energy, and empathetic leadership, with mobilizing power, empathetic leadership, and expressiveness giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by outward, highly contagious energy, and empathetic leadership, with mobilizing power, empathetic leadership, and expressiveness giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/enfj-personality"
+      }
     },
     {
       "slug": "enfp_campaigner",
@@ -267,7 +288,10 @@
       "core_traits_en": "enthusiasm, associative thinking, social energy, possibility-sensitive",
       "temperament_tags_en": "high-energy, extroverted, leaping, infectious energy",
       "thinking_style_en": "Works from enthusiasm and associative thinking, then lets social energy and possibility-sensitive shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by high-energy, extroverted, and leaping, with enthusiasm, associative thinking, and social energy giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by high-energy, extroverted, and leaping, with enthusiasm, associative thinking, and social energy giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/enfp-personality"
+      }
     },
     {
       "slug": "istj_logistician",
@@ -299,7 +323,10 @@
       "core_traits_en": "responsibility, orderliness, steady execution, detail awareness",
       "temperament_tags_en": "steady, orderly, responsible, detail-minded",
       "thinking_style_en": "Works from responsibility and orderliness, then lets steady execution and detail awareness shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by steady, orderly, and responsible, with responsibility, orderliness, and steady execution giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by steady, orderly, and responsible, with responsibility, orderliness, and steady execution giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/istj-personality"
+      }
     },
     {
       "slug": "isfj_defender",
@@ -331,7 +358,10 @@
       "core_traits_en": "considerate, responsibility, memory, steady care",
       "temperament_tags_en": "softness, reliable, caretaking, low-key",
       "thinking_style_en": "Works from considerate and responsibility, then lets memory and steady care shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by softness, reliable, and caretaking, with considerate, responsibility, and memory giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by softness, reliable, and caretaking, with considerate, responsibility, and memory giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/isfj-personality"
+      }
     },
     {
       "slug": "estj_executive",
@@ -363,7 +393,10 @@
       "core_traits_en": "structured judgment, emotional rhythm, decision style",
       "temperament_tags_en": "distinctive, expressive, recognizable",
       "thinking_style_en": "Works from structured judgment and emotional rhythm, then lets decision style shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by distinctive, expressive, and recognizable, with structured judgment, emotional rhythm, and decision style giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by distinctive, expressive, and recognizable, with structured judgment, emotional rhythm, and decision style giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/estj-personality"
+      }
     },
     {
       "slug": "esfj_consul",
@@ -395,7 +428,10 @@
       "core_traits_en": "enthusiasm, responsibility",
       "temperament_tags_en": "enthusiasm",
       "thinking_style_en": "Works from enthusiasm and responsibility, then lets  shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by enthusiasm, with enthusiasm and responsibility giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by enthusiasm, with enthusiasm and responsibility giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/esfj-personality"
+      }
     },
     {
       "slug": "istp_virtuoso",
@@ -427,7 +463,10 @@
       "core_traits_en": "calm",
       "temperament_tags_en": "calm, nimble",
       "thinking_style_en": "Works from calm, then lets  shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by calm and nimble, with calm giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by calm and nimble, with calm giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/istp-personality"
+      }
     },
     {
       "slug": "isfp_adventurer",
@@ -459,7 +498,10 @@
       "core_traits_en": "structured judgment, emotional rhythm, decision style",
       "temperament_tags_en": "distinctive, expressive, recognizable",
       "thinking_style_en": "Works from structured judgment and emotional rhythm, then lets decision style shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by distinctive, expressive, and recognizable, with structured judgment, emotional rhythm, and decision style giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by distinctive, expressive, and recognizable, with structured judgment, emotional rhythm, and decision style giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/isfp-personality"
+      }
     },
     {
       "slug": "estp_entrepreneur",
@@ -491,7 +533,10 @@
       "core_traits_en": "structured judgment, emotional rhythm, decision style",
       "temperament_tags_en": "distinctive, expressive, recognizable",
       "thinking_style_en": "Works from structured judgment and emotional rhythm, then lets decision style shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by distinctive, expressive, and recognizable, with structured judgment, emotional rhythm, and decision style giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by distinctive, expressive, and recognizable, with structured judgment, emotional rhythm, and decision style giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/estp-personality"
+      }
     },
     {
       "slug": "esfp_entertainer",
@@ -523,7 +568,10 @@
       "core_traits_en": "enthusiasm",
       "temperament_tags_en": "extroverted, highly contagious energy",
       "thinking_style_en": "Works from enthusiasm, then lets  shape the long-term structure.",
-      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by extroverted and highly contagious energy, with enthusiasm giving the whole presence its shape."
+      "temperament_summary_en": "Like someone who quietly sketches the larger blueprint first. Looking closer, this archetype is defined by extroverted and highly contagious energy, with enthusiasm giving the whole presence its shape.",
+      "wikipedia_urls": {
+        "en": "https://www.16personalities.com/esfp-personality"
+      }
     }
   ]
 }

@@ -1,5 +1,12 @@
 import { storageAdapter } from "@/services/storage";
 import { persistLlmDebugLog } from "@/services/llmDebugLogger";
+import {
+  getLlmProxyResponseText,
+  getLlmRuntimeConfig,
+  requestLlmChatCompletion,
+  type LlmRuntimeConfig,
+  type LlmProxyResponse,
+} from "@/services/llmProxyService";
 import type { ClaudeMessage } from "@/types";
 import type {
   CopaFactor,
@@ -222,9 +229,8 @@ function shouldFallbackToJsonObject(status: number, detail: string): boolean {
 }
 
 export const DEFAULT_COPA_MODEL_CONFIG: CopaModelConfig = {
-  baseUrl: "http://35.220.164.252:3888/v1",
-  model: "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
-  apiKey: "sk-bJGY1sslj60pLLE3Mx8FFAUUCmJKEFsVBvoZ3oAE1DUpLFa6",
+  baseUrl: "https://api.openai.com/v1",
+  model: "",
   temperature: 0.2,
 };
 
@@ -568,18 +574,20 @@ function normalizeModelConfig(value: unknown, fallback: CopaModelConfig): CopaMo
     typeof payload.model === "string" && payload.model.trim().length > 0
       ? payload.model.trim()
       : fallback.model;
-  const apiKey =
-    typeof payload.apiKey === "string" && payload.apiKey.trim().length > 0
-      ? payload.apiKey.trim()
-      : fallback.apiKey;
   const temperature =
     typeof payload.temperature === "number" ? payload.temperature : fallback.temperature;
+  const hasApiKey =
+    typeof payload.hasApiKey === "boolean"
+      ? payload.hasApiKey
+      : typeof fallback.hasApiKey === "boolean"
+        ? fallback.hasApiKey
+        : undefined;
 
   return {
     baseUrl,
     model,
-    apiKey,
     temperature,
+    ...(hasApiKey === undefined ? {} : { hasApiKey }),
   };
 }
 
@@ -615,6 +623,36 @@ function normalizeLlmConfigState(value: unknown): CopaLlmConfigState {
       config: { ...legacyCopa },
     },
     ...signalThresholds,
+  };
+}
+
+function applyRuntimeModelDefaults(config: CopaModelConfig, runtime?: LlmRuntimeConfig["copa"]): CopaModelConfig {
+  if (!runtime) {
+    return config;
+  }
+
+  return {
+    ...config,
+    baseUrl:
+      config.baseUrl === DEFAULT_COPA_MODEL_CONFIG.baseUrl && runtime.baseUrl
+        ? runtime.baseUrl
+        : config.baseUrl,
+    model: config.model.trim().length > 0 ? config.model : runtime.model,
+    temperature:
+      typeof config.temperature === "number" ? config.temperature : runtime.temperature,
+    hasApiKey: runtime.hasApiKey,
+  };
+}
+
+function applyRuntimeConfigDefaults(config: CopaLlmConfigState, runtime: LlmRuntimeConfig): CopaLlmConfigState {
+  const copa = applyRuntimeModelDefaults(config.copa, runtime.copa);
+  return {
+    ...config,
+    copa,
+    resonance: {
+      ...config.resonance,
+      config: applyRuntimeModelDefaults(config.resonance.config, runtime.resonance),
+    },
   };
 }
 
@@ -1079,7 +1117,13 @@ export function resolveResonanceModelConfig(config: CopaLlmConfigState): CopaMod
 
 export async function loadCopaConfig(): Promise<CopaLlmConfigState> {
   const state = await loadStoreState();
-  return state.config;
+  await saveStoreState(state);
+  try {
+    const runtime = await getLlmRuntimeConfig();
+    return applyRuntimeConfigDefaults(state.config, runtime);
+  } catch {
+    return state.config;
+  }
 }
 
 export async function saveCopaConfig(config: CopaLlmConfigState): Promise<CopaLlmConfigState> {
@@ -1258,12 +1302,6 @@ export async function requestCopaProfile(
   language: CopaLanguage = "en",
   profileMode: CopaProfileMode = "serious"
 ): Promise<CopaNormalizedResponse> {
-  if (!config.apiKey?.trim()) {
-    throw new Error("Missing API key");
-  }
-  if (!config.model.trim()) {
-    throw new Error("Missing model name");
-  }
   if (signals.length === 0) {
     throw new Error("No user signals available");
   }
@@ -1283,25 +1321,20 @@ export async function requestCopaProfile(
       userPrompt: prompt.user,
     },
   });
-  let response: Response | null = null;
+  let response: LlmProxyResponse | null = null;
   const primaryResponseFormat = profileMode === "fun" ? COPA_FUN_RESPONSE_FORMAT : COPA_RESPONSE_FORMAT;
   for (const responseFormat of [primaryResponseFormat, COPA_JSON_OBJECT_RESPONSE_FORMAT]) {
     try {
-      response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          temperature: config.temperature ?? 0.2,
-          response_format: responseFormat,
-          messages: [
-            { role: "system", content: prompt.system },
-            { role: "user", content: prompt.user },
-          ],
-        }),
+      response = await requestLlmChatCompletion({
+        purpose: "copa",
+        baseUrl: config.baseUrl,
+        model: config.model,
+        temperature: config.temperature ?? 0.2,
+        responseFormat,
+        messages: [
+          { role: "system", content: prompt.system },
+          { role: "user", content: prompt.user },
+        ],
       });
     } catch (error) {
       await persistLlmDebugLog({
@@ -1320,18 +1353,18 @@ export async function requestCopaProfile(
       category: "copa",
       stage: "fetch_resolved",
       payload: {
-        ok: response.ok,
+        ok: response.status >= 200 && response.status < 300,
         status: response.status,
         statusText: response.statusText,
         responseFormat: responseFormat.type,
       },
     });
 
-    if (response.ok) {
+    if (response.status >= 200 && response.status < 300) {
       break;
     }
 
-    const detail = await response.text();
+    const detail = getLlmProxyResponseText(response);
     if (
       responseFormat.type === "json_schema" &&
       shouldFallbackToJsonObject(response.status, detail)
@@ -1374,7 +1407,7 @@ export async function requestCopaProfile(
     choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
   };
   try {
-    payload = (await response.json()) as {
+    payload = (response.body ?? JSON.parse(response.text ?? "")) as {
       choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
     };
   } catch (error) {

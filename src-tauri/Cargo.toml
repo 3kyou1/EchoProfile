@@ -1,6 +1,6 @@
 [package]
 name = "echo-profile"
-version = "0.1.0"
+version = "0.1.1"
 description = "Desktop app for modeling users from AI conversation history"
 authors = ["EchoProfile contributors"]
 license = "Apache-2.0"
@@ -53,6 +53,8 @@ trash = "5.2"
 regex = "1.11"
 lazy_static = "1.5"
 rusqlite = { version = "0.32", features = ["bundled"] }
+zip = "4.6.1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 notify = { version = "7.0", default-features = false, features = ["macos_fsevent"] }
 notify-debouncer-mini = "0.5"
 

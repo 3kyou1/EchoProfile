@@ -116,6 +116,13 @@ pub fn build_router(state: Arc<AppState>, host: &str, port: u16, dist_dir: Optio
         .route("/get_system_info", post(h::get_system_info))
         .route("/open_github_issues", post(h::open_github_issues))
         .route("/log_frontend_llm_debug", post(h::log_frontend_llm_debug))
+        .route("/get_llm_runtime_config", post(h::get_llm_runtime_config))
+        .route("/save_llm_api_key", post(h::save_llm_api_key))
+        .route("/delete_llm_api_key", post(h::delete_llm_api_key))
+        .route(
+            "/request_llm_chat_completion",
+            post(h::request_llm_chat_completion),
+        )
         // Metadata commands
         .route(
             "/get_metadata_folder_path",

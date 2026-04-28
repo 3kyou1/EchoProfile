@@ -202,17 +202,6 @@ http://127.0.0.1:3727/?token=your-secret-token
 
 By default Docker mounts `~/.claude`, `~/.codex`, and `~/.local/share/opencode`. If your remote Linux host uses different paths, set `CLAUDE_HOME`, `CODEX_HOME`, or `OPENCODE_HOME` in `.env`.
 
-### Publishing a release
-
-Releases are built by GitHub Actions when a `v*` tag is pushed. Add `TAURI_SIGNING_PRIVATE_KEY` and, if needed, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` as repository secrets first, then run:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-The release workflows upload desktop installers, portable Windows zip, WebUI server archives, checksums, and `latest.json` updater metadata.
-
 ### Frontend-only debugging
 
 ```bash

@@ -1151,7 +1151,9 @@ export function CopaProfilePage() {
   return (
     <div className="h-full overflow-auto">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 md:p-6">
-        <section className="rounded-3xl border border-slate-300/70 bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.14),transparent_34%),radial-gradient(circle_at_60%_35%,rgba(148,163,184,0.12),transparent_40%),linear-gradient(135deg,rgba(248,250,252,0.96),rgba(255,255,255,0.92))] p-6 shadow-[0_20px_50px_rgba(148,163,184,0.18)] backdrop-blur-sm">
+        <section
+          className={`relative isolate rounded-3xl border border-slate-300/70 bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.14),transparent_34%),radial-gradient(circle_at_60%_35%,rgba(148,163,184,0.12),transparent_40%),linear-gradient(135deg,rgba(248,250,252,0.96),rgba(255,255,255,0.92))] p-6 shadow-[0_20px_50px_rgba(148,163,184,0.18)] backdrop-blur-sm ${isLlmConfigOpen ? "z-50" : "z-0"}`}
+        >
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-8">
             <div className="max-w-3xl xl:min-w-0 xl:flex-1">
               <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-slate-50/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700 shadow-[0_8px_20px_rgba(148,163,184,0.12)]">
@@ -1241,7 +1243,7 @@ export function CopaProfilePage() {
                       id="copa-llm-config-panel"
                       role="dialog"
                       aria-label={t("common.copa.llmConfig.title", "LLM config")}
-                      className="absolute right-0 top-full z-30 mt-3 w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-border/70 bg-popover/95 p-4 text-popover-foreground shadow-2xl backdrop-blur"
+                      className="absolute right-0 top-full z-[60] mt-3 w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-border/70 bg-popover p-4 text-popover-foreground shadow-2xl"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>

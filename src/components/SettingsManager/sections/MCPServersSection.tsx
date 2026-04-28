@@ -44,7 +44,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettingsManager } from "../UnifiedSettingsManager";
-import type { MCPServerConfig, MCPSource, SettingsScope } from "@/types";
+import type { MCPServerConfig, MCPServerType, MCPSource, SettingsScope } from "@/types";
+import {
+  buildMcpServerConfig,
+  formatMcpServerDetails,
+  isValidHttpMcpUrl,
+} from "./mcpServerConfig";
 
 // ============================================================================
 // Types
@@ -110,25 +115,33 @@ const ServerRow: React.FC<ServerRowProps> = React.memo(({
 }) => {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
-  const [editCommand, setEditCommand] = useState(server.config.command);
+  const [editType, setEditType] = useState<MCPServerType>(server.config.type ?? "stdio");
+  const [editCommand, setEditCommand] = useState(server.config.command ?? "");
   const [editArgs, setEditArgs] = useState(server.config.args?.join(" ") || "");
+  const [editUrl, setEditUrl] = useState(server.config.url ?? "");
 
   const handleSave = () => {
-    if (!editCommand.trim()) {
-      setIsEditing(false);
+    if (editType === "stdio" && !editCommand.trim()) {
       return;
     }
-    onEdit({
-      ...server.config,
+    if (editType === "http" && !isValidHttpMcpUrl(editUrl)) {
+      return;
+    }
+    onEdit(buildMcpServerConfig({
+      type: editType,
       command: editCommand,
-      args: editArgs.trim() ? editArgs.split(/\s+/) : undefined,
-    });
+      argsText: editArgs,
+      url: editUrl,
+      env: server.config.env ?? {},
+    }));
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditCommand(server.config.command);
+    setEditType(server.config.type ?? "stdio");
+    setEditCommand(server.config.command ?? "");
     setEditArgs(server.config.args?.join(" ") || "");
+    setEditUrl(server.config.url ?? "");
     setIsEditing(false);
   };
 
@@ -148,18 +161,45 @@ const ServerRow: React.FC<ServerRowProps> = React.memo(({
             {scopeLabel[server.scope]}
           </Badge>
         </div>
-        <Input
-          value={editCommand}
-          onChange={(e) => setEditCommand(e.target.value)}
-          placeholder={t("settingsManager.mcp.commandPlaceholder")}
-          className="h-7 text-xs font-mono"
-        />
-        <Input
-          value={editArgs}
-          onChange={(e) => setEditArgs(e.target.value)}
-          placeholder={t("settingsManager.mcp.argsPlaceholder")}
-          className="h-7 text-xs font-mono"
-        />
+        <Select value={editType} onValueChange={(value) => setEditType(value as MCPServerType)}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="stdio">{t("settingsManager.mcp.transport.stdio", "Command (stdio)")}</SelectItem>
+            <SelectItem value="http">{t("settingsManager.mcp.transport.http", "URL (HTTP)")}</SelectItem>
+          </SelectContent>
+        </Select>
+        {editType === "http" ? (
+          <div className="space-y-1">
+            <Input
+              value={editUrl}
+              onChange={(e) => setEditUrl(e.target.value)}
+              placeholder={t("settingsManager.mcp.urlPlaceholder", "https://example.com/mcp")}
+              className="h-7 text-xs font-mono"
+            />
+            {editUrl.trim() && !isValidHttpMcpUrl(editUrl) ? (
+              <p className="text-[11px] text-destructive">
+                {t("settingsManager.mcp.invalidUrl", "Enter a valid http:// or https:// URL.")}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <>
+            <Input
+              value={editCommand}
+              onChange={(e) => setEditCommand(e.target.value)}
+              placeholder={t("settingsManager.mcp.commandPlaceholder")}
+              className="h-7 text-xs font-mono"
+            />
+            <Input
+              value={editArgs}
+              onChange={(e) => setEditArgs(e.target.value)}
+              placeholder={t("settingsManager.mcp.argsPlaceholder")}
+              className="h-7 text-xs font-mono"
+            />
+          </>
+        )}
         <div className="flex items-center gap-1 justify-end">
           <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleSave} aria-label={t("common.save")}>
             <Check className="w-4 h-4 text-green-600" />
@@ -175,14 +215,19 @@ const ServerRow: React.FC<ServerRowProps> = React.memo(({
   return (
     <div className="group relative rounded-lg border border-border/50 hover:border-border bg-card/50 hover:bg-muted/40 transition-all duration-150 px-3 py-2.5">
       {/* Top row: icon + server name + scope badge + hover actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <Server className="w-3.5 h-3.5 text-emerald-500/70 shrink-0" />
-        <span className="text-xs font-semibold truncate flex-1">{server.name}</span>
+        <span className="text-xs font-semibold truncate flex-1 min-w-0">{server.name}</span>
+        {server.config.type === "http" && (
+          <Badge variant="secondary" className="text-[10px] shrink-0">
+            HTTP
+          </Badge>
+        )}
         <Badge variant="outline" className={`text-[10px] shrink-0 ${scopeColors[server.scope]}`}>
           {scopeLabel[server.scope]}
         </Badge>
         {!readOnly && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-100">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-100 shrink-0">
             <button
               onClick={() => setIsEditing(true)}
               className="inline-flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -201,9 +246,9 @@ const ServerRow: React.FC<ServerRowProps> = React.memo(({
         )}
       </div>
       {/* Bottom row: command in monospace */}
-      <div className="mt-1.5 pl-5.5">
-        <code className="text-[11px] text-muted-foreground/70 font-mono break-all whitespace-normal md:truncate md:whitespace-nowrap block">
-          {server.config.command} {server.config.args?.join(" ")}
+      <div className="mt-1.5 min-w-0 overflow-hidden pl-5">
+        <code className="text-[11px] text-muted-foreground/70 font-mono truncate block max-w-full">
+          {formatMcpServerDetails(server.config)}
         </code>
       </div>
     </div>
@@ -231,8 +276,10 @@ export const MCPServersSection: React.FC<MCPServersSectionProps> = React.memo(({
 
   // Add server form state
   const [newServerName, setNewServerName] = useState("");
+  const [newServerType, setNewServerType] = useState<MCPServerType>("stdio");
   const [newServerCommand, setNewServerCommand] = useState("npx");
   const [newServerArgs, setNewServerArgs] = useState("");
+  const [newServerUrl, setNewServerUrl] = useState("");
   const [newServerEnv, setNewServerEnv] = useState<Record<string, string>>({});
 
   // Combine all servers into unified list
@@ -276,13 +323,17 @@ export const MCPServersSection: React.FC<MCPServersSectionProps> = React.memo(({
 
   // Handle add server
   const handleAddServer = async () => {
-    if (!newServerName.trim() || !newServerCommand.trim()) return;
+    if (!newServerName.trim()) return;
+    if (newServerType === "stdio" && !newServerCommand.trim()) return;
+    if (newServerType === "http" && !isValidHttpMcpUrl(newServerUrl)) return;
 
-    const newServer: MCPServerConfig = {
-      command: newServerCommand.trim(),
-      args: newServerArgs.trim() ? newServerArgs.split(/\s+/) : undefined,
-      env: Object.keys(newServerEnv).length > 0 ? newServerEnv : undefined,
-    };
+    const newServer = buildMcpServerConfig({
+      type: newServerType,
+      command: newServerCommand,
+      argsText: newServerArgs,
+      url: newServerUrl,
+      env: newServerEnv,
+    });
 
     const source = scopeToSource[saveLocation];
     const currentServers = getServersForSource(source);
@@ -345,11 +396,17 @@ export const MCPServersSection: React.FC<MCPServersSectionProps> = React.memo(({
   // Reset form
   const resetForm = () => {
     setNewServerName("");
+    setNewServerType("stdio");
     setNewServerCommand("npx");
     setNewServerArgs("");
+    setNewServerUrl("");
     setNewServerEnv({});
     setSaveLocation("user");
   };
+
+  const canAddServer =
+    newServerName.trim().length > 0 &&
+    (newServerType === "http" ? isValidHttpMcpUrl(newServerUrl) : newServerCommand.trim().length > 0);
 
   return (
     <>
@@ -456,25 +513,58 @@ export const MCPServersSection: React.FC<MCPServersSectionProps> = React.memo(({
               </div>
 
               <div>
-                <Label htmlFor="mcp-server-command">{t("settingsManager.mcp.command")}</Label>
-                <Input
-                  id="mcp-server-command"
-                  value={newServerCommand}
-                  onChange={(e) => setNewServerCommand(e.target.value)}
-                  placeholder={t("settingsManager.mcp.commandPlaceholder")}
-                  className="mt-1 font-mono text-sm"
-                />
+                <Label htmlFor="mcp-server-type">{t("settingsManager.mcp.transport.label", "Connection type")}</Label>
+                <Select value={newServerType} onValueChange={(value) => setNewServerType(value as MCPServerType)}>
+                  <SelectTrigger id="mcp-server-type" className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stdio">{t("settingsManager.mcp.transport.stdio", "Command (stdio)")}</SelectItem>
+                    <SelectItem value="http">{t("settingsManager.mcp.transport.http", "URL (HTTP)")}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <Label htmlFor="mcp-server-args">{t("settingsManager.mcp.args")}</Label>
-                <Input
-                  id="mcp-server-args"
-                  value={newServerArgs}
-                  onChange={(e) => setNewServerArgs(e.target.value)}
-                  placeholder={t("settingsManager.mcp.argsPlaceholder")}
-                  className="mt-1 font-mono text-sm"
-                />
-              </div>
+
+              {newServerType === "http" ? (
+                <div>
+                  <Label htmlFor="mcp-server-url">{t("settingsManager.mcp.url")}</Label>
+                  <Input
+                    id="mcp-server-url"
+                    value={newServerUrl}
+                    onChange={(e) => setNewServerUrl(e.target.value)}
+                    placeholder={t("settingsManager.mcp.urlPlaceholder", "https://example.com/mcp")}
+                    className="mt-1 font-mono text-sm"
+                  />
+                  {newServerUrl.trim() && !isValidHttpMcpUrl(newServerUrl) ? (
+                    <p className="mt-1 text-xs text-destructive">
+                      {t("settingsManager.mcp.invalidUrl", "Enter a valid http:// or https:// URL.")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <Label htmlFor="mcp-server-command">{t("settingsManager.mcp.command")}</Label>
+                    <Input
+                      id="mcp-server-command"
+                      value={newServerCommand}
+                      onChange={(e) => setNewServerCommand(e.target.value)}
+                      placeholder={t("settingsManager.mcp.commandPlaceholder")}
+                      className="mt-1 font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="mcp-server-args">{t("settingsManager.mcp.args")}</Label>
+                    <Input
+                      id="mcp-server-args"
+                      value={newServerArgs}
+                      onChange={(e) => setNewServerArgs(e.target.value)}
+                      placeholder={t("settingsManager.mcp.argsPlaceholder")}
+                      className="mt-1 font-mono text-sm"
+                    />
+                  </div>
+                </>
+              )}
 
                 {/* Env vars */}
                 {Object.keys(newServerEnv).length > 0 && (
@@ -542,7 +632,7 @@ export const MCPServersSection: React.FC<MCPServersSectionProps> = React.memo(({
             </Button>
             <Button
               onClick={handleAddServer}
-              disabled={!newServerName.trim() || !newServerCommand.trim()}
+              disabled={!canAddServer}
             >
               {t("settingsManager.mcp.add")}
             </Button>

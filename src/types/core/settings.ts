@@ -192,7 +192,7 @@ export type MCPServerType = "stdio" | "http";
  */
 export interface MCPServerConfig {
   /** Command to execute (for stdio type) */
-  command: string;
+  command?: string;
   /** Command arguments */
   args?: string[];
   /** Environment variables to pass to the server */

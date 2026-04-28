@@ -170,17 +170,6 @@ http://127.0.0.1:3727/?token=your-secret-token
 
 默认会挂载 `~/.claude`、`~/.codex` 和 `~/.local/share/opencode`。如果远程 Linux 主机路径不同，可以在 `.env` 中设置 `CLAUDE_HOME`、`CODEX_HOME` 或 `OPENCODE_HOME`。
 
-### 发布 Release
-
-推送 `v*` tag 后，GitHub Actions 会自动构建 Release。发布前先在仓库 Secrets 中添加 `TAURI_SIGNING_PRIVATE_KEY`，如果私钥设置了密码，也添加 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`：
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-Release workflow 会上传桌面安装包、Windows 便携 zip、WebUI Server 压缩包、校验文件和 `latest.json` updater 元数据。
-
 ### 仅调试前端界面
 
 ```bash

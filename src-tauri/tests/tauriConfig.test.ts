@@ -59,7 +59,7 @@ describe('Tauri Configuration Tests', () => {
 
     it('should have valid app identifier in reverse domain notation', () => {
       expect(config.identifier).toMatch(/^[a-zA-Z0-9.-]+$/);
-      expect(config.identifier).toBe('com.3kyou1.echoprofile');
+      expect(config.identifier).toBe('com.echoprofile.app');
       expect(config.identifier.split('.').length).toBeGreaterThanOrEqual(3);
     });
 
@@ -272,7 +272,7 @@ describe('Tauri Configuration Tests', () => {
     it('should have bundle configuration enabled', () => {
       expect(config.bundle.active).toBe(true);
       expect(config.bundle.targets).toBe('all');
-      expect(config.bundle.createUpdaterArtifacts).toBe(true);
+      expect(config.bundle.createUpdaterArtifacts).toBe(false);
     });
 
     it('should have valid icon file paths', () => {
@@ -424,8 +424,8 @@ describe('Tauri Configuration Tests', () => {
       const parts = config.identifier.split('.');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[0]).toBe('com'); // Proper reverse domain
-      expect(parts[1]).toBe('3kyou1');
-      expect(parts[2]).toBe('echoprofile');
+      expect(parts[1]).toBe('echoprofile');
+      expect(parts[2]).toBe('app');
     });
 
     it('should not expose sensitive information', () => {

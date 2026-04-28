@@ -1,4 +1,5 @@
 import { api } from "@/services/api";
+import { isTauri } from "@/utils/platform";
 
 export type LlmPurpose = "copa" | "resonance";
 
@@ -54,7 +55,8 @@ export async function saveLlmApiKey(input: SaveLlmApiKeyInput): Promise<LlmRunti
 }
 
 export async function saveLlmConfig(input: SaveLlmConfigInput): Promise<LlmRuntimeConfig> {
-  return api<LlmRuntimeConfig>("save_llm_config", input as unknown as Record<string, unknown>);
+  const args = isTauri() ? { input } : input;
+  return api<LlmRuntimeConfig>("save_llm_config", args as unknown as Record<string, unknown>);
 }
 
 export async function deleteLlmApiKey(purpose: LlmPurpose): Promise<LlmRuntimeConfig> {

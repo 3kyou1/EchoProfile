@@ -232,25 +232,11 @@ export function CopaProfilePage() {
       if (llmConfigPanelRef.current?.contains(event.target as Node)) {
         return;
       }
-      setDraftConfig(config);
-      setDiscardSignalLengthInput(
-        String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
-      );
-      setPasteLikeSignalLengthInput(
-        String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
-      );
       setIsLlmConfigOpen(false);
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setDraftConfig(config);
-        setDiscardSignalLengthInput(
-          String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
-        );
-        setPasteLikeSignalLengthInput(
-          String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
-        );
         setIsLlmConfigOpen(false);
       }
     };
@@ -578,28 +564,10 @@ export function CopaProfilePage() {
   };
 
   const openLlmConfigPanel = () => {
-    setDraftConfig(config);
-    setDraftCopaApiKey("");
-    setDraftResonanceApiKey("");
-    setDiscardSignalLengthInput(
-      String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
-    );
-    setPasteLikeSignalLengthInput(
-      String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
-    );
     setIsLlmConfigOpen(true);
   };
 
   const closeLlmConfigPanel = () => {
-    setDraftConfig(config);
-    setDraftCopaApiKey("");
-    setDraftResonanceApiKey("");
-    setDiscardSignalLengthInput(
-      String(config.discardSignalLength ?? DEFAULT_COPA_LLM_CONFIG.discardSignalLength ?? 50)
-    );
-    setPasteLikeSignalLengthInput(
-      String(config.pasteLikeSignalLength ?? DEFAULT_COPA_LLM_CONFIG.pasteLikeSignalLength ?? 40)
-    );
     setIsLlmConfigOpen(false);
   };
 
@@ -1882,7 +1850,9 @@ export function CopaProfilePage() {
                                   {currentSnapshot.sourceStats.rawUserMessages} {t("common.copa.summary.userMessages", "user messages")}
                                 </span>
                               </div>
-                              <p className="mt-3 text-sm leading-6 text-foreground">{currentSnapshot.promptSummary}</p>
+                              {currentSnapshot.profileMode === "fun" ? null : (
+                                <p className="mt-3 text-sm leading-6 text-foreground">{currentSnapshot.promptSummary}</p>
+                              )}
                               <p className="mt-2 text-[11px] text-muted-foreground">
                                 {formatSnapshotTime(currentSnapshot.createdAt)}
                               </p>

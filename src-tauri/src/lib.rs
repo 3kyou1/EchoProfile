@@ -29,6 +29,7 @@ use crate::commands::{
     },
     llm::{
         delete_llm_api_key, get_llm_runtime_config, request_llm_chat_completion, save_llm_api_key,
+        save_llm_config,
     },
     mcp_presets::{delete_mcp_preset, get_mcp_preset, load_mcp_presets, save_mcp_preset},
     metadata::{
@@ -157,6 +158,7 @@ fn run_tauri() {
             log_frontend_llm_debug,
             get_llm_runtime_config,
             save_llm_api_key,
+            save_llm_config,
             delete_llm_api_key,
             request_llm_chat_completion,
             list_figure_pool_entries,

@@ -4,6 +4,7 @@ import {
   getLlmProxyResponseText,
   getLlmRuntimeConfig,
   requestLlmChatCompletion,
+  saveLlmConfig,
   type LlmRuntimeConfig,
   type LlmProxyResponse,
 } from "@/services/llmProxyService";
@@ -229,7 +230,7 @@ function shouldFallbackToJsonObject(status: number, detail: string): boolean {
 }
 
 export const DEFAULT_COPA_MODEL_CONFIG: CopaModelConfig = {
-  baseUrl: "https://api.openai.com/v1",
+  baseUrl: "",
   model: "",
   temperature: 0.2,
 };
@@ -599,28 +600,26 @@ function normalizeLlmConfigState(value: unknown): CopaLlmConfigState {
   });
 
   if ("copa" in payload) {
-    const copa = normalizeModelConfig(payload.copa, DEFAULT_COPA_MODEL_CONFIG);
     const resonancePayload =
       payload.resonance && typeof payload.resonance === "object"
         ? (payload.resonance as Record<string, unknown>)
         : {};
 
     return {
-      copa,
+      copa: { ...DEFAULT_COPA_MODEL_CONFIG },
       resonance: {
         enabled: resonancePayload.enabled === true,
-        config: normalizeModelConfig(resonancePayload.config, copa),
+        config: { ...DEFAULT_COPA_MODEL_CONFIG },
       },
       ...signalThresholds,
     };
   }
 
-  const legacyCopa = normalizeModelConfig(payload, DEFAULT_COPA_MODEL_CONFIG);
   return {
-    copa: legacyCopa,
+    copa: { ...DEFAULT_COPA_MODEL_CONFIG },
     resonance: {
       enabled: false,
-      config: { ...legacyCopa },
+      config: { ...DEFAULT_COPA_MODEL_CONFIG },
     },
     ...signalThresholds,
   };
@@ -656,11 +655,72 @@ function applyRuntimeConfigDefaults(config: CopaLlmConfigState, runtime: LlmRunt
   };
 }
 
+function frontendStoredConfig(config: CopaLlmConfigState): Record<string, unknown> {
+  const signalThresholds = normalizeSignalThresholds({
+    discardSignalLength: config.discardSignalLength,
+    pasteLikeSignalLength: config.pasteLikeSignalLength,
+  });
+
+  return {
+    ...signalThresholds,
+    resonance: {
+      enabled: config.resonance.enabled === true,
+    },
+  };
+}
+
+function hasLegacyLlmFields(value: unknown): value is Record<string, unknown> {
+  return (
+    value != null &&
+    typeof value === "object" &&
+    (typeof (value as Record<string, unknown>).baseUrl === "string" ||
+      typeof (value as Record<string, unknown>).model === "string" ||
+      typeof (value as Record<string, unknown>).apiKey === "string" ||
+      typeof (value as Record<string, unknown>).temperature === "number")
+  );
+}
+
+async function migrateLegacyLlmConfig(rawConfig: unknown): Promise<void> {
+  const payload = rawConfig && typeof rawConfig === "object" ? (rawConfig as Record<string, unknown>) : {};
+  const candidates: Array<{ purpose: "copa" | "resonance"; value: unknown }> = [];
+
+  if (hasLegacyLlmFields(payload)) {
+    candidates.push({ purpose: "copa", value: payload });
+  }
+  if ("copa" in payload) {
+    candidates.push({ purpose: "copa", value: payload.copa });
+  }
+  if (payload.resonance && typeof payload.resonance === "object") {
+    const resonance = payload.resonance as Record<string, unknown>;
+    candidates.push({ purpose: "resonance", value: resonance.config });
+  }
+
+  for (const candidate of candidates) {
+    if (!hasLegacyLlmFields(candidate.value)) {
+      continue;
+    }
+    const baseUrl = typeof candidate.value.baseUrl === "string" ? candidate.value.baseUrl.trim() : "";
+    const model = typeof candidate.value.model === "string" ? candidate.value.model.trim() : "";
+    if (!baseUrl || !model) {
+      continue;
+    }
+
+    await saveLlmConfig({
+      purpose: candidate.purpose,
+      baseUrl,
+      model,
+      temperature:
+        typeof candidate.value.temperature === "number" ? candidate.value.temperature : undefined,
+      apiKey: typeof candidate.value.apiKey === "string" ? candidate.value.apiKey : undefined,
+    });
+  }
+}
+
 async function loadStoreState(): Promise<CopaStoredState> {
   const store = await storageAdapter.load(STORE_NAME, {
     defaults: {
       [SNAPSHOTS_KEY]: [],
-      [CONFIG_KEY]: DEFAULT_COPA_LLM_CONFIG,
+      [CONFIG_KEY]: frontendStoredConfig(DEFAULT_COPA_LLM_CONFIG),
     },
     autoSave: true,
   });
@@ -681,8 +741,8 @@ async function loadStoreState(): Promise<CopaStoredState> {
 
 async function saveStoreState(state: CopaStoredState): Promise<void> {
   const store = await storageAdapter.load(STORE_NAME, { autoSave: true });
-  await store.set(SNAPSHOTS_KEY, state.snapshots);
-  await store.set(CONFIG_KEY, state.config);
+  await store.set(SNAPSHOTS_KEY, state.snapshots.map((snapshot) => normalizeSnapshot(snapshot)));
+  await store.set(CONFIG_KEY, frontendStoredConfig(state.config));
   await store.save();
 }
 
@@ -791,6 +851,7 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
   const language = normalizeCopaLanguage(
     typeof payload.language === "string" ? payload.language : inferredLanguage
   );
+  const profileMode = normalizeCopaProfileMode(payload.profileMode);
   const normalized = normalizeCopaResponse(
     {
       factors: payload.factors,
@@ -798,208 +859,95 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
       profile_text: payload.funProfileText,
     },
     language,
-    normalizeCopaProfileMode(payload.profileMode)
+    profileMode
   );
   const funProfileText =
     typeof payload.funProfileText === "string" && payload.funProfileText.trim().length > 0
       ? payload.funProfileText.trim()
       : normalized.funProfileText;
-
-  return {
-    id: typeof payload.id === "string" && payload.id.trim().length > 0 ? payload.id : `copa-${Date.now()}`,
-    createdAt:
-      typeof payload.createdAt === "string" && payload.createdAt.trim().length > 0
-        ? payload.createdAt
-        : new Date(0).toISOString(),
+  const id = typeof payload.id === "string" && payload.id.trim().length > 0 ? payload.id : `copa-${Date.now()}`;
+  const createdAt =
+    typeof payload.createdAt === "string" && payload.createdAt.trim().length > 0
+      ? payload.createdAt
+      : new Date(0).toISOString();
+  const scope =
+    payload.scope && typeof payload.scope === "object"
+      ? {
+          type:
+            (payload.scope as Record<string, unknown>).type === "session" ||
+            (payload.scope as Record<string, unknown>).type === "project" ||
+            (payload.scope as Record<string, unknown>).type === "global"
+              ? ((payload.scope as Record<string, unknown>).type as CopaSnapshot["scope"]["type"])
+              : "global",
+          ref:
+            typeof (payload.scope as Record<string, unknown>).ref === "string"
+              ? ((payload.scope as Record<string, unknown>).ref as string)
+              : "global",
+          label:
+            typeof (payload.scope as Record<string, unknown>).label === "string"
+              ? ((payload.scope as Record<string, unknown>).label as string)
+              : "Global",
+          key:
+            typeof (payload.scope as Record<string, unknown>).key === "string"
+              ? ((payload.scope as Record<string, unknown>).key as string)
+              : "global:all",
+        }
+      : {
+          type: "global" as const,
+          ref: "global",
+          label: "Global",
+          key: "global:all",
+        };
+  const providerScope = Array.isArray(payload.providerScope)
+    ? payload.providerScope.filter((item): item is string => typeof item === "string")
+    : [];
+  const sourceStats =
+    payload.sourceStats && typeof payload.sourceStats === "object"
+      ? {
+          projectCount:
+            typeof (payload.sourceStats as Record<string, unknown>).projectCount === "number"
+              ? ((payload.sourceStats as Record<string, unknown>).projectCount as number)
+              : 0,
+          sessionCount:
+            typeof (payload.sourceStats as Record<string, unknown>).sessionCount === "number"
+              ? ((payload.sourceStats as Record<string, unknown>).sessionCount as number)
+              : 0,
+          rawUserMessages:
+            typeof (payload.sourceStats as Record<string, unknown>).rawUserMessages === "number"
+              ? ((payload.sourceStats as Record<string, unknown>).rawUserMessages as number)
+              : 0,
+          dedupedUserMessages:
+            typeof (payload.sourceStats as Record<string, unknown>).dedupedUserMessages === "number"
+              ? ((payload.sourceStats as Record<string, unknown>).dedupedUserMessages as number)
+              : 0,
+          truncatedMessages:
+            typeof (payload.sourceStats as Record<string, unknown>).truncatedMessages === "number"
+              ? ((payload.sourceStats as Record<string, unknown>).truncatedMessages as number)
+              : 0,
+        }
+      : {
+          projectCount: 0,
+          sessionCount: 0,
+          rawUserMessages: 0,
+          dedupedUserMessages: 0,
+          truncatedMessages: 0,
+        };
+  const snapshotBase: Omit<CopaSnapshot, "markdown"> = {
+    id,
+    createdAt,
     language,
-    profileMode: normalizeCopaProfileMode(payload.profileMode),
-    scope:
-      payload.scope && typeof payload.scope === "object"
-        ? {
-            type:
-              (payload.scope as Record<string, unknown>).type === "session" ||
-              (payload.scope as Record<string, unknown>).type === "project" ||
-              (payload.scope as Record<string, unknown>).type === "global"
-                ? ((payload.scope as Record<string, unknown>).type as CopaSnapshot["scope"]["type"])
-                : "global",
-            ref:
-              typeof (payload.scope as Record<string, unknown>).ref === "string"
-                ? ((payload.scope as Record<string, unknown>).ref as string)
-                : "global",
-            label:
-              typeof (payload.scope as Record<string, unknown>).label === "string"
-                ? ((payload.scope as Record<string, unknown>).label as string)
-                : "Global",
-            key:
-              typeof (payload.scope as Record<string, unknown>).key === "string"
-                ? ((payload.scope as Record<string, unknown>).key as string)
-                : "global:all",
-          }
-        : {
-            type: "global",
-            ref: "global",
-            label: "Global",
-            key: "global:all",
-          },
-    providerScope: Array.isArray(payload.providerScope)
-      ? payload.providerScope.filter((item): item is string => typeof item === "string")
-      : [],
-    sourceStats:
-      payload.sourceStats && typeof payload.sourceStats === "object"
-        ? {
-            projectCount:
-              typeof (payload.sourceStats as Record<string, unknown>).projectCount === "number"
-                ? ((payload.sourceStats as Record<string, unknown>).projectCount as number)
-                : 0,
-            sessionCount:
-              typeof (payload.sourceStats as Record<string, unknown>).sessionCount === "number"
-                ? ((payload.sourceStats as Record<string, unknown>).sessionCount as number)
-                : 0,
-            rawUserMessages:
-              typeof (payload.sourceStats as Record<string, unknown>).rawUserMessages === "number"
-                ? ((payload.sourceStats as Record<string, unknown>).rawUserMessages as number)
-                : 0,
-            dedupedUserMessages:
-              typeof (payload.sourceStats as Record<string, unknown>).dedupedUserMessages === "number"
-                ? ((payload.sourceStats as Record<string, unknown>).dedupedUserMessages as number)
-                : 0,
-            truncatedMessages:
-              typeof (payload.sourceStats as Record<string, unknown>).truncatedMessages === "number"
-                ? ((payload.sourceStats as Record<string, unknown>).truncatedMessages as number)
-                : 0,
-          }
-        : {
-            projectCount: 0,
-            sessionCount: 0,
-            rawUserMessages: 0,
-            dedupedUserMessages: 0,
-            truncatedMessages: 0,
-          },
-    modelConfig:
-      payload.modelConfig && typeof payload.modelConfig === "object"
-        ? {
-            baseUrl:
-              typeof (payload.modelConfig as Record<string, unknown>).baseUrl === "string"
-                ? ((payload.modelConfig as Record<string, unknown>).baseUrl as string)
-                : DEFAULT_COPA_MODEL_CONFIG.baseUrl,
-            model:
-              typeof (payload.modelConfig as Record<string, unknown>).model === "string"
-                ? ((payload.modelConfig as Record<string, unknown>).model as string)
-                : DEFAULT_COPA_MODEL_CONFIG.model,
-            temperature:
-              typeof (payload.modelConfig as Record<string, unknown>).temperature === "number"
-                ? ((payload.modelConfig as Record<string, unknown>).temperature as number)
-                : DEFAULT_COPA_MODEL_CONFIG.temperature,
-          }
-        : {
-            baseUrl: DEFAULT_COPA_MODEL_CONFIG.baseUrl,
-            model: DEFAULT_COPA_MODEL_CONFIG.model,
-            temperature: DEFAULT_COPA_MODEL_CONFIG.temperature,
-          },
+    profileMode,
+    scope,
+    providerScope,
+    sourceStats,
     promptSummary: normalized.promptSummary,
     factors: normalized.factors,
     funProfileText,
-    markdown:
-      typeof payload.markdown === "string" && payload.markdown.trim().length > 0
-        ? payload.markdown
-        : renderCopaMarkdown({
-            id:
-              typeof payload.id === "string" && payload.id.trim().length > 0
-                ? payload.id
-                : `copa-${Date.now()}`,
-            createdAt:
-              typeof payload.createdAt === "string" && payload.createdAt.trim().length > 0
-                ? payload.createdAt
-                : new Date(0).toISOString(),
-            language,
-            profileMode: normalizeCopaProfileMode(payload.profileMode),
-            scope:
-              payload.scope && typeof payload.scope === "object"
-                ? {
-                    type:
-                      (payload.scope as Record<string, unknown>).type === "session" ||
-                      (payload.scope as Record<string, unknown>).type === "project" ||
-                      (payload.scope as Record<string, unknown>).type === "global"
-                        ? ((payload.scope as Record<string, unknown>).type as CopaSnapshot["scope"]["type"])
-                        : "global",
-                    ref:
-                      typeof (payload.scope as Record<string, unknown>).ref === "string"
-                        ? ((payload.scope as Record<string, unknown>).ref as string)
-                        : "global",
-                    label:
-                      typeof (payload.scope as Record<string, unknown>).label === "string"
-                        ? ((payload.scope as Record<string, unknown>).label as string)
-                        : "Global",
-                    key:
-                      typeof (payload.scope as Record<string, unknown>).key === "string"
-                        ? ((payload.scope as Record<string, unknown>).key as string)
-                        : "global:all",
-                  }
-                : {
-                    type: "global",
-                    ref: "global",
-                    label: "Global",
-                    key: "global:all",
-                  },
-            providerScope: Array.isArray(payload.providerScope)
-              ? payload.providerScope.filter((item): item is string => typeof item === "string")
-              : [],
-            sourceStats:
-              payload.sourceStats && typeof payload.sourceStats === "object"
-                ? {
-                    projectCount:
-                      typeof (payload.sourceStats as Record<string, unknown>).projectCount === "number"
-                        ? ((payload.sourceStats as Record<string, unknown>).projectCount as number)
-                        : 0,
-                    sessionCount:
-                      typeof (payload.sourceStats as Record<string, unknown>).sessionCount === "number"
-                        ? ((payload.sourceStats as Record<string, unknown>).sessionCount as number)
-                        : 0,
-                    rawUserMessages:
-                      typeof (payload.sourceStats as Record<string, unknown>).rawUserMessages === "number"
-                        ? ((payload.sourceStats as Record<string, unknown>).rawUserMessages as number)
-                        : 0,
-                    dedupedUserMessages:
-                      typeof (payload.sourceStats as Record<string, unknown>).dedupedUserMessages === "number"
-                        ? ((payload.sourceStats as Record<string, unknown>).dedupedUserMessages as number)
-                        : 0,
-                    truncatedMessages:
-                      typeof (payload.sourceStats as Record<string, unknown>).truncatedMessages === "number"
-                        ? ((payload.sourceStats as Record<string, unknown>).truncatedMessages as number)
-                        : 0,
-                  }
-                : {
-                    projectCount: 0,
-                    sessionCount: 0,
-                    rawUserMessages: 0,
-                    dedupedUserMessages: 0,
-                    truncatedMessages: 0,
-                  },
-            modelConfig:
-              payload.modelConfig && typeof payload.modelConfig === "object"
-                ? {
-                    baseUrl:
-                      typeof (payload.modelConfig as Record<string, unknown>).baseUrl === "string"
-                        ? ((payload.modelConfig as Record<string, unknown>).baseUrl as string)
-                        : DEFAULT_COPA_MODEL_CONFIG.baseUrl,
-                    model:
-                      typeof (payload.modelConfig as Record<string, unknown>).model === "string"
-                        ? ((payload.modelConfig as Record<string, unknown>).model as string)
-                        : DEFAULT_COPA_MODEL_CONFIG.model,
-                    temperature:
-                      typeof (payload.modelConfig as Record<string, unknown>).temperature === "number"
-                        ? ((payload.modelConfig as Record<string, unknown>).temperature as number)
-                        : DEFAULT_COPA_MODEL_CONFIG.temperature,
-                  }
-                : {
-                    baseUrl: DEFAULT_COPA_MODEL_CONFIG.baseUrl,
-                    model: DEFAULT_COPA_MODEL_CONFIG.model,
-                    temperature: DEFAULT_COPA_MODEL_CONFIG.temperature,
-                  },
-            promptSummary: normalized.promptSummary,
-            factors: normalized.factors,
-            funProfileText,
-          }),
+  };
+
+  return {
+    ...snapshotBase,
+    markdown: renderCopaMarkdown(snapshotBase),
   };
 }
 
@@ -1116,6 +1064,14 @@ export function resolveResonanceModelConfig(config: CopaLlmConfigState): CopaMod
 }
 
 export async function loadCopaConfig(): Promise<CopaLlmConfigState> {
+  const store = await storageAdapter.load(STORE_NAME, { autoSave: true });
+  const rawConfig = await store.get<unknown>(CONFIG_KEY);
+  try {
+    await migrateLegacyLlmConfig(rawConfig);
+  } catch {
+    // Migration is best-effort; missing backend configuration will surface when generating.
+  }
+
   const state = await loadStoreState();
   await saveStoreState(state);
   try {
@@ -1166,8 +1122,6 @@ export function renderCopaMarkdown(snapshot: Omit<CopaSnapshot, "markdown">): st
   sections.push(`- ${labels.rawUserMessages}: ${snapshot.sourceStats.rawUserMessages}`);
   sections.push(`- ${labels.dedupedUserMessages}: ${snapshot.sourceStats.dedupedUserMessages}`);
   sections.push(`- ${labels.truncatedMessages}: ${snapshot.sourceStats.truncatedMessages}`);
-  sections.push(`- ${labels.model}: ${snapshot.modelConfig.model}`);
-  sections.push(`- ${labels.baseUrl}: ${snapshot.modelConfig.baseUrl}`);
 
   return sections.join("\n").trim();
 }
@@ -1311,8 +1265,6 @@ export async function requestCopaProfile(
     category: "copa",
     stage: "request",
     payload: {
-      baseUrl: config.baseUrl,
-      model: config.model,
       language,
       profileMode,
       responseFormat: COPA_RESPONSE_FORMAT.type,
@@ -1327,9 +1279,6 @@ export async function requestCopaProfile(
     try {
       response = await requestLlmChatCompletion({
         purpose: "copa",
-        baseUrl: config.baseUrl,
-        model: config.model,
-        temperature: config.temperature ?? 0.2,
         responseFormat,
         messages: [
           { role: "system", content: prompt.system },

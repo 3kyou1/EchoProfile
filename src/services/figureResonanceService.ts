@@ -692,8 +692,6 @@ async function requestFigureResonanceFromLlm(
     category: "resonance",
     stage: "request",
     payload: {
-      baseUrl: config.baseUrl,
-      model: config.model,
       language,
       responseFormat: FIGURE_RESONANCE_RESPONSE_FORMAT.type,
       recentMessageCount: recentMessages.length,
@@ -708,9 +706,6 @@ async function requestFigureResonanceFromLlm(
     try {
       response = await requestLlmChatCompletion({
         purpose: "resonance",
-        baseUrl: config.baseUrl,
-        model: config.model,
-        temperature: 0.3,
         responseFormat,
         messages: [
           { role: "system", content: prompt.system },

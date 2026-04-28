@@ -10,7 +10,6 @@ use std::io::Write;
 use std::path::Path;
 use tempfile::Builder;
 
-const DEFAULT_BASE_URL: &str = "https://api.openai.com/v1";
 const LLM_CONFIG_FILE: &str = "llm-config.json";
 
 #[derive(Debug, Deserialize)]
@@ -75,6 +74,12 @@ struct LlmStoredConfig {
 struct LlmStoredPurposeConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     api_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    base_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    temperature: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -82,6 +87,18 @@ struct LlmStoredPurposeConfig {
 pub struct SaveLlmApiKeyInput {
     pub purpose: String,
     pub api_key: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SaveLlmConfigInput {
+    pub purpose: String,
+    pub base_url: String,
+    pub model: String,
+    #[serde(default)]
+    pub temperature: Option<f64>,
+    #[serde(default)]
+    pub api_key: Option<String>,
 }
 
 #[derive(Debug)]
@@ -102,6 +119,15 @@ fn purpose_prefix(purpose: &str) -> Result<&'static str, String> {
 
 fn normalize_base_url(value: String) -> String {
     value.trim_end_matches('/').to_string()
+}
+
+fn normalize_required_string(value: &str, label: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        Err(format!("{label} must not be empty"))
+    } else {
+        Ok(trimmed.to_string())
+    }
 }
 
 fn default_temperature(purpose: &str) -> f64 {
@@ -201,6 +227,32 @@ fn save_llm_api_key_at(path: &Path, input: SaveLlmApiKeyInput) -> Result<(), Str
     write_llm_config_at(path, &config)
 }
 
+fn save_llm_config_at(path: &Path, input: SaveLlmConfigInput) -> Result<(), String> {
+    purpose_prefix(&input.purpose)?;
+    let base_url = normalize_base_url(normalize_required_string(&input.base_url, "Base URL")?);
+    let model = normalize_required_string(&input.model, "Model")?;
+    let temperature = input
+        .temperature
+        .filter(|value| value.is_finite())
+        .unwrap_or_else(|| default_temperature(&input.purpose));
+    let mut config = read_llm_config_at(path)?;
+
+    let target = match input.purpose.as_str() {
+        "copa" => &mut config.copa,
+        "resonance" => &mut config.resonance,
+        _ => unreachable!("purpose validated above"),
+    };
+
+    target.base_url = Some(base_url);
+    target.model = Some(model);
+    target.temperature = Some(temperature);
+    if let Some(api_key) = input.api_key.as_deref().and_then(normalize_api_key) {
+        target.api_key = Some(api_key);
+    }
+
+    write_llm_config_at(path, &config)
+}
+
 fn delete_llm_api_key_at(path: &Path, purpose: &str) -> Result<(), String> {
     purpose_prefix(purpose)?;
     let mut config = read_llm_config_at(path)?;
@@ -226,6 +278,44 @@ fn api_key_for_purpose(config: &LlmStoredConfig, purpose: &str) -> Option<String
     }
 }
 
+fn purpose_config<'a>(
+    config: &'a LlmStoredConfig,
+    purpose: &str,
+) -> Option<&'a LlmStoredPurposeConfig> {
+    match purpose {
+        "copa" => Some(&config.copa),
+        "resonance" => Some(&config.resonance),
+        _ => None,
+    }
+}
+
+fn configured_base_url_for_purpose(config: &LlmStoredConfig, purpose: &str) -> Option<String> {
+    let primary = purpose_config(config, purpose)?.base_url.clone();
+    if purpose == "resonance" {
+        primary.or_else(|| config.copa.base_url.clone())
+    } else {
+        primary
+    }
+}
+
+fn configured_model_for_purpose(config: &LlmStoredConfig, purpose: &str) -> Option<String> {
+    let primary = purpose_config(config, purpose)?.model.clone();
+    if purpose == "resonance" {
+        primary.or_else(|| config.copa.model.clone())
+    } else {
+        primary
+    }
+}
+
+fn configured_temperature_for_purpose(config: &LlmStoredConfig, purpose: &str) -> Option<f64> {
+    let primary = purpose_config(config, purpose)?.temperature;
+    if purpose == "resonance" {
+        primary.or(config.copa.temperature)
+    } else {
+        primary
+    }
+}
+
 fn missing_api_key_message(purpose: &str) -> String {
     if purpose == "resonance" {
         "Configure the Thought Echoes API key in LLM settings before generating thought echoes."
@@ -241,20 +331,13 @@ fn resolve_config_with_stored_config(
 ) -> Result<ResolvedLlmConfig, String> {
     purpose_prefix(&input.purpose)?;
 
-    let base_url = input
-        .base_url
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(ToString::to_string)
-        .unwrap_or_else(|| DEFAULT_BASE_URL.to_string());
+    let base_url = configured_base_url_for_purpose(stored_config, &input.purpose)
+        .map(normalize_base_url)
+        .ok_or_else(|| {
+            "Configure the LLM Base URL in LLM settings before generating.".to_string()
+        })?;
 
-    let model = input
-        .model
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(ToString::to_string)
+    let model = configured_model_for_purpose(stored_config, &input.purpose)
         .ok_or_else(|| "Configure the LLM model in LLM settings before generating.".to_string())?;
 
     let api_key = api_key_for_purpose(stored_config, &input.purpose)
@@ -264,8 +347,9 @@ fn resolve_config_with_stored_config(
         base_url: normalize_base_url(base_url),
         model,
         api_key,
-        temperature: input
-            .temperature
+        temperature: configured_temperature_for_purpose(stored_config, &input.purpose)
+            .or(input.temperature)
+            .filter(|value| value.is_finite())
             .unwrap_or_else(|| default_temperature(&input.purpose)),
     })
 }
@@ -281,9 +365,11 @@ fn runtime_model_config(
     stored_config: &LlmStoredConfig,
 ) -> LlmRuntimeModelConfig {
     LlmRuntimeModelConfig {
-        base_url: DEFAULT_BASE_URL.to_string(),
-        model: String::new(),
-        temperature: default_temperature,
+        base_url: configured_base_url_for_purpose(stored_config, purpose).unwrap_or_default(),
+        model: configured_model_for_purpose(stored_config, purpose).unwrap_or_default(),
+        temperature: configured_temperature_for_purpose(stored_config, purpose)
+            .filter(|value| value.is_finite())
+            .unwrap_or(default_temperature),
         has_api_key: api_key_for_purpose(stored_config, purpose).is_some(),
     }
 }
@@ -304,6 +390,12 @@ pub async fn save_llm_api_key(
 ) -> Result<LlmRuntimeConfig, String> {
     let input = SaveLlmApiKeyInput { purpose, api_key };
     save_llm_api_key_at(&llm_config_path()?, input)?;
+    get_llm_runtime_config().await
+}
+
+#[tauri::command]
+pub async fn save_llm_config(input: SaveLlmConfigInput) -> Result<LlmRuntimeConfig, String> {
+    save_llm_config_at(&llm_config_path()?, input)?;
     get_llm_runtime_config().await
 }
 
@@ -439,6 +531,9 @@ mod tests {
         let stored = LlmStoredConfig {
             copa: LlmStoredPurposeConfig {
                 api_key: Some("saved-key".to_string()),
+                base_url: Some("https://example.com/v1".to_string()),
+                model: Some("ui-model".to_string()),
+                ..Default::default()
             },
             resonance: LlmStoredPurposeConfig::default(),
         };
@@ -454,7 +549,14 @@ mod tests {
     #[serial]
     fn rejects_missing_saved_api_key_without_environment_fallback() {
         let _guard = EnvGuard::set(&[("ECHOPROFILE_COPA_API_KEY", "env-key")]);
-        let stored = LlmStoredConfig::default();
+        let stored = LlmStoredConfig {
+            copa: LlmStoredPurposeConfig {
+                base_url: Some("https://example.com/v1".to_string()),
+                model: Some("ui-model".to_string()),
+                ..Default::default()
+            },
+            resonance: LlmStoredPurposeConfig::default(),
+        };
 
         let error = resolve_config_with_stored_config(&input(), &stored)
             .expect_err("missing key should fail");
@@ -484,5 +586,39 @@ mod tests {
 
         let stored = read_llm_config_at(&path).expect("read config");
         assert_eq!(stored.copa.api_key, None);
+    }
+
+    #[test]
+    fn resolves_full_llm_config_from_saved_config_only() {
+        let stored = LlmStoredConfig {
+            copa: LlmStoredPurposeConfig {
+                api_key: Some("saved-key".to_string()),
+                base_url: Some("https://saved.example.com/v1".to_string()),
+                model: Some("saved-model".to_string()),
+                temperature: Some(0.7),
+            },
+            resonance: LlmStoredPurposeConfig::default(),
+        };
+
+        let resolved = resolve_config_with_stored_config(
+            &LlmChatCompletionInput {
+                purpose: "copa".to_string(),
+                base_url: Some("https://frontend.example.com/v1".to_string()),
+                model: Some("frontend-model".to_string()),
+                temperature: Some(0.1),
+                response_format: json!({ "type": "json_object" }),
+                messages: vec![LlmChatMessage {
+                    role: "user".to_string(),
+                    content: "hello".to_string(),
+                }],
+            },
+            &stored,
+        )
+        .expect("config");
+
+        assert_eq!(resolved.api_key, "saved-key");
+        assert_eq!(resolved.base_url, "https://saved.example.com/v1");
+        assert_eq!(resolved.model, "saved-model");
+        assert!((resolved.temperature - 0.7).abs() < f64::EPSILON);
     }
 }

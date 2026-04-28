@@ -1209,6 +1209,12 @@ handler_json!(
     }
 );
 
+handler_json!(
+    save_llm_config,
+    commands::llm::SaveLlmConfigInput,
+    |p: commands::llm::SaveLlmConfigInput| async move { commands::llm::save_llm_config(p).await }
+);
+
 #[derive(Deserialize)]
 pub struct DeleteLlmApiKeyParams {
     pub purpose: String,

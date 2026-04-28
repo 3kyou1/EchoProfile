@@ -27,6 +27,7 @@ import {
   buildScopeKey,
   createSnapshot,
   extractUserSignals,
+  selectPromptSignals,
   loadCopaConfig,
   loadCopaSnapshots,
   normalizeCopaLanguage,
@@ -690,7 +691,14 @@ export function CopaProfilePage() {
         throw new Error(t("common.copa.error.selectSession", "Select a session first."));
       }
 
-      allMessages.push(...(await loadMessagesForSession(selectedSessionForScope)));
+      const messages = await loadMessagesForSession(selectedSessionForScope);
+      allMessages.push(
+        ...messages.map((message) => ({
+          ...message,
+          projectName: message.projectName ?? selectedProjectForScope?.path ?? selectedSessionForScope.project_name,
+          provider: message.provider ?? selectedSessionForScope.provider ?? "claude",
+        }))
+      );
       return {
         scopeRef: selectedSessionForScope.file_path,
         scopeLabel: buildScopeLabel(),
@@ -707,8 +715,21 @@ export function CopaProfilePage() {
       }
 
       const sessions = await loadSessionsForProject(selectedProjectForScope, excludeSidechain);
-      const messageGroups = await Promise.all(sessions.map((session) => loadMessagesForSession(session)));
-      messageGroups.forEach((group) => allMessages.push(...group));
+      const messageGroups = await Promise.all(
+        sessions.map(async (session) => ({
+          session,
+          messages: await loadMessagesForSession(session),
+        }))
+      );
+      messageGroups.forEach(({ session, messages }) =>
+        allMessages.push(
+          ...messages.map((message) => ({
+            ...message,
+            projectName: message.projectName ?? selectedProjectForScope.path,
+            provider: message.provider ?? session.provider ?? selectedProjectForScope.provider ?? "claude",
+          }))
+        )
+      );
 
       return {
         scopeRef: selectedProjectForScope.path,
@@ -726,11 +747,30 @@ export function CopaProfilePage() {
         : projects;
 
     const sessionGroups = await Promise.all(
-      filteredProjects.map((project) => loadSessionsForProject(project, excludeSidechain))
+      filteredProjects.map(async (project) => ({
+        project,
+        sessions: await loadSessionsForProject(project, excludeSidechain),
+      }))
     );
-    const flatSessions = sessionGroups.flat();
-    const messageGroups = await Promise.all(flatSessions.map((session) => loadMessagesForSession(session)));
-    messageGroups.forEach((group) => allMessages.push(...group));
+    const flatSessions = sessionGroups.flatMap(({ project, sessions }) =>
+      sessions.map((session) => ({ project, session }))
+    );
+    const messageGroups = await Promise.all(
+      flatSessions.map(async ({ project, session }) => ({
+        project,
+        session,
+        messages: await loadMessagesForSession(session),
+      }))
+    );
+    messageGroups.forEach(({ project, session, messages }) =>
+      allMessages.push(
+        ...messages.map((message) => ({
+          ...message,
+          projectName: message.projectName ?? project.path,
+          provider: message.provider ?? session.provider ?? project.provider ?? "claude",
+        }))
+      )
+    );
 
     return {
       scopeRef: "global",
@@ -753,15 +793,14 @@ export function CopaProfilePage() {
     try {
       const generationLanguage = normalizeCopaLanguage(i18n.resolvedLanguage || i18n.language || "en");
       const collected = await collectScopeMessages();
-      const extracted = extractUserSignals(collected.messages, {
+      const extracted = selectPromptSignals(collected.messages, {
         discardSignalLength: config.discardSignalLength,
         pasteLikeSignalLength: config.pasteLikeSignalLength,
+        maxSignals: MAX_PROMPT_SIGNALS,
+        strategy: scopeType === "global" ? "balanced" : "recent",
       });
-      const limitedSignals =
-        extracted.messages.length > MAX_PROMPT_SIGNALS
-          ? extracted.messages.slice(-MAX_PROMPT_SIGNALS)
-          : extracted.messages;
-      const overflowCount = Math.max(0, extracted.messages.length - limitedSignals.length);
+      const limitedSignals = extracted.messages;
+      const overflowCount = Math.max(0, extracted.stats.dedupedMessages - limitedSignals.length);
 
       if (limitedSignals.length === 0) {
         throw new Error(t("common.copa.error.noSignals", "No user messages were found in the selected scope."));

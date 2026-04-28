@@ -29,6 +29,7 @@ const CONFIG_KEY = "config";
 const MAX_SIGNAL_LENGTH = 1200;
 const DEFAULT_DISCARD_SIGNAL_LENGTH = 50;
 const DEFAULT_PASTE_LIKE_SIGNAL_LENGTH = 40;
+const DEFAULT_PROMPT_SAMPLING_STRATEGY = "recent";
 
 const FACTOR_ORDER: CopaFactorCode[] = ["CT", "SA", "SC", "CLM", "MS", "AMR"];
 
@@ -356,6 +357,22 @@ function normalizeSignal(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+interface SignalEntry {
+  text: string;
+  projectKey: string;
+  index: number;
+}
+
+interface SignalExtractionOptions {
+  pasteLikeSignalLength?: number;
+  discardSignalLength?: number;
+}
+
+interface PromptSignalSelectionOptions extends SignalExtractionOptions {
+  maxSignals?: number;
+  strategy?: "recent" | "balanced";
+}
+
 function normalizeSignalLengthThreshold(value: unknown, fallback: number, minimum = 1): number {
   const normalized =
     typeof value === "number"
@@ -443,6 +460,83 @@ function isLikelyPastedContent(
   }
 
   return false;
+}
+
+function getSignalProjectKey(message: ClaudeMessage): string {
+  return [
+    message.provider ?? "unknown-provider",
+    message.projectName ?? message.sessionId ?? "unknown-project",
+  ].join(":");
+}
+
+function pickEvenly<T>(items: T[], count: number): T[] {
+  if (count <= 0) {
+    return [];
+  }
+  if (items.length <= count) {
+    return items;
+  }
+  if (count === 1) {
+    return [items[Math.floor((items.length - 1) / 2)]];
+  }
+
+  const picked: T[] = [];
+  const seen = new Set<number>();
+  for (let index = 0; index < count; index += 1) {
+    const itemIndex = Math.round((index * (items.length - 1)) / (count - 1));
+    if (seen.has(itemIndex)) {
+      continue;
+    }
+    seen.add(itemIndex);
+    picked.push(items[itemIndex]);
+  }
+
+  return picked;
+}
+
+function selectBalancedSignalEntries(entries: SignalEntry[], maxSignals: number): SignalEntry[] {
+  if (entries.length <= maxSignals) {
+    return entries;
+  }
+
+  const selected = new Map<number, SignalEntry>();
+  const addEntry = (entry: SignalEntry) => {
+    if (selected.size < maxSignals) {
+      selected.set(entry.index, entry);
+    }
+  };
+
+  const projectGroups = new Map<string, SignalEntry[]>();
+  for (const entry of entries) {
+    const group = projectGroups.get(entry.projectKey) ?? [];
+    group.push(entry);
+    projectGroups.set(entry.projectKey, group);
+  }
+
+  const recentBudget = Math.max(1, Math.floor(maxSignals * 0.3));
+  const projectBudget = Math.min(projectGroups.size, Math.max(1, Math.ceil(maxSignals * 0.2)));
+  const timelineBudget = Math.max(1, maxSignals - recentBudget - projectBudget);
+
+  for (const entry of pickEvenly(entries, timelineBudget)) {
+    addEntry(entry);
+  }
+
+  for (const entry of entries.slice(-recentBudget)) {
+    addEntry(entry);
+  }
+
+  const projectRepresentatives = [...projectGroups.values()]
+    .map((group) => group[group.length - 1])
+    .sort((left, right) => right.index - left.index);
+  for (const entry of projectRepresentatives.slice(0, projectBudget)) {
+    addEntry(entry);
+  }
+
+  for (let index = entries.length - 1; selected.size < maxSignals && index >= 0; index -= 1) {
+    addEntry(entries[index]);
+  }
+
+  return [...selected.values()].sort((left, right) => left.index - right.index);
 }
 
 function containsHanCharacters(value: string): boolean {
@@ -759,15 +853,15 @@ export function buildScopeKey(input: {
   return `global:${providers || "all"}`;
 }
 
-export function extractUserSignals(
+function collectUserSignalEntries(
   messages: ClaudeMessage[],
-  options: number | { pasteLikeSignalLength?: number; discardSignalLength?: number } = {}
-): ExtractedSignalResult {
+  options: number | SignalExtractionOptions = {}
+): { entries: SignalEntry[]; stats: ExtractedSignalResult["stats"] } {
   const { discardSignalLength, pasteLikeSignalLength } =
     typeof options === "number"
       ? normalizeSignalThresholds({ pasteLikeSignalLength: options })
       : normalizeSignalThresholds(options);
-  const normalized: string[] = [];
+  const entries: SignalEntry[] = [];
   const seen = new Set<string>();
   let userMessages = 0;
   let truncatedMessages = 0;
@@ -803,16 +897,52 @@ export function extractUserSignals(
     }
 
     seen.add(clipped);
-    normalized.push(clipped);
+    entries.push({
+      text: clipped,
+      projectKey: getSignalProjectKey(message),
+      index: entries.length,
+    });
   }
 
   return {
-    messages: normalized,
+    entries,
     stats: {
       userMessages,
-      dedupedMessages: normalized.length,
+      dedupedMessages: entries.length,
       truncatedMessages,
     },
+  };
+}
+
+export function extractUserSignals(
+  messages: ClaudeMessage[],
+  options: number | SignalExtractionOptions = {}
+): ExtractedSignalResult {
+  const extracted = collectUserSignalEntries(messages, options);
+
+  return {
+    messages: extracted.entries.map((entry) => entry.text),
+    stats: extracted.stats,
+  };
+}
+
+export function selectPromptSignals(
+  messages: ClaudeMessage[],
+  options: PromptSignalSelectionOptions = {}
+): ExtractedSignalResult {
+  const extracted = collectUserSignalEntries(messages, options);
+  const maxSignals = options.maxSignals;
+  const strategy = options.strategy ?? DEFAULT_PROMPT_SAMPLING_STRATEGY;
+  const selectedEntries =
+    typeof maxSignals === "number" && maxSignals > 0 && extracted.entries.length > maxSignals
+      ? strategy === "balanced"
+        ? selectBalancedSignalEntries(extracted.entries, maxSignals)
+        : extracted.entries.slice(-maxSignals)
+      : extracted.entries;
+
+  return {
+    messages: selectedEntries.map((entry) => entry.text),
+    stats: extracted.stats,
   };
 }
 

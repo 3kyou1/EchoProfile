@@ -24,6 +24,7 @@ import {
 import { AlertTriangle, ExternalLink, Server } from "lucide-react";
 import { maskValue } from "@/utils/securityUtils";
 import { useSettingsManager } from "../UnifiedSettingsManager";
+import { formatMcpServerDetails } from "../sections/mcpServerConfig";
 import type { MCPServerConfig, MCPSource, SettingsScope } from "@/types";
 
 // ============================================================================
@@ -229,11 +230,16 @@ export const UnifiedMCPDialog: React.FC<UnifiedMCPDialogProps> = ({
                         key={`${server.source}-${idx}`}
                         className={`text-sm ${hasConflict ? "p-2 bg-muted rounded" : ""}`}
                       >
-                        <div className="flex items-center justify-between">
-                          <code className="text-xs text-muted-foreground font-mono truncate flex-1">
-                            {server.config.command} {server.config.args?.join(" ")}
+                        <div className="flex items-center justify-between min-w-0">
+                          <code className="text-xs text-muted-foreground font-mono truncate flex-1 min-w-0">
+                            {formatMcpServerDetails(server.config)}
                           </code>
-                          <div className="flex items-center gap-2 ml-2">
+                          <div className="flex items-center gap-2 ml-2 shrink-0">
+                            {server.config.type === "http" && (
+                              <Badge variant="secondary" className="text-xs">
+                                HTTP
+                              </Badge>
+                            )}
                             <Badge
                               variant="outline"
                               className={`text-xs ${sourceColors[server.source]}`}

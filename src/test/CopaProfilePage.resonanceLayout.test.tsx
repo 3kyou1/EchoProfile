@@ -539,6 +539,19 @@ describe("CopaProfilePage resonance layout", () => {
     );
   });
 
+  it("raises the LLM settings hero layer above following action cards", async () => {
+    render(<CopaProfilePage />);
+
+    const badge = await screen.findByText("User-only inference");
+    const hero = badge.closest("section");
+    expect(hero?.className).not.toContain("z-50");
+
+    fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
+
+    expect(await screen.findByRole("dialog", { name: "LLM config" })).toBeInTheDocument();
+    expect(hero?.className).toContain("z-50");
+  });
+
   it("places figure pool controls in the thought echoes section instead of the shared config card", async () => {
     render(<CopaProfilePage />);
 

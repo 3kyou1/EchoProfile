@@ -10,6 +10,7 @@ const mockLoadCopaSnapshots = vi.fn();
 const mockLoadFigurePools = vi.fn();
 const mockLoadFigureResonanceHistory = vi.fn();
 const mockRequestCopaProfile = vi.fn();
+const mockRequestThinkingAnalysis = vi.fn();
 const mockCreateSnapshot = vi.fn();
 const mockExtractUserSignals = vi.fn();
 const mockSaveCopaSnapshot = vi.fn();
@@ -82,6 +83,7 @@ vi.mock("@/services/copaProfileService", () => ({
   normalizeCopaLanguage: (language?: string) =>
     typeof language === "string" && language.toLowerCase().startsWith("zh") ? "zh" : "en",
   requestCopaProfile: (...args: unknown[]) => mockRequestCopaProfile(...args),
+  requestThinkingAnalysis: (...args: unknown[]) => mockRequestThinkingAnalysis(...args),
   resolveCopaModelConfig: vi.fn((config) => config.copa),
   resolveResonanceModelConfig: vi.fn((config) =>
     config.resonance.enabled ? config.resonance.config : config.copa
@@ -184,6 +186,8 @@ describe("CopaProfilePage resonance layout", () => {
     mockSaveCopaConfig.mockReset();
     mockSaveCopaConfig.mockImplementation(async (next) => next);
     mockRequestCopaProfile.mockReset();
+    mockRequestThinkingAnalysis.mockReset();
+    mockRequestThinkingAnalysis.mockResolvedValue("默认思维分析结果。");
     mockCreateSnapshot.mockReset();
     mockExtractUserSignals.mockReset();
     mockSaveCopaSnapshot.mockReset();
@@ -676,6 +680,124 @@ describe("CopaProfilePage resonance layout", () => {
     await waitFor(() => {
       expect(screen.queryByText("Generating new Profile")).not.toBeInTheDocument();
     });
+  });
+
+  it("renders the Nuwa-generated thinking analysis in a read-only textbox for serious profiles", async () => {
+    mockLoadCopaSnapshots.mockResolvedValue([
+      {
+        id: "snapshot-thinking",
+        createdAt: "2026-04-23T00:00:00.000Z",
+        language: "zh",
+        profileMode: "serious",
+        scope: {
+          type: "global",
+          ref: "global",
+          label: "全局历史",
+          key: "global:global",
+        },
+        providerScope: ["claude"],
+        sourceStats: {
+          projectCount: 1,
+          sessionCount: 1,
+          rawUserMessages: 12,
+          dedupedUserMessages: 12,
+          truncatedMessages: 0,
+        },
+        modelConfig: {
+          baseUrl: "http://example.com/v1",
+          model: "test-model",
+          temperature: 0.2,
+        },
+        promptSummary: "A concise summary.",
+        factors: {},
+        thinkingAnalysisText: "你习惯先抽象出问题结构，再把判断变成可执行步骤。",
+        markdown: "# Profile",
+      },
+    ]);
+
+    render(<CopaProfilePage />);
+
+    const textbox = await screen.findByRole("textbox", { name: "思维分析" });
+    expect(textbox).toHaveTextContent("你习惯先抽象出问题结构，再把判断变成可执行步骤。");
+    expect(textbox).toHaveAttribute("aria-readonly", "true");
+    expect(textbox).toHaveClass("whitespace-pre-wrap");
+    expect(textbox).not.toHaveClass("resize-y");
+    expect(textbox.closest("section")).toHaveClass("mt-4");
+    expect(screen.queryByRole("button", { name: "思维分析" })).not.toBeInTheDocument();
+  });
+
+  it("calls the thinking-analysis model with raw user signals when generating a serious profile", async () => {
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "load_project_sessions") {
+        return [];
+      }
+      if (command === "load_provider_messages") {
+        return [];
+      }
+      return [];
+    });
+    mockExtractUserSignals.mockReturnValue({
+      messages: ["我需要先拆结构再推进。"],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
+    mockRequestCopaProfile.mockResolvedValue({
+      promptSummary: "结构化推进。",
+      factors: {},
+    });
+    mockRequestThinkingAnalysis.mockResolvedValue("这是一段女娲式思维方式分析。");
+    mockCreateSnapshot.mockReturnValue({
+      id: "snapshot-thinking-generated",
+      createdAt: "2026-04-23T01:00:00.000Z",
+      language: "zh",
+      profileMode: "serious",
+      scope: {
+        type: "global",
+        ref: "global",
+        label: "全局历史",
+        key: "global:global",
+      },
+      providerScope: ["claude"],
+      sourceStats: {
+        projectCount: 1,
+        sessionCount: 1,
+        rawUserMessages: 1,
+        dedupedUserMessages: 1,
+        truncatedMessages: 0,
+      },
+      modelConfig: {
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        temperature: 0.2,
+      },
+      promptSummary: "结构化推进。",
+      factors: {},
+      thinkingAnalysisText: "这是一段女娲式思维方式分析。",
+      markdown: "# CoPA 画像",
+    });
+    mockSaveCopaSnapshot.mockResolvedValue([]);
+
+    render(<CopaProfilePage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("A concise summary.").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate CoPA Profile" }));
+
+    await waitFor(() => {
+      expect(mockRequestThinkingAnalysis).toHaveBeenCalledWith(
+        ["我需要先拆结构再推进。"],
+        expect.objectContaining({ model: "test-model" }),
+        "en"
+      );
+    });
+
+    expect(mockCreateSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profileMode: "serious",
+        thinkingAnalysisText: "这是一段女娲式思维方式分析。",
+      })
+    );
   });
 
   it("renders profile history as a compact dropdown selector", async () => {

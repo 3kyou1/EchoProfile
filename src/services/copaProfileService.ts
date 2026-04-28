@@ -207,6 +207,21 @@ const COPA_FUN_RESPONSE_FORMAT = {
 const COPA_JSON_OBJECT_RESPONSE_FORMAT = { type: "json_object" } as const;
 const COPA_INVALID_JSON_ERROR = "CoPA model returned invalid JSON.";
 
+const THINKING_ANALYSIS_RESPONSE_FORMAT = {
+  type: "json_schema",
+  json_schema: {
+    name: "nuwa_thinking_analysis",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        thinking_analysis_text: { type: "string" },
+      },
+      required: ["thinking_analysis_text"],
+    },
+  },
+};
+
 function shouldFallbackToJsonObject(status: number, detail: string): boolean {
   if (status !== 400) {
     return false;
@@ -766,6 +781,10 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
     typeof payload.funProfileText === "string" && payload.funProfileText.trim().length > 0
       ? payload.funProfileText.trim()
       : normalized.funProfileText;
+  const thinkingAnalysisText =
+    typeof payload.thinkingAnalysisText === "string" && payload.thinkingAnalysisText.trim().length > 0
+      ? payload.thinkingAnalysisText.trim()
+      : undefined;
 
   return {
     id: typeof payload.id === "string" && payload.id.trim().length > 0 ? payload.id : `copa-${Date.now()}`,
@@ -861,6 +880,7 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
     promptSummary: normalized.promptSummary,
     factors: normalized.factors,
     funProfileText,
+    thinkingAnalysisText,
     markdown:
       typeof payload.markdown === "string" && payload.markdown.trim().length > 0
         ? payload.markdown
@@ -961,6 +981,7 @@ function normalizeSnapshot(value: unknown): CopaSnapshot {
             promptSummary: normalized.promptSummary,
             factors: normalized.factors,
             funProfileText,
+            thinkingAnalysisText,
           }),
   };
 }
@@ -1114,6 +1135,12 @@ export function renderCopaMarkdown(snapshot: Omit<CopaSnapshot, "markdown">): st
     sections.push(labels.promptSummary);
     sections.push(snapshot.promptSummary);
     sections.push("");
+
+    if (snapshot.thinkingAnalysisText) {
+      sections.push(snapshot.language === "zh" ? "## 思维分析" : "## 思维分析");
+      sections.push(snapshot.thinkingAnalysisText);
+      sections.push("");
+    }
   }
   sections.push(labels.metadata);
   sections.push(`- ${labels.providers}: ${snapshot.providerScope.join(", ") || "none"}`);
@@ -1250,6 +1277,189 @@ export function buildCopaPrompt(
       ...signals.map((signal) => `- ${signal}`),
     ].join("\n"),
   };
+}
+
+export function buildThinkingAnalysisPrompt(
+  signals: string[],
+  language: CopaLanguage = "en"
+): { system: string; user: string } {
+  if (language === "zh") {
+    return {
+      system: [
+        "你正在使用思维蒸馏方法，为用户本人生成一段可展示的思维方式分析。",
+        "女娲不是复制人，是提炼思维框架。",
+        "一个好的人物思维框架是一套全面的认知操作系统：",
+        "- 他用什么心智模型看世界？（镜片）",
+        "- 他用什么决策启发式做判断？（直觉规则）",
+        "- 他怎么表达？（DNA）",
+        "- 他绝对不会做什么？（反模式）",
+        "- 什么是这个思维框架做不到的？（诚实边界）",
+        "关键区分：捕捉的是HOW they think，不是WHAT they said。",
+        "这次对象不是公众人物，而是用户本人。请直接从用户消息中蒸馏其稳定思维方式。",
+        "请输出一段适合的思维分析：",
+        "- 覆盖心智模型、决策启发式、表达 DNA、优势场景、反模式/盲点。",
+        "- 写得具体、有洞察，不要像心理测评套话。",
+        "- 不要编造身份、经历、职业、关系或用户消息中没有的事实。",
+        "只返回严格 JSON，顶层键仅允许为：thinking_analysis_text。",
+      ].join("\n"),
+      user: [
+        "请仅基于这些用户消息生成思维分析。",
+        "消息：",
+        ...signals.map((signal) => `- ${signal}`),
+      ].join("\n"),
+    };
+  }
+
+  return {
+    system: [
+      "You are using a thinking distillation method to generate a displayable thinking-style analysis for the user.",
+      "Nuwa is not about copying a person; it is about extracting thinking frameworks.",
+      "A good personal thinking framework is a comprehensive cognitive operating system:",
+      "- What mental models does this person use to see the world? (lenses)",
+      "- What decision heuristics does this person use to judge? (intuitive rules)",
+      "- How does this person express themselves? (DNA)",
+      "- What would this person absolutely not do? (anti-patterns)",
+      "- What can this thinking framework not do? (honest boundaries)",
+      "Key distinction: capture HOW they think, not WHAT they said.",
+      "This time, the subject is not a public figure, but the user. Please distill their stable thinking style directly from user messages.",
+      "Please output a suitable thinking analysis:",
+      "- Cover mental models, decision heuristics, expression DNA, strength scenarios, and anti-patterns/blind spots.",
+      "- Be specific and insightful; do not sound like generic psychometric boilerplate.",
+      "- Do not invent identities, experiences, jobs, relationships, or facts not present in the user messages.",
+      "Return strict JSON only. The only allowed top-level key is: thinking_analysis_text.",
+    ].join("\n"),
+    user: [
+      "Generate a thinking analysis based only on these user messages.",
+      "Messages:",
+      ...signals.map((signal) => `- ${signal}`),
+    ].join("\n"),
+  };
+}
+
+function extractCompletionContent(payload: {
+  choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
+}): string {
+  const content = payload.choices?.[0]?.message?.content;
+  return Array.isArray(content)
+    ? content
+        .map((item) => (typeof item?.text === "string" ? item.text : ""))
+        .join("\n")
+    : typeof content === "string"
+      ? content
+      : "";
+}
+
+export async function requestThinkingAnalysis(
+  signals: string[],
+  config: CopaModelConfig,
+  language: CopaLanguage = "en"
+): Promise<string> {
+  if (!config.apiKey?.trim()) {
+    throw new Error("Missing API key");
+  }
+  if (!config.model.trim()) {
+    throw new Error("Missing model name");
+  }
+  if (signals.length === 0) {
+    throw new Error("No user signals available");
+  }
+
+  const prompt = buildThinkingAnalysisPrompt(signals, language);
+  await persistLlmDebugLog({
+    category: "copa",
+    stage: "thinking_analysis_request",
+    payload: {
+      baseUrl: config.baseUrl,
+      model: config.model,
+      language,
+      signalCount: signals.length,
+      systemPrompt: prompt.system,
+      userPrompt: prompt.user,
+    },
+  });
+
+  let response: Response | null = null;
+  for (const responseFormat of [THINKING_ANALYSIS_RESPONSE_FORMAT, COPA_JSON_OBJECT_RESPONSE_FORMAT]) {
+    response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        temperature: config.temperature ?? 0.2,
+        response_format: responseFormat,
+        messages: [
+          { role: "system", content: prompt.system },
+          { role: "user", content: prompt.user },
+        ],
+      }),
+    });
+
+    if (response.ok) {
+      break;
+    }
+
+    const detail = await response.text();
+    if (
+      responseFormat.type === "json_schema" &&
+      shouldFallbackToJsonObject(response.status, detail)
+    ) {
+      await persistLlmDebugLog({
+        category: "copa",
+        stage: "thinking_analysis_schema_fallback",
+        level: "warn",
+        payload: {
+          from: "json_schema",
+          to: "json_object",
+          status: response.status,
+          statusText: response.statusText,
+          detail,
+        },
+      });
+      response = null;
+      continue;
+    }
+
+    await persistLlmDebugLog({
+      category: "copa",
+      stage: "thinking_analysis_http_error",
+      level: "warn",
+      payload: {
+        status: response.status,
+        statusText: response.statusText,
+        detail,
+        responseFormat: responseFormat.type,
+      },
+    });
+    throw new Error(detail || `Thinking analysis generation failed (${response.status})`);
+  }
+
+  if (!response) {
+    throw new Error("Thinking analysis generation failed before receiving a response.");
+  }
+
+  const payload = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
+  };
+  const rawContent = extractCompletionContent(payload);
+  await persistLlmDebugLog({
+    category: "copa",
+    stage: "thinking_analysis_response",
+    payload: { rawContent },
+  });
+
+  const parsed = parseCopaJsonContent(rawContent);
+  const thinkingAnalysisText =
+    parsed && typeof parsed === "object" && typeof (parsed as Record<string, unknown>).thinking_analysis_text === "string"
+      ? ((parsed as Record<string, unknown>).thinking_analysis_text as string).trim()
+      : "";
+  if (!thinkingAnalysisText) {
+    throw new Error("Thinking analysis model returned invalid JSON.");
+  }
+
+  return thinkingAnalysisText;
 }
 
 export async function requestCopaProfile(

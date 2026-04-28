@@ -18,6 +18,7 @@ import {
   loadCopaConfig,
   normalizeCopaResponse,
   requestCopaProfile,
+  requestThinkingAnalysis,
   renderCopaMarkdown,
   resolveResonanceModelConfig,
   saveCopaSnapshot,
@@ -388,6 +389,84 @@ describe("copaProfileService", () => {
         }),
       })
     );
+  });
+
+  test("requestThinkingAnalysis uses the Nuwa skill prompt directly on user signals", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: "{\"thinking_analysis_text\":\"你用结构先驯服混乱，再把判断压成行动。\"}",
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestThinkingAnalysis(
+      ["我需要先拆结构再推进。"],
+      {
+        baseUrl: "https://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      "zh"
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(requestInit?.body ?? "{}")) as {
+      response_format?: { json_schema?: { name?: string; schema?: Record<string, unknown> } };
+      messages?: Array<{ role: string; content: string }>;
+    };
+
+    expect(body.response_format?.json_schema?.name).toBe("nuwa_thinking_analysis");
+    expect(body.messages?.[0]?.content).toContain("你正在使用思维蒸馏方法");
+    expect(body.messages?.[0]?.content).toContain("一个好的人物思维框架是一套全面的认知操作系统");
+    expect(body.messages?.[0]?.content).toContain("关键区分：捕捉的是HOW they think，不是WHAT they said。");
+    expect(body.messages?.[0]?.content).not.toContain("CoPA 因子");
+    expect(body.messages?.[1]?.content).toContain("请仅基于这些用户消息生成思维分析。");
+    expect(body.messages?.[1]?.content).toContain("- 我需要先拆结构再推进。");
+    expect(result).toBe("你用结构先驯服混乱，再把判断压成行动。");
+  });
+
+  test("requestThinkingAnalysis uses the synchronized English Nuwa-style prompt for English UI", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: "{\"thinking_analysis_text\":\"You tame ambiguity by making structure executable.\"}",
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestThinkingAnalysis(
+      ["I need to split the structure before moving forward."],
+      {
+        baseUrl: "https://example.com/v1",
+        model: "test-model",
+        apiKey: "test-key",
+      },
+      "en"
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(requestInit?.body ?? "{}")) as {
+      messages?: Array<{ role: string; content: string }>;
+    };
+
+    expect(body.messages?.[0]?.content).toContain("You are using a thinking distillation method");
+    expect(body.messages?.[0]?.content).toContain("A good personal thinking framework is a comprehensive cognitive operating system");
+    expect(body.messages?.[0]?.content).toContain("Key distinction: capture HOW they think, not WHAT they said.");
+    expect(body.messages?.[1]?.content).toContain("Generate a thinking analysis based only on these user messages.");
+    expect(result).toBe("You tame ambiguity by making structure executable.");
   });
 
   test("requestCopaProfile sends a json_schema response format", async () => {

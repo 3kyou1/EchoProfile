@@ -64,6 +64,7 @@ export interface CopaSnapshot {
   promptSummary: string;
   factors: CopaFactors;
   funProfileText?: string;
+  thinkingAnalysisText?: string;
   markdown: string;
 }
 

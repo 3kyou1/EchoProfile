@@ -31,6 +31,7 @@ import {
   loadCopaSnapshots,
   normalizeCopaLanguage,
   requestCopaProfile,
+  requestThinkingAnalysis,
   resolveCopaModelConfig,
   resolveResonanceModelConfig,
   saveCopaConfig,
@@ -704,6 +705,10 @@ export function CopaProfilePage() {
         generationLanguage,
         profileMode
       );
+      const thinkingAnalysisText =
+        profileMode === "serious"
+          ? await requestThinkingAnalysis(limitedSignals, resolveCopaModelConfig(config), generationLanguage)
+          : undefined;
       const snapshot = createSnapshot({
         language: generationLanguage,
         profileMode,
@@ -733,6 +738,7 @@ export function CopaProfilePage() {
         promptSummary: result.promptSummary,
         factors: result.factors,
         funProfileText: result.funProfileText,
+        thinkingAnalysisText,
       });
 
       const stored = await saveCopaSnapshot(snapshot);
@@ -1890,6 +1896,38 @@ export function CopaProfilePage() {
                           ))}
                         </section>
                       )
+                    ) : null}
+
+                    {!isProfileGenerationView &&
+                    interactiveSnapshot &&
+                    (interactiveSnapshot.profileMode ?? "serious") === "serious" &&
+                    interactiveSnapshot.thinkingAnalysisText ? (
+                      <section className="mt-4 rounded-3xl border border-slate-300/70 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_32%),linear-gradient(135deg,rgba(248,250,252,0.96),rgba(255,255,255,0.94))] p-5 shadow-sm">
+                        <label
+                          id="copa-thinking-analysis-label"
+                          htmlFor="copa-thinking-analysis"
+                          className="flex items-center gap-2 text-sm font-semibold text-slate-950"
+                        >
+                          <Brain className="h-4 w-4" />
+                          {t("common.copa.thinkingAnalysis.title", "思维分析")}
+                        </label>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {t(
+                            "common.copa.thinkingAnalysis.description",
+                            "直接基于用户消息调用思维蒸馏 prompt，蒸馏稳定思维方式。"
+                          )}
+                        </p>
+                        <div
+                          id="copa-thinking-analysis"
+                          role="textbox"
+                          aria-readonly="true"
+                          aria-labelledby="copa-thinking-analysis-label"
+                          tabIndex={0}
+                          className="mt-4 min-h-[220px] w-full whitespace-pre-wrap rounded-2xl border border-slate-200 bg-white/90 p-4 text-sm leading-7 text-slate-800 shadow-inner outline-none focus:ring-2 focus:ring-slate-300"
+                        >
+                          {interactiveSnapshot.thinkingAnalysisText}
+                        </div>
+                      </section>
                     ) : null}
 
                   </>

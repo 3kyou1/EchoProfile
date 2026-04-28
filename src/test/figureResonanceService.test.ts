@@ -518,7 +518,6 @@ describe("figureResonanceService", () => {
         category: "resonance",
         stage: "request",
         payload: expect.objectContaining({
-          model: "test-model",
           language: "en",
           systemPrompt: expect.stringContaining("Generate Thought Echoes"),
         }),

@@ -44,7 +44,7 @@ import {
   generateFigureResonance,
   loadFigureResonanceHistory,
 } from "@/services/figureResonanceService";
-import { saveLlmApiKey, type LlmRuntimeConfig } from "@/services/llmProxyService";
+import { saveLlmConfig, type LlmRuntimeConfig } from "@/services/llmProxyService";
 import type { FigurePool, FigureRecordInput } from "@/types/figurePool";
 import {
   createFigureRecord,
@@ -487,12 +487,18 @@ export function CopaProfilePage() {
     ...next,
     copa: {
       ...next.copa,
+      baseUrl: runtime.copa.baseUrl,
+      model: runtime.copa.model,
+      temperature: runtime.copa.temperature,
       hasApiKey: runtime.copa.hasApiKey,
     },
     resonance: {
       ...next.resonance,
       config: {
         ...next.resonance.config,
+        baseUrl: runtime.resonance.baseUrl,
+        model: runtime.resonance.model,
+        temperature: runtime.resonance.temperature,
         hasApiKey: runtime.resonance.hasApiKey,
       },
     },
@@ -617,16 +623,29 @@ export function CopaProfilePage() {
 
     try {
       let runtimeConfig: LlmRuntimeConfig | null = null;
-      if (draftCopaApiKey.trim().length > 0) {
-        runtimeConfig = await saveLlmApiKey({
+      if (
+        nextConfig.copa.baseUrl.trim().length > 0 ||
+        nextConfig.copa.model.trim().length > 0 ||
+        draftCopaApiKey.trim().length > 0
+      ) {
+        runtimeConfig = await saveLlmConfig({
           purpose: "copa",
-          apiKey: draftCopaApiKey,
+          baseUrl: nextConfig.copa.baseUrl,
+          model: nextConfig.copa.model,
+          temperature: nextConfig.copa.temperature,
+          ...(draftCopaApiKey.trim().length > 0 ? { apiKey: draftCopaApiKey } : {}),
         });
       }
-      if (draftResonanceApiKey.trim().length > 0) {
-        runtimeConfig = await saveLlmApiKey({
+      if (
+        nextConfig.resonance.enabled ||
+        draftResonanceApiKey.trim().length > 0
+      ) {
+        runtimeConfig = await saveLlmConfig({
           purpose: "resonance",
-          apiKey: draftResonanceApiKey,
+          baseUrl: nextConfig.resonance.config.baseUrl,
+          model: nextConfig.resonance.config.model,
+          temperature: nextConfig.resonance.config.temperature,
+          ...(draftResonanceApiKey.trim().length > 0 ? { apiKey: draftResonanceApiKey } : {}),
         });
       }
 
@@ -775,11 +794,6 @@ export function CopaProfilePage() {
           rawUserMessages: extracted.stats.userMessages,
           dedupedUserMessages: extracted.stats.dedupedMessages,
           truncatedMessages: extracted.stats.truncatedMessages + overflowCount,
-        },
-        modelConfig: {
-          baseUrl: resolveCopaModelConfig(config).baseUrl,
-          model: resolveCopaModelConfig(config).model,
-          temperature: resolveCopaModelConfig(config).temperature,
         },
         promptSummary: result.promptSummary,
         factors: result.factors,
@@ -1758,8 +1772,7 @@ export function CopaProfilePage() {
                               {currentSnapshot ? (
                                 <p className="mt-1 text-xs text-white/65">
                                   {currentSnapshot.sourceStats.rawUserMessages}{" "}
-                                  {t("common.copa.summary.userMessages", "user messages")} ·{" "}
-                                  {currentSnapshot.modelConfig.model}
+                                  {t("common.copa.summary.userMessages", "user messages")}
                                 </p>
                               ) : null}
                             </div>
@@ -1830,7 +1843,7 @@ export function CopaProfilePage() {
                               </div>
                               <p className="mt-3 text-sm leading-6 text-foreground">{currentSnapshot.promptSummary}</p>
                               <p className="mt-2 text-[11px] text-muted-foreground">
-                                {formatSnapshotTime(currentSnapshot.createdAt)} · {currentSnapshot.modelConfig.model}
+                                {formatSnapshotTime(currentSnapshot.createdAt)}
                               </p>
                             </div>
                             <button

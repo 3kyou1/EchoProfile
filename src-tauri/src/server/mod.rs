@@ -118,6 +118,7 @@ pub fn build_router(state: Arc<AppState>, host: &str, port: u16, dist_dir: Optio
         .route("/log_frontend_llm_debug", post(h::log_frontend_llm_debug))
         .route("/get_llm_runtime_config", post(h::get_llm_runtime_config))
         .route("/save_llm_api_key", post(h::save_llm_api_key))
+        .route("/save_llm_config", post(h::save_llm_config))
         .route("/delete_llm_api_key", post(h::delete_llm_api_key))
         .route(
             "/request_llm_chat_completion",

@@ -61,7 +61,7 @@ export interface CopaSnapshot {
   scope: CopaScopeRef;
   providerScope: string[];
   sourceStats: CopaSourceStats;
-  modelConfig: Omit<CopaModelConfig, "apiKey">;
+  modelConfig?: Omit<CopaModelConfig, "apiKey">;
   promptSummary: string;
   factors: CopaFactors;
   funProfileText?: string;

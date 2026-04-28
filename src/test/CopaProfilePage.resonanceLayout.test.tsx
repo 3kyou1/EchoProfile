@@ -15,7 +15,7 @@ const mockExtractUserSignals = vi.fn();
 const mockSaveCopaSnapshot = vi.fn();
 const mockApi = vi.fn();
 const mockSaveCopaConfig = vi.fn();
-const mockSaveLlmApiKey = vi.fn();
+const mockSaveLlmConfig = vi.fn();
 const mockDeleteLlmApiKey = vi.fn();
 const mockOpenBinaryFileDialog = vi.fn();
 const mockSaveBinaryFileDialog = vi.fn();
@@ -37,7 +37,7 @@ vi.mock("@/services/api", () => ({
 }));
 
 vi.mock("@/services/llmProxyService", () => ({
-  saveLlmApiKey: (...args: unknown[]) => mockSaveLlmApiKey(...args),
+  saveLlmConfig: (...args: unknown[]) => mockSaveLlmConfig(...args),
   deleteLlmApiKey: (...args: unknown[]) => mockDeleteLlmApiKey(...args),
 }));
 
@@ -190,10 +190,10 @@ describe("CopaProfilePage resonance layout", () => {
 
     mockSaveCopaConfig.mockReset();
     mockSaveCopaConfig.mockImplementation(async (next) => next);
-    mockSaveLlmApiKey.mockReset();
-    mockSaveLlmApiKey.mockResolvedValue({
-      copa: { baseUrl: "https://api.openai.com/v1", model: "", temperature: 0.2, hasApiKey: true },
-      resonance: { baseUrl: "https://api.openai.com/v1", model: "", temperature: 0.3, hasApiKey: true },
+    mockSaveLlmConfig.mockReset();
+    mockSaveLlmConfig.mockResolvedValue({
+      copa: { baseUrl: "http://example.com/v1", model: "test-model", temperature: 0.2, hasApiKey: true },
+      resonance: { baseUrl: "http://example.com/v1", model: "test-model", temperature: 0.3, hasApiKey: true },
     });
     mockDeleteLlmApiKey.mockReset();
     mockDeleteLlmApiKey.mockResolvedValue({
@@ -1047,17 +1047,16 @@ describe("CopaProfilePage resonance layout", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm LLM settings" }));
 
     await waitFor(() => {
-      expect(mockSaveCopaConfig).toHaveBeenCalledWith(
+      expect(mockSaveLlmConfig).toHaveBeenCalledWith(
         expect.objectContaining({
-          copa: expect.objectContaining({
-            baseUrl: "http://draft.example.com/v1",
-          }),
+          purpose: "copa",
+          baseUrl: "http://draft.example.com/v1",
         })
       );
     });
   });
 
-  it("saves the CoPA API key through the backend when llm settings are confirmed", async () => {
+  it("saves the CoPA LLM config through the backend when llm settings are confirmed", async () => {
     render(<CopaProfilePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
@@ -1068,8 +1067,11 @@ describe("CopaProfilePage resonance layout", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm LLM settings" }));
 
     await waitFor(() => {
-      expect(mockSaveLlmApiKey).toHaveBeenCalledWith({
+      expect(mockSaveLlmConfig).toHaveBeenCalledWith({
         purpose: "copa",
+        baseUrl: "http://example.com/v1",
+        model: "test-model",
+        temperature: 0.2,
         apiKey: "sk-new-copa-key",
       });
     });

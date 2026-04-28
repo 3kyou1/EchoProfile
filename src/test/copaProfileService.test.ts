@@ -370,11 +370,12 @@ describe("copaProfileService", () => {
       "request_llm_chat_completion",
       expect.objectContaining({
         purpose: "copa",
-        baseUrl: "https://example.com/v1",
-        model: "test-model",
       })
     );
-    expect(JSON.stringify(mockApi.mock.calls[0]?.[1])).not.toContain("test-key");
+    const llmRequest = JSON.stringify(mockApi.mock.calls[0]?.[1]);
+    expect(llmRequest).not.toContain("test-key");
+    expect(llmRequest).not.toContain("https://example.com/v1");
+    expect(llmRequest).not.toContain("test-model");
     expect(fetch).not.toHaveBeenCalled();
 
     expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
@@ -383,7 +384,6 @@ describe("copaProfileService", () => {
         stage: "request",
         payload: expect.objectContaining({
           language: "en",
-          model: "test-model",
           signalCount: 1,
           systemPrompt: expect.stringContaining("You are generating a CoPA profile"),
           userPrompt: expect.stringContaining("- Please keep this practical."),
@@ -923,6 +923,25 @@ describe("copaProfileService", () => {
   });
 
   test("loadCopaConfig migrates legacy single-config storage into dual llm config", async () => {
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "save_llm_config" || command === "get_llm_runtime_config") {
+        return {
+          copa: {
+            baseUrl: "https://legacy.example.com/v1",
+            model: "legacy-model",
+            temperature: 0.4,
+            hasApiKey: true,
+          },
+          resonance: {
+            baseUrl: "https://legacy.example.com/v1",
+            model: "legacy-model",
+            temperature: 0.4,
+            hasApiKey: true,
+          },
+        };
+      }
+      return undefined;
+    });
     localStorage.setItem(
       "webui:copa-profiles.json:config",
       JSON.stringify({
@@ -941,6 +960,14 @@ describe("copaProfileService", () => {
     expect(config.resonance.config.model).toBe("legacy-model");
     expect(config.discardSignalLength).toBe(50);
     expect(config.pasteLikeSignalLength).toBe(40);
+    expect(mockApi).toHaveBeenCalledWith("save_llm_config", {
+      purpose: "copa",
+      baseUrl: "https://legacy.example.com/v1",
+      model: "legacy-model",
+      temperature: 0.4,
+      apiKey: "legacy-key",
+    });
+    expect(localStorage.getItem("webui:copa-profiles.json:config")).not.toContain("legacy-key");
   });
 
   test("saveCopaConfig keeps the paste-like filter threshold below the discard threshold", async () => {
@@ -964,8 +991,45 @@ describe("copaProfileService", () => {
     expect(config.pasteLikeSignalLength).toBe(49);
   });
 
-  test("resolveResonanceModelConfig falls back to CoPA config until a separate resonance config is enabled", async () => {
-    const config = await saveCopaConfig({
+  test("saveCopaConfig does not persist LLM endpoint, model, or API key in frontend storage", async () => {
+    await saveCopaConfig({
+      copa: {
+        baseUrl: "https://copa.example.com/v1",
+        model: "copa-model",
+        apiKey: "copa-key",
+        temperature: 0.2,
+      },
+      resonance: {
+        enabled: true,
+        config: {
+          baseUrl: "https://res.example.com/v1",
+          model: "res-model",
+          apiKey: "res-key",
+          temperature: 0.3,
+        },
+      },
+      discardSignalLength: 50,
+      pasteLikeSignalLength: 20,
+    });
+
+    const raw = localStorage.getItem("webui:copa-profiles.json:config");
+
+    expect(raw).not.toBeNull();
+    expect(raw).not.toContain("https://copa.example.com/v1");
+    expect(raw).not.toContain("https://res.example.com/v1");
+    expect(raw).not.toContain("copa-model");
+    expect(raw).not.toContain("res-model");
+    expect(raw).not.toContain("copa-key");
+    expect(raw).not.toContain("res-key");
+    expect(JSON.parse(raw ?? "{}")).toEqual({
+      discardSignalLength: 50,
+      pasteLikeSignalLength: 20,
+      resonance: { enabled: true },
+    });
+  });
+
+  test("resolveResonanceModelConfig falls back to CoPA config until a separate resonance config is enabled", () => {
+    const config = {
       copa: {
         baseUrl: "https://copa.example.com/v1",
         model: "copa-model",
@@ -981,14 +1045,14 @@ describe("copaProfileService", () => {
           temperature: 0.3,
         },
       },
-    });
+    };
 
     expect(resolveResonanceModelConfig(config)).toMatchObject({
       baseUrl: "https://copa.example.com/v1",
       model: "copa-model",
     });
 
-    const withSeparateResonance = await saveCopaConfig({
+    const withSeparateResonance = {
       ...config,
       resonance: {
         enabled: true,
@@ -999,7 +1063,7 @@ describe("copaProfileService", () => {
           temperature: 0.3,
         },
       },
-    });
+    };
 
     expect(resolveResonanceModelConfig(withSeparateResonance)).toMatchObject({
       baseUrl: "https://res.example.com/v1",

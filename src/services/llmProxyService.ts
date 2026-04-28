@@ -9,9 +9,6 @@ export interface LlmChatMessage {
 
 export interface LlmProxyRequest {
   purpose: LlmPurpose;
-  baseUrl: string;
-  model: string;
-  temperature?: number;
   responseFormat: unknown;
   messages: LlmChatMessage[];
 }
@@ -40,12 +37,24 @@ export interface SaveLlmApiKeyInput {
   apiKey: string;
 }
 
+export interface SaveLlmConfigInput {
+  purpose: LlmPurpose;
+  baseUrl: string;
+  model: string;
+  temperature?: number;
+  apiKey?: string;
+}
+
 export async function getLlmRuntimeConfig(): Promise<LlmRuntimeConfig> {
   return api<LlmRuntimeConfig>("get_llm_runtime_config");
 }
 
 export async function saveLlmApiKey(input: SaveLlmApiKeyInput): Promise<LlmRuntimeConfig> {
   return api<LlmRuntimeConfig>("save_llm_api_key", input as unknown as Record<string, unknown>);
+}
+
+export async function saveLlmConfig(input: SaveLlmConfigInput): Promise<LlmRuntimeConfig> {
+  return api<LlmRuntimeConfig>("save_llm_config", input as unknown as Record<string, unknown>);
 }
 
 export async function deleteLlmApiKey(purpose: LlmPurpose): Promise<LlmRuntimeConfig> {

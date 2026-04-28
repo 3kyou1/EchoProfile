@@ -1252,7 +1252,7 @@ export function buildCopaPrompt(
 
 export async function requestCopaProfile(
   signals: string[],
-  config: CopaModelConfig,
+  _config: CopaModelConfig,
   language: CopaLanguage = "en",
   profileMode: CopaProfileMode = "serious"
 ): Promise<CopaNormalizedResponse> {

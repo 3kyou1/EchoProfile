@@ -683,7 +683,7 @@ function buildFigurePrompt(
 async function requestFigureResonanceFromLlm(
   profileMarkdown: string,
   recentMessages: string[],
-  config: CopaModelConfig,
+  _config: CopaModelConfig,
   language: string,
   context: PoolContext
 ): Promise<FigureResonancePayload> {

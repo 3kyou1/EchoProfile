@@ -4,6 +4,10 @@ const { mockPersistLlmDebugLog } = vi.hoisted(() => ({
   mockPersistLlmDebugLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+const { mockApi } = vi.hoisted(() => ({
+  mockApi: vi.fn(),
+}));
+
 const repoMock = vi.hoisted(() => {
   interface RepoEntry {
     directoryName: string;
@@ -94,6 +98,10 @@ const repoMock = vi.hoisted(() => {
 
 vi.mock("@/services/llmDebugLogger", () => ({
   persistLlmDebugLog: mockPersistLlmDebugLog,
+}));
+
+vi.mock("@/services/api", () => ({
+  api: mockApi,
 }));
 
 vi.mock("@/services/figurePoolApi", () => ({
@@ -237,6 +245,8 @@ describe("figureResonanceService", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+    mockApi.mockReset();
+    mockApi.mockRejectedValue(new Error("network down"));
     repoMock.reset();
     repoMock.setEntries([
       {
@@ -375,6 +385,50 @@ describe("figureResonanceService", () => {
     );
   });
 
+  it("surfaces missing local API key errors instead of using a heuristic fallback", async () => {
+    const imported = await importFigurePool({
+      name: "Operators",
+      records: [
+        {
+          slug: "valid_operator",
+          name: "Valid Operator",
+          localized_names: { zh: "有效操盘手" },
+          portrait_url: "/valid.png",
+          quote_en: "A short quote.",
+          quote_zh: "一句简短的话。",
+          core_traits: "结构化、系统化",
+          thinking_style: "把复杂问题转成清晰结构。",
+          temperament_tags: "冷静、抽象",
+          temperament_summary: "偏系统思考。",
+          loading_copy_zh: "正在对齐...",
+          loading_copy_en: "Aligning...",
+          bio_zh: "有效人物。",
+          bio_en: "Valid figure.",
+          achievements_zh: ["成就一"],
+          achievements_en: ["Achievement one"],
+        },
+      ],
+    });
+    mockApi.mockRejectedValue(new Error("Configure the Thought Echoes API key in LLM settings before generating thought echoes."));
+
+    await expect(
+      generateFigureResonance({
+        scopeKey: "global:all",
+        poolId: imported.id,
+        profileSnapshot: snapshot,
+        recentMessages: [
+          "我喜欢把复杂系统压缩成结构化框架。",
+          "我希望看到严谨推导，而不是泛泛而谈。",
+        ],
+        config: {
+          baseUrl: "http://example.com/v1",
+          model: "test-model",
+        },
+        language: "zh-CN",
+      })
+    ).rejects.toThrow("Configure the Thought Echoes API key");
+  });
+
   it("persists generated resonance result in cache", async () => {
     const pools = await loadFigurePools();
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
@@ -415,35 +469,33 @@ describe("figureResonanceService", () => {
     const primary = validRecords[0]!;
     const secondary = validRecords.slice(1, 3);
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  long_term: {
-                    primary: {
-                      slug: primary.slug,
-                      reason: "Matches the user's structured reasoning style.",
-                      resonance_axes: ["structured", "rigorous"],
-                    },
-                    secondary: secondary.map((record) => ({
-                      slug: record.slug,
-                      reason: `Echoes ${record.name}.`,
-                      resonance_axes: ["adjacent"],
-                    })),
+    mockApi.mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      body: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                long_term: {
+                  primary: {
+                    slug: primary.slug,
+                    reason: "Matches the user's structured reasoning style.",
+                    resonance_axes: ["structured", "rigorous"],
                   },
-                  recent_state: null,
-                }),
-              },
+                  secondary: secondary.map((record) => ({
+                    slug: record.slug,
+                    reason: `Echoes ${record.name}.`,
+                    resonance_axes: ["adjacent"],
+                  })),
+                },
+                recent_state: null,
+              }),
             },
-          ],
-        }),
-      })
-    );
+          },
+        ],
+      },
+    });
 
     await generateFigureResonance({
       scopeKey: "global:all",
@@ -499,9 +551,10 @@ describe("figureResonanceService", () => {
     const pools = await loadFigurePools();
     const validRecords = pools[0]!.records.filter((record) => record.status === "valid");
     const primary = validRecords[0]!;
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    mockApi.mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      body: {
         choices: [
           {
             message: {
@@ -519,9 +572,8 @@ describe("figureResonanceService", () => {
             },
           },
         ],
-      }),
+      },
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     await generateFigureResonance({
       scopeKey: "global:all",
@@ -539,14 +591,13 @@ describe("figureResonanceService", () => {
       language: "en",
     });
 
-    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
-    const body = JSON.parse(String(requestInit?.body ?? "{}")) as {
-      response_format?: { type?: string; json_schema?: { name?: string; schema?: Record<string, unknown> } };
+    const body = mockApi.mock.calls[0]?.[1] as {
+      responseFormat?: { type?: string; json_schema?: { name?: string; schema?: Record<string, unknown> } };
     };
 
-    expect(body.response_format?.type).toBe("json_schema");
-    expect(body.response_format?.json_schema?.name).toBe("figure_resonance");
-    expect(body.response_format?.json_schema?.schema).toEqual(
+    expect(body.responseFormat?.type).toBe("json_schema");
+    expect(body.responseFormat?.json_schema?.name).toBe("figure_resonance");
+    expect(body.responseFormat?.json_schema?.schema).toEqual(
       expect.objectContaining({
         type: "object",
         required: expect.arrayContaining(["long_term", "recent_state"]),
@@ -558,19 +609,16 @@ describe("figureResonanceService", () => {
     const pools = await loadFigurePools();
     const validRecords = pools[0]!.records.filter((record) => record.status === "valid");
     const primary = validRecords[0]!;
-    const fetchMock = vi
-      .fn()
+    mockApi
       .mockResolvedValueOnce({
-        ok: false,
         status: 400,
         statusText: "Bad Request",
-        text: async () => "response_format json_schema is not supported for this model",
+        text: "response_format json_schema is not supported for this model",
       })
       .mockResolvedValueOnce({
-        ok: true,
         status: 200,
         statusText: "OK",
-        json: async () => ({
+        body: {
           choices: [
             {
               message: {
@@ -588,9 +636,8 @@ describe("figureResonanceService", () => {
               },
             },
           ],
-        }),
+        },
       });
-    vi.stubGlobal("fetch", fetchMock);
 
     const result = await generateFigureResonance({
       scopeKey: "global:all",
@@ -608,15 +655,15 @@ describe("figureResonanceService", () => {
       language: "en",
     });
 
-    const firstBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body ?? "{}")) as {
-      response_format?: { type?: string };
+    const firstBody = mockApi.mock.calls[0]?.[1] as {
+      responseFormat?: { type?: string };
     };
-    const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body ?? "{}")) as {
-      response_format?: { type?: string };
+    const secondBody = mockApi.mock.calls[1]?.[1] as {
+      responseFormat?: { type?: string };
     };
 
-    expect(firstBody.response_format?.type).toBe("json_schema");
-    expect(secondBody.response_format?.type).toBe("json_object");
+    expect(firstBody.responseFormat?.type).toBe("json_schema");
+    expect(secondBody.responseFormat?.type).toBe("json_object");
     expect(result.source).toBe("llm");
     expect(mockPersistLlmDebugLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -634,15 +681,11 @@ describe("figureResonanceService", () => {
   it("logs thought echoes http errors before falling back", async () => {
     const pools = await loadFigurePools();
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 502,
-        statusText: "Bad Gateway",
-        text: async () => "bad gateway",
-      })
-    );
+    mockApi.mockResolvedValue({
+      status: 502,
+      statusText: "Bad Gateway",
+      text: "bad gateway",
+    });
 
     const result = await generateFigureResonance({
       scopeKey: "global:all",

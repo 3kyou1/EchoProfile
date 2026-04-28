@@ -1,5 +1,10 @@
 import { loadFigurePool, loadFigurePools } from "@/services/figurePoolService";
 import { persistLlmDebugLog } from "@/services/llmDebugLogger";
+import {
+  getLlmProxyResponseText,
+  requestLlmChatCompletion,
+  type LlmProxyResponse,
+} from "@/services/llmProxyService";
 import { storageAdapter } from "@/services/storage";
 import type { FigurePool, FigurePoolRecord } from "@/types/figurePool";
 import type { CopaModelConfig, CopaSnapshot } from "@/types/copaProfile";
@@ -276,6 +281,8 @@ function buildCardPayload(
   return {
     name: record.name,
     localized_names: record.localized_names,
+    wikipedia_url: record.wikipedia_url,
+    wikipedia_urls: record.wikipedia_urls,
     slug: record.slug,
     portrait_url: record.portrait_url,
     hook: localizedTemperamentSummary(record, options.language),
@@ -680,13 +687,6 @@ async function requestFigureResonanceFromLlm(
   language: string,
   context: PoolContext
 ): Promise<FigureResonancePayload> {
-  if (!config.apiKey?.trim()) {
-    throw new Error("Missing API key");
-  }
-  if (!config.model.trim()) {
-    throw new Error("Missing model name");
-  }
-
   const prompt = buildFigurePrompt(profileMarkdown, recentMessages, language, context);
   await persistLlmDebugLog({
     category: "resonance",
@@ -703,24 +703,19 @@ async function requestFigureResonanceFromLlm(
       userPrompt: prompt.user,
     },
   });
-  let response: Response | null = null;
+  let response: LlmProxyResponse | null = null;
   for (const responseFormat of [FIGURE_RESONANCE_RESPONSE_FORMAT, FIGURE_RESONANCE_JSON_OBJECT_RESPONSE_FORMAT]) {
     try {
-      response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          temperature: 0.3,
-          response_format: responseFormat,
-          messages: [
-            { role: "system", content: prompt.system },
-            { role: "user", content: prompt.user },
-          ],
-        }),
+      response = await requestLlmChatCompletion({
+        purpose: "resonance",
+        baseUrl: config.baseUrl,
+        model: config.model,
+        temperature: 0.3,
+        responseFormat,
+        messages: [
+          { role: "system", content: prompt.system },
+          { role: "user", content: prompt.user },
+        ],
       });
     } catch (error) {
       await persistLlmDebugLog({
@@ -739,18 +734,18 @@ async function requestFigureResonanceFromLlm(
       category: "resonance",
       stage: "fetch_resolved",
       payload: {
-        ok: response.ok,
+        ok: response.status >= 200 && response.status < 300,
         status: response.status,
         statusText: response.statusText,
         responseFormat: responseFormat.type,
       },
     });
 
-    if (response.ok) {
+    if (response.status >= 200 && response.status < 300) {
       break;
     }
 
-    const detail = await response.text();
+    const detail = getLlmProxyResponseText(response);
     if (
       responseFormat.type === "json_schema" &&
       shouldFallbackToJsonObject(response.status, detail)
@@ -793,7 +788,7 @@ async function requestFigureResonanceFromLlm(
     choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
   };
   try {
-    payload = (await response.json()) as {
+    payload = (response.body ?? JSON.parse(response.text ?? "")) as {
       choices?: Array<{ message?: { content?: string | Array<{ text?: string; type?: string }> } }>;
     };
   } catch (error) {
@@ -893,6 +888,11 @@ async function saveStoreResults(results: FigureResonanceResult[]): Promise<void>
   const store = await storageAdapter.load(STORE_NAME, { autoSave: true });
   await store.set(RESULTS_KEY, results);
   await store.save();
+}
+
+function isMissingLocalApiKeyError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("Configure the ") && message.includes(" API key");
 }
 
 export function buildFigureResonanceCacheKey(input: {
@@ -1009,6 +1009,10 @@ export async function generateFigureResonance(input: {
       context
     );
   } catch (error) {
+    if (isMissingLocalApiKeyError(error)) {
+      throw error;
+    }
+
     await persistLlmDebugLog({
       category: "resonance",
       stage: "diagnosis",

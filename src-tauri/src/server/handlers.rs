@@ -1193,3 +1193,45 @@ handler_json!(
         commands::archive::export_session(p.session_file_path, p.format).await
     }
 );
+
+// ─── Handlers: LLM PROXY ─────────────────────────────────────────────────────
+
+handler_no_params!(
+    get_llm_runtime_config,
+    commands::llm::get_llm_runtime_config
+);
+
+handler_json!(
+    save_llm_api_key,
+    commands::llm::SaveLlmApiKeyInput,
+    |p: commands::llm::SaveLlmApiKeyInput| async move {
+        commands::llm::save_llm_api_key(p.purpose, p.api_key).await
+    }
+);
+
+#[derive(Deserialize)]
+pub struct DeleteLlmApiKeyParams {
+    pub purpose: String,
+}
+
+handler_json!(
+    delete_llm_api_key,
+    DeleteLlmApiKeyParams,
+    |p: DeleteLlmApiKeyParams| async move { commands::llm::delete_llm_api_key(p.purpose).await }
+);
+
+handler_json!(
+    request_llm_chat_completion,
+    commands::llm::LlmChatCompletionInput,
+    |p: commands::llm::LlmChatCompletionInput| async move {
+        commands::llm::request_llm_chat_completion(
+            p.purpose,
+            p.base_url,
+            p.model,
+            p.temperature,
+            p.response_format,
+            p.messages,
+        )
+        .await
+    }
+);

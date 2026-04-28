@@ -2,13 +2,23 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::io::{Cursor, Read, Write};
+use std::path::{Component, Path, PathBuf};
 use tempfile::Builder;
 
-const FIGURE_POOL_ROOT: &str = "src/data/figure-pools";
+const FIGURE_POOL_ROOT: &str = "figure-pools";
 const POOL_MANIFEST: &str = "pool.json";
 const PORTRAITS_DIR: &str = "portraits";
+
+struct BuiltinFigurePool {
+    directory_name: &'static str,
+    zip_bytes: &'static [u8],
+}
+
+const BUILTIN_FIGURE_POOLS: &[BuiltinFigurePool] = &[BuiltinFigurePool {
+    directory_name: "mbti",
+    zip_bytes: include_bytes!("../../../zip/mbti.zip"),
+}];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -57,38 +67,8 @@ pub struct FigurePoolPortraitOutput {
     pub data_base64: String,
 }
 
-fn resolve_repo_base_dir(current_dir: &Path, manifest_dir: &Path) -> Result<PathBuf, String> {
-    let current_looks_like_repo_root = current_dir.join("package.json").exists()
-        && current_dir.join("src-tauri/Cargo.toml").exists();
-    if current_looks_like_repo_root {
-        return Ok(current_dir.to_path_buf());
-    }
-
-    let current_looks_like_src_tauri = current_dir.join("Cargo.toml").exists()
-        && current_dir
-            .file_name()
-            .and_then(|value| value.to_str())
-            .map(|value| value == "src-tauri")
-            .unwrap_or(false);
-    if current_looks_like_src_tauri {
-        if let Some(parent) = current_dir.parent() {
-            return Ok(parent.to_path_buf());
-        }
-    }
-
-    manifest_dir.parent().map(Path::to_path_buf).ok_or_else(|| {
-        format!(
-            "Failed to resolve repository root from {}",
-            manifest_dir.display()
-        )
-    })
-}
-
 fn repo_root() -> Result<PathBuf, String> {
-    let current_dir =
-        std::env::current_dir().map_err(|e| format!("Failed to resolve current dir: {e}"))?;
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    Ok(resolve_repo_base_dir(&current_dir, &manifest_dir)?.join(FIGURE_POOL_ROOT))
+    crate::app_dirs::app_data_path(FIGURE_POOL_ROOT)
 }
 
 fn validate_directory_name(name: &str) -> Result<String, String> {
@@ -147,6 +127,145 @@ fn ensure_pool_root(root: &Path) -> Result<(), String> {
     }
     fs::create_dir_all(root)
         .map_err(|e| format!("Failed to create figure pool root {}: {e}", root.display()))
+}
+
+fn has_pool_manifests(root: &Path) -> Result<bool, String> {
+    if !root.exists() {
+        return Ok(false);
+    }
+
+    for entry in fs::read_dir(root)
+        .map_err(|e| format!("Failed to read figure pool root {}: {e}", root.display()))?
+    {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
+        if entry.path().join(POOL_MANIFEST).is_file() {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+fn builtin_zip_entry_path(name: &str) -> Option<PathBuf> {
+    let trimmed = name.trim_matches('/');
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let relative = Path::new(trimmed);
+    let mut safe_path = PathBuf::new();
+    for component in relative.components() {
+        match component {
+            Component::Normal(value) => safe_path.push(value),
+            _ => return None,
+        }
+    }
+
+    if safe_path == Path::new(POOL_MANIFEST) || safe_path.starts_with(PORTRAITS_DIR) {
+        Some(safe_path)
+    } else {
+        None
+    }
+}
+
+fn extract_builtin_pool_zip(root: &Path, pool: &BuiltinFigurePool) -> Result<(), String> {
+    let target_dir = root.join(pool.directory_name);
+    fs::create_dir_all(&target_dir).map_err(|e| {
+        format!(
+            "Failed to create built-in pool directory {}: {e}",
+            target_dir.display()
+        )
+    })?;
+
+    let cursor = Cursor::new(pool.zip_bytes);
+    let mut archive = zip::ZipArchive::new(cursor).map_err(|e| {
+        format!(
+            "Failed to open built-in pool zip {}: {e}",
+            pool.directory_name
+        )
+    })?;
+
+    for index in 0..archive.len() {
+        let mut file = archive.by_index(index).map_err(|e| {
+            format!(
+                "Failed to read built-in pool zip entry {} in {}: {e}",
+                index, pool.directory_name
+            )
+        })?;
+        if file.is_dir() {
+            continue;
+        }
+
+        let Some(relative_path) = builtin_zip_entry_path(file.name()) else {
+            continue;
+        };
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).map_err(|e| {
+            format!(
+                "Failed to extract built-in pool entry {} from {}: {e}",
+                file.name(),
+                pool.directory_name
+            )
+        })?;
+        if relative_path == Path::new(POOL_MANIFEST) {
+            bytes = normalize_builtin_pool_manifest(&bytes, pool)?;
+        }
+        atomic_write_bytes(&target_dir.join(relative_path), &bytes)?;
+    }
+
+    if !target_dir.join(POOL_MANIFEST).is_file() {
+        return Err(format!(
+            "Built-in pool zip {} is missing {}",
+            pool.directory_name, POOL_MANIFEST
+        ));
+    }
+
+    Ok(())
+}
+
+fn normalize_builtin_pool_manifest(
+    bytes: &[u8],
+    pool: &BuiltinFigurePool,
+) -> Result<Vec<u8>, String> {
+    let mut value: Value = serde_json::from_slice(bytes).map_err(|e| {
+        format!(
+            "Failed to parse built-in pool manifest {}: {e}",
+            pool.directory_name
+        )
+    })?;
+    let object = value.as_object_mut().ok_or_else(|| {
+        format!(
+            "Built-in pool manifest {} must be a JSON object",
+            pool.directory_name
+        )
+    })?;
+
+    object
+        .entry("id".to_string())
+        .or_insert_with(|| Value::String(pool.directory_name.to_string()));
+    object
+        .entry("name".to_string())
+        .or_insert_with(|| Value::String(pool.directory_name.to_string()));
+    object.insert("origin".to_string(), Value::String("builtin".to_string()));
+    object
+        .entry("isDefault".to_string())
+        .or_insert_with(|| Value::Bool(pool.directory_name == "mbti"));
+
+    serde_json::to_vec_pretty(&Value::Object(object.clone()))
+        .map_err(|e| format!("Failed to serialize built-in pool manifest: {e}"))
+}
+
+fn seed_builtin_zip_pools_if_empty(root: &Path) -> Result<(), String> {
+    ensure_pool_root(root)?;
+    if has_pool_manifests(root)? {
+        return Ok(());
+    }
+
+    for pool in BUILTIN_FIGURE_POOLS {
+        extract_builtin_pool_zip(root, pool)?;
+    }
+
+    Ok(())
 }
 
 fn atomic_write_string(path: &Path, content: &str) -> Result<(), String> {
@@ -298,6 +417,8 @@ fn resolve_unique_directory_name(
 }
 
 fn list_figure_pool_entries_in_root(root: &Path) -> Result<Vec<FigurePoolRepoEntry>, String> {
+    seed_builtin_zip_pools_if_empty(root)?;
+
     if !root.exists() {
         return Ok(Vec::new());
     }
@@ -518,6 +639,38 @@ mod tests {
     }
 
     #[test]
+    fn empty_root_is_seeded_with_builtin_zip_pools() {
+        let tempdir = TempDir::new().expect("tempdir");
+
+        let entries = list_figure_pool_entries_in_root(tempdir.path()).expect("load entries");
+
+        assert_eq!(entries.len(), 1);
+        let parsed: Value = serde_json::from_str(&entries[0].pool_json).expect("parse pool");
+        assert_eq!(entries[0].directory_name, "mbti");
+        assert_eq!(parsed["id"], "mbti");
+        assert_eq!(parsed["origin"], "builtin");
+        assert_eq!(parsed["isDefault"], true);
+        assert!(tempdir.path().join("mbti").join(POOL_MANIFEST).exists());
+        assert!(!tempdir.path().join("entrepreneurs").exists());
+        assert!(!tempdir.path().join("scientists").exists());
+    }
+
+    #[test]
+    fn non_empty_root_is_not_seeded_with_builtin_zip_pools() {
+        let tempdir = TempDir::new().expect("tempdir");
+        write_pool(
+            tempdir.path(),
+            "自定义候选池",
+            &pool_json("custom-pool", "自定义候选池", true),
+        );
+
+        let entries = list_figure_pool_entries_in_root(tempdir.path()).expect("load entries");
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].directory_name, "自定义候选池");
+    }
+
+    #[test]
     fn loads_pool_entries_from_first_level_pool_directories() {
         let tempdir = TempDir::new().expect("tempdir");
         write_pool(
@@ -608,29 +761,6 @@ mod tests {
 
         assert_eq!(left["isDefault"], false);
         assert_eq!(right["isDefault"], true);
-    }
-
-    #[test]
-    fn repo_root_resolution_prefers_workspace_root_over_src_tauri_cwd() {
-        let tempdir = TempDir::new().expect("tempdir");
-        let repo_root = tempdir.path().join("EchoProfile");
-        let src_tauri = repo_root.join("src-tauri");
-
-        fs::create_dir_all(&src_tauri).expect("create src-tauri");
-        fs::write(repo_root.join("package.json"), "{}").expect("write package.json");
-        fs::write(
-            src_tauri.join("Cargo.toml"),
-            "[package]\nname = \"echo-profile\"\nversion = \"0.1.0\"\n",
-        )
-        .expect("write Cargo.toml");
-
-        let resolved_from_repo =
-            resolve_repo_base_dir(&repo_root, &src_tauri).expect("resolve repo root");
-        assert_eq!(resolved_from_repo, repo_root);
-
-        let resolved_from_src_tauri =
-            resolve_repo_base_dir(&src_tauri, &src_tauri).expect("resolve src-tauri cwd");
-        assert_eq!(resolved_from_src_tauri, repo_root);
     }
 
     #[test]

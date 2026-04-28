@@ -7,6 +7,8 @@ export type FigureConfidenceStyle = "strong_resonance" | "phase_resonance";
 export interface FigureResonanceCard {
   name: string;
   localized_names?: Partial<Record<"zh", string>>;
+  wikipedia_url?: string;
+  wikipedia_urls?: Partial<Record<"zh" | "en", string>>;
   slug: string;
   portrait_url: string;
   hook: string;

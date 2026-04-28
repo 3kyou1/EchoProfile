@@ -2,6 +2,8 @@ export interface FigureRecordInput {
   slug: string;
   name: string;
   localized_names?: Partial<Record<string, string>>;
+  wikipedia_url?: string;
+  wikipedia_urls?: Partial<Record<string, string>>;
   portrait_url: string;
   quote_en: string;
   quote_zh: string;

@@ -4,6 +4,7 @@ pub mod debug;
 pub mod feedback;
 pub mod figure_pool;
 pub mod fs_utils;
+pub mod llm;
 pub mod mcp_presets;
 pub mod metadata;
 pub mod multi_provider;

@@ -33,6 +33,7 @@ export interface CopaModelConfig {
   model: string;
   apiKey?: string;
   temperature?: number;
+  hasApiKey?: boolean;
 }
 
 export interface CopaLlmConfigState {

@@ -27,6 +27,9 @@ use crate::commands::{
     figure_pool::{
         delete_figure_pool, list_figure_pool_entries, read_figure_pool_portrait, save_figure_pool,
     },
+    llm::{
+        delete_llm_api_key, get_llm_runtime_config, request_llm_chat_completion, save_llm_api_key,
+    },
     mcp_presets::{delete_mcp_preset, get_mcp_preset, load_mcp_presets, save_mcp_preset},
     metadata::{
         get_metadata_folder_path, get_session_display_name, is_project_hidden, load_user_metadata,
@@ -152,6 +155,10 @@ fn run_tauri() {
             get_system_info,
             open_github_issues,
             log_frontend_llm_debug,
+            get_llm_runtime_config,
+            save_llm_api_key,
+            delete_llm_api_key,
+            request_llm_chat_completion,
             list_figure_pool_entries,
             save_figure_pool,
             delete_figure_pool,

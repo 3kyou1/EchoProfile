@@ -14,6 +14,7 @@ export function useAnalyticsComputed() {
       isSettingsView: analytics.currentView === "settings",
       isBoardView: analytics.currentView === "board",
       isArchiveView: analytics.currentView === "archive",
+      isMyTraceView: analytics.currentView === "myTrace",
       isCopaProfileView: analytics.currentView === "copaProfile",
       hasAnyError: !!(
         analytics.projectSummaryError ||

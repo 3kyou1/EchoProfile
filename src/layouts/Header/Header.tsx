@@ -10,6 +10,7 @@ import {
   Columns,
   Search,
   Archive,
+  Fingerprint,
   Brain,
 } from "lucide-react";
 
@@ -283,6 +284,19 @@ export const Header = ({ analyticsActions, analyticsComputed, updater }: HeaderP
                 analyticsActions.switchToMessages();
               } else {
                 analyticsActions.switchToArchive();
+              }
+            }}
+          />
+
+          <NavButton
+            icon={Fingerprint}
+            label={t("common.myTrace.title", "My Trace")}
+            isActive={computed.isMyTraceView}
+            onClick={() => {
+              if (computed.isMyTraceView) {
+                analyticsActions.switchToMessages();
+              } else {
+                analyticsActions.switchToMyTrace();
               }
             }}
           />

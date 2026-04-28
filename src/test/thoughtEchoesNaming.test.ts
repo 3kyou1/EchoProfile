@@ -27,8 +27,8 @@ describe("thought echoes naming", () => {
     expect(enCommon["common.copa.resonance.title"]).toBe("Thought Echoes");
     expect(enCommon["common.copa.resonance.generateLong"]).toBe("Generate Thought Echoes");
     expect(enCommon["common.copa.resonance.longTerm"]).toBe("Long-term echoes");
-    expect(enCommon["common.copa.resonance.pool.title"]).toBe("Figure Pools");
-    expect(enCommon["common.copa.resonance.pool.manage"]).toBe("Manage pools");
+    expect(enCommon["common.copa.resonance.pool.title"]).toBe("Candidate Pools");
+    expect(enCommon["common.copa.resonance.pool.manage"]).toBe("Manage candidate pools");
   });
 
   it("exposes only figure-named resonance components from the CoPA profile module", () => {

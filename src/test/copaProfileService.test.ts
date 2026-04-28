@@ -347,11 +347,13 @@ describe("copaProfileService", () => {
 
     expect(english.system).toContain("You are generating a profile from user-only interaction history.");
     expect(english.system).toContain("profile_text");
+    expect(english.system).toContain("title must be non-empty");
     expect(english.system).toContain("part stand-up comic");
     expect(english.system).toContain("product backlog waiting to be optimized");
     expect(english.system).not.toContain("CoPA factors:");
     expect(english.user).toContain("Ensure title and profile_text are written in English.");
     expect(chinese.system).toContain("你正在基于仅包含用户消息的互动历史生成 profile。");
+    expect(chinese.system).toContain("title 必须非空");
     expect(chinese.system).toContain("熟人局吐槽大师");
     expect(chinese.system).toContain("人生当成待优化系统的产品经理");
     expect(chinese.system).not.toContain("CoPA 因子：");
@@ -370,6 +372,19 @@ describe("copaProfileService", () => {
 
     expect(result.promptSummary).toBe("高压锅型架构师");
     expect(result.funProfileText).toBe("这个人像一台自带报警器的高压锅：能把复杂系统炖成结构化方案。");
+  });
+
+  test("normalizeCopaResponse falls back to the first entertainment sentence when title is missing", () => {
+    const result = normalizeCopaResponse(
+      {
+        profile_text: "你是把人生当 Jira 看板的推进狂魔。第二句应该留在正文里。",
+      },
+      "zh",
+      "fun"
+    );
+
+    expect(result.promptSummary).toBe("你是把人生当 Jira 看板的推进狂魔。");
+    expect(result.funProfileText).toBe("你是把人生当 Jira 看板的推进狂魔。第二句应该留在正文里。");
   });
 
   test("requestCopaProfile logs the prompt input and raw response for debugging", async () => {

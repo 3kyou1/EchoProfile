@@ -668,6 +668,12 @@ function buildPromptSummary(factors: CopaFactors, language: CopaLanguage): strin
     : "Adapt to the user's task, pace, framework, and trust needs.";
 }
 
+function extractFirstProfileSentence(text: string): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  const match = normalized.match(/^.+?[。！？.!?](?=\s|$|[\u4e00-\u9fff])/u);
+  return (match?.[0] ?? normalized).trim();
+}
+
 function normalizeModelConfig(value: unknown, fallback: CopaModelConfig): CopaModelConfig {
   const payload = value && typeof value === "object" ? (value as Partial<CopaModelConfig>) : {};
 
@@ -1117,11 +1123,15 @@ export function normalizeCopaResponse(
     typeof payload.title === "string" && payload.title.trim().length > 0
       ? payload.title.trim()
       : undefined;
+  const promptSummaryPayload =
+    typeof payload.prompt_summary === "string" && payload.prompt_summary.trim().length > 0
+      ? payload.prompt_summary.trim()
+      : undefined;
   const promptSummary =
     profileMode === "fun" && (title || funProfileText)
-      ? (title ?? funProfileText ?? "").trim()
-      : typeof payload.prompt_summary === "string" && payload.prompt_summary.trim().length > 0
-        ? payload.prompt_summary.trim()
+      ? (title ?? promptSummaryPayload ?? extractFirstProfileSentence(funProfileText ?? "")).trim()
+      : promptSummaryPayload
+        ? promptSummaryPayload
         : buildPromptSummary(factors, language);
 
   return {
@@ -1319,7 +1329,8 @@ export function buildCopaPrompt(
         ...(profileMode === "fun"
           ? [
               "只返回严格 JSON，顶层键仅允许为：title、profile_text。",
-              "title 是一个短标题；profile_text 是一段完整、有趣、可直接展示的中文 profile。",
+              "title 必须非空，必须是一个短、有记忆点、可展示在历史卡片上的中文短语；不要把 title 写成普通摘要句，不要留空，不要省略。",
+              "profile_text 是一段完整、有趣、可直接展示的中文 profile。",
             ]
           : [
               "只返回严格 JSON，顶层键仅允许为：factors、prompt_summary。",
@@ -1367,7 +1378,8 @@ export function buildCopaPrompt(
       ...(profileMode === "fun"
         ? [
             "Return strict JSON only with top-level keys: title, profile_text.",
-            "title is a short title; profile_text is one complete, entertaining profile paragraph ready to display.",
+            "title must be non-empty. It must be a short, memorable phrase suitable for display in the profile history card. Do not make title a generic summary sentence. Do not leave it empty or omit it.",
+            "profile_text is one complete, entertaining profile paragraph ready to display.",
           ]
         : [
             "Return strict JSON only with top-level keys: factors, prompt_summary.",

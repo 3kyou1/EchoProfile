@@ -746,6 +746,51 @@ describe("CopaProfilePage resonance layout", () => {
     expect(screen.getByRole("button", { name: "Delete Profile" })).toBeInTheDocument();
   });
 
+  it("hides the duplicate selected-card summary for fun profiles", async () => {
+    mockLoadCopaSnapshots.mockResolvedValue([
+      {
+        id: "snapshot-fun",
+        createdAt: "2026-04-23T00:00:00.000Z",
+        language: "en",
+        profileMode: "fun",
+        scope: {
+          type: "global",
+          ref: "global",
+          label: "Global history",
+          key: "global:global",
+        },
+        providerScope: ["claude"],
+        sourceStats: {
+          projectCount: 1,
+          sessionCount: 1,
+          rawUserMessages: 12,
+          dedupedUserMessages: 12,
+          truncatedMessages: 0,
+        },
+        modelConfig: {
+          baseUrl: "http://example.com/v1",
+          model: "test-model",
+          temperature: 0.2,
+        },
+        promptSummary: "Fun title only",
+        funProfileText: "Long fun profile body.",
+        factors: {},
+        markdown: "# Profile",
+      },
+    ]);
+
+    render(<CopaProfilePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Currently selected")).toBeInTheDocument();
+    });
+
+    const profileSelector = screen.getByLabelText("Choose profile");
+    expect(profileSelector).toHaveTextContent("Fun title only");
+    expect(screen.getAllByText("Fun title only")).toHaveLength(1);
+    expect(screen.getByText("Long fun profile body.")).toBeInTheDocument();
+  });
+
   it("renders resonance history as a compact dropdown selector", async () => {
     mockLoadFigureResonanceHistory.mockResolvedValue([
       {
@@ -1090,6 +1135,30 @@ describe("CopaProfilePage resonance layout", () => {
         })
       );
     });
+  });
+
+  it("keeps unconfirmed llm settings when the panel is closed and reopened", async () => {
+    render(<CopaProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("http://example.com/v1")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByDisplayValue("http://example.com/v1"), {
+      target: { value: "http://draft.example.com/v1" },
+    });
+    fireEvent.change(screen.getByLabelText("CoPA API Key"), {
+      target: { value: "sk-draft-copa-key" },
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Close LLM settings" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Open LLM settings" }));
+
+    expect(screen.getByDisplayValue("http://draft.example.com/v1")).toBeInTheDocument();
+    expect(screen.getByLabelText("CoPA API Key")).toHaveValue("sk-draft-copa-key");
+    expect(mockSaveLlmConfig).not.toHaveBeenCalled();
+    expect(mockSaveCopaConfig).not.toHaveBeenCalled();
   });
 
   it("saves the CoPA LLM config through the backend when llm settings are confirmed", async () => {

@@ -477,7 +477,8 @@ function pickEvenly<T>(items: T[], count: number): T[] {
     return items;
   }
   if (count === 1) {
-    return [items[Math.floor((items.length - 1) / 2)]];
+    const middleItem = items[Math.floor((items.length - 1) / 2)];
+    return middleItem === undefined ? [] : [middleItem];
   }
 
   const picked: T[] = [];
@@ -488,7 +489,10 @@ function pickEvenly<T>(items: T[], count: number): T[] {
       continue;
     }
     seen.add(itemIndex);
-    picked.push(items[itemIndex]);
+    const item = items[itemIndex];
+    if (item !== undefined) {
+      picked.push(item);
+    }
   }
 
   return picked;
@@ -526,14 +530,20 @@ function selectBalancedSignalEntries(entries: SignalEntry[], maxSignals: number)
   }
 
   const projectRepresentatives = [...projectGroups.values()]
-    .map((group) => group[group.length - 1])
+    .flatMap((group) => {
+      const representative = group[group.length - 1];
+      return representative === undefined ? [] : [representative];
+    })
     .sort((left, right) => right.index - left.index);
   for (const entry of projectRepresentatives.slice(0, projectBudget)) {
     addEntry(entry);
   }
 
   for (let index = entries.length - 1; selected.size < maxSignals && index >= 0; index -= 1) {
-    addEntry(entries[index]);
+    const entry = entries[index];
+    if (entry !== undefined) {
+      addEntry(entry);
+    }
   }
 
   return [...selected.values()].sort((left, right) => left.index - right.index);

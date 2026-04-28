@@ -32,11 +32,9 @@
 
 > 🪞 Your AI conversations are becoming a second profile of you.
 
-Every day, we hand our questions, hesitations, preferences, judgments, blind spots, and ways of working to AI.
+Your chats with Codex, Cursor, Claude Code, and other AI tools form a long-term trace of how you think, learn, decide, and collaborate.
 
-Those conversations are scattered across Codex, Cursor, Claude Code, and local history files. They are not just chat logs. They are a long-term trace of how you think, learn, decide, and collaborate.
-
-EchoProfile turns your AI conversation history into a personal AI profile, then makes that profile explorable, comparable, and reflective.
+EchoProfile generates a personal AI profile from your AI conversation history.
 
 ✨ Before any AI remembers you on your behalf, you should own your own memory first.
 
@@ -69,7 +67,7 @@ The profiling method is inspired by CoPA (Cognitive Personalization Assessment),
 
 ### 2. Use Thought Echoes to see “who you resemble”
 
-Abstract profiles are boring, so EchoProfile introduces Thought Echoes.
+Abstract profiles are boring!
 
 You can project your AI profile into different figure pools:
 

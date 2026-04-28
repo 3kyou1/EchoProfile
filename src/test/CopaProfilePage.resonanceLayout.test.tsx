@@ -12,6 +12,7 @@ const mockLoadFigureResonanceHistory = vi.fn();
 const mockRequestCopaProfile = vi.fn();
 const mockCreateSnapshot = vi.fn();
 const mockExtractUserSignals = vi.fn();
+const mockSelectPromptSignals = vi.fn();
 const mockSaveCopaSnapshot = vi.fn();
 const mockApi = vi.fn();
 const mockSaveCopaConfig = vi.fn();
@@ -84,6 +85,7 @@ vi.mock("@/services/copaProfileService", () => ({
   createSnapshot: (...args: unknown[]) => mockCreateSnapshot(...args),
   extractUserSignals: (...args: unknown[]) =>
     mockExtractUserSignals(...args),
+  selectPromptSignals: (...args: unknown[]) => mockSelectPromptSignals(...args),
   loadCopaConfig: () => mockLoadCopaConfig(),
   loadCopaSnapshots: () => mockLoadCopaSnapshots(),
   normalizeCopaLanguage: (language?: string) =>
@@ -308,6 +310,11 @@ describe("CopaProfilePage resonance layout", () => {
       messages: [],
       stats: { userMessages: 0, dedupedMessages: 0, truncatedMessages: 0 },
     });
+    mockSelectPromptSignals.mockReset();
+    mockSelectPromptSignals.mockReturnValue({
+      messages: [],
+      stats: { userMessages: 0, dedupedMessages: 0, truncatedMessages: 0 },
+    });
   });
 
   it("uses a frosted blue hero palette instead of the old emerald wash", async () => {
@@ -374,6 +381,10 @@ describe("CopaProfilePage resonance layout", () => {
       return [];
     });
     mockExtractUserSignals.mockReturnValue({
+      messages: ["请保持结构化。"],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
+    mockSelectPromptSignals.mockReturnValue({
       messages: ["请保持结构化。"],
       stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
     });
@@ -474,6 +485,10 @@ describe("CopaProfilePage resonance layout", () => {
       return [];
     });
     mockExtractUserSignals.mockReturnValue({
+      messages: ["Make this playful."],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
+    mockSelectPromptSignals.mockReturnValue({
       messages: ["Make this playful."],
       stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
     });
@@ -585,6 +600,10 @@ describe("CopaProfilePage resonance layout", () => {
       messages: ["Please keep this practical."],
       stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
     });
+    mockSelectPromptSignals.mockReturnValue({
+      messages: ["Please keep this practical."],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
     mockRequestCopaProfile.mockRejectedValue(new Error("CoPA model returned invalid JSON."));
 
     render(<CopaProfilePage />);
@@ -612,6 +631,10 @@ describe("CopaProfilePage resonance layout", () => {
       return [];
     });
     mockExtractUserSignals.mockReturnValue({
+      messages: ["Please keep this practical."],
+      stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
+    });
+    mockSelectPromptSignals.mockReturnValue({
       messages: ["Please keep this practical."],
       stats: { userMessages: 1, dedupedMessages: 1, truncatedMessages: 0 },
     });

@@ -23,6 +23,7 @@ import {
   createSnapshot,
   deleteCopaSnapshot,
   extractUserSignals,
+  selectPromptSignals,
   loadCopaConfig,
   normalizeCopaResponse,
   requestCopaProfile,
@@ -214,6 +215,39 @@ describe("copaProfileService", () => {
     expect(longPreference.length).toBeGreaterThan(80);
     expect(shortStructuredPaste.length).toBeLessThanOrEqual(80);
     expect(result.messages).toEqual([]);
+  });
+
+  test("selectPromptSignals samples across old, middle, recent, and project buckets instead of only taking latest messages", () => {
+    const messages: ClaudeMessage[] = Array.from({ length: 90 }, (_, index) => {
+      const projectName = index < 30 ? "project-a" : index < 60 ? "project-b" : "project-c";
+      const phase = index < 30 ? "old" : index < 60 ? "middle" : "recent";
+
+      return {
+        uuid: `u-${index}`,
+        sessionId: `s-${projectName}`,
+        timestamp: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+        type: "user",
+        role: "user",
+        projectName,
+        content: `${phase}-${projectName}-${index}`,
+      };
+    });
+
+    const result = selectPromptSignals(messages, {
+      discardSignalLength: 100,
+      pasteLikeSignalLength: 20,
+      maxSignals: 12,
+      strategy: "balanced",
+    });
+
+    expect(result.messages).toHaveLength(12);
+    expect(result.stats.dedupedMessages).toBe(90);
+    expect(result.messages.some((message) => message.startsWith("old-project-a"))).toBe(true);
+    expect(result.messages.some((message) => message.startsWith("middle-project-b"))).toBe(true);
+    expect(result.messages.some((message) => message.startsWith("recent-project-c"))).toBe(true);
+    expect(result.messages).not.toEqual(
+      Array.from({ length: 12 }, (_, offset) => `recent-project-c-${offset + 78}`)
+    );
   });
 
   test("normalizeCopaResponse fills missing factors with defaults", () => {

@@ -104,6 +104,12 @@ fn collect(args: CollectArgs) -> Result<CollectResponse, CliError> {
 
     let mut omitted = OmittedCounts::default();
     let (matched_projects, session_inputs) = resolve_session_inputs(&args, &provider_scope)?;
+    let mut effective_providers: Vec<String> = session_inputs
+        .iter()
+        .map(|input| input.provider.clone())
+        .collect();
+    effective_providers.sort();
+    effective_providers.dedup();
     let mut candidates = Vec::new();
     let mut scanned_sessions = 0usize;
     let mut scanned_messages = 0usize;
@@ -206,7 +212,7 @@ fn collect(args: CollectArgs) -> Result<CollectResponse, CliError> {
             paste_detect_min_chars: args.paste_detect_min_chars,
             paste_like_threshold: args.paste_like_threshold,
             include_paste_like: args.include_paste_like,
-            providers: provider_scope,
+            providers: effective_providers,
             matched_projects,
         },
         messages,
@@ -499,4 +505,51 @@ mod tests {
         let err = validate_collect_args(&args).unwrap_err();
         assert_eq!(err.code(), "INVALID_ARGUMENT");
     }
+
+
+    #[test]
+    #[serial_test::serial]
+    fn collect_session_reads_codex_fixture_user_messages() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let codex_home = tmp.path().join("codex-home");
+        let sessions_dir = codex_home.join("sessions");
+        std::fs::create_dir_all(&sessions_dir).unwrap();
+        let rollout_path = sessions_dir.join("rollout-test.jsonl");
+        let project_cwd = tmp.path().join("project");
+        std::fs::create_dir_all(&project_cwd).unwrap();
+        let lines = [
+            serde_json::json!({
+                "type": "session_meta",
+                "payload": { "id": "session-1", "cwd": project_cwd.to_string_lossy() }
+            }),
+            serde_json::json!({
+                "type": "response_item",
+                "payload": {
+                    "type": "message",
+                    "role": "user",
+                    "created_at": "2026-04-30T10:00:00Z",
+                    "content": [{ "type": "input_text", "text": "请先讨论设计" }]
+                }
+            })
+        ];
+        let content = lines.iter().map(serde_json::Value::to_string).collect::<Vec<_>>().join("\n");
+        std::fs::write(&rollout_path, format!("{content}\n")).unwrap();
+
+        let original = std::env::var_os("CODEX_HOME");
+        std::env::set_var("CODEX_HOME", &codex_home);
+        let mut args = base_args(CollectScope::Session);
+        args.providers = vec!["codex".to_string()];
+        args.session_path = Some(rollout_path.to_string_lossy().to_string());
+        args.budget_chars = 1000;
+        let value = handle_collect(args).unwrap();
+        if let Some(original) = original {
+            std::env::set_var("CODEX_HOME", original);
+        } else {
+            std::env::remove_var("CODEX_HOME");
+        }
+
+        assert_eq!(value["messages"][0]["text"], "请先讨论设计");
+        assert_eq!(value["messages"][0]["provider"], "codex");
+    }
+
 }

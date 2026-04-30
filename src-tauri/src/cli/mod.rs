@@ -5,6 +5,7 @@ pub mod output;
 pub mod paste_filter;
 pub mod project_match;
 pub mod providers;
+pub mod sampling;
 pub mod time_filter;
 pub mod text_extract;
 

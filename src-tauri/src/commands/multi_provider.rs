@@ -277,6 +277,25 @@ pub async fn scan_all_projects(
     wsl_enabled: Option<bool>,
     wsl_excluded_distros: Option<Vec<String>>,
 ) -> Result<Vec<ClaudeProject>, String> {
+    scan_all_projects_with_options(
+        claude_path,
+        active_providers,
+        custom_claude_paths,
+        wsl_enabled,
+        wsl_excluded_distros,
+        true,
+    )
+    .await
+}
+
+pub async fn scan_all_projects_with_options(
+    claude_path: Option<String>,
+    active_providers: Option<Vec<String>>,
+    custom_claude_paths: Option<Vec<CustomClaudePathParam>>,
+    wsl_enabled: Option<bool>,
+    wsl_excluded_distros: Option<Vec<String>>,
+    use_cache: bool,
+) -> Result<Vec<ClaudeProject>, String> {
     let providers_to_scan = normalize_provider_ids(active_providers.unwrap_or_else(|| {
         vec![
             "claude".to_string(),
@@ -306,7 +325,7 @@ pub async fn scan_all_projects(
 
     // WSL paths can represent remote/mounted filesystems with different freshness semantics.
     // Keep those live for now; all regular providers use the shared cache path.
-    let should_use_cache = !wsl_cache_enabled;
+    let should_use_cache = use_cache && !wsl_cache_enabled;
     if should_use_cache {
         if let Some(projects) = try_load_cached_provider_projects(&cache_key, &cache_fingerprint) {
             return Ok(projects);

@@ -69,8 +69,10 @@ fn list_providers(_args: ProviderListArgs) -> Result<Value, CliError> {
 }
 
 fn list_projects(args: ProjectListArgs) -> Result<Value, CliError> {
-    let provider_scope = providers::resolve_provider_scope(&args.providers, args.providers_csv.as_deref())?;
-    let time_range = TimeRange::from_args(args.since.as_deref(), args.until.as_deref(), Utc::now())?;
+    let provider_scope =
+        providers::resolve_provider_scope(&args.providers, args.providers_csv.as_deref())?;
+    let time_range =
+        TimeRange::from_args(args.since.as_deref(), args.until.as_deref(), Utc::now())?;
     let active_providers = Some(provider_scope);
     let projects = tauri::async_runtime::block_on(multi_provider::scan_all_projects_with_options(
         None,
@@ -106,8 +108,10 @@ fn list_projects(args: ProjectListArgs) -> Result<Value, CliError> {
 }
 
 fn list_sessions_placeholder(args: SessionListArgs) -> Result<Value, CliError> {
-    let provider_scope = providers::resolve_provider_scope(&args.providers, args.providers_csv.as_deref())?;
-    let time_range = TimeRange::from_args(args.since.as_deref(), args.until.as_deref(), Utc::now())?;
+    let provider_scope =
+        providers::resolve_provider_scope(&args.providers, args.providers_csv.as_deref())?;
+    let time_range =
+        TimeRange::from_args(args.since.as_deref(), args.until.as_deref(), Utc::now())?;
     let projects = tauri::async_runtime::block_on(multi_provider::scan_all_projects_with_options(
         None,
         Some(provider_scope.clone()),
@@ -122,7 +126,10 @@ fn list_sessions_placeholder(args: SessionListArgs) -> Result<Value, CliError> {
     let mut items = Vec::new();
 
     for project in matched_projects {
-        let provider = project.provider.clone().unwrap_or_else(|| "claude".to_string());
+        let provider = project
+            .provider
+            .clone()
+            .unwrap_or_else(|| "claude".to_string());
         let sessions = tauri::async_runtime::block_on(multi_provider::load_provider_sessions(
             provider.clone(),
             project.path.clone(),
@@ -131,7 +138,11 @@ fn list_sessions_placeholder(args: SessionListArgs) -> Result<Value, CliError> {
         .map_err(CliError::internal)?;
 
         for session in sessions {
-            if !session_in_range(&session.last_message_time, &session.last_modified, &time_range) {
+            if !session_in_range(
+                &session.last_message_time,
+                &session.last_modified,
+                &time_range,
+            ) {
                 continue;
             }
             items.push(SessionItem {
@@ -160,7 +171,11 @@ fn resolve_session_projects(
     if args.current_project {
         let cwd = std::env::current_dir()
             .map_err(|e| CliError::internal(format!("Failed to read current directory: {e}")))?;
-        return project_match::match_current_project(&cwd, projects, args.include_ancestor_projects);
+        return project_match::match_current_project(
+            &cwd,
+            projects,
+            args.include_ancestor_projects,
+        );
     }
     if let Some(actual_project_path) = &args.actual_project_path {
         return project_match::match_actual_project_path(actual_project_path, projects);
@@ -238,7 +253,6 @@ mod tests {
         assert!(page.pagination.has_more);
         assert_eq!(page.pagination.next_offset, Some(2));
     }
-
 
     fn session(path: &str, last_message_time: &str) -> SessionItem {
         SessionItem {

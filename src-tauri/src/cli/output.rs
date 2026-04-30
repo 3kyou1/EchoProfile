@@ -148,7 +148,8 @@ mod tests {
 
     #[test]
     fn error_envelope_has_code_message_and_schema() {
-        let envelope = CliEnvelope::<serde_json::Value>::failure(CliError::invalid_argument("bad arg"));
+        let envelope =
+            CliEnvelope::<serde_json::Value>::failure(CliError::invalid_argument("bad arg"));
         let json = serde_json::to_value(envelope).unwrap();
         assert_eq!(json["ok"], false);
         assert_eq!(json["schemaVersion"], CLI_SCHEMA_VERSION);

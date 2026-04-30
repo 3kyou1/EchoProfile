@@ -80,7 +80,6 @@ pub fn run() {
             #[cfg(feature = "webui-server")]
             {
                 run_server(&serve_args);
-                return;
             }
             #[cfg(not(feature = "webui-server"))]
             {

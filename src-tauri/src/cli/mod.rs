@@ -3,19 +3,18 @@ pub mod help;
 pub mod list;
 pub mod output;
 pub mod paste_filter;
+pub mod profile_collect;
 pub mod project_match;
 pub mod providers;
-pub mod profile_collect;
 pub mod sampling;
-pub mod time_filter;
 pub mod text_extract;
+pub mod time_filter;
 
 use clap::Parser;
 use serde_json::Value;
 
 use args::{CliArgs, CliCommand};
 use output::{envelope_to_stdout, CliEnvelope, CliError, CLI_SCHEMA_VERSION};
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CliAction {
@@ -45,8 +44,8 @@ pub fn classify_args(args: &[String]) -> CliAction {
 }
 
 pub fn run_machine_command(args: Vec<String>) -> Result<Value, CliError> {
-    let parsed = CliArgs::try_parse_from(args)
-        .map_err(|e| CliError::invalid_argument(e.to_string()))?;
+    let parsed =
+        CliArgs::try_parse_from(args).map_err(|e| CliError::invalid_argument(e.to_string()))?;
 
     match parsed.command {
         CliCommand::Help(help_args) => {
@@ -58,7 +57,7 @@ pub fn run_machine_command(args: Vec<String>) -> Result<Value, CliError> {
         CliCommand::Profile(args) => match args.command {
             args::ProfileCommand::Collect(args) => profile_collect::handle_collect(args),
         },
-        command => Err(CliError::invalid_argument(format!(
+        command @ CliCommand::Serve(_) => Err(CliError::invalid_argument(format!(
             "Command is not implemented yet: {command:?}"
         ))),
     }
@@ -112,7 +111,10 @@ mod routing_tests {
     #[test]
     fn classify_version_as_machine_command() {
         let args = vec!["echo-profile".to_string(), "version".to_string()];
-        assert!(matches!(classify_args(&args), CliAction::RunMachineCommand(_)));
+        assert!(matches!(
+            classify_args(&args),
+            CliAction::RunMachineCommand(_)
+        ));
     }
 
     #[test]

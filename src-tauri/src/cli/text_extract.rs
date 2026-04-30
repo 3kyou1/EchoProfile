@@ -24,9 +24,14 @@ fn extract_text_value(content: &serde_json::Value) -> Option<String> {
         }
         serde_json::Value::Object(map) => {
             if map.get("type").and_then(serde_json::Value::as_str) == Some("text") {
-                return map.get("text").and_then(serde_json::Value::as_str).map(str::to_string);
+                return map
+                    .get("text")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string);
             }
-            map.get("text").and_then(serde_json::Value::as_str).map(str::to_string)
+            map.get("text")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string)
         }
         _ => None,
     }
@@ -38,12 +43,15 @@ fn extract_text_block(value: &serde_json::Value) -> Option<String> {
         serde_json::Value::Object(map) => {
             let block_type = map.get("type").and_then(serde_json::Value::as_str);
             match block_type {
-                Some("text") | Some("input_text") => map
+                Some("text" | "input_text") => map
                     .get("text")
                     .or_else(|| map.get("content"))
                     .and_then(serde_json::Value::as_str)
                     .map(str::to_string),
-                None => map.get("text").and_then(serde_json::Value::as_str).map(str::to_string),
+                None => map
+                    .get("text")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string),
                 _ => None,
             }
         }
@@ -105,6 +113,9 @@ mod tests {
             {"type": "image", "source": {}},
             {"type": "text", "text": "describe this"}
         ]));
-        assert_eq!(extract_user_text(&message), Some("describe this".to_string()));
+        assert_eq!(
+            extract_user_text(&message),
+            Some("describe this".to_string())
+        );
     }
 }

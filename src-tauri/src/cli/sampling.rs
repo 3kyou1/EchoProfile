@@ -77,7 +77,7 @@ pub fn select_messages(
         selected.push(candidate);
     }
 
-    selected.sort_by(|left, right| left.timestamp.cmp(&right.timestamp));
+    selected.sort_by_key(|candidate| candidate.timestamp);
 
     SamplingResult {
         messages: selected,
@@ -87,7 +87,7 @@ pub fn select_messages(
 }
 
 fn chronological(mut candidates: Vec<MessageCandidate>) -> Vec<MessageCandidate> {
-    candidates.sort_by(|left, right| left.timestamp.cmp(&right.timestamp));
+    candidates.sort_by_key(|candidate| candidate.timestamp);
     candidates
 }
 
@@ -144,11 +144,35 @@ fn mixed(candidates: Vec<MessageCandidate>, budget_chars: usize) -> Vec<MessageC
 fn profile_value_score(candidate: &MessageCandidate) -> usize {
     let text = candidate.text.as_str();
     let keywords = [
-        "我希望", "我想要", "不要", "不用", "请用", "更简洁", "更详细", "必须", "保持",
-        "不要动", "不要依赖", "不对", "不是这个意思", "你漏了", "我选择", "我倾向", "我推荐",
-        "我担心", "先讨论", "先设计", "一步一步", "用 skill", "不要直接实现",
+        "我希望",
+        "我想要",
+        "不要",
+        "不用",
+        "请用",
+        "更简洁",
+        "更详细",
+        "必须",
+        "保持",
+        "不要动",
+        "不要依赖",
+        "不对",
+        "不是这个意思",
+        "你漏了",
+        "我选择",
+        "我倾向",
+        "我推荐",
+        "我担心",
+        "先讨论",
+        "先设计",
+        "一步一步",
+        "用 skill",
+        "不要直接实现",
     ];
-    let keyword_score = keywords.iter().filter(|keyword| text.contains(**keyword)).count() * 10;
+    let keyword_score = keywords
+        .iter()
+        .filter(|keyword| text.contains(**keyword))
+        .count()
+        * 10;
     let length_score = (text.chars().count() / 200).min(10);
     keyword_score + length_score
 }
@@ -178,16 +202,39 @@ mod tests {
 
     #[test]
     fn budget_never_truncates_messages() {
-        let messages = vec![candidate("a", 5), candidate("too_long", 20), candidate("b", 5)];
-        let result = select_messages(messages, SamplingConfig { budget_chars: 10, strategy: SampleStrategy::Chronological });
-        assert_eq!(result.messages.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), vec!["a", "b"]);
+        let messages = vec![
+            candidate("a", 5),
+            candidate("too_long", 20),
+            candidate("b", 5),
+        ];
+        let result = select_messages(
+            messages,
+            SamplingConfig {
+                budget_chars: 10,
+                strategy: SampleStrategy::Chronological,
+            },
+        );
+        assert_eq!(
+            result
+                .messages
+                .iter()
+                .map(|m| m.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
         assert_eq!(result.omitted.over_budget, 1);
     }
 
     #[test]
     fn final_output_is_chronological() {
         let messages = vec![candidate_at("new", 5, 2), candidate_at("old", 5, 1)];
-        let result = select_messages(messages, SamplingConfig { strategy: SampleStrategy::Recent, budget_chars: 100 });
+        let result = select_messages(
+            messages,
+            SamplingConfig {
+                strategy: SampleStrategy::Recent,
+                budget_chars: 100,
+            },
+        );
         assert_eq!(result.messages[0].id, "old");
     }
 }

@@ -1,7 +1,11 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Debug, Parser)]
-#[command(name = "echo-profile", disable_help_flag = true, disable_help_subcommand = true)]
+#[command(
+    name = "echo-profile",
+    disable_help_flag = true,
+    disable_help_subcommand = true
+)]
 pub struct CliArgs {
     #[arg(long, global = true)]
     pub json: bool,
@@ -106,6 +110,7 @@ pub enum ProfileCommand {
 }
 
 #[derive(Debug, Args)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct CollectArgs {
     #[arg(long, value_enum)]
     pub scope: CollectScope,
@@ -181,7 +186,10 @@ mod tests {
             "--current-project",
         ])
         .unwrap();
-        let CliCommand::Profile(ProfileArgs { command: ProfileCommand::Collect(args) }) = cli.command else {
+        let CliCommand::Profile(ProfileArgs {
+            command: ProfileCommand::Collect(args),
+        }) = cli.command
+        else {
             panic!("expected profile collect");
         };
         assert_eq!(args.scope, CollectScope::Project);

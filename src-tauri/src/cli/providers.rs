@@ -50,9 +50,7 @@ pub fn supported_provider_infos() -> Vec<ProviderListItem> {
             ProviderListItem {
                 provider: id.to_string(),
                 display_name: provider_id.display_name().to_string(),
-                is_available: detected_info
-                    .map(|info| info.is_available)
-                    .unwrap_or(false),
+                is_available: detected_info.map(|info| info.is_available).unwrap_or(false),
                 base_path: detected_info
                     .filter(|info| info.is_available)
                     .map(|info| info.base_path.clone()),
@@ -121,11 +119,8 @@ mod tests {
 
     #[test]
     fn merges_provider_flags_and_csv_values() {
-        let resolved = normalize_provider_filters(
-            &["codex".to_string()],
-            Some("claude,codex"),
-        )
-        .unwrap();
+        let resolved =
+            normalize_provider_filters(&["codex".to_string()], Some("claude,codex")).unwrap();
         assert_eq!(resolved, vec!["claude", "codex"]);
     }
 

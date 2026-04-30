@@ -84,9 +84,15 @@ pub fn help_topic_from_strings(topic: &[String]) -> Result<HelpTopic, CliError> 
 fn root_help() -> HelpTopic {
     HelpTopic {
         command: "echo-profile".to_string(),
-        description: "Machine-oriented CLI for EchoProfile history discovery and profile input collection.".to_string(),
+        description:
+            "Machine-oriented CLI for EchoProfile history discovery and profile input collection."
+                .to_string(),
         usage: "echo-profile <help|version|list|profile|serve> [options]".to_string(),
-        options: vec![HelpOption::new("--json", "Accepted for compatibility; output is always JSON for machine-interface commands.").default(serde_json::json!(true))],
+        options: vec![HelpOption::new(
+            "--json",
+            "Accepted for compatibility; output is always JSON for machine-interface commands.",
+        )
+        .default(serde_json::json!(true))],
         examples: vec![
             "echo-profile version".to_string(),
             "echo-profile list providers".to_string(),
@@ -112,7 +118,8 @@ fn list_help() -> HelpTopic {
 fn list_providers_help() -> HelpTopic {
     HelpTopic {
         command: "list providers".to_string(),
-        description: "List all supported providers and mark which are available on this machine.".to_string(),
+        description: "List all supported providers and mark which are available on this machine."
+            .to_string(),
         usage: "echo-profile list providers".to_string(),
         options: vec![],
         examples: vec!["echo-profile list providers".to_string()],
@@ -135,14 +142,29 @@ fn list_projects_help() -> HelpTopic {
 fn list_sessions_help() -> HelpTopic {
     let mut options = common_list_options();
     options.extend([
-        HelpOption::new("--current-project", "Match sessions for the current working directory project.").default(serde_json::json!(false)),
-        HelpOption::new("--include-ancestor-projects", "Include ancestor projects when using --current-project.").default(serde_json::json!(false)),
-        HelpOption::new("--actual-project-path", "Match sessions by actual filesystem project path."),
-        HelpOption::new("--project-path", "Match sessions by provider-native project path."),
+        HelpOption::new(
+            "--current-project",
+            "Match sessions for the current working directory project.",
+        )
+        .default(serde_json::json!(false)),
+        HelpOption::new(
+            "--include-ancestor-projects",
+            "Include ancestor projects when using --current-project.",
+        )
+        .default(serde_json::json!(false)),
+        HelpOption::new(
+            "--actual-project-path",
+            "Match sessions by actual filesystem project path.",
+        ),
+        HelpOption::new(
+            "--project-path",
+            "Match sessions by provider-native project path.",
+        ),
     ]);
     HelpTopic {
         command: "list sessions".to_string(),
-        description: "List session metadata. Without a project filter, returns recent sessions.".to_string(),
+        description: "List session metadata. Without a project filter, returns recent sessions."
+            .to_string(),
         usage: "echo-profile list sessions [options]".to_string(),
         options,
         examples: vec![
@@ -207,7 +229,8 @@ fn common_list_options() -> Vec<HelpOption> {
         HelpOption::new("--offset", "Page offset.").default(serde_json::json!(0)),
         HelpOption::new("--since", "Filter after ISO time or relative duration."),
         HelpOption::new("--until", "Filter before ISO time or relative duration."),
-        HelpOption::new("--no-cache", "Bypass provider scan cache.").default(serde_json::json!(false)),
+        HelpOption::new("--no-cache", "Bypass provider scan cache.")
+            .default(serde_json::json!(false)),
     ]
 }
 
@@ -230,6 +253,8 @@ mod tests {
         let options = json["options"].as_array().unwrap();
         assert!(options.iter().any(|o| o["name"] == "--scope"));
         assert!(options.iter().any(|o| o["name"] == "--sample"));
-        assert!(options.iter().any(|o| o["name"] == "--paste-detect-min-chars"));
+        assert!(options
+            .iter()
+            .any(|o| o["name"] == "--paste-detect-min-chars"));
     }
 }

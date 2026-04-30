@@ -2,6 +2,7 @@ pub mod args;
 pub mod help;
 pub mod list;
 pub mod output;
+pub mod project_match;
 pub mod providers;
 pub mod time_filter;
 

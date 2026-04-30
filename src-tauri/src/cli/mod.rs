@@ -2,6 +2,7 @@ pub mod args;
 pub mod help;
 pub mod output;
 pub mod providers;
+pub mod time_filter;
 
 use clap::Parser;
 use serde_json::Value;

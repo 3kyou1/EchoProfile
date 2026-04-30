@@ -26,7 +26,7 @@ MVP does not include:
 
 The only official command name is `echo-profile`.
 
-All commands always output JSON. `--json` may be accepted as a no-op for compatibility, but JSON is the default and only output format.
+All machine-interface commands always output JSON. `--json` may be accepted as a no-op for compatibility, but JSON is the default and only output format for `help`, `version`, `list`, and `profile collect`.
 
 MVP commands:
 
@@ -57,11 +57,13 @@ echo-profile --serve
 
 `echo-profile serve` is an alias for the existing WebUI server mode. Existing `echo-profile --serve` behavior remains supported for compatibility.
 
+`serve` and `--serve` are long-running server modes, not machine-interface data commands. They preserve the existing WebUI server behavior and may write operational information to stderr instead of returning a one-shot JSON envelope.
+
 With no CLI args, `echo-profile` continues to launch the normal Tauri desktop app.
 
 ## JSON Envelope
 
-Every command writes one JSON envelope to stdout. stderr is reserved for debug/internal logs. Exit code is `0` on success and non-zero on failure.
+Every machine-interface command writes one JSON envelope to stdout. stderr is reserved for debug/internal logs. Exit code is `0` on success and non-zero on failure. This envelope does not apply to long-running `serve` / `--serve` server mode.
 
 Success:
 

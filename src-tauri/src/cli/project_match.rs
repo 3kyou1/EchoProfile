@@ -33,7 +33,10 @@ pub fn match_current_project(
     if matched.is_empty() {
         return Err(CliError::new(
             "PROJECT_NOT_FOUND",
-            format!("No provider history found for current project: {}", cwd.display()),
+            format!(
+                "No provider history found for current project: {}",
+                cwd.display()
+            ),
         ));
     }
 
@@ -126,7 +129,11 @@ mod tests {
 
     fn project(provider: &str, actual_path: &str) -> crate::models::ClaudeProject {
         crate::models::ClaudeProject {
-            name: actual_path.rsplit('/').next().unwrap_or(actual_path).to_string(),
+            name: actual_path
+                .rsplit('/')
+                .next()
+                .unwrap_or(actual_path)
+                .to_string(),
             path: format!("{provider}://{actual_path}"),
             actual_path: actual_path.to_string(),
             session_count: 1,
@@ -142,7 +149,10 @@ mod tests {
     #[test]
     fn current_project_picks_nearest_ancestor() {
         let cwd = PathBuf::from("/repo/packages/app/src");
-        let projects = vec![project("codex", "/repo"), project("codex", "/repo/packages/app")];
+        let projects = vec![
+            project("codex", "/repo"),
+            project("codex", "/repo/packages/app"),
+        ];
         let matches = match_current_project(&cwd, &projects, false).unwrap();
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].actual_path, "/repo/packages/app");
@@ -151,7 +161,10 @@ mod tests {
     #[test]
     fn include_ancestor_projects_keeps_all_matches() {
         let cwd = PathBuf::from("/repo/packages/app/src");
-        let projects = vec![project("codex", "/repo"), project("claude", "/repo/packages/app")];
+        let projects = vec![
+            project("codex", "/repo"),
+            project("claude", "/repo/packages/app"),
+        ];
         let matches = match_current_project(&cwd, &projects, true).unwrap();
         assert_eq!(matches.len(), 2);
     }

@@ -61,8 +61,9 @@ pub struct CollectMessage {
 pub fn handle_collect(args: CollectArgs) -> Result<Value, CliError> {
     validate_collect_args(&args)?;
     let response = collect(args)?;
-    serde_json::to_value(response)
-        .map_err(|e| CliError::internal(format!("Failed to serialize profile collect response: {e}")))
+    serde_json::to_value(response).map_err(|e| {
+        CliError::internal(format!("Failed to serialize profile collect response: {e}"))
+    })
 }
 
 pub fn validate_collect_args(args: &CollectArgs) -> Result<(), CliError> {
@@ -94,8 +95,10 @@ pub fn validate_collect_args(args: &CollectArgs) -> Result<(), CliError> {
 
 fn collect(args: CollectArgs) -> Result<CollectResponse, CliError> {
     let strategy = args.sample.unwrap_or_else(|| default_strategy(args.scope));
-    let provider_scope = providers::resolve_provider_scope(&args.providers, args.providers_csv.as_deref())?;
-    let time_range = TimeRange::from_args(args.since.as_deref(), args.until.as_deref(), Utc::now())?;
+    let provider_scope =
+        providers::resolve_provider_scope(&args.providers, args.providers_csv.as_deref())?;
+    let time_range =
+        TimeRange::from_args(args.since.as_deref(), args.until.as_deref(), Utc::now())?;
     let paste_config = PasteFilterConfig {
         min_chars: args.paste_detect_min_chars,
         threshold: args.paste_like_threshold,
@@ -127,8 +130,8 @@ fn collect(args: CollectArgs) -> Result<CollectResponse, CliError> {
         ))
         .map_err(CliError::internal)?;
 
-        let session_last_timestamp = parse_rfc3339_opt(&input.session_last_time)
-            .unwrap_or_else(Utc::now);
+        let session_last_timestamp =
+            parse_rfc3339_opt(&input.session_last_time).unwrap_or_else(Utc::now);
 
         for (index, message) in messages.iter().enumerate() {
             if scanned_messages >= args.max_messages_scan {
@@ -236,7 +239,9 @@ fn resolve_session_inputs(
 ) -> Result<(Vec<MatchedProject>, Vec<SessionInput>), CliError> {
     match args.scope {
         CollectScope::Session => resolve_single_session(args, provider_scope),
-        CollectScope::Global | CollectScope::Project => resolve_project_sessions(args, provider_scope),
+        CollectScope::Global | CollectScope::Project => {
+            resolve_project_sessions(args, provider_scope)
+        }
     }
 }
 
@@ -257,8 +262,9 @@ fn resolve_project_sessions(
     let matched = match args.scope {
         CollectScope::Global => projects,
         CollectScope::Project if args.current_project => {
-            let cwd = std::env::current_dir()
-                .map_err(|e| CliError::internal(format!("Failed to read current directory: {e}")))?;
+            let cwd = std::env::current_dir().map_err(|e| {
+                CliError::internal(format!("Failed to read current directory: {e}"))
+            })?;
             project_match::match_current_project(&cwd, &projects, args.include_ancestor_projects)?
         }
         CollectScope::Project => {
@@ -276,14 +282,22 @@ fn resolve_project_sessions(
     let matched_projects = matched.iter().map(matched_project).collect();
     let mut sessions = Vec::new();
     for project in matched {
-        let provider = project.provider.clone().unwrap_or_else(|| "claude".to_string());
-        let provider_sessions = tauri::async_runtime::block_on(multi_provider::load_provider_sessions(
-            provider.clone(),
-            project.path.clone(),
-            Some(false),
-        ))
-        .map_err(CliError::internal)?;
-        sessions.extend(provider_sessions.into_iter().map(|session| session_input(&provider, &project, &session)));
+        let provider = project
+            .provider
+            .clone()
+            .unwrap_or_else(|| "claude".to_string());
+        let provider_sessions =
+            tauri::async_runtime::block_on(multi_provider::load_provider_sessions(
+                provider.clone(),
+                project.path.clone(),
+                Some(false),
+            ))
+            .map_err(CliError::internal)?;
+        sessions.extend(
+            provider_sessions
+                .into_iter()
+                .map(|session| session_input(&provider, &project, &session)),
+        );
     }
     Ok((matched_projects, sessions))
 }
@@ -315,7 +329,7 @@ fn resolve_single_session(
     } else {
         SessionInput {
             provider,
-            session_path: session_path.to_string(),
+            session_path: session_path.clone(),
             project_path: String::new(),
             actual_project_path: String::new(),
             session_last_time: Utc::now().to_rfc3339(),
@@ -347,7 +361,8 @@ fn find_session_context(
         ))
         .map_err(CliError::internal)?;
         for session in sessions {
-            let current = canonical_string(&session.file_path).unwrap_or_else(|| session.file_path.clone());
+            let current =
+                canonical_string(&session.file_path).unwrap_or_else(|| session.file_path.clone());
             if current == target {
                 return Ok(Some((project, session)));
             }
@@ -358,7 +373,10 @@ fn find_session_context(
 
 fn session_input(provider: &str, project: &ClaudeProject, session: &ClaudeSession) -> SessionInput {
     SessionInput {
-        provider: session.provider.clone().unwrap_or_else(|| provider.to_string()),
+        provider: session
+            .provider
+            .clone()
+            .unwrap_or_else(|| provider.to_string()),
         session_path: session.file_path.clone(),
         project_path: project.path.clone(),
         actual_project_path: project.actual_path.clone(),
@@ -368,7 +386,10 @@ fn session_input(provider: &str, project: &ClaudeProject, session: &ClaudeSessio
 
 fn matched_project(project: &ClaudeProject) -> MatchedProject {
     MatchedProject {
-        provider: project.provider.clone().unwrap_or_else(|| "claude".to_string()),
+        provider: project
+            .provider
+            .clone()
+            .unwrap_or_else(|| "claude".to_string()),
         project_path: project.path.clone(),
         actual_project_path: project.actual_path.clone(),
     }
@@ -394,9 +415,12 @@ fn infer_provider_from_session_path(session_path: &str) -> Option<String> {
 }
 
 fn validate_session_path_allowed(provider: &str, session_path: &str) -> Result<(), CliError> {
-    let session = Path::new(session_path)
-        .canonicalize()
-        .map_err(|e| CliError::new("SESSION_NOT_FOUND", format!("Failed to resolve session path: {e}")))?;
+    let session = Path::new(session_path).canonicalize().map_err(|e| {
+        CliError::new(
+            "SESSION_NOT_FOUND",
+            format!("Failed to resolve session path: {e}"),
+        )
+    })?;
     let roots = safe_roots(provider);
     for root in roots {
         if root.exists() {
@@ -444,7 +468,10 @@ fn safe_roots(provider: &str) -> Vec<PathBuf> {
 }
 
 fn canonical_string(path: &str) -> Option<String> {
-    Path::new(path).canonicalize().ok().map(|path| path.to_string_lossy().to_string())
+    Path::new(path)
+        .canonicalize()
+        .ok()
+        .map(|path| path.to_string_lossy().to_string())
 }
 
 fn default_strategy(scope: CollectScope) -> SampleStrategy {
@@ -506,7 +533,6 @@ mod tests {
         assert_eq!(err.code(), "INVALID_ARGUMENT");
     }
 
-
     #[test]
     #[serial_test::serial]
     fn collect_session_reads_codex_fixture_user_messages() {
@@ -530,9 +556,13 @@ mod tests {
                     "created_at": "2026-04-30T10:00:00Z",
                     "content": [{ "type": "input_text", "text": "请先讨论设计" }]
                 }
-            })
+            }),
         ];
-        let content = lines.iter().map(serde_json::Value::to_string).collect::<Vec<_>>().join("\n");
+        let content = lines
+            .iter()
+            .map(serde_json::Value::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
         std::fs::write(&rollout_path, format!("{content}\n")).unwrap();
 
         let original = std::env::var_os("CODEX_HOME");
@@ -551,5 +581,4 @@ mod tests {
         assert_eq!(value["messages"][0]["text"], "请先讨论设计");
         assert_eq!(value["messages"][0]["provider"], "codex");
     }
-
 }

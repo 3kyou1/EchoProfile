@@ -55,7 +55,10 @@ pub fn is_paste_like(text: &str, config: &PasteFilterConfig) -> PasteLikeResult 
         features.push("shell_output");
     }
 
-    let long_lines = lines.iter().filter(|line| line.chars().count() >= 140).count();
+    let long_lines = lines
+        .iter()
+        .filter(|line| line.chars().count() >= 140)
+        .count();
     if long_lines > 0 {
         features.push("long_lines");
     }
@@ -105,22 +108,19 @@ fn is_diff_line(line: &str) -> bool {
         || line.starts_with("@@")
         || line.starts_with("+++")
         || line.starts_with("---")
-        || line.starts_with("+")
-        || line.starts_with("-")
+        || line.starts_with('+')
+        || line.starts_with('-')
 }
 
 fn is_structured_line(line: &str) -> bool {
     if line.is_empty() {
         return false;
     }
-    let starts_structured = matches!(
-        line.chars().next(),
-        Some('{') | Some('}') | Some('[') | Some(']') | Some('<')
-    );
+    let starts_structured = matches!(line.chars().next(), Some('{' | '}' | '[' | ']' | '<'));
     starts_structured
         || line.contains(": {")
         || line.contains(": [")
-        || line.starts_with('"') && line.contains(":")
+        || line.starts_with('"') && line.contains(':')
         || line.starts_with('-') && line.contains(':')
 }
 
@@ -135,8 +135,8 @@ fn is_log_or_trace_line(line: &str) -> bool {
 }
 
 fn is_shell_output_line(line: &str) -> bool {
-    line.starts_with("$")
-        || line.starts_with(">")
+    line.starts_with('$')
+        || line.starts_with('>')
         || line.starts_with("❯")
         || line.starts_with("Compiling ")
         || line.starts_with("Finished ")
@@ -169,20 +169,32 @@ mod tests {
 
     #[test]
     fn short_input_bypasses_detection() {
-        let cfg = PasteFilterConfig { min_chars: 50, threshold: 0.7, include_paste_like: false };
+        let cfg = PasteFilterConfig {
+            min_chars: 50,
+            threshold: 0.7,
+            include_paste_like: false,
+        };
         assert!(!is_paste_like("ok", &cfg).is_paste_like);
     }
 
     #[test]
     fn dominant_code_block_is_paste_like() {
         let text = "```rust\nfn main() {}\nfn other() {}\n```";
-        let cfg = PasteFilterConfig { min_chars: 10, threshold: 0.7, include_paste_like: false };
+        let cfg = PasteFilterConfig {
+            min_chars: 10,
+            threshold: 0.7,
+            include_paste_like: false,
+        };
         assert!(is_paste_like(text, &cfg).is_paste_like);
     }
 
     #[test]
     fn include_paste_like_bypasses_filtering() {
-        let cfg = PasteFilterConfig { min_chars: 10, threshold: 0.7, include_paste_like: true };
+        let cfg = PasteFilterConfig {
+            min_chars: 10,
+            threshold: 0.7,
+            include_paste_like: true,
+        };
         assert!(!should_filter_paste_like("```\ncode\n```", &cfg));
     }
 }

@@ -216,6 +216,20 @@ pnpm test
 pnpm lint
 ```
 
+### Skill-oriented CLI
+
+The `echo-profile` binary also exposes a JSON-only CLI for skills and automation:
+
+```bash
+echo-profile version
+echo-profile list providers
+echo-profile list sessions --current-project
+echo-profile profile collect --scope project --current-project --budget-chars 30000
+```
+
+`profile collect` only gathers local user-message text as structured JSON. It does not call an LLM or generate a profile; Codex skills or other agents can use the returned messages as profile-generation input.
+
+
 ## Good first contribution areas
 
 EchoProfile is especially open to contributions in these areas:

@@ -1,6 +1,7 @@
 pub mod args;
 pub mod help;
 pub mod output;
+pub mod providers;
 
 use clap::Parser;
 use serde_json::Value;

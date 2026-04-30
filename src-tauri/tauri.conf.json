@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "EchoProfile",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "identifier": "com.echoprofile.app",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://127.0.0.1:5173",
     "beforeDevCommand": "pnpm run dev:web",
     "beforeBuildCommand": "pnpm run build:web"
   },

@@ -93,6 +93,52 @@ const hasAvailableNonClaudeProvider = (
     (provider) => provider.is_available && provider.id !== DEFAULT_PROVIDER_ID
   );
 
+const PROJECT_CACHE_STORE = "project-cache.json";
+const PROJECT_CACHE_KEY = "projects";
+
+async function loadCachedProjects(): Promise<ClaudeProject[]> {
+  try {
+    const store = await storageAdapter.load(PROJECT_CACHE_STORE, {
+      autoSave: false,
+      defaults: {},
+    });
+    const cached = await store.get<ClaudeProject[]>(PROJECT_CACHE_KEY);
+    return Array.isArray(cached) ? cached : [];
+  } catch {
+    return [];
+  }
+}
+
+async function saveCachedProjects(projects: ClaudeProject[]): Promise<void> {
+  try {
+    const store = await storageAdapter.load(PROJECT_CACHE_STORE, {
+      autoSave: false,
+      defaults: {},
+    });
+    await store.set(PROJECT_CACHE_KEY, projects);
+    await store.save();
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn("[project-cache] Failed to persist projects", error);
+    }
+  }
+}
+
+async function hydrateCachedProjects(set: Parameters<StateCreator<FullAppStore, [], [], ProjectSlice>>[0]): Promise<void> {
+  const cachedProjects = await loadCachedProjects();
+  if (cachedProjects.length > 0) {
+    set({ projects: cachedProjects });
+  }
+}
+
+async function startProjectScanInBackground(
+  set: Parameters<StateCreator<FullAppStore, [], [], ProjectSlice>>[0],
+  get: () => FullAppStore
+): Promise<void> {
+  await hydrateCachedProjects(set);
+  void get().scanProjects();
+}
+
 // ============================================================================
 // CLAUDE_CONFIG_DIR Auto-detection
 // ============================================================================
@@ -155,7 +201,7 @@ export const createProjectSlice: StateCreator<
             await get().loadMetadata();
             await get().detectProviders();
             await autoRegisterConfigDir(get);
-            await get().scanProjects();
+            await startProjectScanInBackground(set, get);
             return;
           }
         }
@@ -178,7 +224,7 @@ export const createProjectSlice: StateCreator<
         await autoRegisterConfigDir(get);
 
         if (hasAvailableNonClaudeProvider(get().providers)) {
-          await get().scanProjects();
+          await startProjectScanInBackground(set, get);
           return;
         }
 
@@ -188,7 +234,7 @@ export const createProjectSlice: StateCreator<
       await get().loadMetadata();
       await get().detectProviders();
       await autoRegisterConfigDir(get);
-      await get().scanProjects();
+      await startProjectScanInBackground(set, get);
     } catch (error) {
       console.error("Failed to initialize app:", error);
       const errorMessage =
@@ -236,17 +282,13 @@ export const createProjectSlice: StateCreator<
       if (!claudePath && !hasNonClaudeProviders && !hasCustomPaths) {
         return;
       }
-      const projects = (hasNonClaudeProviders || hasCustomPaths)
-        ? await api<ClaudeProject[]>("scan_all_projects", {
-            claudePath: claudePath || undefined,
-            activeProviders: scanProviders,
-            customClaudePaths: hasCustomPaths ? customClaudePaths : undefined,
-            wslEnabled: settings?.wsl?.enabled ?? false,
-            wslExcludedDistros: settings?.wsl?.excludedDistros ?? [],
-          })
-        : await api<ClaudeProject[]>("scan_projects", {
-            claudePath,
-          });
+      const projects = await api<ClaudeProject[]>("scan_all_projects", {
+        claudePath: claudePath || undefined,
+        activeProviders: scanProviders,
+        customClaudePaths: hasCustomPaths ? customClaudePaths : undefined,
+        wslEnabled: settings?.wsl?.enabled ?? false,
+        wslExcludedDistros: settings?.wsl?.excludedDistros ?? [],
+      });
       const duration = performance.now() - start;
       if (import.meta.env.DEV) {
         console.log(
@@ -257,6 +299,7 @@ export const createProjectSlice: StateCreator<
         return;
       }
       set({ projects });
+      void saveCachedProjects(projects);
 
       // Auto-enable worktree grouping if worktrees are detected
       // Only auto-enable if user has never explicitly set the preference
@@ -324,6 +367,7 @@ export const createProjectSlice: StateCreator<
             : p
         );
         set({ projects });
+      void saveCachedProjects(projects);
       }
     } catch (error) {
       console.error("Failed to load project sessions:", error);

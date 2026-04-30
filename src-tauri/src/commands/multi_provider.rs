@@ -4,6 +4,10 @@ use crate::utils::parse_rfc3339_utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cmp::Ordering;
+use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::fs;
+use std::hash::{Hash, Hasher};
+use std::path::{Path, PathBuf};
 
 /// Parameter for passing custom Claude paths from frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,6 +15,251 @@ use std::cmp::Ordering;
 pub struct CustomClaudePathParam {
     pub path: String,
     pub label: Option<String>,
+}
+
+const PROVIDER_SCAN_CACHE_FILE: &str = "provider-scan-cache.json";
+const PROVIDER_SCAN_CACHE_VERSION: u32 = 1;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct ProviderScanCache {
+    version: u32,
+    entries: HashMap<String, ProviderScanCacheEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ProviderScanCacheEntry {
+    fingerprint: String,
+    projects: Vec<ClaudeProject>,
+}
+
+#[derive(Debug, Serialize)]
+struct ProviderScanCacheKey<'a> {
+    providers: Vec<String>,
+    claude_path: Option<&'a String>,
+    custom_claude_paths: &'a [CustomClaudePathParam],
+    wsl_enabled: bool,
+    wsl_excluded_distros: &'a [String],
+}
+
+fn normalize_provider_ids(providers: Vec<String>) -> Vec<String> {
+    let mut normalized = providers;
+    normalized.sort();
+    normalized.dedup();
+    normalized
+}
+
+fn provider_scan_cache_path() -> Result<PathBuf, String> {
+    crate::app_dirs::app_data_path(PROVIDER_SCAN_CACHE_FILE)
+}
+
+fn load_provider_scan_cache_at(path: &Path) -> ProviderScanCache {
+    let Ok(content) = fs::read_to_string(path) else {
+        return ProviderScanCache {
+            version: PROVIDER_SCAN_CACHE_VERSION,
+            entries: HashMap::new(),
+        };
+    };
+    let Ok(cache) = serde_json::from_str::<ProviderScanCache>(&content) else {
+        return ProviderScanCache {
+            version: PROVIDER_SCAN_CACHE_VERSION,
+            entries: HashMap::new(),
+        };
+    };
+    if cache.version == PROVIDER_SCAN_CACHE_VERSION {
+        cache
+    } else {
+        ProviderScanCache {
+            version: PROVIDER_SCAN_CACHE_VERSION,
+            entries: HashMap::new(),
+        }
+    }
+}
+
+fn save_provider_scan_cache_at(path: &Path, cache: &ProviderScanCache) {
+    let Some(parent) = path.parent() else {
+        return;
+    };
+    if fs::create_dir_all(parent).is_err() {
+        return;
+    }
+    let Ok(content) = serde_json::to_string(cache) else {
+        return;
+    };
+    let tmp_path = path.with_extension("json.tmp");
+    if fs::write(&tmp_path, content).is_ok() {
+        let _ = fs::rename(tmp_path, path);
+    }
+}
+
+fn get_cached_provider_projects_at(
+    path: &Path,
+    cache_key: &str,
+    fingerprint: &str,
+) -> Option<Vec<ClaudeProject>> {
+    let cache = load_provider_scan_cache_at(path);
+    let entry = cache.entries.get(cache_key)?;
+    if entry.fingerprint == fingerprint {
+        Some(entry.projects.clone())
+    } else {
+        None
+    }
+}
+
+fn save_cached_provider_projects_at(
+    path: &Path,
+    cache_key: String,
+    fingerprint: String,
+    projects: Vec<ClaudeProject>,
+) {
+    let mut cache = load_provider_scan_cache_at(path);
+    cache.version = PROVIDER_SCAN_CACHE_VERSION;
+    cache.entries.insert(
+        cache_key,
+        ProviderScanCacheEntry {
+            fingerprint,
+            projects,
+        },
+    );
+    save_provider_scan_cache_at(path, &cache);
+}
+
+fn provider_scan_cache_key(
+    providers: Vec<String>,
+    claude_path: Option<&String>,
+    custom_claude_paths: &[CustomClaudePathParam],
+    wsl_enabled: bool,
+    wsl_excluded_distros: &[String],
+) -> String {
+    serde_json::to_string(&ProviderScanCacheKey {
+        providers,
+        claude_path,
+        custom_claude_paths,
+        wsl_enabled,
+        wsl_excluded_distros,
+    })
+    .unwrap_or_else(|_| "provider-scan-cache-key".to_string())
+}
+
+fn hash_path_metadata(hasher: &mut DefaultHasher, path: &Path) {
+    if !path.exists() {
+        path.to_string_lossy().hash(hasher);
+        "missing".hash(hasher);
+        return;
+    }
+
+    let mut entries = Vec::new();
+    for entry in walkdir::WalkDir::new(path)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let entry_path = entry.path().to_path_buf();
+        let Ok(metadata) = fs::symlink_metadata(&entry_path) else {
+            continue;
+        };
+        let modified = metadata
+            .modified()
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|duration| duration.as_nanos())
+            .unwrap_or_default();
+        entries.push((
+            entry_path.to_string_lossy().to_string(),
+            metadata.len(),
+            modified,
+            metadata.file_type().is_dir(),
+        ));
+    }
+
+    entries.sort_by(|left, right| left.0.cmp(&right.0));
+    for entry in entries {
+        entry.hash(hasher);
+    }
+}
+
+fn provider_fingerprint_roots(
+    provider: &str,
+    claude_path: Option<&String>,
+    custom_claude_paths: &[CustomClaudePathParam],
+) -> Vec<PathBuf> {
+    match provider {
+        "claude" => {
+            let mut roots = Vec::new();
+            if let Some(base) = claude_path
+                .cloned()
+                .or_else(providers::claude::get_base_path)
+            {
+                roots.push(PathBuf::from(base).join("projects"));
+            }
+            roots.extend(
+                custom_claude_paths
+                    .iter()
+                    .map(|custom| PathBuf::from(&custom.path).join("projects")),
+            );
+            roots
+        }
+        "codex" => providers::codex::get_base_path()
+            .map(|base| {
+                let base = PathBuf::from(base);
+                vec![base.join("sessions"), base.join("archived_sessions")]
+            })
+            .unwrap_or_default(),
+        "gemini" => providers::gemini::get_base_path()
+            .map(|base| vec![PathBuf::from(base).join("tmp")])
+            .unwrap_or_default(),
+        "opencode" => providers::opencode::get_base_path()
+            .map(|base| vec![PathBuf::from(base).join("storage")])
+            .unwrap_or_default(),
+        "cline" => providers::cline::detect()
+            .filter(|info| !info.base_path.is_empty())
+            .map(|info| vec![PathBuf::from(info.base_path)])
+            .unwrap_or_default(),
+        "cursor" => providers::cursor::get_base_path()
+            .map(|base| vec![base.join("workspaceStorage"), base.join("globalStorage")])
+            .unwrap_or_default(),
+        "aider" => providers::aider::detect()
+            .filter(|info| !info.base_path.is_empty())
+            .map(|info| vec![PathBuf::from(info.base_path)])
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    }
+}
+
+fn provider_scan_fingerprint(
+    providers_to_scan: &[String],
+    claude_path: Option<&String>,
+    custom_claude_paths: &[CustomClaudePathParam],
+) -> String {
+    let mut hasher = DefaultHasher::new();
+    PROVIDER_SCAN_CACHE_VERSION.hash(&mut hasher);
+    for provider in providers_to_scan {
+        provider.hash(&mut hasher);
+        let roots = provider_fingerprint_roots(provider, claude_path, custom_claude_paths);
+        roots.len().hash(&mut hasher);
+        for root in roots {
+            hash_path_metadata(&mut hasher, &root);
+        }
+    }
+    hasher.finish().to_string()
+}
+
+fn try_load_cached_provider_projects(
+    cache_key: &str,
+    fingerprint: &str,
+) -> Option<Vec<ClaudeProject>> {
+    let path = provider_scan_cache_path().ok()?;
+    get_cached_provider_projects_at(&path, cache_key, fingerprint)
+}
+
+fn persist_provider_projects_cache(
+    cache_key: String,
+    fingerprint: String,
+    projects: &[ClaudeProject],
+) {
+    let Ok(path) = provider_scan_cache_path() else {
+        return;
+    };
+    save_cached_provider_projects_at(&path, cache_key, fingerprint, projects.to_vec());
 }
 
 /// Detect all available providers
@@ -28,7 +277,7 @@ pub async fn scan_all_projects(
     wsl_enabled: Option<bool>,
     wsl_excluded_distros: Option<Vec<String>>,
 ) -> Result<Vec<ClaudeProject>, String> {
-    let providers_to_scan = active_providers.unwrap_or_else(|| {
+    let providers_to_scan = normalize_provider_ids(active_providers.unwrap_or_else(|| {
         vec![
             "claude".to_string(),
             "codex".to_string(),
@@ -38,13 +287,39 @@ pub async fn scan_all_projects(
             "cursor".to_string(),
             "aider".to_string(),
         ]
-    });
+    }));
+    let custom_claude_paths_for_cache = custom_claude_paths.clone().unwrap_or_default();
+    let wsl_excluded_distros_for_cache = wsl_excluded_distros.clone().unwrap_or_default();
+    let wsl_cache_enabled = wsl_enabled.unwrap_or(false);
+    let cache_key = provider_scan_cache_key(
+        providers_to_scan.clone(),
+        claude_path.as_ref(),
+        &custom_claude_paths_for_cache,
+        wsl_cache_enabled,
+        &wsl_excluded_distros_for_cache,
+    );
+    let cache_fingerprint = provider_scan_fingerprint(
+        &providers_to_scan,
+        claude_path.as_ref(),
+        &custom_claude_paths_for_cache,
+    );
+
+    // WSL paths can represent remote/mounted filesystems with different freshness semantics.
+    // Keep those live for now; all regular providers use the shared cache path.
+    let should_use_cache = !wsl_cache_enabled;
+    if should_use_cache {
+        if let Some(projects) = try_load_cached_provider_projects(&cache_key, &cache_fingerprint) {
+            return Ok(projects);
+        }
+    }
 
     let mut all_projects = Vec::new();
 
     // Claude (default path)
     if providers_to_scan.iter().any(|p| p == "claude") {
-        let claude_base = claude_path.or_else(providers::claude::get_base_path);
+        let claude_base = claude_path
+            .clone()
+            .or_else(providers::claude::get_base_path);
         if let Some(base) = claude_base {
             match crate::commands::project::scan_projects(base).await {
                 Ok(mut projects) => {
@@ -195,6 +470,9 @@ pub async fn scan_all_projects(
             (None, None) => b.last_modified.cmp(&a.last_modified),
         }
     });
+    if should_use_cache {
+        persist_provider_projects_cache(cache_key, cache_fingerprint, &all_projects);
+    }
     Ok(all_projects)
 }
 
@@ -292,7 +570,9 @@ pub async fn search_all_providers(
 
     // Claude
     if providers_to_search.iter().any(|p| p == "claude") {
-        let claude_base = claude_path.or_else(providers::claude::get_base_path);
+        let claude_base = claude_path
+            .clone()
+            .or_else(providers::claude::get_base_path);
         if let Some(base) = claude_base {
             match crate::commands::session::search_messages(
                 base,
@@ -562,6 +842,100 @@ fn append_content_block(msg: &mut ClaudeMessage, block: Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn make_project(provider: &str, name: &str) -> ClaudeProject {
+        ClaudeProject {
+            name: name.to_string(),
+            path: format!("{provider}://{name}"),
+            actual_path: format!("/tmp/{name}"),
+            session_count: 1,
+            message_count: 2,
+            last_modified: "2026-04-29T00:00:00Z".to_string(),
+            git_info: None,
+            provider: Some(provider.to_string()),
+            storage_type: None,
+            custom_directory_label: None,
+        }
+    }
+
+    #[test]
+    fn provider_scan_cache_returns_only_matching_fingerprint() {
+        let temp = tempfile::tempdir().unwrap();
+        let cache_path = temp.path().join("provider-scan-cache.json");
+        let projects = vec![make_project("codex", "EchoProfile")];
+
+        save_cached_provider_projects_at(
+            &cache_path,
+            "codex+claude".to_string(),
+            "fingerprint-a".to_string(),
+            projects.clone(),
+        );
+
+        assert_eq!(
+            get_cached_provider_projects_at(&cache_path, "codex+claude", "fingerprint-a")
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(
+            get_cached_provider_projects_at(&cache_path, "codex+claude", "fingerprint-b").is_none()
+        );
+    }
+
+    #[test]
+    fn provider_scan_cache_key_separates_provider_sets() {
+        let claude_path = Some("/tmp/.claude".to_string());
+        let custom_paths = vec![CustomClaudePathParam {
+            path: "/tmp/custom-claude".to_string(),
+            label: Some("Custom".to_string()),
+        }];
+        let excluded = vec!["Ubuntu".to_string()];
+
+        let claude_only = provider_scan_cache_key(
+            vec!["claude".to_string()],
+            claude_path.as_ref(),
+            &custom_paths,
+            false,
+            &excluded,
+        );
+        let all_providers = provider_scan_cache_key(
+            vec![
+                "aider".to_string(),
+                "claude".to_string(),
+                "cline".to_string(),
+                "codex".to_string(),
+                "cursor".to_string(),
+                "gemini".to_string(),
+                "opencode".to_string(),
+            ],
+            claude_path.as_ref(),
+            &custom_paths,
+            false,
+            &excluded,
+        );
+
+        assert_ne!(claude_only, all_providers);
+        assert!(all_providers.contains("codex"));
+        assert!(all_providers.contains("opencode"));
+        assert!(all_providers.contains("aider"));
+    }
+
+    #[test]
+    fn path_metadata_fingerprint_changes_when_any_provider_file_changes() {
+        let temp = tempfile::tempdir().unwrap();
+        let provider_root = temp.path().join("provider-root");
+        fs::create_dir_all(&provider_root).unwrap();
+        let file_path = provider_root.join("session.jsonl");
+        fs::write(&file_path, "one").unwrap();
+
+        let mut first = DefaultHasher::new();
+        hash_path_metadata(&mut first, &provider_root);
+        fs::write(&file_path, "one plus change").unwrap();
+        let mut second = DefaultHasher::new();
+        hash_path_metadata(&mut second, &provider_root);
+
+        assert_ne!(first.finish(), second.finish());
+    }
 
     fn make_message(message_type: &str, content: Value) -> ClaudeMessage {
         ClaudeMessage {

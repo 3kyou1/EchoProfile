@@ -2,9 +2,10 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { OverlayScrollbars } from "overlayscrollbars";
 import "overlayscrollbars/overlayscrollbars.css";
+import "./fonts.css";
 import "./index.css";
 import "./scrollbar.css";
-import App from "./App.tsx";
+import BootApp from "./BootApp.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 import "./i18n";
 import { PlatformProvider } from "./contexts/platform";
@@ -19,14 +20,19 @@ initAuthToken();
 // If startup hit `?auth_error=1`, prompt for token and reload once recovered.
 recoverAuthFromErrorQuery();
 
-// Apply OverlayScrollbars globally to body
-OverlayScrollbars(document.body, {
-  scrollbars: {
-    theme: "os-theme-custom",
-    autoHide: "leave",
-    autoHideDelay: 400,
-  },
-});
+// Apply OverlayScrollbars globally to body. This is non-critical; never let it
+// prevent the first loading shell from painting.
+try {
+  OverlayScrollbars(document.body, {
+    scrollbars: {
+      theme: "os-theme-custom",
+      autoHide: "leave",
+      autoHideDelay: 400,
+    },
+  });
+} catch {
+  // Ignore startup-only scrollbar failures.
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -34,7 +40,7 @@ createRoot(document.getElementById("root")!).render(
       <PlatformProvider>
         <ThemeProvider>
           <ModalProvider>
-            <App />
+            <BootApp />
             <Toaster />
           </ModalProvider>
         </ThemeProvider>

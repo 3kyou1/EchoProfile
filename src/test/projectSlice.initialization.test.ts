@@ -5,6 +5,8 @@ import type { ClaudeProject, ProviderInfo } from "@/types";
 
 const mockApi = vi.fn();
 const mockStoreGet = vi.fn();
+const mockStoreSet = vi.fn();
+const mockStoreSave = vi.fn();
 
 vi.mock("@/services/api", () => ({
   api: (...args: unknown[]) => mockApi(...args),
@@ -14,8 +16,8 @@ vi.mock("@/services/storage", () => ({
   storageAdapter: {
     load: vi.fn(async () => ({
       get: mockStoreGet,
-      set: vi.fn(),
-      save: vi.fn(),
+      set: mockStoreSet,
+      save: mockStoreSave,
     })),
   },
 }));
@@ -63,6 +65,8 @@ describe("projectSlice initialization without a Claude directory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStoreGet.mockResolvedValue(null);
+    mockStoreSet.mockResolvedValue(undefined);
+    mockStoreSave.mockResolvedValue(undefined);
     mockApi.mockImplementation(async (command: string) => {
       if (command === "get_claude_folder_path") {
         throw new Error("CLAUDE_FOLDER_NOT_FOUND:/home/vepfsdata/.claude");
@@ -77,17 +81,67 @@ describe("projectSlice initialization without a Claude directory", () => {
     });
   });
 
-  it("continues initialization and loads Codex projects when Claude is missing but Codex is available", async () => {
+  it("initializes without waiting for provider project scanning", async () => {
     const useStore = createTestStore();
+    let resolveScan: (projects: ClaudeProject[]) => void = () => undefined;
+    const scanPromise = new Promise<ClaudeProject[]>((resolve) => {
+      resolveScan = resolve;
+    });
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "get_claude_folder_path") {
+        throw new Error("CLAUDE_FOLDER_NOT_FOUND:/home/vepfsdata/.claude");
+      }
+      if (command === "detect_claude_config_dir") {
+        return null;
+      }
+      if (command === "scan_all_projects") {
+        return scanPromise;
+      }
+      throw new Error(`Unexpected command: ${command}`);
+    });
 
     await useStore.getState().initializeApp();
 
     expect(useStore.getState().error).toBeNull();
-    expect(useStore.getState().projects).toEqual([codexProject]);
+    expect(useStore.getState().isLoading).toBe(false);
+    expect(useStore.getState().isLoadingProjects).toBe(true);
+    expect(useStore.getState().projects).toEqual([]);
     expect(mockApi).toHaveBeenCalledWith("scan_all_projects", expect.objectContaining({
       activeProviders: ["codex"],
       claudePath: undefined,
     }));
+
+    resolveScan([codexProject]);
+    await vi.waitFor(() => expect(useStore.getState().projects).toEqual([codexProject]));
+  });
+
+  it("hydrates cached projects before background refresh completes", async () => {
+    const useStore = createTestStore();
+    let resolveScan: (projects: ClaudeProject[]) => void = () => undefined;
+    const scanPromise = new Promise<ClaudeProject[]>((resolve) => {
+      resolveScan = resolve;
+    });
+    mockStoreGet.mockImplementation(async (key: string) => (key === "projects" ? [codexProject] : null));
+    mockApi.mockImplementation(async (command: string) => {
+      if (command === "get_claude_folder_path") {
+        throw new Error("CLAUDE_FOLDER_NOT_FOUND:/home/vepfsdata/.claude");
+      }
+      if (command === "detect_claude_config_dir") {
+        return null;
+      }
+      if (command === "scan_all_projects") {
+        return scanPromise;
+      }
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    await useStore.getState().initializeApp();
+
+    expect(useStore.getState().projects).toEqual([codexProject]);
+    expect(useStore.getState().isLoadingProjects).toBe(true);
+
+    resolveScan([]);
+    await vi.waitFor(() => expect(useStore.getState().isLoadingProjects).toBe(false));
   });
 
   it("scans Codex projects when claudePath is empty and a non-Claude provider is available", async () => {

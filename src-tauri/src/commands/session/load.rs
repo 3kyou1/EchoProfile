@@ -1020,7 +1020,7 @@ pub async fn load_project_sessions(
     #[cfg(debug_assertions)]
     {
         let elapsed = start_time.elapsed();
-        println!(
+        eprintln!(
             "📊 load_project_sessions performance: {} sessions, {}ms elapsed",
             sessions.len(),
             elapsed.as_millis()

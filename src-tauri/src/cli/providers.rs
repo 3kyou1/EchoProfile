@@ -53,7 +53,9 @@ pub fn supported_provider_infos() -> Vec<ProviderListItem> {
                 is_available: detected_info
                     .map(|info| info.is_available)
                     .unwrap_or(false),
-                base_path: detected_info.map(|info| info.base_path.clone()),
+                base_path: detected_info
+                    .filter(|info| info.is_available)
+                    .map(|info| info.base_path.clone()),
             }
         })
         .collect()

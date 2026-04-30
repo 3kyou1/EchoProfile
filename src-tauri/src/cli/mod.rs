@@ -1,5 +1,6 @@
 pub mod args;
 pub mod help;
+pub mod list;
 pub mod output;
 pub mod providers;
 pub mod time_filter;
@@ -48,6 +49,7 @@ pub fn run_machine_command(args: Vec<String>) -> Result<Value, CliError> {
                 .map_err(|e| CliError::internal(format!("Failed to serialize help topic: {e}")))
         }
         CliCommand::Version => Ok(version_response()),
+        CliCommand::List(args) => list::handle_list(args),
         command => Err(CliError::invalid_argument(format!(
             "Command is not implemented yet: {command:?}"
         ))),

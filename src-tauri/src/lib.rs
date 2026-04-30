@@ -70,17 +70,30 @@ pub fn run() {
         eprintln!("⚠ Failed to prepare app data directory: {error}");
     }
 
-    // Check for --serve flag (WebUI server mode)
-    #[cfg(feature = "webui-server")]
-    {
-        let args: Vec<String> = std::env::args().collect();
-        if args.iter().any(|a| a == "--serve") {
-            run_server(&args);
-            return;
+    let args: Vec<String> = std::env::args().collect();
+    match crate::cli::classify_args(&args) {
+        crate::cli::CliAction::LaunchDesktop => run_tauri(),
+        crate::cli::CliAction::RunMachineCommand(args) => {
+            std::process::exit(crate::cli::run_and_print(args));
+        }
+        crate::cli::CliAction::RunServe(serve_args) => {
+            #[cfg(feature = "webui-server")]
+            {
+                run_server(&serve_args);
+                return;
+            }
+            #[cfg(not(feature = "webui-server"))]
+            {
+                let _ = serve_args;
+                let error = crate::cli::output::CliError::invalid_argument(
+                    "WebUI server mode is not available in this build.",
+                );
+                let envelope = crate::cli::output::CliEnvelope::<serde_json::Value>::failure(error);
+                let _ = crate::cli::output::envelope_to_stdout(&envelope);
+                std::process::exit(1);
+            }
         }
     }
-
-    run_tauri();
 }
 
 /// Run the normal Tauri desktop application.

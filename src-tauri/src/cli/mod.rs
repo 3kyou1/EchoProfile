@@ -5,6 +5,7 @@ pub mod output;
 pub mod paste_filter;
 pub mod project_match;
 pub mod providers;
+pub mod profile_collect;
 pub mod sampling;
 pub mod time_filter;
 pub mod text_extract;
@@ -54,6 +55,9 @@ pub fn run_machine_command(args: Vec<String>) -> Result<Value, CliError> {
         }
         CliCommand::Version => Ok(version_response()),
         CliCommand::List(args) => list::handle_list(args),
+        CliCommand::Profile(args) => match args.command {
+            args::ProfileCommand::Collect(args) => profile_collect::handle_collect(args),
+        },
         command => Err(CliError::invalid_argument(format!(
             "Command is not implemented yet: {command:?}"
         ))),

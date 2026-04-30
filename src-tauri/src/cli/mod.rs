@@ -5,6 +5,7 @@ pub mod output;
 pub mod project_match;
 pub mod providers;
 pub mod time_filter;
+pub mod text_extract;
 
 use clap::Parser;
 use serde_json::Value;

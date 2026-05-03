@@ -36,7 +36,7 @@
 - 区分：结构错误、展示质量问题、可降级问题。
 
 ## 文件策略
-- 正式文档仍可先沿用当前路径 `docs/echo-profile-figure-pool-material-guidelines.md` 进行内容重构。
+- 正式文档仍可先沿用当前路径 `docs/superpowers/specs/2026-04-23-figure-pool-material-guidelines-design.md` 进行内容重构。
 - 若后续术语完全稳定，再考虑更名为更通用的文件名。
 
 ## 输出要求

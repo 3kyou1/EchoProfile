@@ -1,0 +1,4 @@
+interface:
+  display_name: "EchoProfile User Profile"
+  short_description: "Generate a profile from collected AI history"
+  default_prompt: "Use $echo-profile-user-profile to generate a user profile from EchoProfile collected messages."

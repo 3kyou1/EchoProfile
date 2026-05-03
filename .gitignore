@@ -60,6 +60,8 @@ coverage
 *.tmp
 *.temp
 .cache
+__pycache__/
+*.py[cod]
 
 # Debug
 debug.log*
@@ -69,6 +71,8 @@ debug.log*
 
 # Auto-generated AI context files
 **/*/CLAUDE.md
+Agent.md
+agent.md
 .serena/memories/
 
 # AFC plugin state

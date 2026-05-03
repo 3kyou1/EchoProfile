@@ -247,7 +247,7 @@ pub async fn scan_projects(claude_path: String) -> Result<Vec<ClaudeProject>, St
     #[cfg(debug_assertions)]
     {
         let elapsed = start_time.elapsed();
-        println!(
+        eprintln!(
             "📊 scan_projects performance: {} projects, {}ms elapsed",
             projects.len(),
             elapsed.as_millis()

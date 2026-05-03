@@ -186,6 +186,20 @@ pnpm test
 pnpm lint
 ```
 
+### 面向 Skill 的 CLI
+
+`echo-profile` 二进制也提供 JSON-only CLI，方便 skill 和自动化流程调用：
+
+```bash
+echo-profile version
+echo-profile list providers
+echo-profile list sessions --current-project
+echo-profile profile collect --scope project --current-project --budget-chars 30000
+```
+
+`profile collect` 只会把本地用户消息文本收集为结构化 JSON。它不会调用 LLM，也不会直接生成画像；Codex skill 或其他 agent 可以使用返回的消息作为画像生成输入。
+
+
 ## 适合贡献什么？
 
 EchoProfile 很适合以下方向的贡献：

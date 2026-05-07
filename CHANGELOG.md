@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-05-07
+
+### Added
+- Add a JSON-only, skill-oriented CLI entrypoint for automation and agent workflows.
+- Add structured CLI help, version metadata, provider listing, project listing, and session listing commands.
+- Add `profile collect` for gathering local user-message samples from global, project, or session scopes.
+- Support provider filters, RFC3339 time filters, current-project matching, sampling strategies, and character budgets for profile collection.
+- Add paste-like input filtering so copied logs, diffs, code, and long documents are omitted from profile evidence by default.
+- Add `skills/echo-profile-user-profile`, a Codex skill for turning collected conversation history into an actionable user profile with evidence confidence and privacy rules.
+
+### Changed
+- Document the skill-oriented CLI commands in the English and Chinese READMEs.
+- Expose no-cache provider scanning for CLI collection paths.
+- Route machine-readable CLI commands from startup while preserving desktop launch and WebUI server behavior.
+- Remove the unused GitHub Pages deployment workflow and obsolete CLI design notes.
+
+### Fixed
+- Format and clippy-clean the Rust CLI implementation.
+
+### Tests
+- Add fixture-based CLI tests for project matching, message extraction, paste filtering, sampling, and profile collection.
+
+## [0.1.4] - 2026-04-30
+
+### Added
+- Bundle local IBM Plex Sans and JetBrains Mono fonts for faster desktop startup and more predictable first render.
+
+### Changed
+- Improve desktop startup performance by deferring expensive provider scans and introducing a lightweight boot path.
+- Synchronize app versions across `package.json`, `src-tauri/Cargo.toml`, and Tauri configuration.
+
+### Fixed
+- Add initialization coverage for project loading behavior used by the faster startup path.
+
 ## [0.1.3] - 2026-04-28
 
 ### Fixed

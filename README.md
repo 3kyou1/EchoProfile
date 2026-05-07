@@ -10,7 +10,7 @@
     <img alt="React" src="https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white" />
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white" />
     <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" />
-    <img alt="Release" src="https://img.shields.io/badge/release-v0.1.0-2EA043?style=flat-square" />
+    <img alt="Release" src="https://img.shields.io/badge/release-v0.1.5-2EA043?style=flat-square" />
     <a href="https://arxiv.org/abs/2604.14773"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2604.14773-b31b1b?style=flat-square" /></a>
   </p>
 

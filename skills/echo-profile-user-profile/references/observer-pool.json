@@ -1,0 +1,71 @@
+{
+  "version": "echo-profile.observer-pool.v1",
+  "observers": [
+    {
+      "slug": "andrej-karpathy-perspective",
+      "displayName": "Andrej Karpathy",
+      "skillPath": "observers/andrej-karpathy-perspective/SKILL.md",
+      "aliases": ["karpathy", "andrej", "卡帕西", "安德烈"]
+    },
+    {
+      "slug": "elon-musk-perspective",
+      "displayName": "Elon Musk",
+      "skillPath": "observers/elon-musk-perspective/SKILL.md",
+      "aliases": ["musk", "elon", "马斯克", "埃隆"]
+    },
+    {
+      "slug": "feynman-perspective",
+      "displayName": "Richard Feynman",
+      "skillPath": "observers/feynman-perspective/SKILL.md",
+      "aliases": ["feynman", "费曼", "理查德费曼"]
+    },
+    {
+      "slug": "ilya-sutskever-perspective",
+      "displayName": "Ilya Sutskever",
+      "skillPath": "observers/ilya-sutskever-perspective/SKILL.md",
+      "aliases": ["ilya", "sutskever", "伊利亚", "苏茨克维"]
+    },
+    {
+      "slug": "munger-perspective",
+      "displayName": "Charlie Munger",
+      "skillPath": "observers/munger-perspective/SKILL.md",
+      "aliases": ["munger", "芒格", "查理芒格"]
+    },
+    {
+      "slug": "naval-perspective",
+      "displayName": "Naval Ravikant",
+      "skillPath": "observers/naval-perspective/SKILL.md",
+      "aliases": ["naval", "纳瓦尔"]
+    },
+    {
+      "slug": "paul-graham-perspective",
+      "displayName": "Paul Graham",
+      "skillPath": "observers/paul-graham-perspective/SKILL.md",
+      "aliases": ["paul graham", "pg", "保罗格雷厄姆"]
+    },
+    {
+      "slug": "steve-jobs-perspective",
+      "displayName": "Steve Jobs",
+      "skillPath": "observers/steve-jobs-perspective/SKILL.md",
+      "aliases": ["jobs", "steve jobs", "乔布斯"]
+    },
+    {
+      "slug": "taleb-perspective",
+      "displayName": "Nassim Nicholas Taleb",
+      "skillPath": "observers/taleb-perspective/SKILL.md",
+      "aliases": ["taleb", "塔勒布", "纳西姆塔勒布"]
+    },
+    {
+      "slug": "x-mastery-mentor",
+      "displayName": "X Mastery Mentor",
+      "skillPath": "observers/x-mastery-mentor/SKILL.md",
+      "aliases": ["x mastery", "x导师", "x mentor"]
+    },
+    {
+      "slug": "zhang-yiming-perspective",
+      "displayName": "Zhang Yiming",
+      "skillPath": "observers/zhang-yiming-perspective/SKILL.md",
+      "aliases": ["zhang yiming", "张一鸣", "一鸣"]
+    }
+  ]
+}

@@ -115,6 +115,36 @@ zip/<pool-slug>.zip
 
 可以从 [GitHub Releases](https://github.com/3kyou1/EchoProfile/releases) 下载打包版本，也可以从源码运行开发版。
 
+### Agent / CLI 安装
+
+如果你希望在 AI agent 或终端工作流中使用 EchoProfile，可以一行安装 CLI 和内置 agent skills：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/3kyou1/EchoProfile/main/install-agent.sh | sh
+```
+
+它会安装：
+
+- `echo-profile`：不绑定具体 provider 的终端 CLI
+- EchoProfile agent skills：安装到 `SKILLS_DEST`，默认使用 Codex-compatible 的 `$CODEX_HOME/skills` / `~/.codex/skills` 目录
+
+如果你的 agent 启动时加载 skills，安装后需要重启 agent。
+
+如果只想安装 CLI：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/3kyou1/EchoProfile/main/install-cli.sh | sh
+```
+
+验证 provider 发现能力：
+
+```bash
+echo-profile version
+echo-profile list providers
+```
+
+CLI 本身不绑定具体 provider。EchoProfile 目前支持读取 Aider、Claude Code、Cline、Codex CLI、Cursor、Gemini CLI 和 OpenCode 的本地历史。
+
 ### 桌面应用开发模式
 
 ```bash
@@ -186,9 +216,9 @@ pnpm test
 pnpm lint
 ```
 
-### 面向 Skill 的 CLI
+### 面向 Agent 的 CLI
 
-`echo-profile` 二进制也提供 JSON-only CLI，方便 skill 和自动化流程调用：
+`echo-profile` 二进制提供 JSON-only CLI，方便 agent skills 和自动化流程调用：
 
 ```bash
 echo-profile version
@@ -197,7 +227,7 @@ echo-profile list sessions --current-project
 echo-profile profile collect --scope project --current-project --budget-chars 30000
 ```
 
-`profile collect` 只会把本地用户消息文本收集为结构化 JSON。它不会调用 LLM，也不会直接生成画像；Codex skill 或其他 agent 可以使用返回的消息作为画像生成输入。
+`profile collect` 只会把本地用户消息文本收集为结构化 JSON。它不会调用 LLM，也不会直接生成画像；agent skills 可以使用返回的消息作为画像生成输入。
 
 
 ## 适合贡献什么？

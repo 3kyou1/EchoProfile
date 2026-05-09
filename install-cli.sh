@@ -1,11 +1,11 @@
 #!/bin/sh
-# install-server.sh - one-line installer for the EchoProfile WebUI server binary.
+# install-cli.sh - one-line installer for the EchoProfile terminal CLI.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/3kyou1/EchoProfile/main/install-server.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/3kyou1/EchoProfile/main/install-cli.sh | sh
 #
 # Environment variables:
-#   INSTALL_DIR  Installation directory (default: /usr/local/bin)
+#   INSTALL_DIR  Installation directory (default: /usr/local/bin, or ~/.local/bin without sudo)
 #   VERSION      Specific version to install, with or without leading v (default: latest)
 
 set -eu
@@ -31,13 +31,13 @@ detect_platform() {
     case "$OS" in
         Linux) OS_TAG="linux" ;;
         Darwin) OS_TAG="macos" ;;
-        *) err "Unsupported OS: $OS. EchoProfile server releases support Linux and macOS." ;;
+        *) err "Unsupported OS: $OS. EchoProfile CLI releases support Linux and macOS." ;;
     esac
 
     case "$ARCH" in
         x86_64|amd64) ARCH_TAG="x64" ;;
         aarch64|arm64) ARCH_TAG="arm64" ;;
-        *) err "Unsupported architecture: $ARCH. EchoProfile server releases support x64 and arm64." ;;
+        *) err "Unsupported architecture: $ARCH. EchoProfile CLI releases support x64 and arm64." ;;
     esac
 
     PLATFORM="${OS_TAG}-${ARCH_TAG}"
@@ -93,6 +93,20 @@ verify_checksum() {
     ok "Checksum verified"
 }
 
+choose_install_dir() {
+    if [ -w "$INSTALL_DIR" ]; then
+        return
+    fi
+
+    if command -v sudo >/dev/null 2>&1; then
+        return
+    fi
+
+    INSTALL_DIR="${HOME}/.local/bin"
+    mkdir -p "$INSTALL_DIR"
+    info "Using ${INSTALL_DIR} because sudo is not available"
+}
+
 install_binary() {
     ARTIFACT="${BINARY_NAME}-${PLATFORM}.tar.gz"
     CHECKSUM_FILE="CHECKSUMS.sha256"
@@ -113,19 +127,19 @@ install_binary() {
         err "Archive did not contain ${BINARY_NAME}"
     fi
 
+    choose_install_dir
     info "Installing to ${INSTALL_DIR}/${BINARY_NAME}"
     if [ -w "$INSTALL_DIR" ]; then
         mv "${TMPDIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
         chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     else
-        need_cmd sudo
         sudo mv "${TMPDIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
         sudo chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     fi
 }
 
 main() {
-    printf '\n\033[1m  EchoProfile WebUI Server Installer\033[0m\n\n'
+    printf '\n\033[1m  EchoProfile CLI Installer\033[0m\n\n'
 
     need_cmd curl
     need_cmd grep
@@ -139,16 +153,11 @@ main() {
 
     ok "Installed ${BINARY_NAME} ${TAG} to ${INSTALL_DIR}/${BINARY_NAME}"
     printf '\n'
-    info "Quick start:"
-    printf '    %s --serve --host 127.0.0.1 --port 3727\n' "$BINARY_NAME"
+    info "Verify:"
+    printf '    echo-profile version\n'
     printf '\n'
-    info "Server options:"
-    printf '    --host <address>    Bind address (use 127.0.0.1 behind a reverse proxy)\n'
-    printf '    --port <number>     Server port (default: 3727)\n'
-    printf '    --token <value>     Require a fixed auth token\n'
-    printf '    --no-auth           Disable authentication; not recommended on shared networks\n'
-    printf '\n'
-    info "systemd service template: https://github.com/${REPO}/blob/main/contrib/echo-profile.service"
+    info "Try provider discovery:"
+    printf '    echo-profile list providers\n'
     printf '\n'
 }
 

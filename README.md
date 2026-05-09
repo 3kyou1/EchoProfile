@@ -145,6 +145,36 @@ In EchoProfile’s `Figure Pools` page, you can upload this zip pool directly. T
 
 Download packaged builds from [GitHub Releases](https://github.com/3kyou1/EchoProfile/releases), or run from source for development.
 
+### Agent / CLI install
+
+For AI agents and terminal workflows, install the EchoProfile CLI plus bundled agent skills:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/3kyou1/EchoProfile/main/install-agent.sh | sh
+```
+
+This installs:
+
+- `echo-profile`, the provider-agnostic terminal CLI
+- EchoProfile agent skills into `SKILLS_DEST`, or by default the Codex-compatible `$CODEX_HOME/skills` / `~/.codex/skills` directory
+
+Restart agents that load skills at startup after installation.
+
+To install only the CLI:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/3kyou1/EchoProfile/main/install-cli.sh | sh
+```
+
+Verify provider discovery:
+
+```bash
+echo-profile version
+echo-profile list providers
+```
+
+The CLI itself is provider-agnostic. EchoProfile currently supports local history from Aider, Claude Code, Cline, Codex CLI, Cursor, Gemini CLI, and OpenCode.
+
 ### Desktop app development mode
 
 ```bash
@@ -216,9 +246,9 @@ pnpm test
 pnpm lint
 ```
 
-### Skill-oriented CLI
+### Agent-oriented CLI
 
-The `echo-profile` binary also exposes a JSON-only CLI for skills and automation:
+The `echo-profile` binary exposes a JSON-only CLI for agent skills and automation:
 
 ```bash
 echo-profile version
@@ -227,7 +257,7 @@ echo-profile list sessions --current-project
 echo-profile profile collect --scope project --current-project --budget-chars 30000
 ```
 
-`profile collect` only gathers local user-message text as structured JSON. It does not call an LLM or generate a profile; Codex skills or other agents can use the returned messages as profile-generation input.
+`profile collect` only gathers local user-message text as structured JSON. It does not call an LLM or generate a profile; agent skills can use the returned messages as profile-generation input.
 
 
 ## Good first contribution areas
